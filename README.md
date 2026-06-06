@@ -65,6 +65,14 @@ Run:
 artifacts\BetterTaskManager-v1.0\BetterTaskManager.exe
 ```
 
+## Download
+
+The v1.0 Windows x64 zip is also checked into this repository:
+
+```text
+release-assets\BetterTaskManager-v1.0-win-x64.zip
+```
+
 ## Safety Notes
 
 This app can force-kill processes, trim memory, clear standby cache, and add/remove Windows Firewall rules. Use those actions carefully.
