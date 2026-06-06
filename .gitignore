@@ -1,0 +1,28 @@
+# Build output
+bin/
+obj/
+artifacts/
+publish/
+
+# Local prototype output
+outputs/
+work/
+
+# User/local app data
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Logs and crash reports
+*.log
+crash.log
+
+# OS/editor noise
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/
+

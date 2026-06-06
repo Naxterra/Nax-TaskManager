@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net11.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>BetterTaskManager</AssemblyName>
+    <RootNamespace>BetterTaskManager</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    <Product>Better Task Manager</Product>
+    <Authors>Better Task Manager Contributors</Authors>
+    <Description>A Windows process, memory, firewall, and network visibility tool inspired by Task Manager and Portmaster.</Description>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+</Project>
