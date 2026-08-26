@@ -216,6 +216,7 @@ namespace BetterTaskManager
         private List<AppProfile> latestAppProfiles = new List<AppProfile>();
         private List<string[]> latestHistoryRows = new List<string[]>();
         private List<string[]> visibleHistoryRows = new List<string[]>();
+        private HashSet<int> processPidScope;
         private DateTime latestAppsSnapshot = DateTime.MinValue;
         private DateTime latestProcessSnapshot = DateTime.MinValue;
         private DateTime latestNetworkSnapshot = DateTime.MinValue;
@@ -609,7 +610,12 @@ namespace BetterTaskManager
 
             refreshButton.Click += async (s, e) => await RefreshProcessesAsync();
             loadDetailsButton.Click += async (s, e) => await LoadDetailsAndRefreshAsync();
-            filterBox.TextChanged += async (s, e) => { if (!settingProcessFilter) await RefreshProcessesAsync(); };
+            filterBox.TextChanged += (s, e) =>
+            {
+                if (settingProcessFilter) return;
+                processPidScope = null;
+                FillProcessGridFromCache();
+            };
             killButton.Click += async (s, e) => await KillSelectedAsync();
             trimSelectedButton.Click += async (s, e) => await TrimSelectedAsync();
             exportProcessesButton.Click += async (s, e) => await ExportGridAsync(processGrid, "processes");
@@ -867,7 +873,7 @@ namespace BetterTaskManager
             }
             else if (grid == processGrid)
             {
-                FillProcessGrid(SortProcesses(latestProcessRows, columnName, ascending));
+                FillProcessGridFromCache();
             }
             else if (grid == networkGrid)
             {
@@ -984,13 +990,12 @@ namespace BetterTaskManager
             appMetaLabel.Text = "Collecting processes, connections, and firewall state";
             try
             {
-                string filter = "";
                 var cache = detailsCache;
                 var knownFirewallStatuses = new Dictionary<string, string>(firewallStatusCache, StringComparer.OrdinalIgnoreCase);
                 var data = await Task.Run(() =>
                 {
                     DateTime snapshotTime = DateTime.Now;
-                    var processes = BuildProcessRows(filter, cache);
+                    var processes = BuildProcessRows(cache);
                     var network = BuildNetworkRows(processes);
                     var apps = BuildAppProfiles(processes, network);
                     var firewall = refreshFirewall ? LoadFirewallStatuses(apps) : knownFirewallStatuses;
@@ -1242,7 +1247,8 @@ namespace BetterTaskManager
             try { filterBox.Text = app.Name; }
             finally { settingProcessFilter = false; }
 
-            List<ProcessRow> matchingRows = latestProcessRows.Where(row => app.Pids.Contains(row.Pid)).ToList();
+            processPidScope = new HashSet<int>(app.Pids);
+            List<ProcessRow> matchingRows = ProcessRowsForCurrentView();
             latestProcessSnapshot = latestAppsSnapshot;
             ShowPage(processTab);
             FillProcessGrid(matchingRows);
@@ -1382,12 +1388,12 @@ namespace BetterTaskManager
 
             try
             {
-                string filter = filterBox.Text.Trim().ToLowerInvariant();
                 var cache = detailsCache;
-                var rows = await Task.Run(() => BuildProcessRows(filter, cache));
+                var rows = await Task.Run(() => BuildProcessRows(cache));
                 latestProcessRows = rows;
                 latestProcessSnapshot = DateTime.Now;
-                FillProcessGrid(rows);
+                processPidScope = null;
+                FillProcessGridFromCache();
                 statusLabel.Text = SnapshotLabel(latestProcessSnapshot) + "    " + (isAdmin
                     ? (detailsLoaded ? "Running as administrator - users/paths loaded" : "Running as administrator")
                     : "Not administrator: some actions may fail");
@@ -1406,7 +1412,7 @@ namespace BetterTaskManager
             }
         }
 
-        private List<ProcessRow> BuildProcessRows(string filter, Dictionary<int, ProcessDetails> cache)
+        private List<ProcessRow> BuildProcessRows(Dictionary<int, ProcessDetails> cache)
         {
             var now = DateTime.UtcNow;
             var result = new List<ProcessRow>();
@@ -1425,12 +1431,6 @@ namespace BetterTaskManager
 
                     if (string.IsNullOrWhiteSpace(path)) path = GetProcessPathFast(pid);
                     if (string.IsNullOrWhiteSpace(user)) user = GetProcessUserFast(pid);
-
-                    if (!string.IsNullOrEmpty(filter))
-                    {
-                        string haystack = (name + " " + user + " " + path).ToLowerInvariant();
-                        if (!haystack.Contains(filter)) continue;
-                    }
 
                     double cpuPercent = 0;
                     try
@@ -1466,6 +1466,38 @@ namespace BetterTaskManager
                 }
             }
             return result;
+        }
+
+        private void FillProcessGridFromCache()
+        {
+            FillProcessGrid(ProcessRowsForCurrentView());
+        }
+
+        private List<ProcessRow> ProcessRowsForCurrentView()
+        {
+            string filter = filterBox.Text.Trim();
+            IEnumerable<ProcessRow> rows = latestProcessRows;
+            if (processPidScope != null) rows = rows.Where(row => processPidScope.Contains(row.Pid));
+
+            var result = rows.Where(row => ProcessRowMatchesFilter(row, filter)).ToList();
+            Tuple<string, bool> sort;
+            if (gridSortState.TryGetValue(processGrid, out sort))
+            {
+                result = SortProcesses(result, sort.Item1, sort.Item2);
+            }
+            return result;
+        }
+
+        internal static bool ProcessRowMatchesFilter(ProcessRow row, string filter)
+        {
+            if (string.IsNullOrWhiteSpace(filter)) return true;
+            if (row == null) return false;
+
+            string query = filter.Trim();
+            return row.Pid.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.Name ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.User ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.Path ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private void FillProcessGrid(List<ProcessRow> rows)
@@ -1933,7 +1965,7 @@ namespace BetterTaskManager
             return row.Any(value => (value ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
-        internal async Task RunHistoryUiSmokeTestAsync()
+        internal async Task RunUiSmokeTestAsync()
         {
             await ShowHistoryAsync();
             if (historyList.VirtualListSize != Math.Min(latestHistoryRows.Count, HistoryDisplayLimit))
@@ -1958,6 +1990,41 @@ namespace BetterTaskManager
             if (!historyNoteLabel.Text.StartsWith("Live ", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("Live monitoring did not sample the active History page.");
+            }
+
+            latestProcessRows = new List<ProcessRow>
+            {
+                new ProcessRow { Pid = 101, Name = "alpha", User = "TEST\\One", Path = "C:\\Apps\\alpha.exe", PrivateMb = 10, WorkingSetMb = 20 },
+                new ProcessRow { Pid = 202, Name = "beta", User = "TEST\\Two", Path = "C:\\Apps\\beta.exe", PrivateMb = 30, WorkingSetMb = 40 }
+            };
+            ShowPage(processTab);
+            refreshingProcesses = true;
+            try
+            {
+                filterBox.Text = "202";
+                if (processGrid.Rows.Count != 1 || Convert.ToInt32(processGrid.Rows[0].Cells["PID"].Value, CultureInfo.InvariantCulture) != 202)
+                {
+                    throw new InvalidOperationException("Process search did not filter the cached snapshot by PID.");
+                }
+                filterBox.Clear();
+            }
+            finally
+            {
+                refreshingProcesses = false;
+            }
+
+            gridSortState[processGrid] = Tuple.Create("PID", false);
+            FillProcessGridFromCache();
+            if (processGrid.Rows.Count != 2 || Convert.ToInt32(processGrid.Rows[0].Cells["PID"].Value, CultureInfo.InvariantCulture) != 202)
+            {
+                throw new InvalidOperationException("Process sorting was not preserved while filtering the cached snapshot.");
+            }
+
+            processPidScope = new HashSet<int> { 101 };
+            FillProcessGridFromCache();
+            if (processGrid.Rows.Count != 1 || Convert.ToInt32(processGrid.Rows[0].Cells["PID"].Value, CultureInfo.InvariantCulture) != 101)
+            {
+                throw new InvalidOperationException("Same-snapshot app PID scope was not preserved in the Process view.");
             }
         }
 
@@ -2359,16 +2426,18 @@ namespace BetterTaskManager
                 return;
             }
 
-            if (args != null && args.Any(a => string.Equals(a, "--history-ui-smoke-test", StringComparison.OrdinalIgnoreCase)))
+            if (args != null && args.Any(a =>
+                string.Equals(a, "--ui-smoke-test", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(a, "--history-ui-smoke-test", StringComparison.OrdinalIgnoreCase)))
             {
-                RunHistoryUiSmokeTest();
+                RunUiSmokeTest();
                 return;
             }
 
             Run();
         }
 
-        private static void RunHistoryUiSmokeTest()
+        private static void RunUiSmokeTest()
         {
             TryEnableNativeDarkControls();
 #pragma warning disable WFO5001
@@ -2393,7 +2462,7 @@ namespace BetterTaskManager
             {
                 try
                 {
-                    await form.RunHistoryUiSmokeTestAsync();
+                    await form.RunUiSmokeTestAsync();
                     await Task.Delay(500);
                     System.Threading.Interlocked.Exchange(ref completed, 1);
                     Environment.ExitCode = 0;
@@ -2501,6 +2570,14 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("History filtering failed.");
             }
+            var filterProbe = new ProcessRow { Pid = 4242, Name = "browser", User = "TEST\\User", Path = "C:\\Apps\\browser.exe" };
+            if (!MainForm.ProcessRowMatchesFilter(filterProbe, "4242") ||
+                !MainForm.ProcessRowMatchesFilter(filterProbe, "test\\user") ||
+                !MainForm.ProcessRowMatchesFilter(filterProbe, "browser.exe") ||
+                MainForm.ProcessRowMatchesFilter(filterProbe, "missing"))
+            {
+                throw new InvalidOperationException("Process snapshot filtering failed.");
+            }
             if (MainForm.RefreshIntervalMilliseconds(0) != 1000 || MainForm.RefreshIntervalMilliseconds(1) != 2000 ||
                 MainForm.RefreshIntervalMilliseconds(2) != 5000 || MainForm.RefreshIntervalMilliseconds(3) != 15000)
             {
@@ -2509,9 +2586,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.8" || form.Text != "Better Task Manager v1.1.0-preview.8")
+                if (Application.ProductVersion != "1.1.0-preview.9" || form.Text != "Better Task Manager v1.1.0-preview.9")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.8.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.9.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

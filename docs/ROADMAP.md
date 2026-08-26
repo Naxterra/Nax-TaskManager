@@ -13,6 +13,7 @@
 - Added CSV export for Process, Network, and History views.
 - Clarified Better Task Manager firewall rule state and selected-app rule details.
 - Added a native real-time system Memory dashboard.
+- Made Process searching an instant in-memory operation over the latest complete snapshot.
 
 ## v2.0
 

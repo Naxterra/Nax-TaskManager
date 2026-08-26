@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.8 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.9 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -14,7 +14,7 @@ WinForms UI
 
 ## Current Collection Model
 
-The app collects live process data directly from Windows process APIs. IPv4 and IPv6 TCP/UDP endpoints and their owning process IDs come from the native Windows IP Helper tables (`GetExtendedTcpTable` and `GetExtendedUdpTable`).
+The app collects live process data directly from Windows process APIs. Process collection produces a complete snapshot; search, same-app PID scoping, and column sorting operate on that in-memory snapshot without triggering new protected-process lookups. IPv4 and IPv6 TCP/UDP endpoints and their owning process IDs come from the native Windows IP Helper tables (`GetExtendedTcpTable` and `GetExtendedUdpTable`).
 
 An Apps refresh reuses its process rows for network path/user attribution. A standalone Network refresh caches those details per PID for the duration of the snapshot, avoiding repeated protected-process lookups when one process owns many connections.
 
