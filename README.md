@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.5`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.6`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -18,6 +18,7 @@ The current development build is `1.1.0-preview.5`. The checked-in v1.0 download
 - CSV export for the current Process, Network, and bounded History views.
 - Per-app Windows Firewall block/unblock actions.
 - Better Task Manager block-rule status in the app list, plus the exact outbound rule explanation for the selected app.
+- Global Standard/Administrator status with **Restart as Admin** available from every page; privileged controls are disabled until elevation.
 - Memory cleanup tools:
   - Live physical load, used/available RAM, system cache, and system commit/limit dashboard.
   - Trim app working sets.
@@ -73,13 +74,13 @@ dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.5-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.6-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.5-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.6-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download

@@ -166,6 +166,7 @@ namespace BetterTaskManager
         private readonly ComboBox refreshIntervalBox;
         private readonly Label liveStatusLabel;
         private readonly Button restartAdminButton;
+        private readonly Label adminStatusLabel;
         private readonly Label statusLabel;
         private readonly Label processSummaryLabel;
         private readonly TextBox filterBox;
@@ -280,7 +281,16 @@ namespace BetterTaskManager
                 ForeColor = Theme.MutedText,
                 Margin = new Padding(4, 11, 0, 0)
             };
-            navBar.Controls.AddRange(new Control[] { liveMonitoringCheck, refreshIntervalBox, liveStatusLabel });
+            restartAdminButton = MakeButton("Restart as Admin", 125);
+            restartAdminButton.Height = 32;
+            restartAdminButton.Margin = new Padding(14, 2, 6, 0);
+            adminStatusLabel = new Label
+            {
+                Text = isAdmin ? "Administrator" : "Standard mode",
+                AutoSize = true,
+                Margin = new Padding(4, 11, 0, 0)
+            };
+            navBar.Controls.AddRange(new Control[] { liveMonitoringCheck, refreshIntervalBox, liveStatusLabel, restartAdminButton, adminStatusLabel });
             appsNavButton.Click += async (s, e) => { ShowPage(appsTab); await RefreshAppsAsync(false); };
             processesNavButton.Click += async (s, e) => { ShowPage(processTab); await RefreshProcessesAsync(); };
             networkNavButton.Click += async (s, e) => { ShowPage(networkTab); await RefreshNetworkAsync(); };
@@ -403,8 +413,6 @@ namespace BetterTaskManager
             trimSelectedButton = MakeButton("Trim Selected Memory", 160);
             loadDetailsButton = MakeButton("Load Users/Paths", 130);
             var exportProcessesButton = MakeButton("Export CSV", 100);
-            restartAdminButton = MakeButton("Restart as Admin", 125);
-            restartAdminButton.Visible = !isAdmin;
             var filterLabel = new Label { Text = "Filter:", AutoSize = true, Margin = new Padding(12, 9, 4, 0) };
             filterBox = new TextBox { Width = 260 };
             statusLabel = new Label
@@ -414,7 +422,7 @@ namespace BetterTaskManager
                 Margin = new Padding(16, 9, 4, 0),
                 ForeColor = isAdmin ? Theme.Good : Theme.Danger
             };
-            processToolbar.Controls.AddRange(new Control[] { refreshButton, killButton, trimSelectedButton, loadDetailsButton, exportProcessesButton, restartAdminButton, filterLabel, filterBox, statusLabel });
+            processToolbar.Controls.AddRange(new Control[] { refreshButton, killButton, trimSelectedButton, loadDetailsButton, exportProcessesButton, filterLabel, filterBox, statusLabel });
             processPanel.Controls.Add(processToolbar, 0, 0);
 
             processSummaryLabel = new Label
@@ -607,12 +615,25 @@ namespace BetterTaskManager
             {
                 ApplyDarkTheme(this);
                 ApplyNativeDarkTheme(this);
+                ApplyPrivilegeState();
                 ShowPage(appsTab);
                 await RefreshAppsAsync(true);
             };
 
             ApplyDarkTheme(this);
+            ApplyPrivilegeState();
             ShowPage(appsTab);
+        }
+
+        private void ApplyPrivilegeState()
+        {
+            restartAdminButton.Visible = !isAdmin;
+            adminStatusLabel.Text = isAdmin ? "Administrator" : "Standard mode";
+            adminStatusLabel.ForeColor = isAdmin ? Theme.Good : Theme.MutedText;
+            blockButton.Enabled = isAdmin;
+            unblockButton.Enabled = isAdmin;
+            clearStandbyButton.Enabled = isAdmin;
+            emptySystemButton.Enabled = isAdmin;
         }
 
         private async Task RefreshActivePageAsync()
@@ -1096,6 +1117,9 @@ namespace BetterTaskManager
                 appRamCard.Text = "0 MB\nSum Working Set";
                 appFirewallCard.Text = "Unknown\nFirewall";
                 appFirewallDetailsLabel.Text = "Select an app to inspect its Better Task Manager firewall rule.";
+                appBlockButton.Enabled = false;
+                appUnblockButton.Enabled = false;
+                appViewProcessesButton.Enabled = false;
                 appConnectionsGrid.Rows.Clear();
                 return;
             }
@@ -1117,6 +1141,10 @@ namespace BetterTaskManager
             appFirewallDetailsLabel.ForeColor = firewallStatus == FirewallStatusBlocked
                 ? Theme.Danger
                 : firewallStatus == FirewallStatusNoBlock ? Theme.MutedText : Theme.Warning;
+            bool canChangeRule = isAdmin && !string.IsNullOrWhiteSpace(app.Path);
+            appBlockButton.Enabled = canChangeRule && firewallStatus != FirewallStatusBlocked;
+            appUnblockButton.Enabled = canChangeRule && firewallStatus == FirewallStatusBlocked;
+            appViewProcessesButton.Enabled = app.Pids.Count > 0;
 
             appConnectionsGrid.SuspendLayout();
             try
@@ -1801,9 +1829,13 @@ namespace BetterTaskManager
             {
                 statusLabel.Text = "Administrator restart was cancelled.";
                 statusLabel.ForeColor = Theme.Warning;
+                adminStatusLabel.Text = "Elevation cancelled";
+                adminStatusLabel.ForeColor = Theme.Warning;
             }
             catch (Exception ex)
             {
+                adminStatusLabel.Text = "Elevation failed";
+                adminStatusLabel.ForeColor = Theme.Danger;
                 MessageBox.Show(this, "Could not restart as administrator.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
@@ -2223,9 +2255,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.5" || form.Text != "Better Task Manager v1.1.0-preview.5")
+                if (Application.ProductVersion != "1.1.0-preview.6" || form.Text != "Better Task Manager v1.1.0-preview.6")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.5.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.6.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

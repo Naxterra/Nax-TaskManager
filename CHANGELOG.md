@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.5 - Unreleased
+## 1.1.0-preview.6 - Unreleased
 
 ### Added
 
@@ -10,6 +10,7 @@
 - Added a self-contained single-file Windows x64 publish profile so preview testers do not need a separate .NET runtime installation.
 - Added one-click grouped-app reconciliation: **View Processes** opens the contributing PIDs from the same snapshot and shows visible-row memory sums.
 - Added a native Memory dashboard with physical load, used/available RAM, system cache, commit total/limit/peak, and process/thread/handle counts; it participates in selectable Live monitoring.
+- Added global privilege status and **Restart as Admin** navigation; firewall and system-level memory controls are gated consistently in Standard mode.
 
 ### Changed
 
