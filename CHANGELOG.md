@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.19 - Unreleased
+## 1.1.0-preview.20 - Unreleased
 
 ### Added
 
@@ -24,6 +24,7 @@
 - Added a confirmed **Clear History** action for permanently removing the user-local connection-history store without administrator rights.
 - Added grouped Apps CPU as the sum of normalized per-PID CPU values from the exact same Process snapshot.
 - Added explicit per-PID CPU sample availability and visible-row CPU sums/partial-sample counts in Processes.
+- Added native System CPU sampling to the Memory dashboard using Windows idle, kernel, and user time deltas.
 
 ### Changed
 
@@ -45,6 +46,7 @@
 - Clearing History atomically rewrites the CSV header, resets cached rows/paging, and resets connection deduplication so later observations can be recorded normally.
 - Apps CPU is visible, locale-formatted, searchable, numerically sortable, and included in selected-app snapshot metadata with a reconciliation tooltip.
 - First snapshots now display `...` instead of a false `0.0%`; measured idle remains `0.0`, and grouped Apps metadata reports sampling or partial coverage.
+- System CPU participates in Memory Live monitoring, uses the same first-sample marker, and follows the existing green/warning/danger thresholds.
 
 ### Fixed
 
@@ -68,6 +70,7 @@
 - Serialized History clearing with live store writes so clearing cannot leave a partial CSV or stale deduplication state.
 - Extended grouped-app reconciliation tests to prove CPU, private bytes, and working set all equal their contributing per-PID sums.
 - CPU baselines now include process start time, preventing a reused PID from inheriting another process's CPU sample; normalized values are clamped to 0–100%.
+- Added deterministic native CPU calculation tests for valid deltas and invalid counter rollback, plus UI coverage for initial sampling state.
 
 ## v1.0.0 - 2026-06-06
 

@@ -205,6 +205,7 @@ namespace BetterTaskManager
         private readonly Button emptySystemButton;
         private readonly Button memoryRefreshButton;
         private readonly Label memorySnapshotLabel;
+        private readonly Label memoryCpuCard;
         private readonly Label memoryLoadCard;
         private readonly Label memoryUsedCard;
         private readonly Label memoryAvailableCard;
@@ -248,6 +249,7 @@ namespace BetterTaskManager
         private int historyPageStart = 0;
         private readonly Dictionary<string, string> firewallStatusCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly NetworkHistoryStore historyStore;
+        private readonly NativeCpuCollector systemCpuCollector = new NativeCpuCollector();
         private long lastAdapterReceived = -1;
         private long lastAdapterSent = -1;
         private DateTime lastAdapterSample = DateTime.MinValue;
@@ -618,12 +620,13 @@ namespace BetterTaskManager
             memoryPanel.Controls.Add(memorySnapshotLabel);
 
             var memoryCards = new FlowLayoutPanel { Width = 1400, Height = 84, WrapContents = false, Margin = new Padding(0, 8, 0, 8) };
+            memoryCpuCard = MakeMetricCard("...", "System CPU");
             memoryLoadCard = MakeMetricCard("0%", "Physical Load");
             memoryUsedCard = MakeMetricCard("0 GiB", "Used RAM");
             memoryAvailableCard = MakeMetricCard("0 GiB", "Available RAM");
             memoryCommitCard = MakeMetricCard("0 / 0 GiB", "Commit / Limit");
             memoryCacheCard = MakeMetricCard("0 GiB", "System Cache");
-            memoryCards.Controls.AddRange(new Control[] { memoryLoadCard, memoryUsedCard, memoryAvailableCard, memoryCommitCard, memoryCacheCard });
+            memoryCards.Controls.AddRange(new Control[] { memoryCpuCard, memoryLoadCard, memoryUsedCard, memoryAvailableCard, memoryCommitCard, memoryCacheCard });
             memoryPanel.Controls.Add(memoryCards);
 
             memoryPanel.Controls.Add(new Label { Text = "Maintenance actions", Font = new Font("Segoe UI", 11, FontStyle.Bold), AutoSize = true, Margin = new Padding(0, 8, 0, 2) });
@@ -2078,7 +2081,10 @@ namespace BetterTaskManager
         {
             try
             {
+                SystemCpuSnapshot cpuSnapshot = systemCpuCollector.GetSnapshot();
                 SystemMemorySnapshot snapshot = NativeMemoryCollector.GetSnapshot();
+                memoryCpuCard.Text = (cpuSnapshot.SampleAvailable ? cpuSnapshot.UsagePercent.ToString("0.0", CultureInfo.CurrentCulture) + "%" : "...") + "\nSystem CPU";
+                memoryCpuCard.ForeColor = !cpuSnapshot.SampleAvailable ? Theme.MutedText : cpuSnapshot.UsagePercent >= 90 ? Theme.Danger : cpuSnapshot.UsagePercent >= 75 ? Theme.Warning : Theme.Good;
                 memoryLoadCard.Text = snapshot.PhysicalLoadPercent.ToString("0.0", CultureInfo.CurrentCulture) + "%\nPhysical Load";
                 memoryLoadCard.ForeColor = snapshot.PhysicalLoadPercent >= 90 ? Theme.Danger : snapshot.PhysicalLoadPercent >= 75 ? Theme.Warning : Theme.Good;
                 memoryUsedCard.Text = FormatGiB(snapshot.PhysicalUsedBytes) + "\nUsed RAM";
@@ -2524,6 +2530,11 @@ namespace BetterTaskManager
             }
 
             await VerifySnapshotCollectionGateAsync();
+            ShowPage(memoryTab);
+            if (!RefreshMemoryPage() || !memoryCpuCard.Text.StartsWith("...", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Memory dashboard did not expose the initial System CPU sampling state.");
+            }
         }
 
         private async Task VerifySnapshotCollectionGateAsync()
@@ -3102,6 +3113,21 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Native memory collector returned an invalid system snapshot.");
             }
 
+            double systemCpuUsage;
+            bool cpuCalculated = NativeCpuCollector.TryCalculateUsage(
+                new SystemCpuTimes { Idle = 100, Kernel = 200, User = 100 },
+                new SystemCpuTimes { Idle = 150, Kernel = 300, User = 200 },
+                out systemCpuUsage);
+            double ignoredCpuUsage;
+            bool invalidCpuCalculated = NativeCpuCollector.TryCalculateUsage(
+                new SystemCpuTimes { Idle = 100, Kernel = 200, User = 100 },
+                new SystemCpuTimes { Idle = 90, Kernel = 250, User = 150 },
+                out ignoredCpuUsage);
+            if (!cpuCalculated || Math.Abs(systemCpuUsage - 75) > 0.001 || invalidCpuCalculated)
+            {
+                throw new InvalidOperationException("Native system CPU delta calculation failed.");
+            }
+
             TestHistoryStore();
             TestAppAggregation();
             if (!MainForm.HistoryRowMatchesFilter(new[] { "2026-01-01", "browser", "42", "user", "TCP", "127.0.0.1", "5000", "10.0.0.1", "443", "Established", "C:\\browser.exe" }, "443") ||
@@ -3206,9 +3232,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.19" || form.Text != "Better Task Manager v1.1.0-preview.19")
+                if (Application.ProductVersion != "1.1.0-preview.20" || form.Text != "Better Task Manager v1.1.0-preview.20")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.19.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.20.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

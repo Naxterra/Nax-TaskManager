@@ -24,6 +24,7 @@
 - Added a confirmed atomic reset for user-local connection history.
 - Added same-snapshot grouped CPU to the Apps view with per-PID reconciliation tests.
 - Distinguished unavailable first-snapshot CPU from measured idle and tied baselines to process identity.
+- Added native System CPU to the real-time Memory dashboard.
 
 ## v2.0
 
