@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.25 - Unreleased
+## 1.1.0-preview.26 - Unreleased
 
 ### Added
 
@@ -30,6 +30,7 @@
 - Added responsive multi-row wrapping for global navigation and dense page command bars.
 - Added explicit `PerMonitorV2` high-DPI configuration and runtime verification.
 - Added non-blocking CSV export for the current filtered and sorted Apps model.
+- Added typed model-based Process and Network CSV exports with snapshot provenance and invariant numeric values.
 
 ### Changed
 
@@ -57,6 +58,7 @@
 - The Apps master/detail split is now proportional; metric cards and actions wrap as the detail pane narrows while tables remain scrollable.
 - Replaced duplicated legacy WinForms startup calls with generated `ApplicationConfiguration.Initialize()` bootstrap while preserving native and supported dark-mode initialization.
 - Apps export writes snapshot time, firewall, process count, CPU and sampled-process count, connections, Private Bytes, Working Set, user, and executable path using invariant numeric values.
+- Process export records CPU availability explicitly; Network export preserves native endpoint fields and normalized connection state. All four views now share one asynchronous dialog/write workflow.
 
 ### Fixed
 
@@ -86,6 +88,7 @@
 - Added minimum-window UI bounds checks for navigation, Apps cards/actions, and Process/Network/History toolbars.
 - Added UI smoke coverage proving the packaged app starts in `PerMonitorV2` mode without regressing responsive layout or dark controls.
 - Added Apps export schema/reconciliation tests, blank unavailable CPU handling, and spreadsheet-formula protection for every model field.
+- Replaced Process/Network grid-text scraping with deterministic export schemas and added exact field tests for CPU, memory, endpoints, state, identity, and timestamp.
 
 ## v1.0.0 - 2026-06-06
 

@@ -685,7 +685,7 @@ namespace BetterTaskManager
             };
             killButton.Click += async (s, e) => await KillSelectedAsync();
             trimSelectedButton.Click += async (s, e) => await TrimSelectedAsync();
-            exportProcessesButton.Click += async (s, e) => await ExportGridAsync(processGrid, "processes");
+            exportProcessesButton.Click += async (s, e) => await ExportProcessesAsync();
             restartAdminButton.Click += (s, e) => RestartAsAdmin();
 
             networkRefreshButton.Click += async (s, e) => await RefreshNetworkAsync();
@@ -693,7 +693,7 @@ namespace BetterTaskManager
             networkFilterBox.TextChanged += (s, e) => FillNetworkGridFromCache();
             blockButton.Click += async (s, e) => await BlockSelectedAsync(true);
             unblockButton.Click += async (s, e) => await BlockSelectedAsync(false);
-            exportNetworkButton.Click += async (s, e) => await ExportGridAsync(networkGrid, "network-connections");
+            exportNetworkButton.Click += async (s, e) => await ExportNetworkAsync();
             reloadHistoryButton.Click += async (s, e) => await LoadHistoryGridAsync();
             exportHistoryButton.Click += async (s, e) => await ExportHistoryAsync();
             clearHistoryButton.Click += async (s, e) => await ClearHistoryAsync();
@@ -2831,9 +2831,9 @@ namespace BetterTaskManager
             }
         }
 
-        private async Task ExportGridAsync(DataGridView grid, string filePrefix)
+        private async Task ExportCsvAsync(string title, string filePrefix, string rowDescription, List<IEnumerable<string>> exportRows)
         {
-            if (!grid.Rows.Cast<DataGridViewRow>().Any(row => !row.IsNewRow))
+            if (exportRows == null || exportRows.Count <= 1)
             {
                 MessageBox.Show(this, "There are no rows to export.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
@@ -2841,7 +2841,7 @@ namespace BetterTaskManager
 
             using (var dialog = new SaveFileDialog
             {
-                Title = "Export CSV",
+                Title = title,
                 Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
                 DefaultExt = "csv",
                 AddExtension = true,
@@ -2851,25 +2851,10 @@ namespace BetterTaskManager
             {
                 if (dialog.ShowDialog(this) != DialogResult.OK) return;
 
-                var columns = grid.Columns.Cast<DataGridViewColumn>()
-                    .Where(column => column.Visible)
-                    .OrderBy(column => column.DisplayIndex)
-                    .ToList();
-                var exportRows = new List<IEnumerable<string>>
-                {
-                    columns.Select(column => SpreadsheetSafe(column.HeaderText)).ToArray()
-                };
-
-                foreach (DataGridViewRow row in grid.Rows)
-                {
-                    if (row.IsNewRow) continue;
-                    exportRows.Add(columns.Select(column => SpreadsheetSafe(Convert.ToString(row.Cells[column.Index].Value, CultureInfo.CurrentCulture))).ToArray());
-                }
-
                 try
                 {
                     await Task.Run(() => CsvFileWriter.Write(dialog.FileName, exportRows));
-                    MessageBox.Show(this, "Exported " + (exportRows.Count - 1).ToString(CultureInfo.CurrentCulture) + " rows to:\n" + dialog.FileName,
+                    MessageBox.Show(this, "Exported " + (exportRows.Count - 1).ToString(CultureInfo.CurrentCulture) + " " + rowDescription + " to:\n" + dialog.FileName,
                         "Export complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
@@ -2879,47 +2864,46 @@ namespace BetterTaskManager
             }
         }
 
+        private async Task ExportProcessesAsync()
+        {
+            List<ProcessRow> processes = ProcessRowsForCurrentView();
+            var exportRows = new List<IEnumerable<string>>
+            {
+                new[] { "Snapshot", "PID", "Process", "User", "CPUPercent", "CPUSampled", "PrivateBytesMB", "WorkingSetMB", "PeakWorkingSetMB", "Threads", "Path" }
+            };
+            foreach (ProcessRow process in processes)
+            {
+                exportRows.Add(ProcessExportFields(process, latestProcessSnapshot).Select(SpreadsheetSafe).ToArray());
+            }
+            await ExportCsvAsync("Export Processes CSV", "processes", "process rows", exportRows);
+        }
+
+        private async Task ExportNetworkAsync()
+        {
+            List<NetworkRow> connections = NetworkRowsForCurrentView();
+            var exportRows = new List<IEnumerable<string>>
+            {
+                new[] { "Snapshot", "Application", "PID", "User", "Protocol", "LocalAddress", "LocalPort", "RemoteAddress", "RemotePort", "State", "Path" }
+            };
+            foreach (NetworkRow connection in connections)
+            {
+                exportRows.Add(NetworkExportFields(connection).Select(SpreadsheetSafe).ToArray());
+            }
+            await ExportCsvAsync("Export Network CSV", "network-connections", "network rows", exportRows);
+        }
+
         private async Task ExportAppsAsync()
         {
             List<AppProfile> apps = AppProfilesForCurrentView();
-            if (apps.Count == 0)
+            var exportRows = new List<IEnumerable<string>>
             {
-                MessageBox.Show(this, "There are no app rows to export.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                new[] { "Snapshot", "Application", "Firewall", "ProcessCount", "CPUPercent", "CPUSampledProcesses", "Connections", "PrivateBytesMB", "WorkingSetMB", "User", "Path" }
+            };
+            foreach (AppProfile app in apps)
+            {
+                exportRows.Add(AppExportFields(app, latestAppsSnapshot, GetFirewallStatus(app.Path)).Select(SpreadsheetSafe).ToArray());
             }
-
-            using (var dialog = new SaveFileDialog
-            {
-                Title = "Export Apps CSV",
-                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
-                DefaultExt = "csv",
-                AddExtension = true,
-                RestoreDirectory = true,
-                FileName = "apps-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".csv"
-            })
-            {
-                if (dialog.ShowDialog(this) != DialogResult.OK) return;
-
-                var exportRows = new List<IEnumerable<string>>
-                {
-                    new[] { "Snapshot", "Application", "Firewall", "ProcessCount", "CPUPercent", "CPUSampledProcesses", "Connections", "PrivateBytesMB", "WorkingSetMB", "User", "Path" }
-                };
-                foreach (AppProfile app in apps)
-                {
-                    exportRows.Add(AppExportFields(app, latestAppsSnapshot, GetFirewallStatus(app.Path)).Select(SpreadsheetSafe).ToArray());
-                }
-
-                try
-                {
-                    await Task.Run(() => CsvFileWriter.Write(dialog.FileName, exportRows));
-                    MessageBox.Show(this, "Exported " + apps.Count.ToString(CultureInfo.CurrentCulture) + " grouped apps to:\n" + dialog.FileName,
-                        "Export complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(this, "Apps CSV export failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            }
+            await ExportCsvAsync("Export Apps CSV", "apps", "grouped apps", exportRows);
         }
 
         internal static string[] AppExportFields(AppProfile app, DateTime snapshot, string firewallStatus)
@@ -2941,48 +2925,57 @@ namespace BetterTaskManager
             };
         }
 
+        internal static string[] ProcessExportFields(ProcessRow process, DateTime snapshot)
+        {
+            if (process == null) throw new ArgumentNullException(nameof(process));
+            return new[]
+            {
+                snapshot == DateTime.MinValue ? "" : snapshot.ToString("s", CultureInfo.InvariantCulture),
+                process.Pid.ToString(CultureInfo.InvariantCulture),
+                process.Name ?? "",
+                process.User ?? "",
+                process.CpuSampleAvailable ? process.Cpu.ToString("0.0", CultureInfo.InvariantCulture) : "",
+                process.CpuSampleAvailable ? "true" : "false",
+                process.PrivateMb.ToString("0.0", CultureInfo.InvariantCulture),
+                process.WorkingSetMb.ToString("0.0", CultureInfo.InvariantCulture),
+                process.PeakWorkingSetMb.ToString("0.0", CultureInfo.InvariantCulture),
+                process.Threads.ToString(CultureInfo.InvariantCulture),
+                process.Path ?? ""
+            };
+        }
+
+        internal static string[] NetworkExportFields(NetworkRow connection)
+        {
+            if (connection == null) throw new ArgumentNullException(nameof(connection));
+            return new[]
+            {
+                connection.Timestamp == DateTime.MinValue ? "" : connection.Timestamp.ToString("s", CultureInfo.InvariantCulture),
+                connection.Process ?? "",
+                connection.Pid.ToString(CultureInfo.InvariantCulture),
+                connection.User ?? "",
+                connection.Protocol ?? "",
+                connection.LocalAddress ?? "",
+                connection.LocalPort ?? "",
+                connection.RemoteAddress ?? "",
+                connection.RemotePort ?? "",
+                NormalizeConnectionState(connection.State),
+                connection.Path ?? ""
+            };
+        }
+
         private async Task ExportHistoryAsync()
         {
-            if (visibleHistoryRows.Count == 0)
+            var exportRows = new List<IEnumerable<string>>
             {
-                MessageBox.Show(this, "There are no history rows to export.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                historyList.Columns.Cast<ColumnHeader>().Select(column => SpreadsheetSafe(column.Text)).ToArray()
+            };
+            foreach (string[] row in visibleHistoryRows)
+            {
+                exportRows.Add(historyList.Columns.Cast<ColumnHeader>()
+                    .Select((column, index) => SpreadsheetSafe(index < row.Length ? row[index] : ""))
+                    .ToArray());
             }
-
-            using (var dialog = new SaveFileDialog
-            {
-                Title = "Export CSV",
-                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
-                DefaultExt = "csv",
-                AddExtension = true,
-                RestoreDirectory = true,
-                FileName = "connection-history-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".csv"
-            })
-            {
-                if (dialog.ShowDialog(this) != DialogResult.OK) return;
-
-                var exportRows = new List<IEnumerable<string>>
-                {
-                    historyList.Columns.Cast<ColumnHeader>().Select(column => SpreadsheetSafe(column.Text)).ToArray()
-                };
-                foreach (string[] row in visibleHistoryRows)
-                {
-                    exportRows.Add(historyList.Columns.Cast<ColumnHeader>()
-                        .Select((column, index) => SpreadsheetSafe(index < row.Length ? row[index] : ""))
-                        .ToArray());
-                }
-
-                try
-                {
-                    await Task.Run(() => CsvFileWriter.Write(dialog.FileName, exportRows));
-                    MessageBox.Show(this, "Exported " + visibleHistoryRows.Count.ToString(CultureInfo.CurrentCulture) + " rows to:\n" + dialog.FileName,
-                        "Export complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(this, "CSV export failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            }
+            await ExportCsvAsync("Export History CSV", "connection-history", "history rows", exportRows);
         }
 
         internal static string SpreadsheetSafe(string value)
@@ -3410,6 +3403,33 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Network snapshot filtering failed.");
             }
+            filterProbe.Cpu = 12.3;
+            filterProbe.CpuSampleAvailable = true;
+            filterProbe.PrivateMb = 100.5;
+            filterProbe.WorkingSetMb = 80.2;
+            filterProbe.PeakWorkingSetMb = 120.7;
+            filterProbe.Threads = 9;
+            string[] processExportFields = MainForm.ProcessExportFields(filterProbe, new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local));
+            if (processExportFields.Length != 11 || processExportFields[0] != "2026-01-02T03:04:05" || processExportFields[1] != "4242" ||
+                processExportFields[4] != "12.3" || processExportFields[5] != "true" || processExportFields[6] != "100.5" ||
+                processExportFields[7] != "80.2" || processExportFields[8] != "120.7" || processExportFields[9] != "9")
+            {
+                throw new InvalidOperationException("Process CSV fields do not match the typed snapshot model.");
+            }
+            filterProbe.CpuSampleAvailable = false;
+            if (MainForm.ProcessExportFields(filterProbe, DateTime.MinValue)[4] != "" || MainForm.ProcessExportFields(filterProbe, DateTime.MinValue)[5] != "false")
+            {
+                throw new InvalidOperationException("Process CSV did not preserve unavailable CPU state.");
+            }
+
+            networkFilterProbe.Timestamp = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local);
+            string[] networkExportFields = MainForm.NetworkExportFields(networkFilterProbe);
+            if (networkExportFields.Length != 11 || networkExportFields[0] != "2026-01-02T03:04:05" || networkExportFields[2] != "4242" ||
+                networkExportFields[6] != "5000" || networkExportFields[8] != "443" || networkExportFields[9] != "Established" ||
+                networkExportFields[10] != "C:\\Apps\\browser.exe")
+            {
+                throw new InvalidOperationException("Network CSV fields do not match the typed snapshot model.");
+            }
             var appFilterProbe = new AppProfile { Name = "browser", Path = "C:\\Apps\\browser.exe", User = "TEST\\User", ConnectionCount = 7, Cpu = 7.5, CpuSampleCount = 1 };
             appFilterProbe.Pids.Add(4242);
             if (!MainForm.AppProfileMatchesFilter(appFilterProbe, "4242", "BTM Blocked") ||
@@ -3476,9 +3496,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.25" || form.Text != "Better Task Manager v1.1.0-preview.25")
+                if (Application.ProductVersion != "1.1.0-preview.26" || form.Text != "Better Task Manager v1.1.0-preview.26")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.25.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.26.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

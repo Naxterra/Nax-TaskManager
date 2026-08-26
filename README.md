@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.25`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.26`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -21,7 +21,7 @@ The current development build is `1.1.0-preview.25`. The checked-in v1.0 downloa
 - Optional live monitoring with 1, 2, 5, or 15-second refresh intervals for Apps, Processes, Network, History, and Memory views.
 - Snapshot timestamps on Apps, Processes, and Network so grouped and per-PID samples can be compared accurately.
 - One-click **View Processes** reconciliation showing the exact contributing PIDs from the same Apps snapshot, with visible-row private-byte and working-set sums.
-- CSV export for Apps, Processes, Network, and filtered History. Apps export includes the complete grouped snapshot schema—CPU coverage, both memory measures, firewall, user, and path—even when compact columns are not visible.
+- Model-based CSV export for filtered/sorted Apps, Processes, Network, and History. Exports include invariant snapshot/numeric fields, explicit CPU availability, complete identity/path data, and spreadsheet-formula protection rather than scraping localized grid text.
 - Per-app Windows Firewall block/unblock actions.
 - Better Task Manager block-rule status in the app list, plus the exact outbound rule explanation for the selected app.
 - Global Standard/Administrator status with **Restart as Admin** available from every page; privileged controls are disabled until elevation.
@@ -87,13 +87,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.25-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.26-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.25-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.26-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download
