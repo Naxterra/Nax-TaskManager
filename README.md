@@ -4,13 +4,14 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.28`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.29`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
 - App-based overview with explicit process count plus same-snapshot summed CPU, private-byte, and working-set values for each executable group. CPU displays `...` until a second snapshot exists, so an unavailable baseline is never mislabeled as measured idle. Cached all-field search, typed sorting, and selection persist across Live refreshes.
 - Per-PID Process view with user, CPU, private bytes, working set, peak working set, threads, and executable path. The visible-row summary reconciles sampled CPU and memory totals, including partial-sample counts. Search filters the latest snapshot instantly by PID, name, user, or path without recollecting processes on every keystroke.
 - Network view showing application, PID, user, protocol, local endpoint, remote endpoint, state, and executable path. All-column search and typed column sorting operate instantly on the latest snapshot and persist across Live refreshes.
+- Stable total adapter bandwidth sampling tracks each active interface independently and ignores new, removed, or reset counters until a second monotonic sample exists.
 - Native IPv4/IPv6 TCP and UDP collection with owning-process IDs.
 - Synchronized per-PID identity caching shared by Apps, Processes, Network, and History collectors. Successful and access-denied path/user lookups are reused until the process exits or its PID is reused.
 - A shared asynchronous snapshot gate prevents Apps, Processes, Network, and live History collectors from running concurrently. Queued work for pages that are no longer active is discarded instead of consuming CPU or applying stale UI results.
@@ -41,7 +42,7 @@ The current development build is `1.1.0-preview.28`. The checked-in v1.0 downloa
 This is not yet a Portmaster replacement.
 
 - Per-app upload/download bandwidth is not implemented yet.
-- Current bandwidth display is adapter-level, not per-process.
+- Current bandwidth display is a stable aggregate of matched adapters, not per-process.
 - Network collection uses native Windows IP Helper connection tables and process mapping, not a dedicated WFP/ETW service.
 - True Portmaster-style traffic attribution, live rule engine, DNS visibility, and long-running background collection require a Windows service and WFP/ETW collector.
 
@@ -89,13 +90,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.28-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.29-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.28-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.29-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download

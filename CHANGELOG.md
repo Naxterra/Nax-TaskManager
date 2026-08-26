@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.28 - Unreleased
+## 1.1.0-preview.29 - Unreleased
 
 ### Added
 
@@ -33,6 +33,7 @@
 - Added typed model-based Process and Network CSV exports with snapshot provenance and invariant numeric values.
 - Added global F5, Ctrl+F, Escape, Ctrl+E, and Ctrl+L shortcuts with contextual tooltip guidance.
 - Added Ctrl+1–5 view navigation and Page Up/Page Down History paging, including numpad navigation support.
+- Added stateful per-adapter download/upload sampling with stable-interface counts.
 
 ### Changed
 
@@ -63,6 +64,7 @@
 - Process export records CPU availability explicitly; Network export preserves native endpoint fields and normalized connection state. All four views now share one asynchronous dialog/write workflow.
 - Shortcut actions route through the active page's existing manual refresh, cached filter, export, and Live semantics; Memory intentionally has no filter/export shortcut action.
 - Mouse clicks and keyboard view changes now share one asynchronous navigation route, preventing refresh behavior from drifting between input methods.
+- Bandwidth rates now use only adapter IDs present in both samples with nondecreasing counters; new or reset interfaces wait for a fresh baseline.
 
 ### Fixed
 
@@ -95,6 +97,7 @@
 - Replaced Process/Network grid-text scraping with deterministic export schemas and added exact field tests for CPU, memory, endpoints, state, identity, and timestamp.
 - Removed the redundant Network panel Enter refresh so focusing its filter no longer starts an unintended native collection.
 - Added runtime shortcut tests for actual Memory navigation and both History paging directions in addition to exhaustive static mapping coverage.
+- Fixed negative total bandwidth values when VPN, Wi-Fi, or other interface counters reset or disappear between snapshots.
 
 ## v1.0.0 - 2026-06-06
 

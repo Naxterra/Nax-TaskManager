@@ -5,7 +5,6 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -273,11 +272,9 @@ namespace BetterTaskManager
         private readonly NetworkHistoryStore historyStore;
         private readonly AppSettingsStore settingsStore;
         private readonly NativeCpuCollector systemCpuCollector = new NativeCpuCollector();
+        private readonly NetworkBandwidthSampler bandwidthSampler = new NetworkBandwidthSampler();
         private readonly ToolTip shortcutToolTip;
         private FormWindowState lastNonMinimizedWindowState = FormWindowState.Normal;
-        private long lastAdapterReceived = -1;
-        private long lastAdapterSent = -1;
-        private DateTime lastAdapterSample = DateTime.MinValue;
 
         public MainForm(bool skipInitialRefresh = false, string historyPath = null, string settingsPath = null)
         {
@@ -3170,33 +3167,17 @@ namespace BetterTaskManager
         {
             try
             {
-                long received = 0;
-                long sent = 0;
-                foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+                BandwidthSnapshot snapshot = bandwidthSampler.GetSnapshot();
+                if (snapshot.SampleAvailable)
                 {
-                    if (nic.OperationalStatus != OperationalStatus.Up) continue;
-                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
-                    var stats = nic.GetIPv4Statistics();
-                    received += stats.BytesReceived;
-                    sent += stats.BytesSent;
-                }
-
-                var now = DateTime.UtcNow;
-                if (lastAdapterReceived >= 0 && lastAdapterSent >= 0)
-                {
-                    double seconds = Math.Max(0.5, (now - lastAdapterSample).TotalSeconds);
-                    double downKb = (received - lastAdapterReceived) / 1024d / seconds;
-                    double upKb = (sent - lastAdapterSent) / 1024d / seconds;
-                    bandwidthLabel.Text = "Total adapter bandwidth: Down " + downKb.ToString("0.0", CultureInfo.CurrentCulture) + " KB/s, Up " + upKb.ToString("0.0", CultureInfo.CurrentCulture) + " KB/s";
+                    bandwidthLabel.Text = "Total adapter bandwidth: Down " + snapshot.DownKilobytesPerSecond.ToString("0.0", CultureInfo.CurrentCulture) +
+                        " KB/s, Up " + snapshot.UpKilobytesPerSecond.ToString("0.0", CultureInfo.CurrentCulture) +
+                        " KB/s (" + snapshot.MatchedAdapters.ToString(CultureInfo.CurrentCulture) + " stable adapter" + (snapshot.MatchedAdapters == 1 ? "" : "s") + ")";
                 }
                 else
                 {
-                    bandwidthLabel.Text = "Total bandwidth: refresh again for speed sample";
+                    bandwidthLabel.Text = "Total bandwidth: waiting for stable per-adapter sample";
                 }
-
-                lastAdapterReceived = received;
-                lastAdapterSent = sent;
-                lastAdapterSample = now;
             }
             catch
             {
@@ -3498,6 +3479,28 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Native network collector returned an invalid row.");
             }
 
+            var previousAdapters = new Dictionary<string, AdapterCounters>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["stable"] = new AdapterCounters { Received = 1000, Sent = 2000 },
+                ["reset"] = new AdapterCounters { Received = 500, Sent = 500 },
+                ["removed"] = new AdapterCounters { Received = 900, Sent = 900 }
+            };
+            var currentAdapters = new Dictionary<string, AdapterCounters>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["stable"] = new AdapterCounters { Received = 2024, Sent = 3024 },
+                ["reset"] = new AdapterCounters { Received = 100, Sent = 100 },
+                ["new"] = new AdapterCounters { Received = 5000, Sent = 5000 }
+            };
+            double downRate;
+            double upRate;
+            int matchedAdapters;
+            bool bandwidthCalculated = NetworkBandwidthSampler.TryCalculateRates(previousAdapters, currentAdapters, 2, out downRate, out upRate, out matchedAdapters);
+            bool zeroElapsedCalculated = NetworkBandwidthSampler.TryCalculateRates(previousAdapters, currentAdapters, 0, out _, out _, out _);
+            if (!bandwidthCalculated || Math.Abs(downRate - 0.5) > 0.001 || Math.Abs(upRate - 0.5) > 0.001 || matchedAdapters != 1 || zeroElapsedCalculated)
+            {
+                throw new InvalidOperationException("Per-adapter bandwidth delta calculation failed.");
+            }
+
             SystemMemorySnapshot memory = NativeMemoryCollector.GetSnapshot();
             if (memory.PhysicalTotalBytes == 0 || memory.PhysicalAvailableBytes > memory.PhysicalTotalBytes ||
                 memory.CommitTotalBytes > memory.CommitLimitBytes || memory.PhysicalLoadPercent < 0 || memory.PhysicalLoadPercent > 100 ||
@@ -3678,9 +3681,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.28" || form.Text != "Better Task Manager v1.1.0-preview.28")
+                if (Application.ProductVersion != "1.1.0-preview.29" || form.Text != "Better Task Manager v1.1.0-preview.29")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.28.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.29.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
