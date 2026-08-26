@@ -67,6 +67,9 @@ namespace BetterTaskManager
     {
         public string Path = "";
         public string User = "";
+        public bool PathResolved;
+        public bool UserResolved;
+        public long ProcessStartTimeUtcTicks;
     }
 
     public sealed class ProcessRow
@@ -80,6 +83,7 @@ namespace BetterTaskManager
         public double PeakWorkingSetMb;
         public int Threads;
         public string Path = "";
+        public long ProcessStartTimeUtcTicks;
     }
 
     public sealed class NetworkRow
@@ -212,6 +216,7 @@ namespace BetterTaskManager
         private readonly Dictionary<DataGridView, Tuple<string, bool>> gridSortState = new Dictionary<DataGridView, Tuple<string, bool>>();
 
         private readonly Dictionary<int, Tuple<TimeSpan, DateTime>> lastCpu = new Dictionary<int, Tuple<TimeSpan, DateTime>>();
+        private readonly object cpuCacheSync = new object();
         private List<ProcessRow> latestProcessRows = new List<ProcessRow>();
         private List<NetworkRow> latestNetworkRows = new List<NetworkRow>();
         private List<AppProfile> latestAppProfiles = new List<AppProfile>();
@@ -222,6 +227,7 @@ namespace BetterTaskManager
         private DateTime latestProcessSnapshot = DateTime.MinValue;
         private DateTime latestNetworkSnapshot = DateTime.MinValue;
         private Dictionary<int, ProcessDetails> detailsCache = new Dictionary<int, ProcessDetails>();
+        private readonly object detailsCacheSync = new object();
         private bool detailsLoaded = false;
         private bool refreshingApps = false;
         private bool refreshingProcesses = false;
@@ -1034,7 +1040,8 @@ namespace BetterTaskManager
             appMetaLabel.Text = "Collecting processes, connections, and firewall state";
             try
             {
-                var cache = detailsCache;
+                Dictionary<int, ProcessDetails> cache;
+                lock (detailsCacheSync) cache = detailsCache;
                 var knownFirewallStatuses = new Dictionary<string, string>(firewallStatusCache, StringComparer.OrdinalIgnoreCase);
                 var data = await Task.Run(() =>
                 {
@@ -1432,7 +1439,8 @@ namespace BetterTaskManager
 
             try
             {
-                var cache = detailsCache;
+                Dictionary<int, ProcessDetails> cache;
+                lock (detailsCacheSync) cache = detailsCache;
                 var rows = await Task.Run(() => BuildProcessRows(cache));
                 latestProcessRows = rows;
                 latestProcessSnapshot = DateTime.Now;
@@ -1460,33 +1468,43 @@ namespace BetterTaskManager
         {
             var now = DateTime.UtcNow;
             var result = new List<ProcessRow>();
+            var activePids = new HashSet<int>();
             foreach (var process in Process.GetProcesses().OrderBy(p => p.ProcessName, StringComparer.OrdinalIgnoreCase))
             {
                 try
                 {
                     int pid = process.Id;
+                    activePids.Add(pid);
+                    long processStartTimeUtcTicks = SafeProcessStartTimeUtcTicks(process);
                     ProcessDetails details = null;
-                    cache.TryGetValue(pid, out details);
+                    lock (detailsCacheSync) cache.TryGetValue(pid, out details);
+                    if (!CachedDetailsMatchProcessInstance(details, processStartTimeUtcTicks))
+                    {
+                        details = null;
+                    }
                     string title = "";
                     try { title = process.MainWindowTitle; } catch { }
                     string name = string.IsNullOrWhiteSpace(title) ? process.ProcessName : process.ProcessName + " - " + title;
-                    string user = details == null ? "" : details.User;
-                    string path = details == null ? "" : details.Path;
-
-                    if (string.IsNullOrWhiteSpace(path)) path = GetProcessPathFast(pid);
-                    if (string.IsNullOrWhiteSpace(user)) user = GetProcessUserFast(pid);
+                    details = ResolveMissingProcessDetails(details, () => GetProcessPathFast(pid), () => GetProcessUserFast(pid));
+                    details.ProcessStartTimeUtcTicks = processStartTimeUtcTicks;
+                    lock (detailsCacheSync) cache[pid] = details;
+                    string user = details.User;
+                    string path = details.Path;
 
                     double cpuPercent = 0;
                     try
                     {
                         TimeSpan totalCpu = process.TotalProcessorTime;
-                        Tuple<TimeSpan, DateTime> old;
-                        if (lastCpu.TryGetValue(pid, out old))
+                        lock (cpuCacheSync)
                         {
-                            double seconds = Math.Max(0.5, (now - old.Item2).TotalSeconds);
-                            cpuPercent = Math.Max(0, Math.Round((totalCpu - old.Item1).TotalSeconds / (seconds * Environment.ProcessorCount) * 100, 1));
+                            Tuple<TimeSpan, DateTime> old;
+                            if (lastCpu.TryGetValue(pid, out old))
+                            {
+                                double seconds = Math.Max(0.5, (now - old.Item2).TotalSeconds);
+                                cpuPercent = Math.Max(0, Math.Round((totalCpu - old.Item1).TotalSeconds / (seconds * Environment.ProcessorCount) * 100, 1));
+                            }
+                            lastCpu[pid] = Tuple.Create(totalCpu, now);
                         }
-                        lastCpu[pid] = Tuple.Create(totalCpu, now);
                     }
                     catch { }
 
@@ -1500,7 +1518,8 @@ namespace BetterTaskManager
                         WorkingSetMb = ToMb(process.WorkingSet64),
                         PeakWorkingSetMb = ToMb(process.PeakWorkingSet64),
                         Threads = SafeThreadCount(process),
-                        Path = path
+                        Path = path,
+                        ProcessStartTimeUtcTicks = processStartTimeUtcTicks
                     });
                 }
                 catch { }
@@ -1509,7 +1528,50 @@ namespace BetterTaskManager
                     process.Dispose();
                 }
             }
+
+            lock (detailsCacheSync)
+            {
+                foreach (int stalePid in cache.Keys.Where(pid => !activePids.Contains(pid)).ToList()) cache.Remove(stalePid);
+            }
+            lock (cpuCacheSync)
+            {
+                foreach (int stalePid in lastCpu.Keys.Where(pid => !activePids.Contains(pid)).ToList()) lastCpu.Remove(stalePid);
+            }
             return result;
+        }
+
+        internal static ProcessDetails ResolveMissingProcessDetails(ProcessDetails cached, Func<string> pathResolver, Func<string> userResolver)
+        {
+            string path = cached == null ? "" : cached.Path ?? "";
+            string user = cached == null ? "" : cached.User ?? "";
+            bool pathResolved = cached != null && cached.PathResolved;
+            bool userResolved = cached != null && cached.UserResolved;
+
+            if (!pathResolved)
+            {
+                path = pathResolver == null ? "" : pathResolver() ?? "";
+                pathResolved = true;
+            }
+            if (!userResolved)
+            {
+                user = userResolver == null ? "" : userResolver() ?? "";
+                userResolved = true;
+            }
+
+            return new ProcessDetails
+            {
+                Path = path,
+                User = user,
+                PathResolved = pathResolved,
+                UserResolved = userResolved,
+                ProcessStartTimeUtcTicks = cached == null ? 0 : cached.ProcessStartTimeUtcTicks
+            };
+        }
+
+        internal static bool CachedDetailsMatchProcessInstance(ProcessDetails cached, long processStartTimeUtcTicks)
+        {
+            return cached == null || cached.ProcessStartTimeUtcTicks == 0 || processStartTimeUtcTicks == 0 ||
+                cached.ProcessStartTimeUtcTicks == processStartTimeUtcTicks;
         }
 
         private void FillProcessGridFromCache()
@@ -1584,7 +1646,8 @@ namespace BetterTaskManager
             statusLabel.ForeColor = Theme.Warning;
             try
             {
-                detailsCache = await Task.Run(() => LoadProcessDetails());
+                Dictionary<int, ProcessDetails> loadedDetails = await Task.Run(() => LoadProcessDetails());
+                lock (detailsCacheSync) detailsCache = loadedDetails;
                 detailsLoaded = true;
                 await RefreshProcessesAsync();
             }
@@ -1611,7 +1674,10 @@ namespace BetterTaskManager
                     map[pid] = new ProcessDetails
                     {
                         Path = GetProcessPathFast(pid),
-                        User = GetProcessUserFast(pid)
+                        User = GetProcessUserFast(pid),
+                        PathResolved = true,
+                        UserResolved = true,
+                        ProcessStartTimeUtcTicks = SafeProcessStartTimeUtcTicks(process)
                     };
                 }
                 catch { }
@@ -1659,20 +1725,30 @@ namespace BetterTaskManager
         private List<NetworkRow> BuildNetworkRows(IEnumerable<ProcessRow> knownProcessRows = null)
         {
             var now = DateTime.Now;
-            var processNames = new Dictionary<int, string>();
+            var processIdentities = new Dictionary<int, Tuple<string, long>>();
             foreach (var p in Process.GetProcesses())
             {
-                try { processNames[p.Id] = p.ProcessName; } catch { }
+                try { processIdentities[p.Id] = Tuple.Create(p.ProcessName, SafeProcessStartTimeUtcTicks(p)); } catch { }
                 finally { p.Dispose(); }
             }
 
             var snapshotDetails = new Dictionary<int, ProcessDetails>();
-            foreach (var pair in detailsCache) snapshotDetails[pair.Key] = pair.Value;
+            lock (detailsCacheSync)
+            {
+                foreach (var pair in detailsCache) snapshotDetails[pair.Key] = pair.Value;
+            }
             if (knownProcessRows != null)
             {
                 foreach (ProcessRow processRow in knownProcessRows)
                 {
-                    snapshotDetails[processRow.Pid] = new ProcessDetails { Path = processRow.Path, User = processRow.User };
+                    snapshotDetails[processRow.Pid] = new ProcessDetails
+                    {
+                        Path = processRow.Path,
+                        User = processRow.User,
+                        PathResolved = true,
+                        UserResolved = true,
+                        ProcessStartTimeUtcTicks = processRow.ProcessStartTimeUtcTicks
+                    };
                 }
             }
 
@@ -1680,24 +1756,27 @@ namespace BetterTaskManager
             foreach (var connection in NativeNetworkCollector.GetAll())
             {
                 ProcessDetails details = null;
-                if (!snapshotDetails.TryGetValue(connection.OwningPid, out details))
+                snapshotDetails.TryGetValue(connection.OwningPid, out details);
+                Tuple<string, long> identity;
+                processIdentities.TryGetValue(connection.OwningPid, out identity);
+                string name = identity == null ? "" : identity.Item1;
+                long processStartTimeUtcTicks = identity == null ? 0 : identity.Item2;
+                if (!CachedDetailsMatchProcessInstance(details, processStartTimeUtcTicks))
                 {
-                    details = new ProcessDetails();
-                    snapshotDetails[connection.OwningPid] = details;
+                    details = null;
                 }
-                string name;
-                processNames.TryGetValue(connection.OwningPid, out name);
+                int owningPid = connection.OwningPid;
+                details = ResolveMissingProcessDetails(details, () => GetProcessPathFast(owningPid), () => GetProcessUserFast(owningPid));
+                details.ProcessStartTimeUtcTicks = processStartTimeUtcTicks;
+                snapshotDetails[owningPid] = details;
+                lock (detailsCacheSync) detailsCache[owningPid] = details;
                 string path = details.Path;
                 string user = details.User;
-                if (string.IsNullOrWhiteSpace(path)) path = GetProcessPathFast(connection.OwningPid);
-                if (string.IsNullOrWhiteSpace(user)) user = GetProcessUserFast(connection.OwningPid);
-                details.Path = path;
-                details.User = user;
 
                 rows.Add(new NetworkRow
                 {
                     Timestamp = now,
-                    Process = name ?? "",
+                    Process = name,
                     Pid = connection.OwningPid,
                     User = NormalizeDisplayText(user),
                     Protocol = connection.Protocol,
@@ -2489,6 +2568,11 @@ namespace BetterTaskManager
             try { return process.Threads.Count; } catch { return 0; }
         }
 
+        private static long SafeProcessStartTimeUtcTicks(Process process)
+        {
+            try { return process.StartTime.ToUniversalTime().Ticks; } catch { return 0; }
+        }
+
         private static double ToMb(long bytes)
         {
             return Math.Round(bytes / 1024d / 1024d, 1);
@@ -2701,6 +2785,33 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Network snapshot filtering failed.");
             }
+            int pathResolutionCalls = 0;
+            int userResolutionCalls = 0;
+            ProcessDetails resolvedDetails = MainForm.ResolveMissingProcessDetails(null,
+                () => { pathResolutionCalls++; return "C:\\Apps\\cached.exe"; },
+                () => { userResolutionCalls++; return "TEST\\Cached"; });
+            ProcessDetails reusedDetails = MainForm.ResolveMissingProcessDetails(resolvedDetails,
+                () => { pathResolutionCalls++; return "unexpected"; },
+                () => { userResolutionCalls++; return "unexpected"; });
+            if (pathResolutionCalls != 1 || userResolutionCalls != 1 || reusedDetails.Path != resolvedDetails.Path || reusedDetails.User != resolvedDetails.User)
+            {
+                throw new InvalidOperationException("Resolved process identity data was not reused.");
+            }
+            ProcessDetails deniedDetails = MainForm.ResolveMissingProcessDetails(null,
+                () => { pathResolutionCalls++; return ""; },
+                () => { userResolutionCalls++; return ""; });
+            MainForm.ResolveMissingProcessDetails(deniedDetails,
+                () => { pathResolutionCalls++; return "unexpected"; },
+                () => { userResolutionCalls++; return "unexpected"; });
+            if (pathResolutionCalls != 2 || userResolutionCalls != 2 || !deniedDetails.PathResolved || !deniedDetails.UserResolved)
+            {
+                throw new InvalidOperationException("Failed process identity lookups were not cached.");
+            }
+            resolvedDetails.ProcessStartTimeUtcTicks = 100;
+            if (!MainForm.CachedDetailsMatchProcessInstance(resolvedDetails, 100) || MainForm.CachedDetailsMatchProcessInstance(resolvedDetails, 200))
+            {
+                throw new InvalidOperationException("Process identity cache did not reject PID reuse.");
+            }
             if (MainForm.RefreshIntervalMilliseconds(0) != 1000 || MainForm.RefreshIntervalMilliseconds(1) != 2000 ||
                 MainForm.RefreshIntervalMilliseconds(2) != 5000 || MainForm.RefreshIntervalMilliseconds(3) != 15000)
             {
@@ -2709,9 +2820,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.10" || form.Text != "Better Task Manager v1.1.0-preview.10")
+                if (Application.ProductVersion != "1.1.0-preview.11" || form.Text != "Better Task Manager v1.1.0-preview.11")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.10.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.11.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

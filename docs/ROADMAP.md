@@ -15,6 +15,7 @@
 - Added a native real-time system Memory dashboard.
 - Made Process searching an instant in-memory operation over the latest complete snapshot.
 - Added cached all-column Network search with persistent typed sorting and fixed-width rendering.
+- Added synchronized process identity and CPU caches to reduce repeated work during Live monitoring.
 
 ## v2.0
 

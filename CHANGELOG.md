@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.10 - Unreleased
+## 1.1.0-preview.11 - Unreleased
 
 ### Added
 
@@ -15,6 +15,7 @@
 - Added a watchdog-backed UI smoke test that verifies responsive History loading/live sampling, cached Process filtering/sorting, same-snapshot PID scope, and a responsive message-loop continuation.
 - Added real live monitoring to History: the active page now samples native connections, records new/state-changed observations, and refreshes the current filtered view at the selected interval.
 - Added instant all-column Network search across application, PID, user, protocol, endpoints, state, and path.
+- Added explicit per-PID resolution state so successful and denied executable-path/user lookups are both cached across collectors.
 
 ### Changed
 
@@ -27,6 +28,7 @@
 - Process search now filters the latest complete snapshot in memory by PID, name, user, or path; only manual/Live refresh performs a new Windows process collection.
 - Network filtering and typed column sorting now operate on the cached snapshot and persist across manual or Live collection refreshes.
 - Split Network actions/search from its snapshot and bandwidth status line, and assigned stable column widths for a calmer layout.
+- Process identity cache entries now carry process start time, are shared safely by Apps, Processes, Network, and History, and are invalidated when Windows reuses a PID.
 
 ### Fixed
 
@@ -41,6 +43,7 @@
 - Reduced the connection-history sampling gate from 30 seconds to one second so short-lived changes can be captured during Live monitoring while unchanged rows remain deduplicated.
 - Eliminated full process enumeration and protected path/user lookups on every Process search keystroke while preserving active column sorting and exact **View Processes** PID reconciliation.
 - Removed content-based Network column resizing during refresh, avoiding repeated width measurement on large connection snapshots.
+- Eliminated repeated protected-process path/user calls on every Live tick and synchronized the shared CPU baseline cache to prevent concurrent Apps/Processes refresh races.
 
 ## v1.0.0 - 2026-06-06
 

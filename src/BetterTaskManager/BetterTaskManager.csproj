@@ -8,10 +8,10 @@
     <AssemblyName>BetterTaskManager</AssemblyName>
     <RootNamespace>BetterTaskManager</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.1.0-preview.10</Version>
+    <Version>1.1.0-preview.11</Version>
     <AssemblyVersion>1.1.0.0</AssemblyVersion>
     <FileVersion>1.1.0.0</FileVersion>
-    <InformationalVersion>1.1.0-preview.10</InformationalVersion>
+    <InformationalVersion>1.1.0-preview.11</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Better Task Manager</Product>
     <Title>Better Task Manager</Title>
