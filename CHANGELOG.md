@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.13 - Unreleased
+## 1.1.0-preview.14 - Unreleased
 
 ### Added
 
@@ -18,6 +18,7 @@
 - Added explicit per-PID resolution state so successful and denied executable-path/user lookups are both cached across collectors.
 - Expanded Apps search across name, path, user, firewall state, process IDs/count, and connection count.
 - Added Previous/Next paging through every filtered and sorted History result while retaining the responsive 100-row render window.
+- Added one shared asynchronous snapshot gate for Apps, Processes, Network, details reload, and live History collection.
 
 ### Changed
 
@@ -33,6 +34,7 @@
 - Process identity cache entries now carry process start time, are shared safely by Apps, Processes, Network, and History, and are invalidated when Windows reuses a PID.
 - Apps filtering and typed sorting now operate on the cached grouped snapshot; active sort and selected app persist across search and Live refreshes.
 - History filtering or sorting returns to the first result page; manual and Live reloads preserve the current page and clamp it safely when the result set shrinks.
+- Queued collection requests now re-check the active page before running, and completed requests re-check it before updating caches or UI.
 
 ### Fixed
 
@@ -50,6 +52,7 @@
 - Eliminated repeated protected-process path/user calls on every Live tick and synchronized the shared CPU baseline cache to prevent concurrent Apps/Processes refresh races.
 - Fixed the Apps firewall column falling back to name sorting and stopped search or refresh from silently discarding the active Apps sort.
 - Removed the earlier limitation that made History matches beyond the first 100 visible only through filtering or CSV export.
+- Prevented rapid cross-page navigation from running multiple expensive native collectors concurrently or applying results to a page the user already left.
 
 ## v1.0.0 - 2026-06-06
 

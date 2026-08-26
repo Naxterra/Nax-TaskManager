@@ -215,6 +215,7 @@ namespace BetterTaskManager
         private readonly Panel memoryTab;
         private Control activePage;
         private readonly Timer timer;
+        private readonly System.Threading.SemaphoreSlim snapshotCollectionGate = new System.Threading.SemaphoreSlim(1, 1);
         private readonly Dictionary<DataGridView, Tuple<string, bool>> gridSortState = new Dictionary<DataGridView, Tuple<string, bool>>();
 
         private readonly Dictionary<int, Tuple<TimeSpan, DateTime>> lastCpu = new Dictionary<int, Tuple<TimeSpan, DateTime>>();
@@ -723,6 +724,21 @@ namespace BetterTaskManager
             else if (activePage == memoryTab) RefreshMemoryPage();
         }
 
+        private async Task<T> RunSnapshotCollectionAsync<T>(Control expectedPage, Func<T> collector) where T : class
+        {
+            await snapshotCollectionGate.WaitAsync();
+            try
+            {
+                if (IsDisposed || activePage != expectedPage) return null;
+                T result = await Task.Run(collector);
+                return IsDisposed || activePage != expectedPage ? null : result;
+            }
+            finally
+            {
+                snapshotCollectionGate.Release();
+            }
+        }
+
         internal static int RefreshIntervalMilliseconds(int selectedIndex)
         {
             switch (selectedIndex)
@@ -1053,7 +1069,7 @@ namespace BetterTaskManager
                 Dictionary<int, ProcessDetails> cache;
                 lock (detailsCacheSync) cache = detailsCache;
                 var knownFirewallStatuses = new Dictionary<string, string>(firewallStatusCache, StringComparer.OrdinalIgnoreCase);
-                var data = await Task.Run(() =>
+                var data = await RunSnapshotCollectionAsync(appsTab, () =>
                 {
                     DateTime snapshotTime = DateTime.Now;
                     var processes = BuildProcessRows(cache);
@@ -1063,6 +1079,7 @@ namespace BetterTaskManager
                     SaveNetworkHistory(network);
                     return Tuple.Create(processes, network, apps, firewall, snapshotTime);
                 });
+                if (data == null) return;
 
                 latestProcessRows = data.Item1;
                 latestNetworkRows = data.Item2;
@@ -1471,7 +1488,8 @@ namespace BetterTaskManager
             {
                 Dictionary<int, ProcessDetails> cache;
                 lock (detailsCacheSync) cache = detailsCache;
-                var rows = await Task.Run(() => BuildProcessRows(cache));
+                var rows = await RunSnapshotCollectionAsync(processTab, () => BuildProcessRows(cache));
+                if (rows == null) return;
                 latestProcessRows = rows;
                 latestProcessSnapshot = DateTime.Now;
                 processPidScope = null;
@@ -1676,7 +1694,8 @@ namespace BetterTaskManager
             statusLabel.ForeColor = Theme.Warning;
             try
             {
-                Dictionary<int, ProcessDetails> loadedDetails = await Task.Run(() => LoadProcessDetails());
+                Dictionary<int, ProcessDetails> loadedDetails = await RunSnapshotCollectionAsync(processTab, () => LoadProcessDetails());
+                if (loadedDetails == null) return;
                 lock (detailsCacheSync) detailsCache = loadedDetails;
                 detailsLoaded = true;
                 await RefreshProcessesAsync();
@@ -1728,12 +1747,13 @@ namespace BetterTaskManager
             networkStatusLabel.ForeColor = Theme.Warning;
             try
             {
-                var rows = await Task.Run(() =>
+                var rows = await RunSnapshotCollectionAsync(networkTab, () =>
                 {
                     var networkRows = BuildNetworkRows();
                     SaveNetworkHistory(networkRows);
                     return networkRows;
                 });
+                if (rows == null) return;
                 latestNetworkRows = rows;
                 latestNetworkSnapshot = rows.Count > 0 ? rows[0].Timestamp : DateTime.Now;
                 FillNetworkGridFromCache();
@@ -2088,7 +2108,7 @@ namespace BetterTaskManager
             historyNoteLabel.ForeColor = Theme.Warning;
             try
             {
-                var result = await Task.Run(() =>
+                var result = await RunSnapshotCollectionAsync(historyTab, () =>
                 {
                     List<NetworkRow> connections = BuildNetworkRows();
                     DateTime sampledAt = connections.Count > 0 ? connections[0].Timestamp : DateTime.Now;
@@ -2096,6 +2116,7 @@ namespace BetterTaskManager
                     List<string[]> history = historyStore.LoadRecent(2000);
                     return Tuple.Create(history, connections.Count, recorded, sampledAt);
                 });
+                if (result == null) return;
 
                 latestHistoryRows = result.Item1;
                 FillHistoryGrid(false);
@@ -2338,6 +2359,45 @@ namespace BetterTaskManager
             if (!string.Equals(selectedAppPath, alphaApp.Path, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("Apps selection was not preserved through filtering and sorting.");
+            }
+
+            await VerifySnapshotCollectionGateAsync();
+        }
+
+        private async Task VerifySnapshotCollectionGateAsync()
+        {
+            ShowPage(appsTab);
+            var collectorStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            using (var releaseCollector = new System.Threading.ManualResetEventSlim(false))
+            {
+                int staleCollectorCalls = 0;
+                int currentCollectorCalls = 0;
+                Task<string> first = RunSnapshotCollectionAsync(appsTab, () =>
+                {
+                    collectorStarted.TrySetResult(true);
+                    releaseCollector.Wait(TimeSpan.FromSeconds(2));
+                    return "apps";
+                });
+
+                await collectorStarted.Task;
+                ShowPage(networkTab);
+                Task<string> stale = RunSnapshotCollectionAsync(processTab, () =>
+                {
+                    staleCollectorCalls++;
+                    return "processes";
+                });
+                Task<string> current = RunSnapshotCollectionAsync(networkTab, () =>
+                {
+                    currentCollectorCalls++;
+                    return "network";
+                });
+                releaseCollector.Set();
+
+                string[] results = await Task.WhenAll(first, stale, current);
+                if (results[0] != null || results[1] != null || results[2] != "network" || staleCollectorCalls != 0 || currentCollectorCalls != 1)
+                {
+                    throw new InvalidOperationException("Snapshot collection gate did not suppress stale cross-page work.");
+                }
             }
         }
 
@@ -2960,9 +3020,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.13" || form.Text != "Better Task Manager v1.1.0-preview.13")
+                if (Application.ProductVersion != "1.1.0-preview.14" || form.Text != "Better Task Manager v1.1.0-preview.14")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.13.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.14.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

@@ -18,6 +18,7 @@
 - Added synchronized process identity and CPU caches to reduce repeated work during Live monitoring.
 - Made Apps search, typed sorting, and selection persistent over cached grouped snapshots.
 - Added responsive paging through the complete filtered and sorted History cache.
+- Serialized heavy snapshot collection and suppressed stale work during rapid page navigation.
 
 ## v2.0
 
