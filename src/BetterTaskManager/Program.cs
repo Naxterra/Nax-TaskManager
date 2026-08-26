@@ -664,8 +664,8 @@ namespace BetterTaskManager
             });
             appGrid.Columns["App"].Width = 145;
             appGrid.Columns["Firewall"].Width = 105;
-            appGrid.Columns["Processes"].Width = 62;
-            appGrid.Columns["Connections"].Width = 58;
+            appGrid.Columns["Processes"].Width = 45;
+            appGrid.Columns["Connections"].Width = 45;
             appGrid.Columns["Cpu"].Width = 65;
             appGrid.Columns["Cpu"].ToolTipText = "Sum of normalized per-PID CPU from the same Apps snapshot.";
             appGrid.Columns["Ram"].Width = 90;
@@ -862,9 +862,9 @@ namespace BetterTaskManager
             networkGrid.Columns["User"].Width = 180;
             networkGrid.Columns["Protocol"].Width = 80;
             networkGrid.Columns["LocalAddress"].Width = 180;
-            networkGrid.Columns["LocalPort"].Width = 105;
+            networkGrid.Columns["LocalPort"].Width = 90;
             networkGrid.Columns["RemoteAddress"].Width = 180;
-            networkGrid.Columns["RemotePort"].Width = 120;
+            networkGrid.Columns["RemotePort"].Width = 100;
             networkGrid.Columns["State"].Width = 110;
             networkGrid.Columns["Path"].Width = 500;
             LockGridColumns(networkGrid);
@@ -1520,19 +1520,19 @@ namespace BetterTaskManager
         private void LockGridColumns(DataGridView grid)
         {
             grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            grid.ColumnHeadersHeight = 30;
-            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            grid.ColumnHeadersHeight = 28;
             grid.AllowUserToResizeRows = false;
             grid.AllowUserToResizeColumns = true;
             foreach (DataGridViewColumn column in grid.Columns)
             {
                 column.SortMode = DataGridViewColumnSortMode.Programmatic;
                 column.Resizable = DataGridViewTriState.True;
-                column.Tag = column.HeaderText;
+                column.HeaderCell.SortGlyphDirection = SortOrder.None;
             }
-            ApplySortIndicators(grid, null, true);
             grid.ColumnHeaderMouseClick -= GridColumnHeaderMouseClick;
             grid.ColumnHeaderMouseClick += GridColumnHeaderMouseClick;
+            grid.CellPainting -= GridHeaderCellPainting;
+            grid.CellPainting += GridHeaderCellPainting;
         }
 
         private void GridColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
@@ -1566,20 +1566,42 @@ namespace BetterTaskManager
             {
                 FillNetworkGridFromCache();
             }
-            ApplySortIndicators(grid, columnName, ascending);
+            RefreshSortIndicator(grid);
         }
 
-        private static void ApplySortIndicators(DataGridView grid, string columnName, bool ascending)
+        private void GridHeaderCellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
-            foreach (DataGridViewColumn column in grid.Columns)
+            if (e.RowIndex != -1 || e.ColumnIndex < 0) return;
+            var grid = sender as DataGridView;
+            if (grid == null) return;
+
+            e.Paint(e.CellBounds, DataGridViewPaintParts.All);
+            SortOrder order = CurrentSortOrder(grid, grid.Columns[e.ColumnIndex].Name);
+            if (order != SortOrder.None)
             {
-                column.HeaderCell.SortGlyphDirection = SortOrder.None;
-                string baseText = Convert.ToString(column.Tag, CultureInfo.InvariantCulture);
-                if (string.IsNullOrEmpty(baseText)) baseText = column.Name;
-                column.HeaderText = string.Equals(column.Name, columnName, StringComparison.Ordinal)
-                    ? (ascending ? "▲ " : "▼ ") + baseText
-                    : "↕ " + baseText;
+                int centerX = e.CellBounds.Right - 11;
+                int centerY = e.CellBounds.Top + (e.CellBounds.Height / 2);
+                Point[] triangle = order == SortOrder.Ascending
+                    ? new[] { new Point(centerX, centerY - 6), new Point(centerX - 6, centerY + 4), new Point(centerX + 6, centerY + 4) }
+                    : new[] { new Point(centerX - 6, centerY - 4), new Point(centerX + 6, centerY - 4), new Point(centerX, centerY + 6) };
+                using (var brush = new SolidBrush(Theme.AccentHover)) e.Graphics.FillPolygon(brush, triangle);
+                using (var pen = new Pen(Color.White, 1)) e.Graphics.DrawPolygon(pen, triangle);
             }
+            e.Handled = true;
+        }
+
+        private SortOrder CurrentSortOrder(DataGridView grid, string columnName)
+        {
+            Tuple<string, bool> state;
+            if (!gridSortState.TryGetValue(grid, out state) || !string.Equals(state.Item1, columnName, StringComparison.Ordinal))
+            {
+                return SortOrder.None;
+            }
+            return state.Item2 ? SortOrder.Ascending : SortOrder.Descending;
+        }
+
+        private static void RefreshSortIndicator(DataGridView grid)
+        {
             grid.Invalidate(new Rectangle(0, 0, grid.ClientSize.Width, grid.ColumnHeadersHeight));
         }
 
@@ -3414,19 +3436,24 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Network sorting was not preserved for the cached snapshot.");
             }
-            ApplySortIndicators(networkGrid, "RemotePort", true);
-            if (networkGrid.Columns["RemotePort"].HeaderText != "▲ Remote Port" ||
-                !networkGrid.Columns["PID"].HeaderText.StartsWith("↕ ", StringComparison.Ordinal) ||
+            gridSortState[networkGrid] = Tuple.Create("RemotePort", true);
+            RefreshSortIndicator(networkGrid);
+            if (networkGrid.Columns["RemotePort"].HeaderText != "Remote Port" ||
+                CurrentSortOrder(networkGrid, "RemotePort") != SortOrder.Ascending ||
+                CurrentSortOrder(networkGrid, "PID") != SortOrder.None ||
                 networkGrid.Columns["RemotePort"].HeaderCell.SortGlyphDirection != SortOrder.None)
             {
                 throw new InvalidOperationException("Network Remote Port did not expose the high-contrast custom sort indicator.");
             }
-            ApplySortIndicators(networkGrid, "RemotePort", false);
-            if (networkGrid.Columns["RemotePort"].HeaderText != "▼ Remote Port")
+            gridSortState[networkGrid] = Tuple.Create("RemotePort", false);
+            RefreshSortIndicator(networkGrid);
+            if (networkGrid.Columns["RemotePort"].HeaderText != "Remote Port" ||
+                CurrentSortOrder(networkGrid, "RemotePort") != SortOrder.Descending)
             {
                 throw new InvalidOperationException("Network Remote Port descending sort indicator did not update.");
             }
-            ApplySortIndicators(networkGrid, "PID", false);
+            gridSortState[networkGrid] = Tuple.Create("PID", false);
+            RefreshSortIndicator(networkGrid);
             if (!networkCopyPathButton.Enabled || !networkOpenFolderButton.Enabled)
             {
                 throw new InvalidOperationException("Network executable path actions did not follow selection state.");
@@ -4744,9 +4771,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.50" || form.Text != "Better Task Manager v1.1.0-preview.50")
+                if (Application.ProductVersion != "1.1.0-preview.51" || form.Text != "Better Task Manager v1.1.0-preview.51")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.50.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.51.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

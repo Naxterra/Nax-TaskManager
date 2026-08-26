@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.50 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.51 remains a single Windows desktop executable.
 
 ```text
 WinForms UI

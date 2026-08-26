@@ -4,12 +4,12 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.50`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.51`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
 - App-based overview with explicit process count plus same-snapshot summed CPU, private-byte, and working-set values for each executable group. CPU displays `...` until a second snapshot exists, so an unavailable baseline is never mislabeled as measured idle. Cached all-field search, typed sorting, and selection persist across Live refreshes.
-- Every sortable data-grid header shows a bold neutral `↕` indicator; the active column changes to a high-contrast `▲` or `▼`, including Local Port and Remote Port.
+- Unsorted data-grid headers remain clean; the actively sorted column receives one larger blue-white triangle at its right edge, including Local Port and Remote Port.
 - Apps renders process/network grouping before the slower firewall-rule scan completes; late firewall results are guarded by snapshot and mutation revision so they cannot overwrite newer data.
 - Apps marks partial native network data in amber so grouped connection counts are never presented as silently complete.
 - Per-PID Process view with user, CPU, private bytes, working set, peak working set, threads, and executable path. The visible-row summary reconciles sampled CPU and memory totals, including partial-sample counts. Search filters the latest snapshot instantly by PID, name, user, or path without recollecting processes on every keystroke.
@@ -125,13 +125,13 @@ Run the normal publish command after the old latest window closes to refresh the
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.50-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.51-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.50-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.51-portable-win-x64\BetterTaskManager.exe
 ```
 
 The publish script also refreshes this stable path on every successful build, so testers do not need to locate the newest numbered preview folder:

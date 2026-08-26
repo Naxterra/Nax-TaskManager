@@ -39,6 +39,7 @@ An exit code of `0` means three complete cross-page rounds stayed within the per
 3. On Apps, confirm **Search apps** is vertically centered in its field.
 4. Confirm **Apps**, the selected application name, metadata, cards, actions, firewall status, **Connections**, and the connection grid share consistent left edges.
 5. Confirm application headings such as `svchost` have no apparent leading spaces.
+6. Click several grid headers, including Network **Remote Port**. Unsorted headers should contain no arrow text; only the active column should show one large blue-white triangle at the right edge and reverse direction on the second click.
 
 ## Privilege reporting
 

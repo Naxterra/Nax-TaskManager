@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.50 - Unreleased
+## 1.1.0-preview.51 - Unreleased
 
 ### Added
 
@@ -159,7 +159,8 @@
 - Moved Apps firewall status into its own aligned row so it no longer wraps beneath the action buttons with an extra left offset.
 - Fixed the Apps search field being stretched to the full row height, which placed its text against the upper edge; it now retains its native edit height and is vertically centered.
 - Removed WinForms glyph-overhang padding from Apps headings/status text and trim display names before rendering, eliminating the apparent leading spaces before names such as `svchost`.
-- Replaced the small low-contrast native sort glyph with bold `↕` indicators on every sortable data-grid column and high-contrast `▲`/`▼` state on the active column; Remote Port now always exposes that it is sortable.
+- Replaced the small low-contrast native sort glyph with one larger blue-white triangle drawn at the right edge of only the active sort column, including Remote Port.
+- Removed the noisy neutral arrow prefix from every unsorted header and restored compact single-line header labels.
 - Replaced the Apps search field's native baseline placement with an explicit vertically centered edit formatting rectangle and centered custom placeholder rendering.
 - Split bulk working-set Trim results into protected/access-denied, exited-during-scan, other failure, and intentional skip categories, with Standard/Admin-specific explanation.
 

@@ -30,14 +30,14 @@ Use `-SkipLatest` to stage only the numbered folder and ZIP while a tester is ru
 The self-contained single-file Windows x64 preview is placed in both a versioned folder and a stable latest-build folder:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.50-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.51-portable-win-x64
 artifacts\BetterTaskManager-latest-portable-win-x64
 ```
 
 The publish script also creates both ZIP packages automatically:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.50-portable-win-x64.zip
+artifacts\BetterTaskManager-v1.1.0-preview.51-portable-win-x64.zip
 artifacts\BetterTaskManager-latest-portable-win-x64.zip
 ```
 
