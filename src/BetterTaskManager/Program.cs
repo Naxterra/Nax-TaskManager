@@ -4093,9 +4093,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.35" || form.Text != "Better Task Manager v1.1.0-preview.35")
+                if (Application.ProductVersion != "1.1.0-preview.36" || form.Text != "Better Task Manager v1.1.0-preview.36")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.35.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.36.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -4161,6 +4161,31 @@ namespace BetterTaskManager
                 if (store.SaveSnapshot(new[] { row }, row.Timestamp) != 1 || store.LoadRecent(100).Count != 1)
                 {
                     throw new InvalidOperationException("History clear did not reset connection deduplication state.");
+                }
+
+                string sharedHistoryPath = Path.Combine(temporaryFolder, "multi-instance-history.csv");
+                var firstStore = new NetworkHistoryStore(sharedHistoryPath);
+                var secondStore = new NetworkHistoryStore(sharedHistoryPath);
+                var secondRow = new NetworkRow
+                {
+                    Timestamp = row.Timestamp,
+                    Process = "Second App",
+                    Pid = 4343,
+                    User = "TEST\\User",
+                    Protocol = "TCP",
+                    LocalAddress = "127.0.0.1",
+                    LocalPort = "23456",
+                    RemoteAddress = "127.0.0.1",
+                    RemotePort = "8443",
+                    State = "Established",
+                    Path = "C:\\Apps\\second.exe"
+                };
+                Task<int> firstWrite = Task.Run(() => firstStore.SaveSnapshot(new[] { row }, row.Timestamp));
+                Task<int> secondWrite = Task.Run(() => secondStore.SaveSnapshot(new[] { secondRow }, secondRow.Timestamp));
+                Task.WaitAll(firstWrite, secondWrite);
+                if (firstWrite.Result != 1 || secondWrite.Result != 1 || firstStore.LoadRecent(100).Count != 2)
+                {
+                    throw new InvalidOperationException("Independent History stores did not serialize writes to the same file.");
                 }
             }
             finally

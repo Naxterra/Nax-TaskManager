@@ -40,6 +40,7 @@
 - Moved native Memory maintenance off the UI thread behind one busy gate.
 - Centralized Process mutation/path action state and prevented overlapping operations.
 - Unified Apps/Network firewall eligibility behind one cross-view mutation gate.
+- Added cross-process transaction locking for the shared connection-history file.
 
 ## v2.0
 

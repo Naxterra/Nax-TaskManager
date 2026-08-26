@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 namespace BetterTaskManager
 {
@@ -13,6 +15,7 @@ namespace BetterTaskManager
         private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan Retention = TimeSpan.FromDays(30);
         private readonly string historyPath;
+        private readonly string mutexName;
         private readonly object syncRoot = new object();
         private HashSet<string> previousConnectionKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private DateTime lastWrite = DateTime.MinValue;
@@ -22,11 +25,12 @@ namespace BetterTaskManager
         {
             if (string.IsNullOrWhiteSpace(historyPath)) throw new ArgumentException("A history path is required.", nameof(historyPath));
             this.historyPath = historyPath;
+            mutexName = BuildMutexName(historyPath);
         }
 
         public int SaveSnapshot(IEnumerable<NetworkRow> rows, DateTime observedAt)
         {
-            lock (syncRoot) return SaveSnapshotCore(rows, observedAt);
+            return WithStoreLock(() => SaveSnapshotCore(rows, observedAt));
         }
 
         private int SaveSnapshotCore(IEnumerable<NetworkRow> rows, DateTime observedAt)
@@ -67,12 +71,12 @@ namespace BetterTaskManager
 
         public List<string[]> LoadRecent(int maximumRows)
         {
-            lock (syncRoot) return LoadRecentCore(maximumRows);
+            return WithStoreLock(() => LoadRecentCore(maximumRows));
         }
 
         public void Clear()
         {
-            lock (syncRoot)
+            WithStoreLock(() =>
             {
                 string folder = Path.GetDirectoryName(historyPath);
                 if (string.IsNullOrWhiteSpace(folder)) throw new InvalidOperationException("The history path has no parent folder.");
@@ -81,6 +85,37 @@ namespace BetterTaskManager
                 previousConnectionKeys.Clear();
                 lastWrite = DateTime.MinValue;
                 lastPrune = DateTime.MinValue;
+                return true;
+            });
+        }
+
+        private T WithStoreLock<T>(Func<T> action)
+        {
+            lock (syncRoot)
+            using (var mutex = new Mutex(false, mutexName))
+            {
+                bool acquired = false;
+                try
+                {
+                    try { acquired = mutex.WaitOne(TimeSpan.FromSeconds(10)); }
+                    catch (AbandonedMutexException) { acquired = true; }
+                    if (!acquired) throw new IOException("Timed out waiting for another Better Task Manager instance to release connection history.");
+                    return action();
+                }
+                finally
+                {
+                    if (acquired) mutex.ReleaseMutex();
+                }
+            }
+        }
+
+        private static string BuildMutexName(string path)
+        {
+            string normalized = Path.GetFullPath(path).ToUpperInvariant();
+            using (var sha = SHA256.Create())
+            {
+                string hash = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(normalized))).Replace("-", "");
+                return "Local\\BetterTaskManager-History-" + hash.Substring(0, 24);
             }
         }
 
