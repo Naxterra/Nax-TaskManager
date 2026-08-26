@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.38 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.39 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -34,7 +34,7 @@ New and changed connection observations are written locally. Unchanged snapshots
 
 The desktop UI can monitor its active Apps, Processes, Network, History, or Memory page every 1, 2, 5, or 15 seconds. On History, each live tick samples native connection tables, records new or state-changed observations, then reloads the retained view. Heavy snapshot work runs away from the UI thread behind one asynchronous gate in addition to per-view reentrancy guards. This prevents cross-page collectors from overlapping; queued and completed work is discarded when its originating page is no longer active. Automatic failures are reported inline with a global **Live error** state rather than modal dialogs, while explicit user refreshes retain modal error feedback.
 
-The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and committed-memory counters. Its page-based values are converted using the native page size. A stateful `GetSystemTimes` collector computes System CPU from idle, kernel, and user deltas; kernel time includes idle time, so busy percentage is `(kernel + user - idle) / (kernel + user)`. Both collectors refresh manually or through the same Live monitoring intervals.
+The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and committed-memory counters. Its page-based values are converted using the native page size. A stateful `GetSystemTimes` collector computes System CPU from idle, kernel, and user deltas; kernel time includes idle time, so busy percentage is `(kernel + user - idle) / (kernel + user)`. Both collectors refresh manually or through the same Live monitoring intervals. Each refresh appends valid CPU and RAM-load percentages to responsive double-buffered controls capped at 60 samples; no chart-specific timer or background work exists.
 
 The desktop starts unelevated. Privilege state and elevation are global navigation concerns; firewall mutation and system-level memory actions remain unavailable until the executable is restarted with `runas`.
 

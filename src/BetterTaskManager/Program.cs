@@ -241,6 +241,10 @@ namespace BetterTaskManager
         private readonly Label memoryCommitCard;
         private readonly Label memoryCacheCard;
         private readonly Label memoryStatusLabel;
+        private readonly FlowLayoutPanel memoryPanel;
+        private readonly TableLayoutPanel memoryTrendPanel;
+        private readonly PercentageTrendControl memoryCpuTrend;
+        private readonly PercentageTrendControl memoryLoadTrend;
         private readonly Panel pageHost;
         private readonly FlowLayoutPanel navBar;
         private readonly FlowLayoutPanel appMetricCards;
@@ -671,7 +675,7 @@ namespace BetterTaskManager
             historyList.HandleCreated += (s, e) => ApplyNativeDarkTheme(historyList);
             historyPanel.Controls.Add(historyList, 0, 1);
 
-            var memoryPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(16), FlowDirection = FlowDirection.TopDown, WrapContents = false };
+            memoryPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(16), FlowDirection = FlowDirection.TopDown, WrapContents = false };
             memoryTab.Controls.Add(memoryPanel);
             memoryPanel.Controls.Add(new Label { Text = "Memory", Font = new Font("Segoe UI", 15, FontStyle.Bold), AutoSize = true });
             memorySnapshotLabel = new Label { Text = "Snapshot unavailable", AutoSize = true, Width = 1400, ForeColor = Theme.MutedText };
@@ -686,6 +690,15 @@ namespace BetterTaskManager
             memoryCacheCard = MakeMetricCard("0 GiB", "System Cache");
             memoryCards.Controls.AddRange(new Control[] { memoryCpuCard, memoryLoadCard, memoryUsedCard, memoryAvailableCard, memoryCommitCard, memoryCacheCard });
             memoryPanel.Controls.Add(memoryCards);
+
+            memoryTrendPanel = new TableLayoutPanel { Width = 1400, Height = 180, ColumnCount = 2, RowCount = 1, Margin = new Padding(0, 4, 0, 10) };
+            memoryTrendPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            memoryTrendPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            memoryCpuTrend = new PercentageTrendControl { Dock = DockStyle.Fill, Title = "System CPU - last 60 samples", LineColor = Theme.AccentHover, Margin = new Padding(0, 0, 7, 0), AccessibleName = "System CPU trend" };
+            memoryLoadTrend = new PercentageTrendControl { Dock = DockStyle.Fill, Title = "Physical RAM Load - last 60 samples", LineColor = Theme.Good, Margin = new Padding(7, 0, 0, 0), AccessibleName = "Physical RAM load trend" };
+            memoryTrendPanel.Controls.Add(memoryCpuTrend, 0, 0);
+            memoryTrendPanel.Controls.Add(memoryLoadTrend, 1, 0);
+            memoryPanel.Controls.Add(memoryTrendPanel);
 
             memoryPanel.Controls.Add(new Label { Text = "Maintenance actions", Font = new Font("Segoe UI", 11, FontStyle.Bold), AutoSize = true, Margin = new Padding(0, 8, 0, 2) });
             var memoryActions = new FlowLayoutPanel { Width = 1400, Height = 40, WrapContents = false, Margin = new Padding(0) };
@@ -705,6 +718,7 @@ namespace BetterTaskManager
             });
             memoryStatusLabel = new Label { Text = "", AutoSize = true, Width = 1400 };
             memoryPanel.Controls.Add(memoryStatusLabel);
+            memoryTab.Resize += (s, e) => UpdateMemoryTrendWidth();
 
             shortcutToolTip.SetToolTip(liveMonitoringCheck, "Toggle Live monitoring (Ctrl+L)");
             shortcutToolTip.SetToolTip(appsNavButton, "Open Apps (Ctrl+1)");
@@ -830,6 +844,7 @@ namespace BetterTaskManager
             RestoreColumnWidths(appSettings.ColumnWidths);
             ApplyDarkTheme(this);
             ApplyPrivilegeState();
+            UpdateMemoryTrendWidth();
             ShowPage(appsTab);
             ShowSelectedApp();
             UpdateExecutablePathActions();
@@ -844,6 +859,12 @@ namespace BetterTaskManager
             trimAllButton.Enabled = !memoryMaintenanceInProgress;
             clearStandbyButton.Enabled = isAdmin && !memoryMaintenanceInProgress;
             emptySystemButton.Enabled = isAdmin && !memoryMaintenanceInProgress;
+        }
+
+        private void UpdateMemoryTrendWidth()
+        {
+            int availableWidth = Math.Max(520, memoryTab.ClientSize.Width - memoryPanel.Padding.Horizontal - 8);
+            memoryTrendPanel.Width = availableWidth;
         }
 
         internal static GlobalShortcutCommand GetGlobalShortcutCommand(Keys keyData, string pageName)
@@ -2514,6 +2535,8 @@ namespace BetterTaskManager
                 memoryCpuCard.ForeColor = !cpuSnapshot.SampleAvailable ? Theme.MutedText : cpuSnapshot.UsagePercent >= 90 ? Theme.Danger : cpuSnapshot.UsagePercent >= 75 ? Theme.Warning : Theme.Good;
                 memoryLoadCard.Text = snapshot.PhysicalLoadPercent.ToString("0.0", CultureInfo.CurrentCulture) + "%\nPhysical Load";
                 memoryLoadCard.ForeColor = snapshot.PhysicalLoadPercent >= 90 ? Theme.Danger : snapshot.PhysicalLoadPercent >= 75 ? Theme.Warning : Theme.Good;
+                if (cpuSnapshot.SampleAvailable) memoryCpuTrend.AddSample(cpuSnapshot.UsagePercent);
+                memoryLoadTrend.AddSample(snapshot.PhysicalLoadPercent);
                 memoryUsedCard.Text = FormatGiB(snapshot.PhysicalUsedBytes) + "\nUsed RAM";
                 memoryAvailableCard.Text = FormatGiB(snapshot.PhysicalAvailableBytes) + "\nAvailable RAM";
                 memoryCommitCard.Text = FormatGiB(snapshot.CommitTotalBytes) + " / " + FormatGiB(snapshot.CommitLimitBytes) + "\nCommit / Limit";
@@ -3050,6 +3073,22 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Memory dashboard did not expose the initial System CPU sampling state.");
             }
+            if (memoryCpuTrend.SampleCount != 0 || memoryLoadTrend.SampleCount != 1)
+            {
+                throw new InvalidOperationException("Memory trends did not respect initial CPU/RAM sample availability.");
+            }
+            using (var boundedTrend = new PercentageTrendControl(3))
+            {
+                boundedTrend.AddSample(-5);
+                boundedTrend.AddSample(50);
+                boundedTrend.AddSample(150);
+                boundedTrend.AddSample(75);
+                double[] samples = boundedTrend.SnapshotSamples();
+                if (samples.Length != 3 || samples[0] != 50 || samples[1] != 100 || samples[2] != 75)
+                {
+                    throw new InvalidOperationException("Percentage trend did not clamp and bound its sample history.");
+                }
+            }
             if (!BeginMemoryMaintenance() || trimAllButton.Enabled || clearStandbyButton.Enabled || emptySystemButton.Enabled || BeginMemoryMaintenance())
             {
                 throw new InvalidOperationException("Memory maintenance gate did not enter a single busy state.");
@@ -3063,6 +3102,10 @@ namespace BetterTaskManager
             if (!await HandleGlobalShortcutAsync(Keys.Control | Keys.D5) || activePage != memoryTab)
             {
                 throw new InvalidOperationException("Ctrl+5 did not navigate to the Memory page.");
+            }
+            if (memoryLoadTrend.SampleCount != 2)
+            {
+                throw new InvalidOperationException("Memory navigation did not append the next RAM trend sample.");
             }
             refreshIntervalBox.SelectedIndex = 3;
             networkGrid.Columns["Process"].Width = 222;
@@ -3924,6 +3967,13 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Native system CPU delta calculation failed.");
             }
+            if (PercentageTrendControl.NormalizePercentage(double.NaN) != 0 ||
+                PercentageTrendControl.NormalizePercentage(-1) != 0 ||
+                PercentageTrendControl.NormalizePercentage(101) != 100 ||
+                PercentageTrendControl.NormalizePercentage(42.5) != 42.5)
+            {
+                throw new InvalidOperationException("Percentage trend normalization failed.");
+            }
 
             TestHistoryStore();
             TestSettingsStore();
@@ -4093,9 +4143,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.38" || form.Text != "Better Task Manager v1.1.0-preview.38")
+                if (Application.ProductVersion != "1.1.0-preview.39" || form.Text != "Better Task Manager v1.1.0-preview.39")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.38.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.39.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

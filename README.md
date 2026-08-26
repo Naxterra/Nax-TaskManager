@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.38`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.39`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -35,6 +35,7 @@ The current development build is `1.1.0-preview.38`. The checked-in v1.0 downloa
 - Memory cleanup tools:
   - Live physical load, used/available RAM, system cache, and system commit/limit dashboard.
   - Native System CPU usage derived from Windows idle/kernel/user time deltas, with an explicit first-sample state.
+  - Double-buffered System CPU and physical RAM-load charts retaining the latest 60 Memory refresh samples without an additional timer.
   - Trim app working sets.
   - Bulk trim excludes Better Task Manager itself and reports trimmed, failed/inaccessible, and skipped process counts.
   - Clear standby cache.
@@ -101,13 +102,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.38-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.39-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.38-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.39-portable-win-x64\BetterTaskManager.exe
 ```
 
 Each portable folder contains `BetterTaskManager.exe`, `README.md`, `CHANGELOG.md`, `LICENSE`, and `SHA256SUMS.txt`. Verify the executable from inside that folder with:

@@ -43,6 +43,7 @@
 - Added cross-process transaction locking for the shared connection-history file.
 - Added Windows CI for build, tests, portable publish, and artifact upload.
 - Made portable packages deterministic and self-describing with an internal checksum manifest.
+- Added bounded real-time CPU and RAM-load trend charts to Memory.
 
 ## v2.0
 
