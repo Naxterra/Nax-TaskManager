@@ -278,6 +278,7 @@ namespace BetterTaskManager
         private bool settingProcessFilter = false;
         private bool loadingHistory = false;
         private bool refreshingHistory = false;
+        private bool memoryMaintenanceInProgress = false;
         private int historySortColumn = -1;
         private bool historySortAscending = true;
         private int historyPageStart = 0;
@@ -774,8 +775,8 @@ namespace BetterTaskManager
             historyFilterBox.TextChanged += (s, e) => FillHistoryGrid(true);
 
             trimAllButton.Click += async (s, e) => await TrimAllAsync();
-            clearStandbyButton.Click += (s, e) => ClearStandby();
-            emptySystemButton.Click += (s, e) => EmptySystemWorkingSets();
+            clearStandbyButton.Click += async (s, e) => await ClearStandbyAsync();
+            emptySystemButton.Click += async (s, e) => await EmptySystemWorkingSetsAsync();
             memoryRefreshButton.Click += (s, e) => RefreshMemoryPage();
 
             timer = new Timer { Interval = 5000, Enabled = false };
@@ -835,8 +836,9 @@ namespace BetterTaskManager
             adminStatusLabel.ForeColor = isAdmin ? Theme.Good : Theme.MutedText;
             blockButton.Enabled = isAdmin;
             unblockButton.Enabled = isAdmin;
-            clearStandbyButton.Enabled = isAdmin;
-            emptySystemButton.Enabled = isAdmin;
+            trimAllButton.Enabled = !memoryMaintenanceInProgress;
+            clearStandbyButton.Enabled = isAdmin && !memoryMaintenanceInProgress;
+            emptySystemButton.Enabled = isAdmin && !memoryMaintenanceInProgress;
         }
 
         internal static GlobalShortcutCommand GetGlobalShortcutCommand(Keys keyData, string pageName)
@@ -2426,7 +2428,7 @@ namespace BetterTaskManager
         private async Task TrimAllAsync()
         {
             if (MessageBox.Show(this, "Trim memory for all accessible apps? Better Task Manager itself is excluded.\n\nThis can reduce visible RAM use, but apps may reload data afterward.", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            trimAllButton.Enabled = false;
+            if (!BeginMemoryMaintenance()) return;
             try
             {
                 int currentProcessId = Environment.ProcessId;
@@ -2463,7 +2465,7 @@ namespace BetterTaskManager
             }
             finally
             {
-                trimAllButton.Enabled = true;
+                EndMemoryMaintenance();
             }
         }
 
@@ -2508,7 +2510,21 @@ namespace BetterTaskManager
             return (bytes / 1024d / 1024d / 1024d).ToString("0.0", CultureInfo.CurrentCulture) + " GiB";
         }
 
-        private void ClearStandby()
+        private bool BeginMemoryMaintenance()
+        {
+            if (memoryMaintenanceInProgress) return false;
+            memoryMaintenanceInProgress = true;
+            ApplyPrivilegeState();
+            return true;
+        }
+
+        private void EndMemoryMaintenance()
+        {
+            memoryMaintenanceInProgress = false;
+            ApplyPrivilegeState();
+        }
+
+        private async Task ClearStandbyAsync()
         {
             if (!isAdmin)
             {
@@ -2516,12 +2532,10 @@ namespace BetterTaskManager
                 return;
             }
             if (MessageBox.Show(this, "Clear Windows standby cache?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            int result = NativeMethods.PurgeStandbyList();
-            memoryStatusLabel.Text = "Clear standby cache: " + NativeMemoryResultText(result);
-            RefreshMemoryPage();
+            await RunSystemMemoryActionAsync("Clearing standby cache...", "Clear standby cache", () => NativeMethods.PurgeStandbyList());
         }
 
-        private void EmptySystemWorkingSets()
+        private async Task EmptySystemWorkingSetsAsync()
         {
             if (!isAdmin)
             {
@@ -2529,9 +2543,30 @@ namespace BetterTaskManager
                 return;
             }
             if (MessageBox.Show(this, "Release system cache/working sets? Use this only for troubleshooting memory pressure.", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            int result = NativeMethods.EmptySystemWorkingSets();
-            memoryStatusLabel.Text = "System working set cleanup: " + NativeMemoryResultText(result);
-            RefreshMemoryPage();
+            await RunSystemMemoryActionAsync("Releasing system cache/working sets...", "System working set cleanup", () => NativeMethods.EmptySystemWorkingSets());
+        }
+
+        private async Task RunSystemMemoryActionAsync(string progressText, string resultPrefix, Func<int> action)
+        {
+            if (!BeginMemoryMaintenance()) return;
+            memoryStatusLabel.Text = progressText;
+            memoryStatusLabel.ForeColor = Theme.Warning;
+            try
+            {
+                int result = await Task.Run(action);
+                memoryStatusLabel.Text = resultPrefix + ": " + NativeMemoryResultText(result);
+                memoryStatusLabel.ForeColor = result == 0 ? Theme.Good : Theme.Danger;
+                RefreshMemoryPage();
+            }
+            catch (Exception ex)
+            {
+                memoryStatusLabel.Text = resultPrefix + " failed: " + ex.Message;
+                memoryStatusLabel.ForeColor = Theme.Danger;
+            }
+            finally
+            {
+                EndMemoryMaintenance();
+            }
         }
 
         private async Task BlockSelectedAsync(bool block)
@@ -2956,6 +2991,15 @@ namespace BetterTaskManager
             if (!RefreshMemoryPage() || !memoryCpuCard.Text.StartsWith("...", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("Memory dashboard did not expose the initial System CPU sampling state.");
+            }
+            if (!BeginMemoryMaintenance() || trimAllButton.Enabled || clearStandbyButton.Enabled || emptySystemButton.Enabled || BeginMemoryMaintenance())
+            {
+                throw new InvalidOperationException("Memory maintenance gate did not enter a single busy state.");
+            }
+            EndMemoryMaintenance();
+            if (!trimAllButton.Enabled || clearStandbyButton.Enabled != isAdmin || emptySystemButton.Enabled != isAdmin)
+            {
+                throw new InvalidOperationException("Memory maintenance controls did not return to their idle privilege state.");
             }
             VerifyNarrowLayout();
             if (!await HandleGlobalShortcutAsync(Keys.Control | Keys.D5) || activePage != memoryTab)
@@ -3944,9 +3988,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.32" || form.Text != "Better Task Manager v1.1.0-preview.32")
+                if (Application.ProductVersion != "1.1.0-preview.33" || form.Text != "Better Task Manager v1.1.0-preview.33")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.32.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.33.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

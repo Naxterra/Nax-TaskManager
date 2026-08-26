@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.32 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.33 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -25,6 +25,8 @@ Apps, Processes, and Network resolve selected executable paths through one activ
 Process snapshots carry process start time in addition to PID. Force Kill and Trim compare this identity before confirmation/action and again inside the background operation, preventing a recycled PID from targeting a different process. Force Kill also rejects the application's own PID; zero/unavailable start times retain best-effort compatibility for protected processes.
 
 Bulk working-set trim enumerates processes off the UI thread, excludes PID 0 and the controlling Better Task Manager process, catches failures per target, and returns trimmed/failed/skipped counts. Its UI action is restored in `finally`, and only the active Memory snapshot is refreshed afterward.
+
+All Memory maintenance shares a UI-level busy gate. Bulk trim, standby purge, and system working-set release cannot overlap; native work executes off the UI thread, all action buttons disable together, and `finally` restores controls according to the current administrator state. UI smoke coverage verifies these transitions without executing destructive native calls.
 
 New and changed connection observations are written locally. Unchanged snapshots are suppressed, the minimum sampling interval is one second, and entries are pruned after 30 days. The History view asynchronously caches the newest 2,000 rows, filters that cache in memory, applies column-aware sorting (date, integer, or case-insensitive text), and pages a native virtual list through the complete result in 100-row windows. Manual and Live reloads preserve the current page when possible. CSV export includes the complete filtered result. A confirmed Clear action uses the same store lock as sampling, atomically restores a header-only file, and resets in-memory deduplication state.
 

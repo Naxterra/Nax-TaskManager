@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.32 - Unreleased
+## 1.1.0-preview.33 - Unreleased
 
 ### Added
 
@@ -37,6 +37,7 @@
 - Added selection-aware **Open Folder** and **Copy Path** actions to Apps, Processes, and Network.
 - Added process-start-time validation and self-process protection for destructive Process actions.
 - Added explicit trimmed/failed/skipped accounting to bulk working-set trimming.
+- Added one shared non-overlapping busy gate for all Memory maintenance actions.
 
 ### Changed
 
@@ -71,6 +72,7 @@
 - Folder opening uses direct Windows shell activation of the resolved directory; clipboard copying retries brief contention and reports success inline.
 - Force Kill confirmation now identifies the process by name, PID, and path and explicitly states that child processes are included.
 - Bulk trim excludes Better Task Manager and PID 0, always restores its action button, and refreshes only the active Memory dashboard.
+- Standby-cache and system-working-set native calls now run through `Task.Run`; all maintenance controls disable together and restore according to administrator state in `finally`.
 
 ### Fixed
 
@@ -107,6 +109,7 @@
 - Path actions now disable themselves when selection/path data is unavailable, and they remain inside responsive wrapping toolbars at narrow widths.
 - Fixed stale PID reuse potentially targeting a different process between snapshot and Force Kill/Trim; Trim failures now receive scoped error handling.
 - Removed the obsolete Process refresh requested from the Memory page after bulk trim, which the stale-page collector gate correctly discarded.
+- Fixed Clear Standby Cache and Release System Cache blocking the WinForms UI thread while Windows performed native maintenance.
 
 ## v1.0.0 - 2026-06-06
 

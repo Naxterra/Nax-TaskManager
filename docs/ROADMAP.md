@@ -37,6 +37,7 @@
 - Added safe selected executable path copy/open-folder workflows across primary views.
 - Hardened Force Kill and Trim against PID reuse and self-termination.
 - Made bulk working-set trim self-safe, counted, and exception-safe.
+- Moved native Memory maintenance off the UI thread behind one busy gate.
 
 ## v2.0
 
