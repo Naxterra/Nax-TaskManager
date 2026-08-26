@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.12 - Unreleased
+## 1.1.0-preview.13 - Unreleased
 
 ### Added
 
@@ -17,6 +17,7 @@
 - Added instant all-column Network search across application, PID, user, protocol, endpoints, state, and path.
 - Added explicit per-PID resolution state so successful and denied executable-path/user lookups are both cached across collectors.
 - Expanded Apps search across name, path, user, firewall state, process IDs/count, and connection count.
+- Added Previous/Next paging through every filtered and sorted History result while retaining the responsive 100-row render window.
 
 ### Changed
 
@@ -31,6 +32,7 @@
 - Split Network actions/search from its snapshot and bandwidth status line, and assigned stable column widths for a calmer layout.
 - Process identity cache entries now carry process start time, are shared safely by Apps, Processes, Network, and History, and are invalidated when Windows reuses a PID.
 - Apps filtering and typed sorting now operate on the cached grouped snapshot; active sort and selected app persist across search and Live refreshes.
+- History filtering or sorting returns to the first result page; manual and Live reloads preserve the current page and clamp it safely when the result set shrinks.
 
 ### Fixed
 
@@ -47,6 +49,7 @@
 - Removed content-based Network column resizing during refresh, avoiding repeated width measurement on large connection snapshots.
 - Eliminated repeated protected-process path/user calls on every Live tick and synchronized the shared CPU baseline cache to prevent concurrent Apps/Processes refresh races.
 - Fixed the Apps firewall column falling back to name sorting and stopped search or refresh from silently discarding the active Apps sort.
+- Removed the earlier limitation that made History matches beyond the first 100 visible only through filtering or CSV export.
 
 ## v1.0.0 - 2026-06-06
 

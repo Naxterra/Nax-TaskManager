@@ -193,6 +193,8 @@ namespace BetterTaskManager
         private readonly Panel historyTab;
         private readonly Label historyNoteLabel;
         private readonly Button reloadHistoryButton;
+        private readonly Button historyPreviousButton;
+        private readonly Button historyNextButton;
         private readonly TextBox historyFilterBox;
         private readonly Button trimAllButton;
         private readonly Button clearStandbyButton;
@@ -238,6 +240,7 @@ namespace BetterTaskManager
         private bool refreshingHistory = false;
         private int historySortColumn = -1;
         private bool historySortAscending = true;
+        private int historyPageStart = 0;
         private readonly Dictionary<string, string> firewallStatusCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly NetworkHistoryStore historyStore;
         private long lastAdapterReceived = -1;
@@ -553,6 +556,10 @@ namespace BetterTaskManager
             var historyToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 6, 8, 4) };
             reloadHistoryButton = MakeButton("Reload History", 120);
             var exportHistoryButton = MakeButton("Export CSV", 100);
+            historyPreviousButton = MakeButton("Previous", 80);
+            historyNextButton = MakeButton("Next", 65);
+            historyPreviousButton.Enabled = false;
+            historyNextButton.Enabled = false;
             var historyFilterLabel = new Label { Text = "Filter:", AutoSize = true, Margin = new Padding(8, 9, 4, 0) };
             historyFilterBox = new TextBox { Width = 260, PlaceholderText = "App, PID, address, state, path..." };
             historyNoteLabel = new Label
@@ -561,7 +568,7 @@ namespace BetterTaskManager
                 AutoSize = true,
                 Margin = new Padding(12, 9, 4, 0)
             };
-            historyToolbar.Controls.AddRange(new Control[] { reloadHistoryButton, exportHistoryButton, historyFilterLabel, historyFilterBox, historyNoteLabel });
+            historyToolbar.Controls.AddRange(new Control[] { reloadHistoryButton, exportHistoryButton, historyPreviousButton, historyNextButton, historyFilterLabel, historyFilterBox, historyNoteLabel });
             historyPanel.Controls.Add(historyToolbar, 0, 0);
             historyList = new BufferedListView
             {
@@ -655,7 +662,9 @@ namespace BetterTaskManager
             exportNetworkButton.Click += async (s, e) => await ExportGridAsync(networkGrid, "network-connections");
             reloadHistoryButton.Click += async (s, e) => await LoadHistoryGridAsync();
             exportHistoryButton.Click += async (s, e) => await ExportHistoryAsync();
-            historyFilterBox.TextChanged += (s, e) => FillHistoryGrid();
+            historyPreviousButton.Click += (s, e) => MoveHistoryPage(-1);
+            historyNextButton.Click += (s, e) => MoveHistoryPage(1);
+            historyFilterBox.TextChanged += (s, e) => FillHistoryGrid(true);
 
             trimAllButton.Click += async (s, e) => await TrimAllAsync();
             clearStandbyButton.Click += (s, e) => ClearStandby();
@@ -1083,7 +1092,9 @@ namespace BetterTaskManager
         {
             historySortAscending = e.Column == historySortColumn ? !historySortAscending : true;
             historySortColumn = e.Column;
+            historyPageStart = 0;
             SortHistoryRows();
+            UpdateHistoryPage();
         }
 
         private void SortHistoryRows()
@@ -1092,7 +1103,6 @@ namespace BetterTaskManager
             IEnumerable<string[]> sorted = visibleHistoryRows.OrderBy(row => SortKey(historySortColumn < row.Length ? row[historySortColumn] : ""));
             if (!historySortAscending) sorted = sorted.Reverse();
             visibleHistoryRows = sorted.ToList();
-            historyList.Invalidate();
         }
 
         private static Dictionary<string, string> LoadFirewallStatuses(IEnumerable<AppProfile> apps)
@@ -2055,7 +2065,7 @@ namespace BetterTaskManager
             try
             {
                 latestHistoryRows = await Task.Run(() => historyStore.LoadRecent(2000));
-                FillHistoryGrid();
+                FillHistoryGrid(false);
             }
             catch (Exception ex)
             {
@@ -2088,7 +2098,7 @@ namespace BetterTaskManager
                 });
 
                 latestHistoryRows = result.Item1;
-                FillHistoryGrid();
+                FillHistoryGrid(false);
                 historyNoteLabel.Text = "Live " + result.Item4.ToString("HH:mm:ss", CultureInfo.CurrentCulture) + ": " +
                     result.Item2.ToString(CultureInfo.CurrentCulture) + " active, " +
                     result.Item3.ToString(CultureInfo.CurrentCulture) + " recorded. " + historyNoteLabel.Text;
@@ -2105,32 +2115,58 @@ namespace BetterTaskManager
             }
         }
 
-        private void FillHistoryGrid()
+        private void FillHistoryGrid(bool resetPage = true)
         {
             string filter = historyFilterBox.Text.Trim();
             visibleHistoryRows = latestHistoryRows.Where(row => HistoryRowMatchesFilter(row, filter)).ToList();
 
             SortHistoryRows();
-            historyList.VirtualListSize = Math.Min(visibleHistoryRows.Count, HistoryDisplayLimit);
+            if (resetPage) historyPageStart = 0;
+            UpdateHistoryPage();
+        }
+
+        private void MoveHistoryPage(int direction)
+        {
+            if (direction == 0 || visibleHistoryRows.Count == 0) return;
+            historyPageStart += direction * HistoryDisplayLimit;
+            UpdateHistoryPage();
+        }
+
+        private void UpdateHistoryPage()
+        {
+            int maximumStart = visibleHistoryRows.Count == 0 ? 0 : ((visibleHistoryRows.Count - 1) / HistoryDisplayLimit) * HistoryDisplayLimit;
+            historyPageStart = Math.Max(0, Math.Min(historyPageStart, maximumStart));
+            int displayed = Math.Min(HistoryDisplayLimit, Math.Max(0, visibleHistoryRows.Count - historyPageStart));
+            historyList.VirtualListSize = displayed;
+            historyPreviousButton.Enabled = historyPageStart > 0;
+            historyNextButton.Enabled = historyPageStart + displayed < visibleHistoryRows.Count;
             historyList.Invalidate();
 
             historyNoteLabel.ForeColor = Theme.MutedText;
             string scope = latestHistoryRows.Count == 2000 ? "2,000 retained" : latestHistoryRows.Count.ToString(CultureInfo.CurrentCulture) + " retained";
-            int displayed = historyList.VirtualListSize;
-            historyNoteLabel.Text = visibleHistoryRows.Count > displayed
-                ? displayed.ToString(CultureInfo.CurrentCulture) + "/" + visibleHistoryRows.Count.ToString(CultureInfo.CurrentCulture) + " matches shown (" + scope + "); export includes all matches."
-                : displayed.ToString(CultureInfo.CurrentCulture) + " matches (" + scope + ").";
+            if (displayed == 0)
+            {
+                historyNoteLabel.Text = "0 matches (" + scope + ").";
+            }
+            else
+            {
+                int first = historyPageStart + 1;
+                int last = historyPageStart + displayed;
+                historyNoteLabel.Text = first.ToString(CultureInfo.CurrentCulture) + "-" + last.ToString(CultureInfo.CurrentCulture) +
+                    "/" + visibleHistoryRows.Count.ToString(CultureInfo.CurrentCulture) + " matches (" + scope + "); export includes all matches.";
+            }
         }
 
         private void HistoryListRetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)
         {
-            if (e.ItemIndex < 0 || e.ItemIndex >= visibleHistoryRows.Count)
+            int sourceIndex = historyPageStart + e.ItemIndex;
+            if (e.ItemIndex < 0 || sourceIndex < 0 || sourceIndex >= visibleHistoryRows.Count)
             {
                 e.Item = new ListViewItem("");
                 return;
             }
 
-            string[] row = visibleHistoryRows[e.ItemIndex];
+            string[] row = visibleHistoryRows[sourceIndex];
             var item = new ListViewItem(row.Length > 0 ? row[0] : "");
             for (int index = 1; index < historyList.Columns.Count; index++)
             {
@@ -2172,6 +2208,54 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Live monitoring did not sample the active History page.");
             }
+
+            latestHistoryRows = Enumerable.Range(0, 250)
+                .Select(index => new[]
+                {
+                    "2026-01-01T00:00:00",
+                    "item-" + index.ToString("000", CultureInfo.InvariantCulture),
+                    index.ToString(CultureInfo.InvariantCulture),
+                    "TEST\\User",
+                    "TCP",
+                    "127.0.0.1",
+                    "5000",
+                    "10.0.0.1",
+                    "443",
+                    "Established",
+                    "C:\\Apps\\item.exe"
+                })
+                .ToList();
+            FillHistoryGrid(true);
+            if (historyPageStart != 0 || historyList.VirtualListSize != 100 || historyPreviousButton.Enabled || !historyNextButton.Enabled)
+            {
+                throw new InvalidOperationException("History paging did not initialize the first page correctly.");
+            }
+
+            MoveHistoryPage(1);
+            var secondPageItem = new RetrieveVirtualItemEventArgs(0);
+            HistoryListRetrieveVirtualItem(historyList, secondPageItem);
+            if (historyPageStart != 100 || secondPageItem.Item.SubItems[1].Text != "item-100")
+            {
+                throw new InvalidOperationException("History paging did not expose the second page correctly.");
+            }
+            FillHistoryGrid(false);
+            if (historyPageStart != 100)
+            {
+                throw new InvalidOperationException("History reload did not preserve the current result page.");
+            }
+
+            MoveHistoryPage(1);
+            if (historyPageStart != 200 || historyList.VirtualListSize != 50 || !historyPreviousButton.Enabled || historyNextButton.Enabled)
+            {
+                throw new InvalidOperationException("History paging did not clamp the final page correctly.");
+            }
+
+            historyFilterBox.Text = "item-249";
+            if (historyPageStart != 0 || historyList.VirtualListSize != 1)
+            {
+                throw new InvalidOperationException("History filtering did not reset paging to the first result page.");
+            }
+            historyFilterBox.Clear();
 
             latestProcessRows = new List<ProcessRow>
             {
@@ -2876,9 +2960,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.12" || form.Text != "Better Task Manager v1.1.0-preview.12")
+                if (Application.ProductVersion != "1.1.0-preview.13" || form.Text != "Better Task Manager v1.1.0-preview.13")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.12.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.13.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

@@ -17,6 +17,7 @@
 - Added cached all-column Network search with persistent typed sorting and fixed-width rendering.
 - Added synchronized process identity and CPU caches to reduce repeated work during Live monitoring.
 - Made Apps search, typed sorting, and selection persistent over cached grouped snapshots.
+- Added responsive paging through the complete filtered and sorted History cache.
 
 ## v2.0
 
