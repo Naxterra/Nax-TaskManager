@@ -47,6 +47,12 @@ An exit code of `0` means three complete cross-page rounds stayed within the per
 3. Confirm the header distinguishes **memory privilege ready** from **memory privilege unavailable**. The two system-memory buttons should be enabled only in the ready state.
 4. It is not necessary to execute either cleanup action to validate capability detection.
 
+## Working-set Trim reporting
+
+1. On Memory, choose **Trim App Memory** and confirm the warning yourself.
+2. Confirm the result reports separate counts for trimmed, protected/access denied, exited during scan, other failures, and skipped System/BTM processes.
+3. In Standard mode, access denials are expected for higher-integrity services and the result should suggest **Restart as Admin**. Elevated mode can reduce those denials, but Windows protected services and security processes may still reject working-set access.
+
 ## History privacy control
 
 1. Open History and clear **Record history** without using **Clear History**.

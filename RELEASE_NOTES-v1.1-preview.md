@@ -13,7 +13,9 @@ This preview is a substantial update to the checked-in v1.0 release. It remains 
 - A persisted **Record history** checkbox stops future disk writes while keeping existing history available for viewing and export.
 - Every successful local publish updates a stable `BetterTaskManager-latest-portable-win-x64` folder and ZIP, avoiding stale numbered-preview launches.
 - Apps search text is vertically centered, and detail headings use tight rendering without apparent leading spaces; all detail content shares one left edge, including firewall status on its own row.
+- Sortable grid columns show visible neutral `↕` indicators and high-contrast active `▲`/`▼` state, including Remote Port.
 - Memory includes native System CPU, physical/commit/cache counters, bounded 60-sample CPU/RAM trends, and non-blocking maintenance actions.
+- Bulk Trim explains how many processes were protected/access denied, exited during enumeration, failed unexpectedly, or were intentionally skipped instead of combining them into one ambiguous failure count.
 - Elevated sessions explicitly activate and verify the Windows system-memory privilege before enabling standby/system-cache maintenance, avoiding misleading administrator-only checks.
 - Firewall, Process mutation, Memory maintenance, snapshot collection, and History persistence have explicit non-overlapping gates and stale-result safeguards.
 - Force Kill/Trim validate process start time, reject PID reuse, and protect Better Task Manager's own process.

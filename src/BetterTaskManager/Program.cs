@@ -67,7 +67,7 @@ namespace BetterTaskManager
         public static extern bool AdjustTokenPrivileges(IntPtr tokenHandle, bool disableAllPrivileges, ref TokenPrivileges newState,
             int bufferLength, IntPtr previousState, IntPtr returnLength);
 
-        [DllImport("psapi.dll")]
+        [DllImport("psapi.dll", SetLastError=true)]
         public static extern bool EmptyWorkingSet(IntPtr hProcess);
 
         [DllImport("ntdll.dll")]
@@ -179,8 +179,18 @@ namespace BetterTaskManager
     internal sealed class MemoryTrimResult
     {
         public int Trimmed;
-        public int Failed;
+        public int Inaccessible;
+        public int Exited;
+        public int OtherFailed;
         public int Skipped;
+    }
+
+    internal enum MemoryTrimOutcome
+    {
+        Trimmed,
+        Inaccessible,
+        Exited,
+        OtherFailed
     }
 
     internal sealed class BufferedDataGridView : DataGridView
@@ -229,6 +239,134 @@ namespace BetterTaskManager
                 Math.Max(0, ClientRectangle.Width - Padding.Horizontal),
                 Math.Max(0, ClientRectangle.Height - Padding.Vertical));
             TextRenderer.DrawText(e.Graphics, Text ?? "", Font, textBounds, ForeColor, flags);
+        }
+    }
+
+    internal sealed class VerticallyCenteredTextBox : TextBox
+    {
+        private const int EmSetRect = 0x00B3;
+        private const int WmPaint = 0x000F;
+        private string placeholderText = "";
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct EditRectangle
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr windowHandle, int message, IntPtr parameter, ref EditRectangle rectangle);
+
+        public VerticallyCenteredTextBox()
+        {
+            AutoSize = false;
+            Multiline = true;
+            AcceptsReturn = false;
+            WordWrap = false;
+            ScrollBars = ScrollBars.None;
+            Height = 30;
+        }
+
+        [System.ComponentModel.DefaultValue("")]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public new string PlaceholderText
+        {
+            get { return placeholderText; }
+            set
+            {
+                placeholderText = value ?? "";
+                Invalidate();
+            }
+        }
+
+        internal int TextTopOffset { get; private set; }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            UpdateFormattingRectangle();
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            UpdateFormattingRectangle();
+        }
+
+        protected override void OnFontChanged(EventArgs e)
+        {
+            base.OnFontChanged(e);
+            UpdateFormattingRectangle();
+        }
+
+        protected override void OnTextChanged(EventArgs e)
+        {
+            if (Text.IndexOfAny(new[] { '\r', '\n' }) >= 0)
+            {
+                int selection = SelectionStart;
+                Text = Text.Replace("\r", " ").Replace("\n", " ");
+                SelectionStart = Math.Min(selection, TextLength);
+                return;
+            }
+            base.OnTextChanged(e);
+            Invalidate();
+        }
+
+        protected override void OnKeyPress(KeyPressEventArgs e)
+        {
+            if (e.KeyChar == '\r' || e.KeyChar == '\n')
+            {
+                e.Handled = true;
+                return;
+            }
+            base.OnKeyPress(e);
+        }
+
+        protected override void OnGotFocus(EventArgs e)
+        {
+            base.OnGotFocus(e);
+            Invalidate();
+        }
+
+        protected override void OnLostFocus(EventArgs e)
+        {
+            base.OnLostFocus(e);
+            Invalidate();
+        }
+
+        protected override void WndProc(ref Message message)
+        {
+            base.WndProc(ref message);
+            if (message.Msg == WmPaint && !Focused && TextLength == 0 && !string.IsNullOrEmpty(placeholderText))
+            {
+                using (Graphics graphics = Graphics.FromHwnd(Handle))
+                {
+                    var bounds = new Rectangle(5, TextTopOffset, Math.Max(0, ClientSize.Width - 10), Math.Max(0, ClientSize.Height - TextTopOffset));
+                    TextRenderer.DrawText(graphics, placeholderText, Font, bounds, Color.FromArgb(166, 181, 201),
+                        TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix |
+                        TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
+                }
+            }
+        }
+
+        private void UpdateFormattingRectangle()
+        {
+            if (!IsHandleCreated || ClientSize.Width <= 8 || ClientSize.Height <= 0) return;
+            int textHeight = TextRenderer.MeasureText("Ag", Font, Size.Empty,
+                TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine).Height;
+            TextTopOffset = Math.Max(1, (ClientSize.Height - textHeight) / 2);
+            var rectangle = new EditRectangle
+            {
+                Left = 4,
+                Top = TextTopOffset,
+                Right = Math.Max(5, ClientSize.Width - 4),
+                Bottom = Math.Min(ClientSize.Height, TextTopOffset + textHeight + 1)
+            };
+            SendMessage(Handle, EmSetRect, IntPtr.Zero, ref rectangle);
+            Invalidate();
         }
     }
 
@@ -287,7 +425,7 @@ namespace BetterTaskManager
         private readonly Button appCopyPathButton;
         private readonly Label appFirewallCard;
         private readonly Label appFirewallDetailsLabel;
-        private readonly TextBox appSearchBox;
+        private readonly VerticallyCenteredTextBox appSearchBox;
         private readonly Label appTitleLabel;
         private readonly Label appMetaLabel;
         private readonly Label appConnectionCard;
@@ -511,7 +649,7 @@ namespace BetterTaskManager
                 Margin = new Padding(0),
                 Padding = new Padding(0)
             };
-            appSearchBox = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(0) };
+            appSearchBox = new VerticallyCenteredTextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(0) };
             appSearchBox.PlaceholderText = "Search apps";
             appGrid = NewGrid();
             appGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
@@ -526,8 +664,8 @@ namespace BetterTaskManager
             });
             appGrid.Columns["App"].Width = 145;
             appGrid.Columns["Firewall"].Width = 105;
-            appGrid.Columns["Processes"].Width = 45;
-            appGrid.Columns["Connections"].Width = 45;
+            appGrid.Columns["Processes"].Width = 62;
+            appGrid.Columns["Connections"].Width = 58;
             appGrid.Columns["Cpu"].Width = 65;
             appGrid.Columns["Cpu"].ToolTipText = "Sum of normalized per-PID CPU from the same Apps snapshot.";
             appGrid.Columns["Ram"].Width = 90;
@@ -724,9 +862,9 @@ namespace BetterTaskManager
             networkGrid.Columns["User"].Width = 180;
             networkGrid.Columns["Protocol"].Width = 80;
             networkGrid.Columns["LocalAddress"].Width = 180;
-            networkGrid.Columns["LocalPort"].Width = 85;
+            networkGrid.Columns["LocalPort"].Width = 105;
             networkGrid.Columns["RemoteAddress"].Width = 180;
-            networkGrid.Columns["RemotePort"].Width = 85;
+            networkGrid.Columns["RemotePort"].Width = 120;
             networkGrid.Columns["State"].Width = 110;
             networkGrid.Columns["Path"].Width = 500;
             LockGridColumns(networkGrid);
@@ -1382,14 +1520,17 @@ namespace BetterTaskManager
         private void LockGridColumns(DataGridView grid)
         {
             grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            grid.ColumnHeadersHeight = 28;
+            grid.ColumnHeadersHeight = 30;
+            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             grid.AllowUserToResizeRows = false;
             grid.AllowUserToResizeColumns = true;
             foreach (DataGridViewColumn column in grid.Columns)
             {
                 column.SortMode = DataGridViewColumnSortMode.Programmatic;
                 column.Resizable = DataGridViewTriState.True;
+                column.Tag = column.HeaderText;
             }
+            ApplySortIndicators(grid, null, true);
             grid.ColumnHeaderMouseClick -= GridColumnHeaderMouseClick;
             grid.ColumnHeaderMouseClick += GridColumnHeaderMouseClick;
         }
@@ -1425,16 +1566,21 @@ namespace BetterTaskManager
             {
                 FillNetworkGridFromCache();
             }
-            ApplySortGlyph(grid, columnName, ascending);
+            ApplySortIndicators(grid, columnName, ascending);
         }
 
-        private static void ApplySortGlyph(DataGridView grid, string columnName, bool ascending)
+        private static void ApplySortIndicators(DataGridView grid, string columnName, bool ascending)
         {
             foreach (DataGridViewColumn column in grid.Columns)
             {
                 column.HeaderCell.SortGlyphDirection = SortOrder.None;
+                string baseText = Convert.ToString(column.Tag, CultureInfo.InvariantCulture);
+                if (string.IsNullOrEmpty(baseText)) baseText = column.Name;
+                column.HeaderText = string.Equals(column.Name, columnName, StringComparison.Ordinal)
+                    ? (ascending ? "▲ " : "▼ ") + baseText
+                    : "↕ " + baseText;
             }
-            grid.Columns[columnName].HeaderCell.SortGlyphDirection = ascending ? SortOrder.Ascending : SortOrder.Descending;
+            grid.Invalidate(new Rectangle(0, 0, grid.ClientSize.Width, grid.ColumnHeadersHeight));
         }
 
         private List<AppProfile> SortApps(List<AppProfile> apps, string columnName, bool ascending)
@@ -2646,7 +2792,12 @@ namespace BetterTaskManager
                         {
                             throw new InvalidOperationException("The PID now belongs to a different process. Refresh and select it again.");
                         }
-                        if (!NativeMethods.EmptyWorkingSet(process.Handle)) throw new InvalidOperationException("Windows did not trim this process working set.");
+                        if (!NativeMethods.EmptyWorkingSet(process.Handle))
+                        {
+                            int error = Marshal.GetLastWin32Error();
+                            throw new System.ComponentModel.Win32Exception(error,
+                                "Windows did not trim this process working set (error " + error.ToString(CultureInfo.InvariantCulture) + ").");
+                        }
                     }
                 });
                 await RefreshProcessesAsync();
@@ -2680,18 +2831,21 @@ namespace BetterTaskManager
                                 summary.Skipped++;
                                 continue;
                             }
-                            if (NativeMethods.EmptyWorkingSet(process.Handle)) summary.Trimmed++;
-                            else summary.Failed++;
+                            switch (TryTrimWorkingSet(process))
+                            {
+                                case MemoryTrimOutcome.Trimmed: summary.Trimmed++; break;
+                                case MemoryTrimOutcome.Inaccessible: summary.Inaccessible++; break;
+                                case MemoryTrimOutcome.Exited: summary.Exited++; break;
+                                default: summary.OtherFailed++; break;
+                            }
                         }
-                        catch { summary.Failed++; }
+                        catch { summary.OtherFailed++; }
                         finally { process.Dispose(); }
                     }
                     return summary;
                 });
-                memoryStatusLabel.ForeColor = result.Failed == 0 ? Theme.Good : Theme.Warning;
-                memoryStatusLabel.Text = "Working-set trim: " + result.Trimmed.ToString(CultureInfo.CurrentCulture) + " trimmed, " +
-                    result.Failed.ToString(CultureInfo.CurrentCulture) + " inaccessible/failed, " +
-                    result.Skipped.ToString(CultureInfo.CurrentCulture) + " skipped.";
+                memoryStatusLabel.ForeColor = result.Inaccessible == 0 && result.OtherFailed == 0 ? Theme.Good : Theme.Warning;
+                memoryStatusLabel.Text = MemoryTrimSummaryText(result, isAdmin);
                 RefreshMemoryPage();
             }
             catch (Exception ex)
@@ -2708,6 +2862,53 @@ namespace BetterTaskManager
         internal static bool ShouldTrimProcess(int processId, int currentProcessId)
         {
             return processId > 0 && processId != currentProcessId;
+        }
+
+        private static MemoryTrimOutcome TryTrimWorkingSet(Process process)
+        {
+            try
+            {
+                if (NativeMethods.EmptyWorkingSet(process.Handle)) return MemoryTrimOutcome.Trimmed;
+                return MemoryTrimOutcomeForWin32Error(Marshal.GetLastWin32Error());
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                return MemoryTrimOutcomeForWin32Error(ex.NativeErrorCode);
+            }
+            catch (InvalidOperationException)
+            {
+                return MemoryTrimOutcome.Exited;
+            }
+            catch (ArgumentException)
+            {
+                return MemoryTrimOutcome.Exited;
+            }
+            catch
+            {
+                return MemoryTrimOutcome.OtherFailed;
+            }
+        }
+
+        internal static MemoryTrimOutcome MemoryTrimOutcomeForWin32Error(int errorCode)
+        {
+            if (errorCode == 5 || errorCode == 1314) return MemoryTrimOutcome.Inaccessible;
+            if (errorCode == 6 || errorCode == 87 || errorCode == 1168) return MemoryTrimOutcome.Exited;
+            return MemoryTrimOutcome.OtherFailed;
+        }
+
+        internal static string MemoryTrimSummaryText(MemoryTrimResult result, bool administrator)
+        {
+            if (result == null) throw new ArgumentNullException(nameof(result));
+            string explanation = result.Inaccessible == 0
+                ? ""
+                : administrator
+                    ? " Protected services and security processes can still refuse trimming."
+                    : " Restart as Admin may reduce denials; protected services can still refuse.";
+            return "Working-set trim: " + result.Trimmed.ToString(CultureInfo.CurrentCulture) + " trimmed; " +
+                result.Inaccessible.ToString(CultureInfo.CurrentCulture) + " protected/access denied; " +
+                result.Exited.ToString(CultureInfo.CurrentCulture) + " exited during scan; " +
+                result.OtherFailed.ToString(CultureInfo.CurrentCulture) + " other failures; " +
+                result.Skipped.ToString(CultureInfo.CurrentCulture) + " skipped (System/BTM)." + explanation;
         }
 
         private bool RefreshMemoryPage()
@@ -3213,6 +3414,19 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Network sorting was not preserved for the cached snapshot.");
             }
+            ApplySortIndicators(networkGrid, "RemotePort", true);
+            if (networkGrid.Columns["RemotePort"].HeaderText != "▲ Remote Port" ||
+                !networkGrid.Columns["PID"].HeaderText.StartsWith("↕ ", StringComparison.Ordinal) ||
+                networkGrid.Columns["RemotePort"].HeaderCell.SortGlyphDirection != SortOrder.None)
+            {
+                throw new InvalidOperationException("Network Remote Port did not expose the high-contrast custom sort indicator.");
+            }
+            ApplySortIndicators(networkGrid, "RemotePort", false);
+            if (networkGrid.Columns["RemotePort"].HeaderText != "▼ Remote Port")
+            {
+                throw new InvalidOperationException("Network Remote Port descending sort indicator did not update.");
+            }
+            ApplySortIndicators(networkGrid, "PID", false);
             if (!networkCopyPathButton.Enabled || !networkOpenFolderButton.Enabled)
             {
                 throw new InvalidOperationException("Network executable path actions did not follow selection state.");
@@ -3459,9 +3673,9 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Apps aligned text must use tight rendering without glyph-overhang padding.");
             }
             if (appSearchBox.Dock != DockStyle.None || appSearchBox.Anchor != (AnchorStyles.Left | AnchorStyles.Right) ||
-                appSearchBox.Height > appSearchBox.PreferredHeight + 1)
+                !appSearchBox.Multiline || appSearchBox.Height != 30 || appSearchBox.TextTopOffset < 3)
             {
-                throw new InvalidOperationException("Apps search must retain its native text height and center vertically in its layout row.");
+                throw new InvalidOperationException("Apps search must use an explicit vertically centered edit formatting rectangle.");
             }
         }
 
@@ -4467,6 +4681,20 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Destructive process identity safety policy failed.");
             }
+            var trimSummaryProbe = new MemoryTrimResult { Trimmed = 12, Inaccessible = 3, Exited = 2, OtherFailed = 1, Skipped = 2 };
+            string standardTrimSummary = MainForm.MemoryTrimSummaryText(trimSummaryProbe, false);
+            string adminTrimSummary = MainForm.MemoryTrimSummaryText(trimSummaryProbe, true);
+            if (MainForm.MemoryTrimOutcomeForWin32Error(5) != MemoryTrimOutcome.Inaccessible ||
+                MainForm.MemoryTrimOutcomeForWin32Error(1314) != MemoryTrimOutcome.Inaccessible ||
+                MainForm.MemoryTrimOutcomeForWin32Error(6) != MemoryTrimOutcome.Exited ||
+                MainForm.MemoryTrimOutcomeForWin32Error(1234) != MemoryTrimOutcome.OtherFailed ||
+                standardTrimSummary.IndexOf("Restart as Admin", StringComparison.Ordinal) < 0 ||
+                adminTrimSummary.IndexOf("Protected services", StringComparison.Ordinal) < 0 ||
+                adminTrimSummary.IndexOf("3 protected/access denied", StringComparison.Ordinal) < 0 ||
+                adminTrimSummary.IndexOf("2 exited during scan", StringComparison.Ordinal) < 0)
+            {
+                throw new InvalidOperationException("Working-set trim failure categorization or guidance failed.");
+            }
             if (MainForm.RefreshIntervalMilliseconds(0) != 1000 || MainForm.RefreshIntervalMilliseconds(1) != 2000 ||
                 MainForm.RefreshIntervalMilliseconds(2) != 5000 || MainForm.RefreshIntervalMilliseconds(3) != 15000)
             {
@@ -4516,9 +4744,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.49" || form.Text != "Better Task Manager v1.1.0-preview.49")
+                if (Application.ProductVersion != "1.1.0-preview.50" || form.Text != "Better Task Manager v1.1.0-preview.50")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.49.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.50.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
