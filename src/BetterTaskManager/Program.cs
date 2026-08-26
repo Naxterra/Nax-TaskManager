@@ -676,14 +676,14 @@ namespace BetterTaskManager
             timer.Tick += async (s, e) =>
             {
                 if (!liveMonitoringCheck.Checked) return;
-                await RefreshActivePageAsync();
+                await RefreshActivePageAsync(true);
             };
             liveMonitoringCheck.CheckedChanged += async (s, e) =>
             {
                 timer.Enabled = liveMonitoringCheck.Checked;
                 liveStatusLabel.Text = liveMonitoringCheck.Checked ? "Live" : "Paused";
                 liveStatusLabel.ForeColor = liveMonitoringCheck.Checked ? Theme.Good : Theme.MutedText;
-                if (liveMonitoringCheck.Checked) await RefreshActivePageAsync();
+                if (liveMonitoringCheck.Checked) await RefreshActivePageAsync(true);
             };
             refreshIntervalBox.SelectedIndexChanged += (s, e) =>
             {
@@ -715,13 +715,36 @@ namespace BetterTaskManager
             emptySystemButton.Enabled = isAdmin;
         }
 
-        private async Task RefreshActivePageAsync()
+        private async Task RefreshActivePageAsync(bool automatic = false)
         {
-            if (activePage == appsTab) await RefreshAppsAsync(false);
-            else if (activePage == processTab) await RefreshProcessesAsync();
-            else if (activePage == networkTab) await RefreshNetworkAsync();
+            if (activePage == appsTab) await RefreshAppsAsync(false, automatic);
+            else if (activePage == processTab) await RefreshProcessesAsync(automatic);
+            else if (activePage == networkTab) await RefreshNetworkAsync(automatic);
             else if (activePage == historyTab) await RefreshHistoryLiveAsync();
-            else if (activePage == memoryTab) RefreshMemoryPage();
+            else if (activePage == memoryTab)
+            {
+                if (RefreshMemoryPage()) MarkLiveRefreshSuccess();
+                else MarkLiveRefreshFailure();
+            }
+        }
+
+        internal static bool ShouldShowRefreshDialog(bool automatic)
+        {
+            return !automatic;
+        }
+
+        private void MarkLiveRefreshSuccess()
+        {
+            if (!liveMonitoringCheck.Checked) return;
+            liveStatusLabel.Text = "Live";
+            liveStatusLabel.ForeColor = Theme.Good;
+        }
+
+        private void MarkLiveRefreshFailure()
+        {
+            if (!liveMonitoringCheck.Checked) return;
+            liveStatusLabel.Text = "Live error";
+            liveStatusLabel.ForeColor = Theme.Danger;
         }
 
         private async Task<T> RunSnapshotCollectionAsync<T>(Control expectedPage, Func<T> collector) where T : class
@@ -1057,7 +1080,7 @@ namespace BetterTaskManager
             }
         }
 
-        private async Task RefreshAppsAsync(bool refreshFirewall)
+        private async Task RefreshAppsAsync(bool refreshFirewall, bool automatic = false)
         {
             if (refreshingApps) return;
             refreshingApps = true;
@@ -1092,11 +1115,13 @@ namespace BetterTaskManager
                 FillAppGridFromCache();
                 UpdateBandwidthLabel();
                 ShowSelectedApp();
+                MarkLiveRefreshSuccess();
             }
             catch (Exception ex)
             {
                 appTitleLabel.Text = "Refresh failed";
                 appMetaLabel.Text = ex.Message;
+                MarkLiveRefreshFailure();
             }
             finally
             {
@@ -1476,7 +1501,7 @@ namespace BetterTaskManager
             grid.RowsDefaultCellStyle.ForeColor = Theme.Text;
         }
 
-        private async Task RefreshProcessesAsync()
+        private async Task RefreshProcessesAsync(bool automatic = false)
         {
             if (refreshingProcesses) return;
             refreshingProcesses = true;
@@ -1498,12 +1523,14 @@ namespace BetterTaskManager
                     ? (detailsLoaded ? "Running as administrator - users/paths loaded" : "Running as administrator")
                     : "Not administrator: some actions may fail");
                 statusLabel.ForeColor = isAdmin ? Theme.Good : Theme.Danger;
+                MarkLiveRefreshSuccess();
             }
             catch (Exception ex)
             {
-                statusLabel.Text = "Process refresh failed";
+                statusLabel.Text = "Process refresh failed: " + ex.Message;
                 statusLabel.ForeColor = Theme.Danger;
-                MessageBox.Show(this, ex.Message, "Process refresh failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MarkLiveRefreshFailure();
+                if (ShouldShowRefreshDialog(automatic)) MessageBox.Show(this, ex.Message, "Process refresh failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             finally
             {
@@ -1738,7 +1765,7 @@ namespace BetterTaskManager
             return map;
         }
 
-        private async Task RefreshNetworkAsync()
+        private async Task RefreshNetworkAsync(bool automatic = false)
         {
             if (refreshingNetwork) return;
             refreshingNetwork = true;
@@ -1758,12 +1785,14 @@ namespace BetterTaskManager
                 latestNetworkSnapshot = rows.Count > 0 ? rows[0].Timestamp : DateTime.Now;
                 FillNetworkGridFromCache();
                 UpdateBandwidthLabel();
+                MarkLiveRefreshSuccess();
             }
             catch (Exception ex)
             {
-                networkStatusLabel.Text = "Network refresh failed";
+                networkStatusLabel.Text = "Network refresh failed: " + ex.Message;
                 networkStatusLabel.ForeColor = Theme.Danger;
-                MessageBox.Show(this, ex.Message, "Network refresh failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MarkLiveRefreshFailure();
+                if (ShouldShowRefreshDialog(automatic)) MessageBox.Show(this, ex.Message, "Network refresh failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             finally
             {
@@ -1971,7 +2000,7 @@ namespace BetterTaskManager
             RefreshMemoryPage();
         }
 
-        private void RefreshMemoryPage()
+        private bool RefreshMemoryPage()
         {
             try
             {
@@ -1989,11 +2018,13 @@ namespace BetterTaskManager
                     "    Processes " + snapshot.ProcessCount.ToString(CultureInfo.CurrentCulture) +
                     "    Threads " + snapshot.ThreadCount.ToString(CultureInfo.CurrentCulture) +
                     "    Handles " + snapshot.HandleCount.ToString(CultureInfo.CurrentCulture);
+                return true;
             }
             catch (Exception ex)
             {
                 memorySnapshotLabel.ForeColor = Theme.Danger;
                 memorySnapshotLabel.Text = "Memory snapshot failed: " + ex.Message;
+                return false;
             }
         }
 
@@ -2123,11 +2154,13 @@ namespace BetterTaskManager
                 historyNoteLabel.Text = "Live " + result.Item4.ToString("HH:mm:ss", CultureInfo.CurrentCulture) + ": " +
                     result.Item2.ToString(CultureInfo.CurrentCulture) + " active, " +
                     result.Item3.ToString(CultureInfo.CurrentCulture) + " recorded. " + historyNoteLabel.Text;
+                MarkLiveRefreshSuccess();
             }
             catch (Exception ex)
             {
                 historyNoteLabel.Text = "Live History refresh failed: " + ex.Message;
                 historyNoteLabel.ForeColor = Theme.Danger;
+                MarkLiveRefreshFailure();
             }
             finally
             {
@@ -3017,12 +3050,16 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Live monitoring interval mapping failed.");
             }
+            if (MainForm.ShouldShowRefreshDialog(true) || !MainForm.ShouldShowRefreshDialog(false))
+            {
+                throw new InvalidOperationException("Automatic refresh dialog suppression policy failed.");
+            }
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.14" || form.Text != "Better Task Manager v1.1.0-preview.14")
+                if (Application.ProductVersion != "1.1.0-preview.15" || form.Text != "Better Task Manager v1.1.0-preview.15")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.14.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.15.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

@@ -19,6 +19,7 @@
 - Made Apps search, typed sorting, and selection persistent over cached grouped snapshots.
 - Added responsive paging through the complete filtered and sorted History cache.
 - Serialized heavy snapshot collection and suppressed stale work during rapid page navigation.
+- Replaced recurring automatic Live error dialogs with recoverable inline status.
 
 ## v2.0
 

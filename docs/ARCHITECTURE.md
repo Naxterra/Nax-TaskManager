@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.14 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.15 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -20,7 +20,7 @@ Apps, Processes, Network, and History share a synchronized per-PID identity cach
 
 New and changed connection observations are written locally. Unchanged snapshots are suppressed, the minimum sampling interval is one second, and entries are pruned after 30 days. The History view asynchronously caches the newest 2,000 rows, filters and sorts that cache in memory, and pages a native virtual list through the complete result in 100-row windows. Manual and Live reloads preserve the current page when possible. CSV export includes the complete filtered result.
 
-The desktop UI can monitor its active Apps, Processes, Network, History, or Memory page every 1, 2, 5, or 15 seconds. On History, each live tick samples native connection tables, records new or state-changed observations, then reloads the retained view. Heavy snapshot work runs away from the UI thread behind one asynchronous gate in addition to per-view reentrancy guards. This prevents cross-page collectors from overlapping; queued and completed work is discarded when its originating page is no longer active.
+The desktop UI can monitor its active Apps, Processes, Network, History, or Memory page every 1, 2, 5, or 15 seconds. On History, each live tick samples native connection tables, records new or state-changed observations, then reloads the retained view. Heavy snapshot work runs away from the UI thread behind one asynchronous gate in addition to per-view reentrancy guards. This prevents cross-page collectors from overlapping; queued and completed work is discarded when its originating page is no longer active. Automatic failures are reported inline with a global **Live error** state rather than modal dialogs, while explicit user refreshes retain modal error feedback.
 
 The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and committed-memory counters. Its page-based values are converted using the native page size and refreshed manually or through the same Live monitoring intervals.
 
