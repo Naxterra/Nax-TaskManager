@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.7`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.8`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -12,7 +12,7 @@ The current development build is `1.1.0-preview.7`. The checked-in v1.0 download
 - Per-PID Process view with user, CPU, private bytes, working set, peak working set, threads, and executable path.
 - Network view showing application, PID, user, protocol, local endpoint, remote endpoint, state, and executable path.
 - Native IPv4/IPv6 TCP and UDP collection with owning-process IDs.
-- Optional live monitoring with 1, 2, 5, or 15-second refresh intervals for Apps, Processes, Network, and Memory views.
+- Optional live monitoring with 1, 2, 5, or 15-second refresh intervals for Apps, Processes, Network, History, and Memory views.
 - Snapshot timestamps on Apps, Processes, and Network so grouped and per-PID samples can be compared accurately.
 - One-click **View Processes** reconciliation showing the exact contributing PIDs from the same Apps snapshot, with visible-row private-byte and working-set sums.
 - CSV export for the current Process, Network, and filtered History views.
@@ -25,7 +25,7 @@ The current development build is `1.1.0-preview.7`. The checked-in v1.0 download
   - Clear standby cache.
   - Release system cache.
 - Softer blue-slate dark UI with native dark controls and scrollbars.
-- Connection-change history with 30-day retention, duplicate suppression, instant all-column filtering, and a responsive 100-row virtual window over the newest 2,000 retained records. Sorting changes which 100 matches are shown, and History export includes every filtered match.
+- Connection-change history with live native connection sampling, 30-day retention, duplicate suppression, one-second change granularity, instant all-column filtering, and a responsive 100-row virtual window over the newest 2,000 retained records. Sorting changes which 100 matches are shown, and History export includes every filtered match.
 
 ## Important Limits in v1.0
 
@@ -74,13 +74,13 @@ dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.7-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.8-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.7-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.8-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download

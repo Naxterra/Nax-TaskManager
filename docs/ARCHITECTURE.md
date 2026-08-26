@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.7 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.8 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -18,9 +18,9 @@ The app collects live process data directly from Windows process APIs. IPv4 and 
 
 An Apps refresh reuses its process rows for network path/user attribution. A standalone Network refresh caches those details per PID for the duration of the snapshot, avoiding repeated protected-process lookups when one process owns many connections.
 
-New and changed connection observations are written locally. Unchanged snapshots are suppressed and entries are pruned after 30 days. The History view asynchronously caches the newest 2,000 rows, filters and sorts that cache in memory, and uses a native virtual list to paint only the first 100 rows of the current result. CSV export includes the complete filtered result.
+New and changed connection observations are written locally. Unchanged snapshots are suppressed, the minimum sampling interval is one second, and entries are pruned after 30 days. The History view asynchronously caches the newest 2,000 rows, filters and sorts that cache in memory, and uses a native virtual list to paint only the first 100 rows of the current result. CSV export includes the complete filtered result.
 
-The desktop UI can monitor its active Apps, Processes, Network, or Memory page every 1, 2, 5, or 15 seconds. Collection and history I/O run away from the UI thread, with per-view reentrancy guards preventing overlapping refreshes.
+The desktop UI can monitor its active Apps, Processes, Network, History, or Memory page every 1, 2, 5, or 15 seconds. On History, each live tick samples native connection tables, records new or state-changed observations, then reloads the retained view. Collection and history I/O run away from the UI thread, with per-view reentrancy guards preventing overlapping refreshes.
 
 The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and committed-memory counters. Its page-based values are converted using the native page size and refreshed manually or through the same Live monitoring intervals.
 

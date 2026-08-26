@@ -10,7 +10,7 @@ namespace BetterTaskManager
     internal sealed class NetworkHistoryStore
     {
         private const string Header = "Timestamp,Process,PID,User,Protocol,LocalAddress,LocalPort,RemoteAddress,RemotePort,State,Path";
-        private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan Retention = TimeSpan.FromDays(30);
         private readonly string historyPath;
         private readonly object syncRoot = new object();

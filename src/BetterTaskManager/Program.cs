@@ -227,6 +227,7 @@ namespace BetterTaskManager
         private bool updatingAppGrid = false;
         private bool settingProcessFilter = false;
         private bool loadingHistory = false;
+        private bool refreshingHistory = false;
         private int historySortColumn = -1;
         private bool historySortAscending = true;
         private readonly Dictionary<string, string> firewallStatusCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -235,7 +236,7 @@ namespace BetterTaskManager
         private long lastAdapterSent = -1;
         private DateTime lastAdapterSample = DateTime.MinValue;
 
-        public MainForm(bool skipInitialRefresh = false)
+        public MainForm(bool skipInitialRefresh = false, string historyPath = null)
         {
             Text = "Better Task Manager v" + Application.ProductVersion;
             Size = new Size(1560, 900);
@@ -245,8 +246,12 @@ namespace BetterTaskManager
             ForeColor = Theme.Text;
 
             isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            string historyFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
-            historyStore = new NetworkHistoryStore(Path.Combine(historyFolder, "network-history.csv"));
+            if (string.IsNullOrWhiteSpace(historyPath))
+            {
+                string historyFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
+                historyPath = Path.Combine(historyFolder, "network-history.csv");
+            }
+            historyStore = new NetworkHistoryStore(historyPath);
 
             var rootShell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Margin = new Padding(0), Padding = new Padding(0) };
             rootShell.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
@@ -672,6 +677,7 @@ namespace BetterTaskManager
             if (activePage == appsTab) await RefreshAppsAsync(false);
             else if (activePage == processTab) await RefreshProcessesAsync();
             else if (activePage == networkTab) await RefreshNetworkAsync();
+            else if (activePage == historyTab) await RefreshHistoryLiveAsync();
             else if (activePage == memoryTab) RefreshMemoryPage();
         }
 
@@ -1823,12 +1829,13 @@ namespace BetterTaskManager
         private async Task ShowHistoryAsync()
         {
             ShowPage(historyTab);
-            await LoadHistoryGridAsync();
+            if (liveMonitoringCheck.Checked) await RefreshHistoryLiveAsync();
+            else await LoadHistoryGridAsync();
         }
 
         private async Task LoadHistoryGridAsync()
         {
-            if (loadingHistory) return;
+            if (loadingHistory || refreshingHistory) return;
             loadingHistory = true;
             reloadHistoryButton.Enabled = false;
             historyNoteLabel.Text = "Loading recent connection changes...";
@@ -1849,6 +1856,42 @@ namespace BetterTaskManager
             }
         }
 
+        private async Task RefreshHistoryLiveAsync()
+        {
+            if (refreshingHistory || loadingHistory) return;
+            refreshingHistory = true;
+            reloadHistoryButton.Enabled = false;
+            historyNoteLabel.Text = "Sampling active connections...";
+            historyNoteLabel.ForeColor = Theme.Warning;
+            try
+            {
+                var result = await Task.Run(() =>
+                {
+                    List<NetworkRow> connections = BuildNetworkRows();
+                    DateTime sampledAt = connections.Count > 0 ? connections[0].Timestamp : DateTime.Now;
+                    int recorded = historyStore.SaveSnapshot(connections, sampledAt);
+                    List<string[]> history = historyStore.LoadRecent(2000);
+                    return Tuple.Create(history, connections.Count, recorded, sampledAt);
+                });
+
+                latestHistoryRows = result.Item1;
+                FillHistoryGrid();
+                historyNoteLabel.Text = "Live " + result.Item4.ToString("HH:mm:ss", CultureInfo.CurrentCulture) + ": " +
+                    result.Item2.ToString(CultureInfo.CurrentCulture) + " active, " +
+                    result.Item3.ToString(CultureInfo.CurrentCulture) + " recorded. " + historyNoteLabel.Text;
+            }
+            catch (Exception ex)
+            {
+                historyNoteLabel.Text = "Live History refresh failed: " + ex.Message;
+                historyNoteLabel.ForeColor = Theme.Danger;
+            }
+            finally
+            {
+                reloadHistoryButton.Enabled = true;
+                refreshingHistory = false;
+            }
+        }
+
         private void FillHistoryGrid()
         {
             string filter = historyFilterBox.Text.Trim();
@@ -1859,11 +1902,11 @@ namespace BetterTaskManager
             historyList.Invalidate();
 
             historyNoteLabel.ForeColor = Theme.MutedText;
-            string scope = latestHistoryRows.Count == 2000 ? "newest 2,000 retained rows" : latestHistoryRows.Count.ToString(CultureInfo.CurrentCulture) + " retained rows";
+            string scope = latestHistoryRows.Count == 2000 ? "2,000 retained" : latestHistoryRows.Count.ToString(CultureInfo.CurrentCulture) + " retained";
             int displayed = historyList.VirtualListSize;
             historyNoteLabel.Text = visibleHistoryRows.Count > displayed
-                ? "Showing first " + displayed.ToString(CultureInfo.CurrentCulture) + " of " + visibleHistoryRows.Count.ToString(CultureInfo.CurrentCulture) + " matches from " + scope + ". Export includes all matches."
-                : "Showing " + displayed.ToString(CultureInfo.CurrentCulture) + " of " + scope + ".";
+                ? displayed.ToString(CultureInfo.CurrentCulture) + "/" + visibleHistoryRows.Count.ToString(CultureInfo.CurrentCulture) + " matches shown (" + scope + "); export includes all matches."
+                : displayed.ToString(CultureInfo.CurrentCulture) + " matches (" + scope + ").";
         }
 
         private void HistoryListRetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)
@@ -1908,6 +1951,13 @@ namespace BetterTaskManager
             if (historyList.VirtualListSize != Math.Min(latestHistoryRows.Count, HistoryDisplayLimit))
             {
                 throw new InvalidOperationException("History view did not restore its rows after clearing the filter.");
+            }
+
+            ShowPage(historyTab);
+            await RefreshActivePageAsync();
+            if (!historyNoteLabel.Text.StartsWith("Live ", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Live monitoring did not sample the active History page.");
             }
         }
 
@@ -2328,7 +2378,8 @@ namespace BetterTaskManager
             Application.SetCompatibleTextRenderingDefault(false);
 
             int completed = 0;
-            var form = new MainForm(true);
+            string temporaryFolder = Path.Combine(Path.GetTempPath(), "BetterTaskManager-HistoryUiTest-" + Guid.NewGuid().ToString("N"));
+            var form = new MainForm(true, Path.Combine(temporaryFolder, "network-history.csv"));
             Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromSeconds(10));
@@ -2357,7 +2408,14 @@ namespace BetterTaskManager
                 }
             };
 
-            Application.Run(form);
+            try
+            {
+                Application.Run(form);
+            }
+            finally
+            {
+                try { if (Directory.Exists(temporaryFolder)) Directory.Delete(temporaryFolder, true); } catch { }
+            }
         }
 
         public static void Run()
@@ -2451,9 +2509,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.7" || form.Text != "Better Task Manager v1.1.0-preview.7")
+                if (Application.ProductVersion != "1.1.0-preview.8" || form.Text != "Better Task Manager v1.1.0-preview.8")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.7.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.8.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -2483,10 +2541,10 @@ namespace BetterTaskManager
                 };
 
                 if (store.SaveSnapshot(new[] { row }, firstSeen) != 1) throw new InvalidOperationException("History store did not save the first connection observation.");
-                if (store.SaveSnapshot(new[] { row }, firstSeen.AddSeconds(31)) != 0) throw new InvalidOperationException("History store duplicated an unchanged connection.");
-                if (store.SaveSnapshot(Array.Empty<NetworkRow>(), firstSeen.AddSeconds(62)) != 0) throw new InvalidOperationException("History store wrote an empty snapshot.");
+                if (store.SaveSnapshot(new[] { row }, firstSeen.AddSeconds(2)) != 0) throw new InvalidOperationException("History store duplicated an unchanged connection.");
+                if (store.SaveSnapshot(Array.Empty<NetworkRow>(), firstSeen.AddSeconds(4)) != 0) throw new InvalidOperationException("History store wrote an empty snapshot.");
 
-                row.Timestamp = firstSeen.AddSeconds(93);
+                row.Timestamp = firstSeen.AddSeconds(6);
                 if (store.SaveSnapshot(new[] { row }, row.Timestamp) != 1) throw new InvalidOperationException("History store did not record a connection that reappeared.");
 
                 List<string[]> loaded = store.LoadRecent(100);

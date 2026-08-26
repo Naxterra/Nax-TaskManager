@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.7 - Unreleased
+## 1.1.0-preview.8 - Unreleased
 
 ### Added
 
@@ -13,6 +13,7 @@
 - Added global privilege status and **Restart as Admin** navigation; firewall and system-level memory controls are gated consistently in Standard mode.
 - Added instant all-column filtering to the History view; sorting and CSV export operate on the complete filtered result.
 - Added a watchdog-backed History UI smoke test that verifies loading, filtering, restoration, and a responsive message-loop continuation.
+- Added real live monitoring to History: the active page now samples native connections, records new/state-changed observations, and refreshes the current filtered view at the selected interval.
 
 ### Changed
 
@@ -33,6 +34,7 @@
 - Apps now refresh when navigating back to the grouped view, preventing a stale Apps snapshot from being compared with a newly refreshed Processes snapshot without an explicit timestamp.
 - Network collection now resolves user/path details once per PID and reuses the same-snapshot Process rows during Apps refresh instead of repeating protected-process lookups for every connection.
 - Replaced the expensive History data grid with a fixed-column virtual list and a 100-row render window over the newest 2,000 cached records, eliminating multi-second UI freezes without truncating filtered CSV exports.
+- Reduced the connection-history sampling gate from 30 seconds to one second so short-lived changes can be captured during Live monitoring while unchanged rows remain deduplicated.
 
 ## v1.0.0 - 2026-06-06
 
