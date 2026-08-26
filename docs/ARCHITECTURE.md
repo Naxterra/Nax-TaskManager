@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.43 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.44 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -45,6 +45,8 @@ The desktop starts unelevated. Privilege state and elevation are global navigati
 Apps and Network firewall controls share one mutation gate and one action-state calculation. Eligibility combines elevation, selected executable path, current refresh, active mutation, and rule state where known. Commands run off the UI thread, update the shared path-keyed rule cache, and restore both pages in `finally`.
 
 Non-destructive UI preferences are stored as atomic JSON under `%LOCALAPPDATA%\BetterTaskManager`. The app restores a screen-clamped window size, maximized state, refresh interval, and clamped widths for fixed/virtual data columns. The last non-minimized state preserves maximization when closing from the taskbar. Live enabled state is excluded so launching the app never begins background sampling unexpectedly.
+
+Unexpected exception reports use a path-derived named mutex across app instances. Before append, the writer rotates `crash.log` to `crash.previous.log` when the new entry would exceed 1 MiB; oversized single entries are bounded and marked. Reports include version/runtime/OS/bitness/DPI context, while logging failures remain non-fatal.
 
 Top-level navigation and dense command surfaces use autosized wrapping flow layouts. The Apps master/detail split uses percentage sizing, with cards and actions wrapping independently; data grids retain explicit column widths and horizontal scrolling. UI smoke tests shrink the form to its minimum size and assert that visible command controls remain inside their containers.
 

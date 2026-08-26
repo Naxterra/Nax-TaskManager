@@ -3956,10 +3956,24 @@ namespace BetterTaskManager
             try
             {
                 string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
-                Directory.CreateDirectory(folder);
-                File.AppendAllText(Path.Combine(folder, "crash.log"), DateTime.Now.ToString("s") + Environment.NewLine + ex + Environment.NewLine + Environment.NewLine);
+                CrashLogWriter.Append(Path.Combine(folder, "crash.log"), BuildCrashReport(ex, DateTime.Now));
             }
             catch { }
+        }
+
+        internal static string BuildCrashReport(Exception ex, DateTime timestamp)
+        {
+            var text = new StringBuilder();
+            text.AppendLine("Timestamp: " + timestamp.ToString("O", CultureInfo.InvariantCulture));
+            text.AppendLine("Version: " + Application.ProductVersion);
+            text.AppendLine("Runtime: " + RuntimeInformation.FrameworkDescription);
+            text.AppendLine("OS: " + RuntimeInformation.OSDescription);
+            text.AppendLine("Process: " + (Environment.Is64BitProcess ? "64-bit" : "32-bit"));
+            text.AppendLine("High DPI: " + Application.HighDpiMode);
+            text.AppendLine();
+            text.AppendLine(ex == null ? "Unknown exception" : ex.ToString());
+            text.AppendLine();
+            return text.ToString();
         }
 
         public static string SelfTest()
@@ -4057,6 +4071,7 @@ namespace BetterTaskManager
 
             TestHistoryStore();
             TestSettingsStore();
+            TestCrashLogWriter();
             TestAppAggregation();
             if (!MainForm.HistoryRowMatchesFilter(new[] { "2026-01-01", "browser", "42", "user", "TCP", "127.0.0.1", "5000", "10.0.0.1", "443", "Established", "C:\\browser.exe" }, "443") ||
                 MainForm.HistoryRowMatchesFilter(new[] { "browser", "Established" }, "missing") ||
@@ -4230,9 +4245,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.43" || form.Text != "Better Task Manager v1.1.0-preview.43")
+                if (Application.ProductVersion != "1.1.0-preview.44" || form.Text != "Better Task Manager v1.1.0-preview.44")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.43.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.44.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -4359,6 +4374,40 @@ namespace BetterTaskManager
                 if (fallback.WindowWidth != 1560 || fallback.WindowHeight != 900 || fallback.Maximized || fallback.RefreshIntervalIndex != 2 || fallback.ColumnWidths == null)
                 {
                     throw new InvalidOperationException("Corrupt settings did not fall back to defaults.");
+                }
+            }
+            finally
+            {
+                try { if (Directory.Exists(temporaryFolder)) Directory.Delete(temporaryFolder, true); } catch { }
+            }
+        }
+
+        private static void TestCrashLogWriter()
+        {
+            string temporaryFolder = Path.Combine(Path.GetTempPath(), "BetterTaskManager-CrashLogTest-" + Guid.NewGuid().ToString("N"));
+            string logPath = Path.Combine(temporaryFolder, "crash.log");
+            string previousPath = Path.Combine(temporaryFolder, "crash.previous.log");
+            try
+            {
+                CrashLogWriter.Append(logPath, new string('A', 180) + Environment.NewLine, 256);
+                CrashLogWriter.Append(logPath, new string('B', 180) + Environment.NewLine, 256);
+                if (!File.Exists(previousPath) || new FileInfo(previousPath).Length > 256 || new FileInfo(logPath).Length > 256)
+                {
+                    throw new InvalidOperationException("Crash log rotation did not preserve bounded current/previous files.");
+                }
+
+                CrashLogWriter.Append(logPath, new string('C', 2000), 256);
+                string bounded = File.ReadAllText(logPath, Encoding.UTF8);
+                if (new FileInfo(logPath).Length > 256 || bounded.IndexOf("Crash entry truncated", StringComparison.Ordinal) < 0)
+                {
+                    throw new InvalidOperationException("Oversized crash entry was not bounded and marked.");
+                }
+
+                string report = BuildCrashReport(new InvalidOperationException("expected crash report"), new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local));
+                if (report.IndexOf("expected crash report", StringComparison.Ordinal) < 0 ||
+                    report.IndexOf("Version:", StringComparison.Ordinal) < 0 || report.IndexOf("Runtime:", StringComparison.Ordinal) < 0)
+                {
+                    throw new InvalidOperationException("Crash report context is incomplete.");
                 }
             }
             finally

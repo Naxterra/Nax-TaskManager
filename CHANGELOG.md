@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.43 - Unreleased
+## 1.1.0-preview.44 - Unreleased
 
 ### Added
 
@@ -48,6 +48,7 @@
 - Added partial-result native network snapshots with per-table issue reporting.
 - Added amber partial-network disclosure to Apps grouped connection metadata.
 - Added comprehensive current security/privacy documentation to the repository and portable package.
+- Added bounded cross-process crash logging with one rotated previous file.
 
 ### Changed
 
@@ -93,6 +94,7 @@
 - Native TCP/UDP table allocation is bounded to 4 bytes–64 MiB and retries table growth up to five times before reporting a scoped failure.
 - Renamed **Load Users/Paths** to **Reload Users/Paths** and clarified that normal collection resolves/caches identities automatically while the button rebuilds the cache manually.
 - Security guidance now documents unelevated startup, privileged/destructive gates, local history/settings/crash data, export sensitivity, firewall rule scope, non-destructive tests, and checksum limitations.
+- Crash reports now include timestamp, app version, .NET runtime, OS, process bitness, DPI mode, and exception details; oversized entries are truncated with an explicit marker.
 
 ### Fixed
 
@@ -140,6 +142,7 @@
 - Prevented one unavailable IPv4/IPv6 TCP/UDP table from discarding every healthy connection table; verified documented network-order IPv6 scope parsing remains intact.
 - Replaced obsolete Network path guidance with protected-process/elevation guidance and added Apps completeness status tests.
 - Fixed stale documentation claiming the app requests elevation at startup, renamed README limits for the current preview, and added `SECURITY.md` to deterministic package staging.
+- Prevented `crash.log` from growing indefinitely or racing overlapping app instances; current and previous logs remain capped at 1 MiB each.
 
 ## v1.0.0 - 2026-06-06
 

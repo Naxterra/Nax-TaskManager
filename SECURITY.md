@@ -22,7 +22,7 @@ The app does not require an online account or send telemetry. It stores the foll
 
 - `network-history.csv` — new or changed observed connections, retained for up to 30 days.
 - `settings.json` — non-destructive window, interval, and column-width preferences.
-- `crash.log` — exception details when an unexpected application error occurs.
+- `crash.log` and `crash.previous.log` — contextual exception reports, bounded to 1 MiB each with one-file rotation.
 
 Connection history and CSV exports can contain private IP addresses, usernames, executable paths, process names, and remote endpoints. **Clear History** removes the saved history file contents, but it does not delete exports the user saved elsewhere. Live monitoring can record new observations after clearing.
 

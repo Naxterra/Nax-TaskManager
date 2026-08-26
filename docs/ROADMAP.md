@@ -48,6 +48,7 @@
 - Added bounded partial-result resilience to native IPv4/IPv6 TCP/UDP collection.
 - Surfaced partial network completeness in Apps and clarified identity-cache reload semantics.
 - Corrected and bundled current security/privacy guidance for preview distribution.
+- Bounded and serialized contextual crash logging across app instances.
 
 ## v2.0
 
