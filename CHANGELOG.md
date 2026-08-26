@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.3 - Unreleased
+## 1.1.0-preview.4 - Unreleased
 
 ### Added
 
@@ -27,6 +27,7 @@
 - Removed the per-application firewall command loop from UI rendering; firewall status is collected once in the background on manual refresh.
 - Moved history persistence off the UI thread, guarded overlapping refreshes, stopped rebuilding hidden grids, and preserved grid selection and scroll position during live updates.
 - Apps now refresh when navigating back to the grouped view, preventing a stale Apps snapshot from being compared with a newly refreshed Processes snapshot without an explicit timestamp.
+- Network collection now resolves user/path details once per PID and reuses the same-snapshot Process rows during Apps refresh instead of repeating protected-process lookups for every connection.
 
 ## v1.0.0 - 2026-06-06
 

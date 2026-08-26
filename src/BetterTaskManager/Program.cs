@@ -274,7 +274,7 @@ namespace BetterTaskManager
             };
             navBar.Controls.AddRange(new Control[] { liveMonitoringCheck, refreshIntervalBox, liveStatusLabel });
             appsNavButton.Click += async (s, e) => { ShowPage(appsTab); await RefreshAppsAsync(false); };
-            processesNavButton.Click += async (s, e) => { ShowPage(processTab); await RefreshProcessesAsync(false); };
+            processesNavButton.Click += async (s, e) => { ShowPage(processTab); await RefreshProcessesAsync(); };
             networkNavButton.Click += async (s, e) => { ShowPage(networkTab); await RefreshNetworkAsync(); };
             historyNavButton.Click += async (s, e) => await ShowHistoryAsync();
             memoryNavButton.Click += (s, e) => ShowPage(memoryTab);
@@ -532,9 +532,9 @@ namespace BetterTaskManager
             appUnblockButton.Click += async (s, e) => await BlockSelectedAppAsync(false);
             appViewProcessesButton.Click += (s, e) => ViewSelectedAppProcesses();
 
-            refreshButton.Click += async (s, e) => await RefreshProcessesAsync(false);
+            refreshButton.Click += async (s, e) => await RefreshProcessesAsync();
             loadDetailsButton.Click += async (s, e) => await LoadDetailsAndRefreshAsync();
-            filterBox.TextChanged += async (s, e) => { if (!settingProcessFilter) await RefreshProcessesAsync(false); };
+            filterBox.TextChanged += async (s, e) => { if (!settingProcessFilter) await RefreshProcessesAsync(); };
             killButton.Click += async (s, e) => await KillSelectedAsync();
             trimSelectedButton.Click += async (s, e) => await TrimSelectedAsync();
             exportProcessesButton.Click += async (s, e) => await ExportGridAsync(processGrid, "processes");
@@ -585,7 +585,7 @@ namespace BetterTaskManager
         private async Task RefreshActivePageAsync()
         {
             if (activePage == appsTab) await RefreshAppsAsync(false);
-            else if (activePage == processTab) await RefreshProcessesAsync(false);
+            else if (activePage == processTab) await RefreshProcessesAsync();
             else if (activePage == networkTab) await RefreshNetworkAsync();
         }
 
@@ -895,13 +895,12 @@ namespace BetterTaskManager
             {
                 string filter = "";
                 var cache = detailsCache;
-                bool useDetails = detailsLoaded;
                 var knownFirewallStatuses = new Dictionary<string, string>(firewallStatusCache, StringComparer.OrdinalIgnoreCase);
                 var data = await Task.Run(() =>
                 {
                     DateTime snapshotTime = DateTime.Now;
-                    var processes = BuildProcessRows(filter, cache, useDetails);
-                    var network = BuildNetworkRows();
+                    var processes = BuildProcessRows(filter, cache);
+                    var network = BuildNetworkRows(processes);
                     var apps = BuildAppProfiles(processes, network);
                     var firewall = refreshFirewall ? LoadFirewallStatuses(apps) : knownFirewallStatuses;
                     SaveNetworkHistory(network);
@@ -1254,7 +1253,7 @@ namespace BetterTaskManager
             grid.RowsDefaultCellStyle.ForeColor = Theme.Text;
         }
 
-        private async Task RefreshProcessesAsync(bool forceDetails)
+        private async Task RefreshProcessesAsync()
         {
             if (refreshingProcesses) return;
             refreshingProcesses = true;
@@ -1266,9 +1265,7 @@ namespace BetterTaskManager
             {
                 string filter = filterBox.Text.Trim().ToLowerInvariant();
                 var cache = detailsCache;
-                bool useDetails = detailsLoaded || forceDetails;
-
-                var rows = await Task.Run(() => BuildProcessRows(filter, cache, useDetails));
+                var rows = await Task.Run(() => BuildProcessRows(filter, cache));
                 latestProcessRows = rows;
                 latestProcessSnapshot = DateTime.Now;
                 FillProcessGrid(rows);
@@ -1290,7 +1287,7 @@ namespace BetterTaskManager
             }
         }
 
-        private List<ProcessRow> BuildProcessRows(string filter, Dictionary<int, ProcessDetails> cache, bool useDetails)
+        private List<ProcessRow> BuildProcessRows(string filter, Dictionary<int, ProcessDetails> cache)
         {
             var now = DateTime.UtcNow;
             var result = new List<ProcessRow>();
@@ -1394,7 +1391,7 @@ namespace BetterTaskManager
             {
                 detailsCache = await Task.Run(() => LoadProcessDetails());
                 detailsLoaded = true;
-                await RefreshProcessesAsync(true);
+                await RefreshProcessesAsync();
             }
             catch (Exception ex)
             {
@@ -1466,7 +1463,7 @@ namespace BetterTaskManager
             }
         }
 
-        private List<NetworkRow> BuildNetworkRows()
+        private List<NetworkRow> BuildNetworkRows(IEnumerable<ProcessRow> knownProcessRows = null)
         {
             var now = DateTime.Now;
             var processNames = new Dictionary<int, string>();
@@ -1476,17 +1473,33 @@ namespace BetterTaskManager
                 finally { p.Dispose(); }
             }
 
+            var snapshotDetails = new Dictionary<int, ProcessDetails>();
+            foreach (var pair in detailsCache) snapshotDetails[pair.Key] = pair.Value;
+            if (knownProcessRows != null)
+            {
+                foreach (ProcessRow processRow in knownProcessRows)
+                {
+                    snapshotDetails[processRow.Pid] = new ProcessDetails { Path = processRow.Path, User = processRow.User };
+                }
+            }
+
             var rows = new List<NetworkRow>();
             foreach (var connection in NativeNetworkCollector.GetAll())
             {
                 ProcessDetails details = null;
-                detailsCache.TryGetValue(connection.OwningPid, out details);
+                if (!snapshotDetails.TryGetValue(connection.OwningPid, out details))
+                {
+                    details = new ProcessDetails();
+                    snapshotDetails[connection.OwningPid] = details;
+                }
                 string name;
                 processNames.TryGetValue(connection.OwningPid, out name);
-                string path = details == null ? "" : details.Path;
-                string user = details == null ? "" : details.User;
+                string path = details.Path;
+                string user = details.User;
                 if (string.IsNullOrWhiteSpace(path)) path = GetProcessPathFast(connection.OwningPid);
                 if (string.IsNullOrWhiteSpace(user)) user = GetProcessUserFast(connection.OwningPid);
+                details.Path = path;
+                details.User = user;
 
                 rows.Add(new NetworkRow
                 {
@@ -1549,7 +1562,7 @@ namespace BetterTaskManager
                         process.WaitForExit(5000);
                     }
                 });
-                await RefreshProcessesAsync(false);
+                await RefreshProcessesAsync();
             }
             catch (Exception ex)
             {
@@ -1572,7 +1585,7 @@ namespace BetterTaskManager
                     NativeMethods.EmptyWorkingSet(process.Handle);
                 }
             });
-            await RefreshProcessesAsync(false);
+            await RefreshProcessesAsync();
         }
 
         private async Task TrimAllAsync()
@@ -1592,7 +1605,7 @@ namespace BetterTaskManager
             });
             trimAllButton.Enabled = true;
             memoryStatusLabel.Text = "Trimmed working sets for " + count + " processes.";
-            await RefreshProcessesAsync(false);
+            await RefreshProcessesAsync();
         }
 
         private void ClearStandby()
@@ -2134,9 +2147,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.3" || form.Text != "Better Task Manager v1.1.0-preview.3")
+                if (Application.ProductVersion != "1.1.0-preview.4" || form.Text != "Better Task Manager v1.1.0-preview.4")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.3.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.4.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, and " + connections.Count + " native network rows passed.";
             }

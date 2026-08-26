@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.3`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.4`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -72,13 +72,13 @@ dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.3-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.4-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.3-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.4-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download
