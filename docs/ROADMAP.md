@@ -44,6 +44,7 @@
 - Added Windows CI for build, tests, portable publish, and artifact upload.
 - Made portable packages deterministic and self-describing with an internal checksum manifest.
 - Added bounded real-time CPU and RAM-load trend charts to Memory.
+- Staged Apps rendering ahead of guarded asynchronous firewall enrichment.
 
 ## v2.0
 

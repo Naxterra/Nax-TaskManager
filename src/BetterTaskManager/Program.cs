@@ -289,6 +289,7 @@ namespace BetterTaskManager
         private bool historySortAscending = true;
         private int historyPageStart = 0;
         private readonly Dictionary<string, string> firewallStatusCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private long firewallStateRevision = 0;
         private readonly NetworkHistoryStore historyStore;
         private readonly AppSettingsStore settingsStore;
         private readonly NativeCpuCollector systemCpuCollector = new NativeCpuCollector();
@@ -1425,36 +1426,56 @@ namespace BetterTaskManager
             appRefreshButton.Enabled = false;
             UpdateFirewallActionButtons();
             appTitleLabel.Text = "Loading apps...";
-            appMetaLabel.Text = "Collecting processes, connections, and firewall state";
+            appMetaLabel.Text = "Collecting processes and connections";
             try
             {
                 Dictionary<int, ProcessDetails> cache;
                 lock (detailsCacheSync) cache = detailsCache;
-                var knownFirewallStatuses = new Dictionary<string, string>(firewallStatusCache, StringComparer.OrdinalIgnoreCase);
                 var data = await RunSnapshotCollectionAsync(appsTab, () =>
                 {
                     DateTime snapshotTime = DateTime.Now;
                     var processes = BuildProcessRows(cache);
                     var network = BuildNetworkRows(processes);
                     var apps = BuildAppProfiles(processes, network);
-                    var firewall = refreshFirewall ? LoadFirewallStatuses(apps) : knownFirewallStatuses;
                     SaveNetworkHistory(network);
-                    return Tuple.Create(processes, network, apps, firewall, snapshotTime);
+                    return Tuple.Create(processes, network, apps, snapshotTime);
                 });
                 if (data == null) return;
 
                 latestProcessRows = data.Item1;
                 latestNetworkRows = data.Item2;
                 latestAppProfiles = data.Item3;
-                latestAppsSnapshot = data.Item5;
-                latestProcessSnapshot = data.Item5;
-                latestNetworkSnapshot = data.Item5;
-                firewallStatusCache.Clear();
-                foreach (var pair in data.Item4) firewallStatusCache[pair.Key] = pair.Value;
+                latestAppsSnapshot = data.Item4;
+                latestProcessSnapshot = data.Item4;
+                latestNetworkSnapshot = data.Item4;
                 FillAppGridFromCache();
                 UpdateBandwidthLabel();
                 ShowSelectedApp();
                 MarkLiveRefreshSuccess();
+
+                if (refreshFirewall)
+                {
+                    DateTime requestedSnapshot = data.Item4;
+                    long requestedRevision = firewallStateRevision;
+                    appFirewallDetailsLabel.Text = "Refreshing Better Task Manager firewall rule state...";
+                    appFirewallDetailsLabel.ForeColor = Theme.Info;
+                    try
+                    {
+                        Dictionary<string, string> firewall = await Task.Run(() => LoadFirewallStatuses(data.Item3));
+                        if (ShouldApplyFirewallResult(latestAppsSnapshot, requestedSnapshot, firewallStateRevision, requestedRevision))
+                        {
+                            firewallStatusCache.Clear();
+                            foreach (var pair in firewall) firewallStatusCache[pair.Key] = pair.Value;
+                            FillAppGridFromCache();
+                            ShowSelectedApp();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        appFirewallDetailsLabel.Text = "Firewall status refresh failed: " + ex.Message;
+                        appFirewallDetailsLabel.ForeColor = Theme.Warning;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -1536,6 +1557,11 @@ namespace BetterTaskManager
             }
 
             return statuses;
+        }
+
+        internal static bool ShouldApplyFirewallResult(DateTime currentSnapshot, DateTime requestedSnapshot, long currentRevision, long requestedRevision)
+        {
+            return currentSnapshot == requestedSnapshot && currentRevision == requestedRevision;
         }
 
         internal static List<AppProfile> BuildAppProfiles(List<ProcessRow> processes, List<NetworkRow> network)
@@ -1821,6 +1847,7 @@ namespace BetterTaskManager
                 }
 
                 firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
+                firewallStateRevision++;
                 await RefreshAppsAsync(false);
             }
             finally
@@ -2664,6 +2691,7 @@ namespace BetterTaskManager
                 }
 
                 firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
+                firewallStateRevision++;
             }
             finally
             {
@@ -4127,6 +4155,13 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Automatic refresh dialog suppression policy failed.");
             }
+            DateTime firewallSnapshot = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local);
+            if (!MainForm.ShouldApplyFirewallResult(firewallSnapshot, firewallSnapshot, 7, 7) ||
+                MainForm.ShouldApplyFirewallResult(firewallSnapshot.AddSeconds(1), firewallSnapshot, 7, 7) ||
+                MainForm.ShouldApplyFirewallResult(firewallSnapshot, firewallSnapshot, 8, 7))
+            {
+                throw new InvalidOperationException("Late firewall result staleness policy failed.");
+            }
             if (MainForm.GetGlobalShortcutCommand(Keys.F5, "Memory") != GlobalShortcutCommand.Refresh ||
                 MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.D1, "Memory") != GlobalShortcutCommand.OpenApps ||
                 MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.NumPad5, "Apps") != GlobalShortcutCommand.OpenMemory ||
@@ -4143,9 +4178,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.39" || form.Text != "Better Task Manager v1.1.0-preview.39")
+                if (Application.ProductVersion != "1.1.0-preview.40" || form.Text != "Better Task Manager v1.1.0-preview.40")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.39.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.40.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

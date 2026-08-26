@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.39 - Unreleased
+## 1.1.0-preview.40 - Unreleased
 
 ### Added
 
@@ -44,6 +44,7 @@
 - Added a Windows GitHub Actions workflow for .NET 11 preview restore, Release build, self-test, UI smoke test, self-contained publish, and artifact upload.
 - Added deterministic, self-describing portable package staging with bundled README, changelog, license, and executable SHA-256 manifest.
 - Added responsive 60-sample System CPU and physical RAM-load trend charts to the Memory dashboard.
+- Split Apps refresh into immediate process/network rendering followed by asynchronous firewall status enrichment.
 
 ### Changed
 
@@ -85,6 +86,7 @@
 - CI uses current official action majors, read-only repository permissions, per-ref cancellation, a 20-minute job timeout, and the app's own UI watchdog.
 - The publish script derives version from the project, validates the exact artifacts child path, removes stale staging content, and regenerates the package from scratch.
 - Trend charts are code-native, double-buffered, bounded to 0–100%, and driven only by existing manual/Live Memory refreshes.
+- Late firewall results now require both matching Apps snapshot time and unchanged firewall mutation revision before updating cache/grid state.
 
 ### Fixed
 
@@ -128,6 +130,7 @@
 - Added documentation distinguishing locally verified workflow commands from GitHub execution, which begins only after the branch is pushed.
 - CI now uploads the complete portable folder instead of only the executable; package tests compare `SHA256SUMS.txt` with a freshly computed executable hash.
 - Added trend normalization, rolling-capacity, initial CPU availability, RAM append, and UI integration tests.
+- Prevented slow or failed firewall enumeration from delaying or relabeling an otherwise successful Apps snapshot, and prevented stale reads from overwriting a concurrent rule mutation.
 
 ## v1.0.0 - 2026-06-06
 
