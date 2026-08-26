@@ -4,13 +4,13 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.9`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.10`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
 - App-based overview with an explicit process count and summed private-byte and working-set values for each executable group.
 - Per-PID Process view with user, CPU, private bytes, working set, peak working set, threads, and executable path. Search filters the latest snapshot instantly by PID, name, user, or path without recollecting processes on every keystroke.
-- Network view showing application, PID, user, protocol, local endpoint, remote endpoint, state, and executable path.
+- Network view showing application, PID, user, protocol, local endpoint, remote endpoint, state, and executable path. All-column search and typed column sorting operate instantly on the latest snapshot and persist across Live refreshes.
 - Native IPv4/IPv6 TCP and UDP collection with owning-process IDs.
 - Optional live monitoring with 1, 2, 5, or 15-second refresh intervals for Apps, Processes, Network, History, and Memory views.
 - Snapshot timestamps on Apps, Processes, and Network so grouped and per-PID samples can be compared accurately.
@@ -80,13 +80,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.9-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.10-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.9-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.10-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download

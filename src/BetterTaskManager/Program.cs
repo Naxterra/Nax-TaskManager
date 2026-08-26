@@ -184,6 +184,7 @@ namespace BetterTaskManager
         private readonly Button unblockButton;
         private readonly Label networkStatusLabel;
         private readonly Label bandwidthLabel;
+        private readonly TextBox networkFilterBox;
         private readonly ListView historyList;
         private readonly Panel historyTab;
         private readonly Label historyNoteLabel;
@@ -479,8 +480,9 @@ namespace BetterTaskManager
             LockGridColumns(processGrid);
             processPanel.Controls.Add(processGrid, 0, 2);
 
-            var networkPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1 };
+            var networkPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };
             networkPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            networkPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
             networkPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             networkTab.Controls.Add(networkPanel);
 
@@ -489,21 +491,27 @@ namespace BetterTaskManager
             blockButton = MakeButton("Block App", 100);
             unblockButton = MakeButton("Unblock App", 110);
             var exportNetworkButton = MakeButton("Export CSV", 100);
+            var networkFilterLabel = new Label { Text = "Filter:", AutoSize = true, Margin = new Padding(8, 9, 4, 0) };
+            networkFilterBox = new TextBox { Width = 260, PlaceholderText = "App, PID, endpoint, state, path..." };
             networkStatusLabel = new Label
             {
                 Text = "Live ports and destinations.",
                 AutoSize = true,
-                Margin = new Padding(16, 9, 4, 0)
+                Margin = new Padding(8, 6, 4, 0)
             };
             bandwidthLabel = new Label
             {
                 Text = "Total bandwidth: waiting for second sample",
                 AutoSize = true,
-                Margin = new Padding(16, 9, 4, 0),
+                Margin = new Padding(16, 6, 4, 0),
                 ForeColor = Theme.Info
             };
-            networkToolbar.Controls.AddRange(new Control[] { networkRefreshButton, blockButton, unblockButton, exportNetworkButton, networkStatusLabel, bandwidthLabel });
+            networkToolbar.Controls.AddRange(new Control[] { networkRefreshButton, blockButton, unblockButton, exportNetworkButton, networkFilterLabel, networkFilterBox });
             networkPanel.Controls.Add(networkToolbar, 0, 0);
+
+            var networkInfoBar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 0, 8, 0) };
+            networkInfoBar.Controls.AddRange(new Control[] { networkStatusLabel, bandwidthLabel });
+            networkPanel.Controls.Add(networkInfoBar, 0, 1);
 
             networkGrid = NewGrid();
             AddColumns(networkGrid, new[] {
@@ -518,7 +526,19 @@ namespace BetterTaskManager
                 Tuple.Create("State", "State"),
                 Tuple.Create("Path", "Application Path")
             });
-            networkPanel.Controls.Add(networkGrid, 0, 1);
+            networkGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+            networkGrid.Columns["Process"].Width = 180;
+            networkGrid.Columns["PID"].Width = 70;
+            networkGrid.Columns["User"].Width = 180;
+            networkGrid.Columns["Protocol"].Width = 80;
+            networkGrid.Columns["LocalAddress"].Width = 180;
+            networkGrid.Columns["LocalPort"].Width = 85;
+            networkGrid.Columns["RemoteAddress"].Width = 180;
+            networkGrid.Columns["RemotePort"].Width = 85;
+            networkGrid.Columns["State"].Width = 110;
+            networkGrid.Columns["Path"].Width = 500;
+            LockGridColumns(networkGrid);
+            networkPanel.Controls.Add(networkGrid, 0, 2);
 
             var historyPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1 };
             historyPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
@@ -623,6 +643,7 @@ namespace BetterTaskManager
 
             networkRefreshButton.Click += async (s, e) => await RefreshNetworkAsync();
             networkTab.Enter += async (s, e) => await RefreshNetworkAsync();
+            networkFilterBox.TextChanged += (s, e) => FillNetworkGridFromCache();
             blockButton.Click += async (s, e) => await BlockSelectedAsync(true);
             unblockButton.Click += async (s, e) => await BlockSelectedAsync(false);
             exportNetworkButton.Click += async (s, e) => await ExportGridAsync(networkGrid, "network-connections");
@@ -877,7 +898,7 @@ namespace BetterTaskManager
             }
             else if (grid == networkGrid)
             {
-                SortVisibleGrid(grid, columnName, ascending);
+                FillNetworkGridFromCache();
             }
             ApplySortGlyph(grid, columnName, ascending);
         }
@@ -916,6 +937,29 @@ namespace BetterTaskManager
             else query = rows.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase);
             if (!ascending) query = query.Reverse();
             return query.ToList();
+        }
+
+        private static List<NetworkRow> SortNetworkRows(List<NetworkRow> rows, string columnName, bool ascending)
+        {
+            IEnumerable<NetworkRow> query;
+            if (columnName == "PID") query = rows.OrderBy(row => row.Pid);
+            else if (columnName == "LocalPort") query = rows.OrderBy(row => PortSortValue(row.LocalPort));
+            else if (columnName == "RemotePort") query = rows.OrderBy(row => PortSortValue(row.RemotePort));
+            else if (columnName == "User") query = rows.OrderBy(row => row.User, StringComparer.OrdinalIgnoreCase);
+            else if (columnName == "Protocol") query = rows.OrderBy(row => row.Protocol, StringComparer.OrdinalIgnoreCase);
+            else if (columnName == "LocalAddress") query = rows.OrderBy(row => row.LocalAddress, StringComparer.OrdinalIgnoreCase);
+            else if (columnName == "RemoteAddress") query = rows.OrderBy(row => row.RemoteAddress, StringComparer.OrdinalIgnoreCase);
+            else if (columnName == "State") query = rows.OrderBy(row => NormalizeConnectionState(row.State), StringComparer.OrdinalIgnoreCase);
+            else if (columnName == "Path") query = rows.OrderBy(row => row.Path, StringComparer.OrdinalIgnoreCase);
+            else query = rows.OrderBy(row => row.Process, StringComparer.OrdinalIgnoreCase);
+            if (!ascending) query = query.Reverse();
+            return query.ToList();
+        }
+
+        private static int PortSortValue(string value)
+        {
+            int port;
+            return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out port) ? port : -1;
         }
 
         private static void SortVisibleGrid(DataGridView grid, string columnName, bool ascending)
@@ -1596,10 +1640,8 @@ namespace BetterTaskManager
                 });
                 latestNetworkRows = rows;
                 latestNetworkSnapshot = rows.Count > 0 ? rows[0].Timestamp : DateTime.Now;
-                FillNetworkGrid(rows);
+                FillNetworkGridFromCache();
                 UpdateBandwidthLabel();
-                networkStatusLabel.Text = SnapshotLabel(latestNetworkSnapshot) + "    Loaded " + rows.Count + " network rows. Per-app bandwidth needs ETW/WFP collector.";
-                networkStatusLabel.ForeColor = Theme.MutedText;
             }
             catch (Exception ex)
             {
@@ -1668,6 +1710,46 @@ namespace BetterTaskManager
                 });
             }
             return rows.OrderBy(r => r.Process).ThenBy(r => r.Protocol).ThenBy(r => r.RemoteAddress).ToList();
+        }
+
+        private void FillNetworkGridFromCache()
+        {
+            List<NetworkRow> rows = NetworkRowsForCurrentView();
+            FillNetworkGrid(rows);
+            networkStatusLabel.Text = SnapshotLabel(latestNetworkSnapshot) + "    " +
+                rows.Count.ToString(CultureInfo.CurrentCulture) + "/" + latestNetworkRows.Count.ToString(CultureInfo.CurrentCulture) +
+                " connections shown. Per-app bandwidth needs ETW/WFP collector.";
+            networkStatusLabel.ForeColor = Theme.MutedText;
+        }
+
+        private List<NetworkRow> NetworkRowsForCurrentView()
+        {
+            string filter = networkFilterBox.Text.Trim();
+            var result = latestNetworkRows.Where(row => NetworkRowMatchesFilter(row, filter)).ToList();
+            Tuple<string, bool> sort;
+            if (gridSortState.TryGetValue(networkGrid, out sort))
+            {
+                result = SortNetworkRows(result, sort.Item1, sort.Item2);
+            }
+            return result;
+        }
+
+        internal static bool NetworkRowMatchesFilter(NetworkRow row, string filter)
+        {
+            if (string.IsNullOrWhiteSpace(filter)) return true;
+            if (row == null) return false;
+
+            string query = filter.Trim();
+            return row.Pid.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.Process ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.User ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.Protocol ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.LocalAddress ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.LocalPort ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.RemoteAddress ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.RemotePort ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                NormalizeConnectionState(row.State).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (row.Path ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private void FillNetworkGrid(List<NetworkRow> rows)
@@ -2025,6 +2107,27 @@ namespace BetterTaskManager
             if (processGrid.Rows.Count != 1 || Convert.ToInt32(processGrid.Rows[0].Cells["PID"].Value, CultureInfo.InvariantCulture) != 101)
             {
                 throw new InvalidOperationException("Same-snapshot app PID scope was not preserved in the Process view.");
+            }
+
+            latestNetworkRows = new List<NetworkRow>
+            {
+                new NetworkRow { Pid = 101, Process = "alpha", User = "TEST\\One", Protocol = "TCP", LocalAddress = "127.0.0.1", LocalPort = "5000", RemoteAddress = "10.0.0.1", RemotePort = "443", State = "Established", Path = "C:\\Apps\\alpha.exe" },
+                new NetworkRow { Pid = 202, Process = "beta", User = "TEST\\Two", Protocol = "UDP", LocalAddress = "0.0.0.0", LocalPort = "5353", RemoteAddress = "*", RemotePort = "", State = "Listening", Path = "C:\\Apps\\beta.exe" }
+            };
+            latestNetworkSnapshot = DateTime.Now;
+            ShowPage(networkTab);
+            networkFilterBox.Text = "443";
+            if (networkGrid.Rows.Count != 1 || Convert.ToInt32(networkGrid.Rows[0].Cells["PID"].Value, CultureInfo.InvariantCulture) != 101)
+            {
+                throw new InvalidOperationException("Network search did not filter the cached snapshot across endpoint fields.");
+            }
+
+            networkFilterBox.Clear();
+            gridSortState[networkGrid] = Tuple.Create("PID", false);
+            FillNetworkGridFromCache();
+            if (networkGrid.Rows.Count != 2 || Convert.ToInt32(networkGrid.Rows[0].Cells["PID"].Value, CultureInfo.InvariantCulture) != 202)
+            {
+                throw new InvalidOperationException("Network sorting was not preserved for the cached snapshot.");
             }
         }
 
@@ -2578,6 +2681,26 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Process snapshot filtering failed.");
             }
+            var networkFilterProbe = new NetworkRow
+            {
+                Pid = 4242,
+                Process = "browser",
+                User = "TEST\\User",
+                Protocol = "TCP",
+                LocalAddress = "127.0.0.1",
+                LocalPort = "5000",
+                RemoteAddress = "10.0.0.1",
+                RemotePort = "443",
+                State = "Established",
+                Path = "C:\\Apps\\browser.exe"
+            };
+            if (!MainForm.NetworkRowMatchesFilter(networkFilterProbe, "443") ||
+                !MainForm.NetworkRowMatchesFilter(networkFilterProbe, "established") ||
+                !MainForm.NetworkRowMatchesFilter(networkFilterProbe, "browser.exe") ||
+                MainForm.NetworkRowMatchesFilter(networkFilterProbe, "missing"))
+            {
+                throw new InvalidOperationException("Network snapshot filtering failed.");
+            }
             if (MainForm.RefreshIntervalMilliseconds(0) != 1000 || MainForm.RefreshIntervalMilliseconds(1) != 2000 ||
                 MainForm.RefreshIntervalMilliseconds(2) != 5000 || MainForm.RefreshIntervalMilliseconds(3) != 15000)
             {
@@ -2586,9 +2709,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.9" || form.Text != "Better Task Manager v1.1.0-preview.9")
+                if (Application.ProductVersion != "1.1.0-preview.10" || form.Text != "Better Task Manager v1.1.0-preview.10")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.9.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.10.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

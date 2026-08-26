@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.9 - Unreleased
+## 1.1.0-preview.10 - Unreleased
 
 ### Added
 
@@ -14,6 +14,7 @@
 - Added instant all-column filtering to the History view; sorting and CSV export operate on the complete filtered result.
 - Added a watchdog-backed UI smoke test that verifies responsive History loading/live sampling, cached Process filtering/sorting, same-snapshot PID scope, and a responsive message-loop continuation.
 - Added real live monitoring to History: the active page now samples native connections, records new/state-changed observations, and refreshes the current filtered view at the selected interval.
+- Added instant all-column Network search across application, PID, user, protocol, endpoints, state, and path.
 
 ### Changed
 
@@ -24,6 +25,8 @@
 - Replaced the misleading generic `Allowed` firewall label with rule-specific `BTM Blocked` and `No BTM Block` states and an exact outbound-rule explanation.
 - Clarified app aggregation with a process-count column, precise Private Bytes/Working Set names, shared-page overlap guidance, summed-memory labels, and snapshot timestamps on all live views.
 - Process search now filters the latest complete snapshot in memory by PID, name, user, or path; only manual/Live refresh performs a new Windows process collection.
+- Network filtering and typed column sorting now operate on the cached snapshot and persist across manual or Live collection refreshes.
+- Split Network actions/search from its snapshot and bandwidth status line, and assigned stable column widths for a calmer layout.
 
 ### Fixed
 
@@ -37,6 +40,7 @@
 - Replaced the expensive History data grid with a fixed-column virtual list and a 100-row render window over the newest 2,000 cached records, eliminating multi-second UI freezes without truncating filtered CSV exports.
 - Reduced the connection-history sampling gate from 30 seconds to one second so short-lived changes can be captured during Live monitoring while unchanged rows remain deduplicated.
 - Eliminated full process enumeration and protected path/user lookups on every Process search keystroke while preserving active column sorting and exact **View Processes** PID reconciliation.
+- Removed content-based Network column resizing during refresh, avoiding repeated width measurement on large connection snapshots.
 
 ## v1.0.0 - 2026-06-06
 

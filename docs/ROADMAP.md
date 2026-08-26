@@ -14,6 +14,7 @@
 - Clarified Better Task Manager firewall rule state and selected-app rule details.
 - Added a native real-time system Memory dashboard.
 - Made Process searching an instant in-memory operation over the latest complete snapshot.
+- Added cached all-column Network search with persistent typed sorting and fixed-width rendering.
 
 ## v2.0
 
