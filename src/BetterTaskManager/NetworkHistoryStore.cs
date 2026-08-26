@@ -70,6 +70,20 @@ namespace BetterTaskManager
             lock (syncRoot) return LoadRecentCore(maximumRows);
         }
 
+        public void Clear()
+        {
+            lock (syncRoot)
+            {
+                string folder = Path.GetDirectoryName(historyPath);
+                if (string.IsNullOrWhiteSpace(folder)) throw new InvalidOperationException("The history path has no parent folder.");
+                Directory.CreateDirectory(folder);
+                File.WriteAllText(historyPath, Header + Environment.NewLine, Encoding.UTF8);
+                previousConnectionKeys.Clear();
+                lastWrite = DateTime.MinValue;
+                lastPrune = DateTime.MinValue;
+            }
+        }
+
         private List<string[]> LoadRecentCore(int maximumRows)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumRows);

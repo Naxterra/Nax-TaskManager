@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.16 - Unreleased
+## 1.1.0-preview.17 - Unreleased
 
 ### Added
 
@@ -21,6 +21,7 @@
 - Added one shared asynchronous snapshot gate for Apps, Processes, Network, details reload, and live History collection.
 - Added a global red **Live error** state that returns to green **Live** after the next successful automatic refresh.
 - Added typed History sorting for timestamp, PID, local port, and remote port columns.
+- Added a confirmed **Clear History** action for permanently removing the user-local connection-history store without administrator rights.
 
 ### Changed
 
@@ -39,6 +40,7 @@
 - Queued collection requests now re-check the active page before running, and completed requests re-check it before updating caches or UI.
 - Automatic and manual refresh origins now propagate through the active-page dispatcher so error presentation can match user intent.
 - History text columns remain case-insensitive while numeric and timestamp columns now sort by their real values.
+- Clearing History atomically rewrites the CSV header, resets cached rows/paging, and resets connection deduplication so later observations can be recorded normally.
 
 ### Fixed
 
@@ -59,6 +61,7 @@
 - Prevented rapid cross-page navigation from running multiple expensive native collectors concurrently or applying results to a page the user already left.
 - Prevented recurring Process or Network error dialogs from stacking during Live monitoring; automatic failures are reported inline while manual refresh failures remain modal.
 - Fixed History Remote Port sorting throwing when blank UDP ports and numeric TCP ports were present together.
+- Serialized History clearing with live store writes so clearing cannot leave a partial CSV or stale deduplication state.
 
 ## v1.0.0 - 2026-06-06
 

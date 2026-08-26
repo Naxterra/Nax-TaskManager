@@ -21,6 +21,7 @@
 - Serialized heavy snapshot collection and suppressed stale work during rapid page navigation.
 - Replaced recurring automatic Live error dialogs with recoverable inline status.
 - Made History sorting type-safe for mixed TCP/UDP endpoint data.
+- Added a confirmed atomic reset for user-local connection history.
 
 ## v2.0
 

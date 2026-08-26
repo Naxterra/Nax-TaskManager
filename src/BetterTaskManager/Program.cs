@@ -193,6 +193,7 @@ namespace BetterTaskManager
         private readonly Panel historyTab;
         private readonly Label historyNoteLabel;
         private readonly Button reloadHistoryButton;
+        private readonly Button clearHistoryButton;
         private readonly Button historyPreviousButton;
         private readonly Button historyNextButton;
         private readonly TextBox historyFilterBox;
@@ -557,6 +558,7 @@ namespace BetterTaskManager
             var historyToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 6, 8, 4) };
             reloadHistoryButton = MakeButton("Reload History", 120);
             var exportHistoryButton = MakeButton("Export CSV", 100);
+            clearHistoryButton = MakeButton("Clear History", 105);
             historyPreviousButton = MakeButton("Previous", 80);
             historyNextButton = MakeButton("Next", 65);
             historyPreviousButton.Enabled = false;
@@ -569,7 +571,7 @@ namespace BetterTaskManager
                 AutoSize = true,
                 Margin = new Padding(12, 9, 4, 0)
             };
-            historyToolbar.Controls.AddRange(new Control[] { reloadHistoryButton, exportHistoryButton, historyPreviousButton, historyNextButton, historyFilterLabel, historyFilterBox, historyNoteLabel });
+            historyToolbar.Controls.AddRange(new Control[] { reloadHistoryButton, exportHistoryButton, clearHistoryButton, historyPreviousButton, historyNextButton, historyFilterLabel, historyFilterBox, historyNoteLabel });
             historyPanel.Controls.Add(historyToolbar, 0, 0);
             historyList = new BufferedListView
             {
@@ -663,6 +665,7 @@ namespace BetterTaskManager
             exportNetworkButton.Click += async (s, e) => await ExportGridAsync(networkGrid, "network-connections");
             reloadHistoryButton.Click += async (s, e) => await LoadHistoryGridAsync();
             exportHistoryButton.Click += async (s, e) => await ExportHistoryAsync();
+            clearHistoryButton.Click += async (s, e) => await ClearHistoryAsync();
             historyPreviousButton.Click += (s, e) => MoveHistoryPage(-1);
             historyNextButton.Click += (s, e) => MoveHistoryPage(1);
             historyFilterBox.TextChanged += (s, e) => FillHistoryGrid(true);
@@ -2146,6 +2149,7 @@ namespace BetterTaskManager
             if (loadingHistory || refreshingHistory) return;
             loadingHistory = true;
             reloadHistoryButton.Enabled = false;
+            clearHistoryButton.Enabled = false;
             historyNoteLabel.Text = "Loading recent connection changes...";
             try
             {
@@ -2160,6 +2164,43 @@ namespace BetterTaskManager
             finally
             {
                 reloadHistoryButton.Enabled = true;
+                clearHistoryButton.Enabled = true;
+                loadingHistory = false;
+            }
+        }
+
+        private async Task ClearHistoryAsync()
+        {
+            if (loadingHistory || refreshingHistory) return;
+            if (MessageBox.Show(this,
+                "Clear all saved Better Task Manager connection history?\n\nThis cannot be undone. Live monitoring can record new changes again after clearing.",
+                "Clear connection history", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+
+            loadingHistory = true;
+            reloadHistoryButton.Enabled = false;
+            clearHistoryButton.Enabled = false;
+            historyNoteLabel.Text = "Clearing saved connection history...";
+            historyNoteLabel.ForeColor = Theme.Warning;
+            try
+            {
+                await Task.Run(() => historyStore.Clear());
+                latestHistoryRows = new List<string[]>();
+                visibleHistoryRows = new List<string[]>();
+                historyPageStart = 0;
+                FillHistoryGrid(true);
+                historyNoteLabel.Text = "Connection history cleared. Live monitoring can record new changes.";
+                historyNoteLabel.ForeColor = Theme.Good;
+            }
+            catch (Exception ex)
+            {
+                historyNoteLabel.Text = "Clearing History failed: " + ex.Message;
+                historyNoteLabel.ForeColor = Theme.Danger;
+                MessageBox.Show(this, ex.Message, "Clear History failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                reloadHistoryButton.Enabled = true;
+                clearHistoryButton.Enabled = true;
                 loadingHistory = false;
             }
         }
@@ -2169,6 +2210,7 @@ namespace BetterTaskManager
             if (refreshingHistory || loadingHistory) return;
             refreshingHistory = true;
             reloadHistoryButton.Enabled = false;
+            clearHistoryButton.Enabled = false;
             historyNoteLabel.Text = "Sampling active connections...";
             historyNoteLabel.ForeColor = Theme.Warning;
             try
@@ -2199,6 +2241,7 @@ namespace BetterTaskManager
             finally
             {
                 reloadHistoryButton.Enabled = true;
+                clearHistoryButton.Enabled = true;
                 refreshingHistory = false;
             }
         }
@@ -2276,6 +2319,10 @@ namespace BetterTaskManager
             if (historyList.VirtualListSize != Math.Min(latestHistoryRows.Count, HistoryDisplayLimit))
             {
                 throw new InvalidOperationException("History view count does not match the loaded history cache.");
+            }
+            if (!clearHistoryButton.Enabled)
+            {
+                throw new InvalidOperationException("Clear History action did not return to its idle state after loading.");
             }
 
             historyFilterBox.Text = "better-task-manager-no-match-probe";
@@ -3105,9 +3152,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.16" || form.Text != "Better Task Manager v1.1.0-preview.16")
+                if (Application.ProductVersion != "1.1.0-preview.17" || form.Text != "Better Task Manager v1.1.0-preview.17")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.16.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.17.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -3166,6 +3213,14 @@ namespace BetterTaskManager
 
                 store.SaveSnapshot(Array.Empty<NetworkRow>(), firstSeen.AddDays(31));
                 if (store.LoadRecent(100).Count != 0) throw new InvalidOperationException("History retention did not prune entries older than 30 days.");
+
+                store.Clear();
+                if (store.LoadRecent(100).Count != 0) throw new InvalidOperationException("History clear did not remove saved observations.");
+                row.Timestamp = firstSeen.AddDays(31).AddSeconds(2);
+                if (store.SaveSnapshot(new[] { row }, row.Timestamp) != 1 || store.LoadRecent(100).Count != 1)
+                {
+                    throw new InvalidOperationException("History clear did not reset connection deduplication state.");
+                }
             }
             finally
             {
