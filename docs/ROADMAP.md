@@ -32,6 +32,7 @@
 - Added complete grouped Apps CSV export from the cached filtered/sorted model.
 - Converted Process and Network exports to typed models and unified asynchronous CSV saving.
 - Added discoverable active-page keyboard shortcuts and removed focus-triggered Network refresh.
+- Added keyboard view navigation and History paging through the shared navigation route.
 
 ## v2.0
 

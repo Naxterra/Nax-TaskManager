@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.27 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.28 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -32,7 +32,7 @@ Top-level navigation and dense command surfaces use autosized wrapping flow layo
 
 WinForms bootstraps through generated `ApplicationConfiguration.Initialize()` with `ApplicationHighDpiMode=PerMonitorV2`, then requests native and framework dark modes before constructing forms. Runtime smoke coverage asserts the configured DPI mode so packaged builds cannot silently fall back to implicit system-aware scaling.
 
-The main form uses KeyPreview and maps global shortcuts to commands before routing them through the active page's existing refresh/filter/export paths. Static mapping tests cover every page/command combination, while UI smoke coverage verifies focus and clear behavior without invoking file dialogs.
+The main form uses KeyPreview and maps global shortcuts to commands before routing them through shared navigation or the active page's existing refresh/filter/export paths. Static mapping tests cover view, paging, filter, export, refresh, and Live commands; UI smoke coverage verifies real navigation, both paging directions, focus, and clear behavior without invoking file dialogs.
 
 The Apps view groups rows by executable path and sums normalized CPU, private-byte, and working-set values across all PIDs in that group. CPU requires two samples of the same process instance; availability and process start time travel with each row so first samples and PID reuse cannot masquerade as measured idle. Search, typed sorting, and selection operate on the grouped in-memory snapshot and remain active when Live monitoring replaces it. The Processes view remains per-PID and reports sampled visible-row CPU coverage. Both views expose their snapshot time and Apps exposes its contributing process count so the scopes are directly comparable. A working set contains private and shared pages, so summing per-PID working sets can count a shared page more than once.
 

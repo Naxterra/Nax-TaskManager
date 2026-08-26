@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.27`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.28`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -19,6 +19,7 @@ The current development build is `1.1.0-preview.27`. The checked-in v1.0 downloa
 - Global navigation, Apps cards/actions, and Process/Network/History command bars autosize and wrap at narrow window widths instead of clipping controls. The Apps split uses proportional columns while data tables retain horizontal scrolling.
 - Explicit WinForms `PerMonitorV2` DPI awareness with generated application bootstrap, allowing forms, child controls, common controls, and dialogs to rescale when moved between monitors with different scaling.
 - Global keyboard shortcuts with tooltip discovery: **F5** refreshes the active view, **Ctrl+F** focuses its filter, **Escape** clears it, **Ctrl+E** exports it, and **Ctrl+L** toggles Live monitoring.
+- **Ctrl+1** through **Ctrl+5** navigate Apps, Processes, Network, History, and Memory; **Page Up/Page Down** browse History result pages.
 - Optional live monitoring with 1, 2, 5, or 15-second refresh intervals for Apps, Processes, Network, History, and Memory views.
 - Snapshot timestamps on Apps, Processes, and Network so grouped and per-PID samples can be compared accurately.
 - One-click **View Processes** reconciliation showing the exact contributing PIDs from the same Apps snapshot, with visible-row private-byte and working-set sums.
@@ -88,13 +89,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.27-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.28-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.27-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.28-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download

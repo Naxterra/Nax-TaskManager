@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.27 - Unreleased
+## 1.1.0-preview.28 - Unreleased
 
 ### Added
 
@@ -32,6 +32,7 @@
 - Added non-blocking CSV export for the current filtered and sorted Apps model.
 - Added typed model-based Process and Network CSV exports with snapshot provenance and invariant numeric values.
 - Added global F5, Ctrl+F, Escape, Ctrl+E, and Ctrl+L shortcuts with contextual tooltip guidance.
+- Added Ctrl+1–5 view navigation and Page Up/Page Down History paging, including numpad navigation support.
 
 ### Changed
 
@@ -61,6 +62,7 @@
 - Apps export writes snapshot time, firewall, process count, CPU and sampled-process count, connections, Private Bytes, Working Set, user, and executable path using invariant numeric values.
 - Process export records CPU availability explicitly; Network export preserves native endpoint fields and normalized connection state. All four views now share one asynchronous dialog/write workflow.
 - Shortcut actions route through the active page's existing manual refresh, cached filter, export, and Live semantics; Memory intentionally has no filter/export shortcut action.
+- Mouse clicks and keyboard view changes now share one asynchronous navigation route, preventing refresh behavior from drifting between input methods.
 
 ### Fixed
 
@@ -92,6 +94,7 @@
 - Added Apps export schema/reconciliation tests, blank unavailable CPU handling, and spreadsheet-formula protection for every model field.
 - Replaced Process/Network grid-text scraping with deterministic export schemas and added exact field tests for CPU, memory, endpoints, state, identity, and timestamp.
 - Removed the redundant Network panel Enter refresh so focusing its filter no longer starts an unintended native collection.
+- Added runtime shortcut tests for actual Memory navigation and both History paging directions in addition to exhaustive static mapping coverage.
 
 ## v1.0.0 - 2026-06-06
 

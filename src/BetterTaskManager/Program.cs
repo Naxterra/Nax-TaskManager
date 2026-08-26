@@ -139,7 +139,14 @@ namespace BetterTaskManager
         FocusFilter,
         ClearFilter,
         Export,
-        ToggleLive
+        ToggleLive,
+        OpenApps,
+        OpenProcesses,
+        OpenNetwork,
+        OpenHistory,
+        OpenMemory,
+        PreviousPage,
+        NextPage
     }
 
     public sealed class MainForm : Form
@@ -359,11 +366,11 @@ namespace BetterTaskManager
                 Margin = new Padding(4, 11, 0, 0)
             };
             navBar.Controls.AddRange(new Control[] { liveMonitoringCheck, refreshIntervalBox, liveStatusLabel, restartAdminButton, adminStatusLabel });
-            appsNavButton.Click += async (s, e) => { ShowPage(appsTab); await RefreshAppsAsync(false); };
-            processesNavButton.Click += async (s, e) => { ShowPage(processTab); await RefreshProcessesAsync(); };
-            networkNavButton.Click += async (s, e) => { ShowPage(networkTab); await RefreshNetworkAsync(); };
-            historyNavButton.Click += async (s, e) => await ShowHistoryAsync();
-            memoryNavButton.Click += (s, e) => { ShowPage(memoryTab); RefreshMemoryPage(); };
+            appsNavButton.Click += async (s, e) => await NavigateToPageAsync(appsTab);
+            processesNavButton.Click += async (s, e) => await NavigateToPageAsync(processTab);
+            networkNavButton.Click += async (s, e) => await NavigateToPageAsync(networkTab);
+            historyNavButton.Click += async (s, e) => await NavigateToPageAsync(historyTab);
+            memoryNavButton.Click += async (s, e) => await NavigateToPageAsync(memoryTab);
 
             var appShell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 1, ColumnCount = 2, Margin = new Padding(0), Padding = new Padding(0) };
             appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36));
@@ -681,6 +688,13 @@ namespace BetterTaskManager
             memoryPanel.Controls.Add(memoryStatusLabel);
 
             shortcutToolTip.SetToolTip(liveMonitoringCheck, "Toggle Live monitoring (Ctrl+L)");
+            shortcutToolTip.SetToolTip(appsNavButton, "Open Apps (Ctrl+1)");
+            shortcutToolTip.SetToolTip(processesNavButton, "Open Processes (Ctrl+2)");
+            shortcutToolTip.SetToolTip(networkNavButton, "Open Network (Ctrl+3)");
+            shortcutToolTip.SetToolTip(historyNavButton, "Open History (Ctrl+4)");
+            shortcutToolTip.SetToolTip(memoryNavButton, "Open Memory (Ctrl+5)");
+            shortcutToolTip.SetToolTip(historyPreviousButton, "Previous History page (Page Up)");
+            shortcutToolTip.SetToolTip(historyNextButton, "Next History page (Page Down)");
             shortcutToolTip.SetToolTip(appSearchBox, "Focus search (Ctrl+F); clear search (Escape)");
             shortcutToolTip.SetToolTip(filterBox, "Focus search (Ctrl+F); clear search (Escape)");
             shortcutToolTip.SetToolTip(networkFilterBox, "Focus search (Ctrl+F); clear search (Escape)");
@@ -793,6 +807,11 @@ namespace BetterTaskManager
 
         internal static GlobalShortcutCommand GetGlobalShortcutCommand(Keys keyData, string pageName)
         {
+            if (keyData == (Keys.Control | Keys.D1) || keyData == (Keys.Control | Keys.NumPad1)) return GlobalShortcutCommand.OpenApps;
+            if (keyData == (Keys.Control | Keys.D2) || keyData == (Keys.Control | Keys.NumPad2)) return GlobalShortcutCommand.OpenProcesses;
+            if (keyData == (Keys.Control | Keys.D3) || keyData == (Keys.Control | Keys.NumPad3)) return GlobalShortcutCommand.OpenNetwork;
+            if (keyData == (Keys.Control | Keys.D4) || keyData == (Keys.Control | Keys.NumPad4)) return GlobalShortcutCommand.OpenHistory;
+            if (keyData == (Keys.Control | Keys.D5) || keyData == (Keys.Control | Keys.NumPad5)) return GlobalShortcutCommand.OpenMemory;
             if (keyData == Keys.F5) return GlobalShortcutCommand.Refresh;
             if (keyData == (Keys.Control | Keys.L)) return GlobalShortcutCommand.ToggleLive;
 
@@ -800,6 +819,8 @@ namespace BetterTaskManager
             if (keyData == (Keys.Control | Keys.F) && searchablePage) return GlobalShortcutCommand.FocusFilter;
             if (keyData == Keys.Escape && searchablePage) return GlobalShortcutCommand.ClearFilter;
             if (keyData == (Keys.Control | Keys.E) && searchablePage) return GlobalShortcutCommand.Export;
+            if (keyData == Keys.PageUp && pageName == "History") return GlobalShortcutCommand.PreviousPage;
+            if (keyData == Keys.PageDown && pageName == "History") return GlobalShortcutCommand.NextPage;
             return GlobalShortcutCommand.None;
         }
 
@@ -808,6 +829,14 @@ namespace BetterTaskManager
             string pageName = Convert.ToString(activePage == null ? null : activePage.Tag) ?? "";
             GlobalShortcutCommand command = GetGlobalShortcutCommand(keyData, pageName);
             if (command == GlobalShortcutCommand.None) return false;
+
+            if (command == GlobalShortcutCommand.OpenApps) { await NavigateToPageAsync(appsTab); return true; }
+            if (command == GlobalShortcutCommand.OpenProcesses) { await NavigateToPageAsync(processTab); return true; }
+            if (command == GlobalShortcutCommand.OpenNetwork) { await NavigateToPageAsync(networkTab); return true; }
+            if (command == GlobalShortcutCommand.OpenHistory) { await NavigateToPageAsync(historyTab); return true; }
+            if (command == GlobalShortcutCommand.OpenMemory) { await NavigateToPageAsync(memoryTab); return true; }
+            if (command == GlobalShortcutCommand.PreviousPage) { MoveHistoryPage(-1); return true; }
+            if (command == GlobalShortcutCommand.NextPage) { MoveHistoryPage(1); return true; }
 
             if (command == GlobalShortcutCommand.ToggleLive)
             {
@@ -838,6 +867,21 @@ namespace BetterTaskManager
 
             await ExportCurrentPageAsync();
             return true;
+        }
+
+        private async Task NavigateToPageAsync(Control page)
+        {
+            if (page == historyTab)
+            {
+                await ShowHistoryAsync();
+                return;
+            }
+
+            ShowPage(page);
+            if (page == appsTab) await RefreshAppsAsync(false);
+            else if (page == processTab) await RefreshProcessesAsync();
+            else if (page == networkTab) await RefreshNetworkAsync();
+            else if (page == memoryTab) RefreshMemoryPage();
         }
 
         private TextBox ActiveFilterBox()
@@ -2635,7 +2679,7 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("History paging did not initialize the first page correctly.");
             }
 
-            MoveHistoryPage(1);
+            if (!await HandleGlobalShortcutAsync(Keys.PageDown)) throw new InvalidOperationException("Page Down was not handled on History.");
             var secondPageItem = new RetrieveVirtualItemEventArgs(0);
             HistoryListRetrieveVirtualItem(historyList, secondPageItem);
             if (historyPageStart != 100 || secondPageItem.Item.SubItems[1].Text != "item-100")
@@ -2648,11 +2692,13 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("History reload did not preserve the current result page.");
             }
 
-            MoveHistoryPage(1);
+            await HandleGlobalShortcutAsync(Keys.PageDown);
             if (historyPageStart != 200 || historyList.VirtualListSize != 50 || !historyPreviousButton.Enabled || historyNextButton.Enabled)
             {
                 throw new InvalidOperationException("History paging did not clamp the final page correctly.");
             }
+            await HandleGlobalShortcutAsync(Keys.PageUp);
+            if (historyPageStart != 100) throw new InvalidOperationException("Page Up did not return to the previous History page.");
 
             historyFilterBox.Text = "item-249";
             if (historyPageStart != 0 || historyList.VirtualListSize != 1)
@@ -2771,6 +2817,10 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Memory dashboard did not expose the initial System CPU sampling state.");
             }
             VerifyNarrowLayout();
+            if (!await HandleGlobalShortcutAsync(Keys.Control | Keys.D5) || activePage != memoryTab)
+            {
+                throw new InvalidOperationException("Ctrl+5 did not navigate to the Memory page.");
+            }
             refreshIntervalBox.SelectedIndex = 3;
             networkGrid.Columns["Process"].Width = 222;
             SaveAppSettings();
@@ -3613,20 +3663,24 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Automatic refresh dialog suppression policy failed.");
             }
             if (MainForm.GetGlobalShortcutCommand(Keys.F5, "Memory") != GlobalShortcutCommand.Refresh ||
+                MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.D1, "Memory") != GlobalShortcutCommand.OpenApps ||
+                MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.NumPad5, "Apps") != GlobalShortcutCommand.OpenMemory ||
                 MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.L, "Memory") != GlobalShortcutCommand.ToggleLive ||
                 MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.F, "Network") != GlobalShortcutCommand.FocusFilter ||
                 MainForm.GetGlobalShortcutCommand(Keys.Escape, "Apps") != GlobalShortcutCommand.ClearFilter ||
                 MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.E, "History") != GlobalShortcutCommand.Export ||
-                MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.E, "Memory") != GlobalShortcutCommand.None)
+                MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.E, "Memory") != GlobalShortcutCommand.None ||
+                MainForm.GetGlobalShortcutCommand(Keys.PageUp, "History") != GlobalShortcutCommand.PreviousPage ||
+                MainForm.GetGlobalShortcutCommand(Keys.PageDown, "Network") != GlobalShortcutCommand.None)
             {
                 throw new InvalidOperationException("Global keyboard shortcut mapping failed.");
             }
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.27" || form.Text != "Better Task Manager v1.1.0-preview.27")
+                if (Application.ProductVersion != "1.1.0-preview.28" || form.Text != "Better Task Manager v1.1.0-preview.28")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.27.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.28.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
