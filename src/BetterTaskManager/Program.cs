@@ -275,7 +275,7 @@ namespace BetterTaskManager
         private DateTime latestNetworkSnapshot = DateTime.MinValue;
         private Dictionary<int, ProcessDetails> detailsCache = new Dictionary<int, ProcessDetails>();
         private readonly object detailsCacheSync = new object();
-        private bool detailsLoaded = false;
+        private bool detailsReloaded = false;
         private bool refreshingApps = false;
         private bool firewallActionInProgress = false;
         private bool refreshingProcesses = false;
@@ -512,7 +512,7 @@ namespace BetterTaskManager
             refreshButton = MakeButton("Refresh", 90);
             killButton = MakeButton("Force Kill", 100);
             trimSelectedButton = MakeButton("Trim Selected Memory", 160);
-            loadDetailsButton = MakeButton("Load Users/Paths", 130);
+            loadDetailsButton = MakeButton("Reload Users/Paths", 145);
             processOpenFolderButton = MakeButton("Open Folder", 105);
             processCopyPathButton = MakeButton("Copy Path", 90);
             var exportProcessesButton = MakeButton("Export CSV", 100);
@@ -730,6 +730,7 @@ namespace BetterTaskManager
             shortcutToolTip.SetToolTip(memoryNavButton, "Open Memory (Ctrl+5)");
             shortcutToolTip.SetToolTip(historyPreviousButton, "Previous History page (Page Up)");
             shortcutToolTip.SetToolTip(historyNextButton, "Next History page (Page Down)");
+            shortcutToolTip.SetToolTip(loadDetailsButton, "Clear and rebuild the cached process usernames and executable paths");
             shortcutToolTip.SetToolTip(appSearchBox, "Focus search (Ctrl+F); clear search (Escape)");
             shortcutToolTip.SetToolTip(filterBox, "Focus search (Ctrl+F); clear search (Escape)");
             shortcutToolTip.SetToolTip(networkFilterBox, "Focus search (Ctrl+F); clear search (Escape)");
@@ -1428,6 +1429,7 @@ namespace BetterTaskManager
             UpdateFirewallActionButtons();
             appTitleLabel.Text = "Loading apps...";
             appMetaLabel.Text = "Collecting processes and connections";
+            appMetaLabel.ForeColor = Theme.Info;
             try
             {
                 Dictionary<int, ProcessDetails> cache;
@@ -1484,6 +1486,7 @@ namespace BetterTaskManager
             {
                 appTitleLabel.Text = "Refresh failed";
                 appMetaLabel.Text = ex.Message;
+                appMetaLabel.ForeColor = Theme.Danger;
                 MarkLiveRefreshFailure();
             }
             finally
@@ -1716,7 +1719,8 @@ namespace BetterTaskManager
             if (appGrid.SelectedRows.Count == 0)
             {
                 appTitleLabel.Text = "Select an app";
-                appMetaLabel.Text = "";
+                appMetaLabel.Text = AppNetworkCompletenessText(latestNetworkIssues);
+                appMetaLabel.ForeColor = latestNetworkIssues.Count == 0 ? Theme.MutedText : Theme.Warning;
                 appConnectionCard.Text = "0\nGroup Connections";
                 appMemoryCard.Text = "0 MB\nSum Private Bytes";
                 appRamCard.Text = "0 MB\nSum Working Set";
@@ -1740,7 +1744,9 @@ namespace BetterTaskManager
             if (app.Pids.Count > 8) pids += " +" + (app.Pids.Count - 8).ToString(CultureInfo.InvariantCulture);
             appMetaLabel.Text = SnapshotLabel(latestAppsSnapshot) + "    " + app.Pids.Count.ToString(CultureInfo.CurrentCulture) + " processes aggregated    " + pids +
                 "    CPU " + AppCpuSummaryText(app) + "    " +
-                (string.IsNullOrWhiteSpace(app.User) ? "User unknown" : app.User) + "    " + (string.IsNullOrWhiteSpace(app.Path) ? "Path unavailable" : app.Path);
+                (string.IsNullOrWhiteSpace(app.User) ? "User unknown" : app.User) + "    " + (string.IsNullOrWhiteSpace(app.Path) ? "Path unavailable" : app.Path) +
+                (latestNetworkIssues.Count == 0 ? "" : "    " + AppNetworkCompletenessText(latestNetworkIssues));
+            appMetaLabel.ForeColor = latestNetworkIssues.Count == 0 ? Theme.MutedText : Theme.Warning;
             appConnectionCard.Text = app.ConnectionCount.ToString(CultureInfo.InvariantCulture) + "\nGroup Connections";
             appMemoryCard.Text = app.PrivateMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nSum Private Bytes";
             appRamCard.Text = app.RamMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nSum Working Set";
@@ -1960,7 +1966,7 @@ namespace BetterTaskManager
                 processPidScope = null;
                 FillProcessGridFromCache();
                 statusLabel.Text = SnapshotLabel(latestProcessSnapshot) + "    " + (isAdmin
-                    ? (detailsLoaded ? "Running as administrator - users/paths loaded" : "Running as administrator")
+                    ? (detailsReloaded ? "Running as administrator - identity cache manually reloaded" : "Running as administrator")
                     : "Not administrator: some actions may fail");
                 statusLabel.ForeColor = isAdmin ? Theme.Good : Theme.Danger;
                 MarkLiveRefreshSuccess();
@@ -2166,14 +2172,14 @@ namespace BetterTaskManager
         {
             if (refreshingProcesses) return;
             loadDetailsButton.Enabled = false;
-            statusLabel.Text = "Loading usernames and full paths...";
+            statusLabel.Text = "Rebuilding username and executable-path cache...";
             statusLabel.ForeColor = Theme.Warning;
             try
             {
                 Dictionary<int, ProcessDetails> loadedDetails = await RunSnapshotCollectionAsync(processTab, () => LoadProcessDetails());
                 if (loadedDetails == null) return;
                 lock (detailsCacheSync) detailsCache = loadedDetails;
-                detailsLoaded = true;
+                detailsReloaded = true;
                 await RefreshProcessesAsync();
             }
             catch (Exception ex)
@@ -2343,6 +2349,12 @@ namespace BetterTaskManager
             var list = (issues ?? Enumerable.Empty<string>()).Where(issue => !string.IsNullOrWhiteSpace(issue)).ToList();
             if (list.Count == 0) return "";
             return " Collector warning" + (list.Count == 1 ? "" : "s") + ": " + string.Join(" | ", list.Take(2)) + (list.Count > 2 ? " | +" + (list.Count - 2).ToString(CultureInfo.CurrentCulture) : "");
+        }
+
+        internal static string AppNetworkCompletenessText(IEnumerable<string> issues)
+        {
+            int count = (issues ?? Enumerable.Empty<string>()).Count(issue => !string.IsNullOrWhiteSpace(issue));
+            return count == 0 ? "" : "Network data partial: " + count.ToString(CultureInfo.CurrentCulture) + " native table warning" + (count == 1 ? "" : "s") + ".";
         }
 
         private List<NetworkRow> NetworkRowsForCurrentView()
@@ -2675,7 +2687,7 @@ namespace BetterTaskManager
             string path = SelectedNetworkPath();
             if (string.IsNullOrWhiteSpace(path))
             {
-                MessageBox.Show(this, "Select a network row with an application path. Press Load Users/Paths first if paths are blank.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "The selected connection has no executable path. Some protected processes hide path data; try Restart as Admin and refresh.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -3070,6 +3082,7 @@ namespace BetterTaskManager
             var betaApp = new AppProfile { Name = "beta", Path = "C:\\Apps\\beta.exe", User = "TEST\\Two", ConnectionCount = 5, Cpu = 7.5, CpuSampleCount = 1, RamMb = 40 };
             betaApp.Pids.Add(202);
             latestAppProfiles = new List<AppProfile> { alphaApp, betaApp };
+            latestNetworkIssues = new List<string> { "IPv6 UDP: expected partial source" };
             firewallStatusCache[alphaApp.Path] = FirewallStatusNoBlock;
             firewallStatusCache[betaApp.Path] = FirewallStatusBlocked;
             ShowPage(appsTab);
@@ -3094,6 +3107,10 @@ namespace BetterTaskManager
             if (!appCopyPathButton.Enabled || !appOpenFolderButton.Enabled)
             {
                 throw new InvalidOperationException("Apps executable path actions did not follow selection state.");
+            }
+            if (appMetaLabel.Text.IndexOf("Network data partial", StringComparison.Ordinal) < 0 || appMetaLabel.ForeColor != Theme.Warning)
+            {
+                throw new InvalidOperationException("Apps did not disclose partial native network data.");
             }
             if (appBlockButton.Enabled != isAdmin || appUnblockButton.Enabled || !BeginFirewallAction() || appBlockButton.Enabled || appUnblockButton.Enabled ||
                 blockButton.Enabled || unblockButton.Enabled || BeginFirewallAction())
@@ -3977,9 +3994,11 @@ namespace BetterTaskManager
             try { NativeNetworkCollector.ValidateBufferSize(3, "test"); } catch (InvalidDataException) { lowerBufferRejected = true; }
             try { NativeNetworkCollector.ValidateBufferSize((64 * 1024 * 1024) + 1, "test"); } catch (InvalidDataException) { upperBufferRejected = true; }
             string issueSummary = MainForm.NetworkIssueSummary(new[] { "one", "two", "three" });
+            string appIssueSummary = MainForm.AppNetworkCompletenessText(new[] { "one", "two" });
             if (partialNetworkSnapshot.Connections.Count != 1 || partialNetworkSnapshot.Issues.Count != 1 ||
                 partialNetworkSnapshot.Issues[0].IndexOf("expected table failure", StringComparison.Ordinal) < 0 ||
-                !lowerBufferRejected || !upperBufferRejected || issueSummary.IndexOf("+1", StringComparison.Ordinal) < 0)
+                !lowerBufferRejected || !upperBufferRejected || issueSummary.IndexOf("+1", StringComparison.Ordinal) < 0 ||
+                appIssueSummary.IndexOf("2 native table warnings", StringComparison.Ordinal) < 0)
             {
                 throw new InvalidOperationException("Partial native network collection or buffer validation failed.");
             }
@@ -4211,9 +4230,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.41" || form.Text != "Better Task Manager v1.1.0-preview.41")
+                if (Application.ProductVersion != "1.1.0-preview.42" || form.Text != "Better Task Manager v1.1.0-preview.42")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.41.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.42.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

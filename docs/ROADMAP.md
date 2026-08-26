@@ -46,6 +46,7 @@
 - Added bounded real-time CPU and RAM-load trend charts to Memory.
 - Staged Apps rendering ahead of guarded asynchronous firewall enrichment.
 - Added bounded partial-result resilience to native IPv4/IPv6 TCP/UDP collection.
+- Surfaced partial network completeness in Apps and clarified identity-cache reload semantics.
 
 ## v2.0
 

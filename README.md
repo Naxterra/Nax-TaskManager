@@ -4,13 +4,15 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.41`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.42`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
 - App-based overview with explicit process count plus same-snapshot summed CPU, private-byte, and working-set values for each executable group. CPU displays `...` until a second snapshot exists, so an unavailable baseline is never mislabeled as measured idle. Cached all-field search, typed sorting, and selection persist across Live refreshes.
 - Apps renders process/network grouping before the slower firewall-rule scan completes; late firewall results are guarded by snapshot and mutation revision so they cannot overwrite newer data.
+- Apps marks partial native network data in amber so grouped connection counts are never presented as silently complete.
 - Per-PID Process view with user, CPU, private bytes, working set, peak working set, threads, and executable path. The visible-row summary reconciles sampled CPU and memory totals, including partial-sample counts. Search filters the latest snapshot instantly by PID, name, user, or path without recollecting processes on every keystroke.
+- User/path identity is resolved automatically and cached; **Reload Users/Paths** explicitly clears and rebuilds that cache for a manual retry.
 - Network view showing application, PID, user, protocol, local endpoint, remote endpoint, state, and executable path. All-column search and typed column sorting operate instantly on the latest snapshot and persist across Live refreshes.
 - Stable total adapter bandwidth sampling tracks each active interface independently and ignores new, removed, or reset counters until a second monotonic sample exists.
 - Selection-aware **Open Folder** and **Copy Path** actions in Apps, Processes, and Network. Folder launch uses Windows shell activation directly and never opens a command prompt.
@@ -104,13 +106,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.41-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.42-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.41-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.42-portable-win-x64\BetterTaskManager.exe
 ```
 
 Each portable folder contains `BetterTaskManager.exe`, `README.md`, `CHANGELOG.md`, `LICENSE`, and `SHA256SUMS.txt`. Verify the executable from inside that folder with:
