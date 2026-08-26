@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.34 - Unreleased
+## 1.1.0-preview.35 - Unreleased
 
 ### Added
 
@@ -39,6 +39,7 @@
 - Added explicit trimmed/failed/skipped accounting to bulk working-set trimming.
 - Added one shared non-overlapping busy gate for all Memory maintenance actions.
 - Added one shared non-overlapping busy state for selected Process mutations.
+- Added one shared non-overlapping firewall mutation gate across Apps and Network.
 
 ### Changed
 
@@ -75,6 +76,7 @@
 - Bulk trim excludes Better Task Manager and PID 0, always restores its action button, and refreshes only the active Memory dashboard.
 - Standby-cache and system-working-set native calls now run through `Task.Run`; all maintenance controls disable together and restore according to administrator state in `finally`.
 - Force Kill, Trim, Open Folder, and Copy Path now follow selection, refresh, mutation, and self-process eligibility from one centralized action-state method.
+- Firewall action eligibility now combines administrator state, selection/path availability, active refresh, global mutation state, and known Apps rule state.
 
 ### Fixed
 
@@ -113,6 +115,7 @@
 - Removed the obsolete Process refresh requested from the Memory page after bulk trim, which the stale-page collector gate correctly discarded.
 - Fixed Clear Standby Cache and Release System Cache blocking the WinForms UI thread while Windows performed native maintenance.
 - Prevented overlapping Force Kill/Trim operations and disabled stale path/mutation actions while Process or Network refreshes replace their grids.
+- Prevented simultaneous Apps/Network firewall commands and guaranteed both pages' controls recover in `finally` after success, failure, or early command return.
 
 ## v1.0.0 - 2026-06-06
 

@@ -272,6 +272,7 @@ namespace BetterTaskManager
         private readonly object detailsCacheSync = new object();
         private bool detailsLoaded = false;
         private bool refreshingApps = false;
+        private bool firewallActionInProgress = false;
         private bool refreshingProcesses = false;
         private bool processActionInProgress = false;
         private bool refreshingNetwork = false;
@@ -765,7 +766,11 @@ namespace BetterTaskManager
             blockButton.Click += async (s, e) => await BlockSelectedAsync(true);
             unblockButton.Click += async (s, e) => await BlockSelectedAsync(false);
             exportNetworkButton.Click += async (s, e) => await ExportNetworkAsync();
-            networkGrid.SelectionChanged += (s, e) => UpdateExecutablePathActions();
+            networkGrid.SelectionChanged += (s, e) =>
+            {
+                UpdateExecutablePathActions();
+                UpdateFirewallActionButtons();
+            };
             networkOpenFolderButton.Click += (s, e) => OpenSelectedExecutableFolder();
             networkCopyPathButton.Click += async (s, e) => await CopySelectedExecutablePathAsync();
             reloadHistoryButton.Click += async (s, e) => await LoadHistoryGridAsync();
@@ -835,8 +840,7 @@ namespace BetterTaskManager
             restartAdminButton.Visible = !isAdmin;
             adminStatusLabel.Text = isAdmin ? "Administrator" : "Standard mode";
             adminStatusLabel.ForeColor = isAdmin ? Theme.Good : Theme.MutedText;
-            blockButton.Enabled = isAdmin;
-            unblockButton.Enabled = isAdmin;
+            UpdateFirewallActionButtons();
             trimAllButton.Enabled = !memoryMaintenanceInProgress;
             clearStandbyButton.Enabled = isAdmin && !memoryMaintenanceInProgress;
             emptySystemButton.Enabled = isAdmin && !memoryMaintenanceInProgress;
@@ -1398,6 +1402,7 @@ namespace BetterTaskManager
             if (refreshingApps) return;
             refreshingApps = true;
             appRefreshButton.Enabled = false;
+            UpdateFirewallActionButtons();
             appTitleLabel.Text = "Loading apps...";
             appMetaLabel.Text = "Collecting processes, connections, and firewall state";
             try
@@ -1440,6 +1445,7 @@ namespace BetterTaskManager
             {
                 appRefreshButton.Enabled = true;
                 refreshingApps = false;
+                UpdateFirewallActionButtons();
             }
         }
 
@@ -1672,6 +1678,7 @@ namespace BetterTaskManager
                 appOpenFolderButton.Enabled = false;
                 appCopyPathButton.Enabled = false;
                 appConnectionsGrid.Rows.Clear();
+                UpdateFirewallActionButtons();
                 return;
             }
 
@@ -1693,9 +1700,7 @@ namespace BetterTaskManager
             appFirewallDetailsLabel.ForeColor = firewallStatus == FirewallStatusBlocked
                 ? Theme.Danger
                 : firewallStatus == FirewallStatusNoBlock ? Theme.MutedText : Theme.Warning;
-            bool canChangeRule = isAdmin && !string.IsNullOrWhiteSpace(app.Path);
-            appBlockButton.Enabled = canChangeRule && firewallStatus != FirewallStatusBlocked;
-            appUnblockButton.Enabled = canChangeRule && firewallStatus == FirewallStatusBlocked;
+            UpdateFirewallActionButtons();
             appViewProcessesButton.Enabled = app.Pids.Count > 0;
             bool hasExecutablePath = !string.IsNullOrWhiteSpace(app.Path);
             appOpenFolderButton.Enabled = hasExecutablePath && !string.IsNullOrWhiteSpace(ExecutableDirectory(app.Path));
@@ -1771,28 +1776,36 @@ namespace BetterTaskManager
             }
 
             string rule = RuleNameForPath(path);
-            if (block)
+            if (block && MessageBox.Show(this, "Block outbound network access for:\n" + path, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            if (!BeginFirewallAction()) return;
+            try
             {
-                if (MessageBox.Show(this, "Block outbound network access for:\n" + path, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-                var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule, "dir=out", "program=" + path, "action=block", "profile=any"));
-                if (!result.Succeeded)
+                if (block)
                 {
-                    ShowCommandFailure("Blocking outbound network access", result);
-                    return;
+                    var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule, "dir=out", "program=" + path, "action=block", "profile=any"));
+                    if (!result.Succeeded)
+                    {
+                        ShowCommandFailure("Blocking outbound network access", result);
+                        return;
+                    }
                 }
-            }
-            else
-            {
-                var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule));
-                if (!result.Succeeded)
+                else
                 {
-                    ShowCommandFailure("Removing the firewall rule", result);
-                    return;
+                    var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule));
+                    if (!result.Succeeded)
+                    {
+                        ShowCommandFailure("Removing the firewall rule", result);
+                        return;
+                    }
                 }
-            }
 
-            firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
-            await RefreshAppsAsync(false);
+                firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
+                await RefreshAppsAsync(false);
+            }
+            finally
+            {
+                EndFirewallAction();
+            }
         }
 
         private static void ApplyDarkTheme(Control root)
@@ -2156,6 +2169,7 @@ namespace BetterTaskManager
             refreshingNetwork = true;
             networkRefreshButton.Enabled = false;
             UpdateExecutablePathActions();
+            UpdateFirewallActionButtons();
             networkStatusLabel.Text = "Loading network connections...";
             networkStatusLabel.ForeColor = Theme.Warning;
             try
@@ -2185,6 +2199,7 @@ namespace BetterTaskManager
                 networkRefreshButton.Enabled = true;
                 refreshingNetwork = false;
                 UpdateExecutablePathActions();
+                UpdateFirewallActionButtons();
             }
         }
 
@@ -2600,29 +2615,37 @@ namespace BetterTaskManager
             }
 
             string rule = RuleNameForPath(path);
-            if (block)
+            if (block && MessageBox.Show(this, "Block outbound network access for:\n" + path, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            if (!BeginFirewallAction()) return;
+            try
             {
-                if (MessageBox.Show(this, "Block outbound network access for:\n" + path, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-                var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule, "dir=out", "program=" + path, "action=block", "profile=any"));
-                if (!result.Succeeded)
+                if (block)
                 {
-                    ShowCommandFailure("Blocking outbound network access", result);
-                    return;
+                    var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule, "dir=out", "program=" + path, "action=block", "profile=any"));
+                    if (!result.Succeeded)
+                    {
+                        ShowCommandFailure("Blocking outbound network access", result);
+                        return;
+                    }
+                    MessageBox.Show(this, "Blocked outbound network access for this app.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                MessageBox.Show(this, "Blocked outbound network access for this app.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            else
-            {
-                var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule));
-                if (!result.Succeeded)
+                else
                 {
-                    ShowCommandFailure("Removing the firewall rule", result);
-                    return;
+                    var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule));
+                    if (!result.Succeeded)
+                    {
+                        ShowCommandFailure("Removing the firewall rule", result);
+                        return;
+                    }
+                    MessageBox.Show(this, "Removed this app's Better Task Manager block rule.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                MessageBox.Show(this, "Removed this app's Better Task Manager block rule.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
 
-            firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
+                firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
+            }
+            finally
+            {
+                EndFirewallAction();
+            }
         }
 
         private async Task ShowHistoryAsync()
@@ -3003,6 +3026,16 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Apps executable path actions did not follow selection state.");
             }
+            if (appBlockButton.Enabled != isAdmin || appUnblockButton.Enabled || !BeginFirewallAction() || appBlockButton.Enabled || appUnblockButton.Enabled ||
+                blockButton.Enabled || unblockButton.Enabled || BeginFirewallAction())
+            {
+                throw new InvalidOperationException("Firewall mutation gate did not enter a single cross-view busy state.");
+            }
+            EndFirewallAction();
+            if (appBlockButton.Enabled != isAdmin || appUnblockButton.Enabled || blockButton.Enabled != isAdmin || unblockButton.Enabled != isAdmin)
+            {
+                throw new InvalidOperationException("Firewall action controls did not recover to selection and privilege state.");
+            }
             gridSortState[appGrid] = Tuple.Create("Cpu", false);
             FillAppGridFromCache();
             if (Convert.ToString(appGrid.Rows[0].Cells["App"].Value) != "beta" ||
@@ -3195,6 +3228,35 @@ namespace BetterTaskManager
             string networkPath = SelectedGridPath(networkGrid);
             networkCopyPathButton.Enabled = !refreshingNetwork && !string.IsNullOrWhiteSpace(networkPath);
             networkOpenFolderButton.Enabled = !refreshingNetwork && !string.IsNullOrWhiteSpace(ExecutableDirectory(networkPath));
+        }
+
+        private void UpdateFirewallActionButtons()
+        {
+            AppProfile app = SelectedAppProfile();
+            string appPath = app == null ? "" : app.Path ?? "";
+            string appStatus = GetFirewallStatus(appPath);
+            bool appEligible = isAdmin && !firewallActionInProgress && !refreshingApps && !string.IsNullOrWhiteSpace(appPath);
+            appBlockButton.Enabled = appEligible && appStatus != FirewallStatusBlocked;
+            appUnblockButton.Enabled = appEligible && appStatus == FirewallStatusBlocked;
+
+            string networkPath = SelectedGridPath(networkGrid);
+            bool networkEligible = isAdmin && !firewallActionInProgress && !refreshingNetwork && !string.IsNullOrWhiteSpace(networkPath);
+            blockButton.Enabled = networkEligible;
+            unblockButton.Enabled = networkEligible;
+        }
+
+        private bool BeginFirewallAction()
+        {
+            if (firewallActionInProgress) return false;
+            firewallActionInProgress = true;
+            UpdateFirewallActionButtons();
+            return true;
+        }
+
+        private void EndFirewallAction()
+        {
+            firewallActionInProgress = false;
+            UpdateFirewallActionButtons();
         }
 
         private bool BeginProcessAction()
@@ -4031,9 +4093,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.34" || form.Text != "Better Task Manager v1.1.0-preview.34")
+                if (Application.ProductVersion != "1.1.0-preview.35" || form.Text != "Better Task Manager v1.1.0-preview.35")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.34.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.35.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.34 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.35 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -37,6 +37,8 @@ The desktop UI can monitor its active Apps, Processes, Network, History, or Memo
 The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and committed-memory counters. Its page-based values are converted using the native page size. A stateful `GetSystemTimes` collector computes System CPU from idle, kernel, and user deltas; kernel time includes idle time, so busy percentage is `(kernel + user - idle) / (kernel + user)`. Both collectors refresh manually or through the same Live monitoring intervals.
 
 The desktop starts unelevated. Privilege state and elevation are global navigation concerns; firewall mutation and system-level memory actions remain unavailable until the executable is restarted with `runas`.
+
+Apps and Network firewall controls share one mutation gate and one action-state calculation. Eligibility combines elevation, selected executable path, current refresh, active mutation, and rule state where known. Commands run off the UI thread, update the shared path-keyed rule cache, and restore both pages in `finally`.
 
 Non-destructive UI preferences are stored as atomic JSON under `%LOCALAPPDATA%\BetterTaskManager`. The app restores a screen-clamped window size, maximized state, refresh interval, and clamped widths for fixed/virtual data columns. The last non-minimized state preserves maximization when closing from the taskbar. Live enabled state is excluded so launching the app never begins background sampling unexpectedly.
 

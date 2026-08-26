@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.34`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.35`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -29,6 +29,7 @@ The current development build is `1.1.0-preview.34`. The checked-in v1.0 downloa
 - One-click **View Processes** reconciliation showing the exact contributing PIDs from the same Apps snapshot, with visible-row private-byte and working-set sums.
 - Model-based CSV export for filtered/sorted Apps, Processes, Network, and History. Exports include invariant snapshot/numeric fields, explicit CPU availability, complete identity/path data, and spreadsheet-formula protection rather than scraping localized grid text.
 - Per-app Windows Firewall block/unblock actions.
+- One cross-view firewall mutation gate keeps Apps and Network rule actions non-overlapping and selection/refresh/administrator aware.
 - Better Task Manager block-rule status in the app list, plus the exact outbound rule explanation for the selected app.
 - Global Standard/Administrator status with **Restart as Admin** available from every page; privileged controls are disabled until elevation.
 - Memory cleanup tools:
@@ -95,13 +96,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.34-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.35-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.34-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.35-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download
