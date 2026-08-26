@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.44 - Unreleased
+## 1.1.0-preview.45 - Unreleased
 
 ### Added
 
@@ -49,6 +49,7 @@
 - Added amber partial-network disclosure to Apps grouped connection metadata.
 - Added comprehensive current security/privacy documentation to the repository and portable package.
 - Added bounded cross-process crash logging with one rotated previous file.
+- Added concise tester-facing v1.1 preview release notes covering highlights, upgrade/local data, safety/privacy, validation, and known limits.
 
 ### Changed
 
@@ -95,6 +96,7 @@
 - Renamed **Load Users/Paths** to **Reload Users/Paths** and clarified that normal collection resolves/caches identities automatically while the button rebuilds the cache manually.
 - Security guidance now documents unelevated startup, privileged/destructive gates, local history/settings/crash data, export sensitivity, firewall rule scope, non-destructive tests, and checksum limitations.
 - Crash reports now include timestamp, app version, .NET runtime, OS, process bitness, DPI mode, and exception details; oversized entries are truncated with an explicit marker.
+- Deterministic portable staging now bundles `RELEASE_NOTES-v1.1-preview.md` ahead of the detailed changelog and security guide.
 
 ### Fixed
 
@@ -143,6 +145,7 @@
 - Replaced obsolete Network path guidance with protected-process/elevation guidance and added Apps completeness status tests.
 - Fixed stale documentation claiming the app requests elevation at startup, renamed README limits for the current preview, and added `SECURITY.md` to deterministic package staging.
 - Prevented `crash.log` from growing indefinitely or racing overlapping app instances; current and previous logs remain capped at 1 MiB each.
+- Documented that existing local history/settings remain in place, Live starts paused, v1.0 remains unchanged, and background ETW/WFP functionality is still outside the desktop preview.
 
 ## v1.0.0 - 2026-06-06
 

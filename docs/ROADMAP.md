@@ -49,6 +49,7 @@
 - Surfaced partial network completeness in Apps and clarified identity-cache reload semantics.
 - Corrected and bundled current security/privacy guidance for preview distribution.
 - Bounded and serialized contextual crash logging across app instances.
+- Added tester-facing v1.1 preview release notes to deterministic packages.
 
 ## v2.0
 
