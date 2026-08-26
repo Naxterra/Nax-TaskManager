@@ -273,6 +273,7 @@ namespace BetterTaskManager
         private bool detailsLoaded = false;
         private bool refreshingApps = false;
         private bool refreshingProcesses = false;
+        private bool processActionInProgress = false;
         private bool refreshingNetwork = false;
         private bool updatingAppGrid = false;
         private bool settingProcessFilter = false;
@@ -1880,6 +1881,7 @@ namespace BetterTaskManager
             if (refreshingProcesses) return;
             refreshingProcesses = true;
             refreshButton.Enabled = false;
+            UpdateExecutablePathActions();
             statusLabel.Text = "Loading processes...";
             statusLabel.ForeColor = Theme.Warning;
 
@@ -1910,6 +1912,7 @@ namespace BetterTaskManager
             {
                 refreshButton.Enabled = true;
                 refreshingProcesses = false;
+                UpdateExecutablePathActions();
             }
         }
 
@@ -2152,6 +2155,7 @@ namespace BetterTaskManager
             if (refreshingNetwork) return;
             refreshingNetwork = true;
             networkRefreshButton.Enabled = false;
+            UpdateExecutablePathActions();
             networkStatusLabel.Text = "Loading network connections...";
             networkStatusLabel.ForeColor = Theme.Warning;
             try
@@ -2180,6 +2184,7 @@ namespace BetterTaskManager
             {
                 networkRefreshButton.Enabled = true;
                 refreshingNetwork = false;
+                UpdateExecutablePathActions();
             }
         }
 
@@ -2371,6 +2376,7 @@ namespace BetterTaskManager
                 (string.IsNullOrWhiteSpace(selected.Path) ? "" : "\n" + selected.Path);
             if (MessageBox.Show(this, "Force kill this process and its child processes?\n\n" + identity,
                 "Confirm force kill", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            if (!BeginProcessAction()) return;
             try
             {
                 await Task.Run(() =>
@@ -2392,6 +2398,10 @@ namespace BetterTaskManager
             {
                 MessageBox.Show(this, "Force-killing PID " + selected.Pid + " failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+            finally
+            {
+                EndProcessAction();
+            }
         }
 
         private async Task TrimSelectedAsync()
@@ -2403,6 +2413,7 @@ namespace BetterTaskManager
                 return;
             }
             if (!SelectedProcessInstanceIsCurrent(selected)) return;
+            if (!BeginProcessAction()) return;
             try
             {
                 await Task.Run(() =>
@@ -2422,6 +2433,10 @@ namespace BetterTaskManager
             catch (Exception ex)
             {
                 MessageBox.Show(this, "Trimming PID " + selected.Pid + " failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                EndProcessAction();
             }
         }
 
@@ -2913,6 +2928,16 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Process executable path actions did not follow selection state.");
             }
+            if (!killButton.Enabled || !trimSelectedButton.Enabled || !BeginProcessAction() || killButton.Enabled || trimSelectedButton.Enabled ||
+                processCopyPathButton.Enabled || processOpenFolderButton.Enabled || BeginProcessAction())
+            {
+                throw new InvalidOperationException("Process mutation gate did not enter a single busy state.");
+            }
+            EndProcessAction();
+            if (!killButton.Enabled || !trimSelectedButton.Enabled || !processCopyPathButton.Enabled || !processOpenFolderButton.Enabled)
+            {
+                throw new InvalidOperationException("Process actions did not recover after leaving the busy state.");
+            }
 
             latestNetworkRows = new List<NetworkRow>
             {
@@ -3159,13 +3184,31 @@ namespace BetterTaskManager
 
         private void UpdateExecutablePathActions()
         {
+            ProcessRow selectedProcess = SelectedProcessRow();
             string processPath = SelectedGridPath(processGrid);
-            processCopyPathButton.Enabled = !string.IsNullOrWhiteSpace(processPath);
-            processOpenFolderButton.Enabled = !string.IsNullOrWhiteSpace(ExecutableDirectory(processPath));
+            bool processActionsAvailable = !refreshingProcesses && !processActionInProgress && selectedProcess != null;
+            killButton.Enabled = processActionsAvailable && CanForceKillProcess(selectedProcess == null ? 0 : selectedProcess.Pid, Environment.ProcessId);
+            trimSelectedButton.Enabled = processActionsAvailable;
+            processCopyPathButton.Enabled = processActionsAvailable && !string.IsNullOrWhiteSpace(processPath);
+            processOpenFolderButton.Enabled = processActionsAvailable && !string.IsNullOrWhiteSpace(ExecutableDirectory(processPath));
 
             string networkPath = SelectedGridPath(networkGrid);
-            networkCopyPathButton.Enabled = !string.IsNullOrWhiteSpace(networkPath);
-            networkOpenFolderButton.Enabled = !string.IsNullOrWhiteSpace(ExecutableDirectory(networkPath));
+            networkCopyPathButton.Enabled = !refreshingNetwork && !string.IsNullOrWhiteSpace(networkPath);
+            networkOpenFolderButton.Enabled = !refreshingNetwork && !string.IsNullOrWhiteSpace(ExecutableDirectory(networkPath));
+        }
+
+        private bool BeginProcessAction()
+        {
+            if (processActionInProgress || refreshingProcesses) return false;
+            processActionInProgress = true;
+            UpdateExecutablePathActions();
+            return true;
+        }
+
+        private void EndProcessAction()
+        {
+            processActionInProgress = false;
+            UpdateExecutablePathActions();
         }
 
         private void OpenSelectedExecutableFolder()
@@ -3988,9 +4031,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.33" || form.Text != "Better Task Manager v1.1.0-preview.33")
+                if (Application.ProductVersion != "1.1.0-preview.34" || form.Text != "Better Task Manager v1.1.0-preview.34")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.33.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.34.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

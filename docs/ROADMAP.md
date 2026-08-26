@@ -38,6 +38,7 @@
 - Hardened Force Kill and Trim against PID reuse and self-termination.
 - Made bulk working-set trim self-safe, counted, and exception-safe.
 - Moved native Memory maintenance off the UI thread behind one busy gate.
+- Centralized Process mutation/path action state and prevented overlapping operations.
 
 ## v2.0
 

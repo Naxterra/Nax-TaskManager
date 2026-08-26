@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.33 - Unreleased
+## 1.1.0-preview.34 - Unreleased
 
 ### Added
 
@@ -38,6 +38,7 @@
 - Added process-start-time validation and self-process protection for destructive Process actions.
 - Added explicit trimmed/failed/skipped accounting to bulk working-set trimming.
 - Added one shared non-overlapping busy gate for all Memory maintenance actions.
+- Added one shared non-overlapping busy state for selected Process mutations.
 
 ### Changed
 
@@ -73,6 +74,7 @@
 - Force Kill confirmation now identifies the process by name, PID, and path and explicitly states that child processes are included.
 - Bulk trim excludes Better Task Manager and PID 0, always restores its action button, and refreshes only the active Memory dashboard.
 - Standby-cache and system-working-set native calls now run through `Task.Run`; all maintenance controls disable together and restore according to administrator state in `finally`.
+- Force Kill, Trim, Open Folder, and Copy Path now follow selection, refresh, mutation, and self-process eligibility from one centralized action-state method.
 
 ### Fixed
 
@@ -110,6 +112,7 @@
 - Fixed stale PID reuse potentially targeting a different process between snapshot and Force Kill/Trim; Trim failures now receive scoped error handling.
 - Removed the obsolete Process refresh requested from the Memory page after bulk trim, which the stale-page collector gate correctly discarded.
 - Fixed Clear Standby Cache and Release System Cache blocking the WinForms UI thread while Windows performed native maintenance.
+- Prevented overlapping Force Kill/Trim operations and disabled stale path/mutation actions while Process or Network refreshes replace their grids.
 
 ## v1.0.0 - 2026-06-06
 

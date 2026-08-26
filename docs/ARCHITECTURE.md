@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.33 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.34 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -23,6 +23,8 @@ Adapter bandwidth is sampled separately from connection ownership. Counters are 
 Apps, Processes, and Network resolve selected executable paths through one active-page helper. Copy uses the STA clipboard with short contention retries; Open Folder passes the resolved directory to `ProcessStartInfo` with `UseShellExecute=true`, avoiding command construction and console windows. Button availability follows each view's current selection.
 
 Process snapshots carry process start time in addition to PID. Force Kill and Trim compare this identity before confirmation/action and again inside the background operation, preventing a recycled PID from targeting a different process. Force Kill also rejects the application's own PID; zero/unavailable start times retain best-effort compatibility for protected processes.
+
+Selected Process mutations use one UI busy gate. Centralized action-state calculation combines selection, current-process protection, Process refresh, and mutation state so kill, trim, and executable-path actions cannot overlap or remain enabled against a grid being replaced. `finally` restores eligibility after each mutation.
 
 Bulk working-set trim enumerates processes off the UI thread, excludes PID 0 and the controlling Better Task Manager process, catches failures per target, and returns trimmed/failed/skipped counts. Its UI action is restored in `finally`, and only the active Memory snapshot is refreshed afterward.
 
