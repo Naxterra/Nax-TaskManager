@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.22 - Unreleased
+## 1.1.0-preview.23 - Unreleased
 
 ### Added
 
@@ -27,6 +27,7 @@
 - Added native System CPU sampling to the Memory dashboard using Windows idle, kernel, and user time deltas.
 - Added user-local persistence for window size, maximized state, and the selected Live refresh interval.
 - Added persistence for user-resized Apps, Processes, Network, and History column widths.
+- Added responsive multi-row wrapping for global navigation and dense page command bars.
 
 ### Changed
 
@@ -51,6 +52,7 @@
 - System CPU participates in Memory Live monitoring, uses the same first-sample marker, and follows the existing green/warning/danger thresholds.
 - Restored window dimensions are clamped to the current primary working area; Live enabled state is intentionally not persisted and always starts paused.
 - Restored column widths are clamped to 40–1200 pixels, and closing while minimized preserves the last non-minimized maximized state correctly.
+- The Apps master/detail split is now proportional; metric cards and actions wrap as the detail pane narrows while tables remain scrollable.
 
 ### Fixed
 
@@ -77,6 +79,7 @@
 - Added deterministic native CPU calculation tests for valid deltas and invalid counter rollback, plus UI coverage for initial sampling state.
 - Settings writes are atomic, corrupt JSON falls back to defaults, and self/UI tests use isolated temporary settings files rather than the real user profile.
 - Extended settings tests cover column-width round trips, UI capture, clamping, and minimized/maximized state policy.
+- Added minimum-window UI bounds checks for navigation, Apps cards/actions, and Process/Network/History toolbars.
 
 ## v1.0.0 - 2026-06-06
 

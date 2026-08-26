@@ -214,6 +214,11 @@ namespace BetterTaskManager
         private readonly Label memoryStatusLabel;
         private readonly Panel pageHost;
         private readonly FlowLayoutPanel navBar;
+        private readonly FlowLayoutPanel appMetricCards;
+        private readonly FlowLayoutPanel appActions;
+        private readonly FlowLayoutPanel processToolbar;
+        private readonly FlowLayoutPanel networkToolbar;
+        private readonly FlowLayoutPanel historyToolbar;
         private readonly Panel appsTab;
         private readonly Panel processTab;
         private readonly Panel networkTab;
@@ -285,11 +290,11 @@ namespace BetterTaskManager
             historyStore = new NetworkHistoryStore(historyPath);
 
             var rootShell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Margin = new Padding(0), Padding = new Padding(0) };
-            rootShell.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
+            rootShell.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             rootShell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             Controls.Add(rootShell);
 
-            navBar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(12, 8, 12, 8), Margin = new Padding(0), Cursor = Cursors.Hand };
+            navBar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(12, 8, 12, 8), Margin = new Padding(0), Cursor = Cursors.Hand };
             rootShell.Controls.Add(navBar, 0, 0);
 
             pageHost = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), Padding = new Padding(0) };
@@ -348,8 +353,8 @@ namespace BetterTaskManager
             memoryNavButton.Click += (s, e) => { ShowPage(memoryTab); RefreshMemoryPage(); };
 
             var appShell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 1, ColumnCount = 2, Margin = new Padding(0), Padding = new Padding(0) };
-            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 540));
-            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36));
+            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64));
             appsTab.Controls.Add(appShell);
 
             var appLeft = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Padding = new Padding(14), Margin = new Padding(0) };
@@ -394,8 +399,8 @@ namespace BetterTaskManager
 
             var appRight = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 5, ColumnCount = 1, Padding = new Padding(24, 18, 24, 18), Margin = new Padding(0) };
             appRight.RowStyles.Add(new RowStyle(SizeType.Absolute, 104));
-            appRight.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
-            appRight.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+            appRight.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            appRight.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             appRight.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
             appRight.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             appShell.Controls.Add(appRight, 1, 0);
@@ -409,15 +414,15 @@ namespace BetterTaskManager
             selectedHeader.Controls.Add(appMetaLabel, 0, 1);
             appRight.Controls.Add(selectedHeader, 0, 0);
 
-            var cardRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0), Padding = new Padding(0) };
+            appMetricCards = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0), Padding = new Padding(0) };
             appConnectionCard = MakeMetricCard("0", "Group Connections");
             appMemoryCard = MakeMetricCard("0 MB", "Sum Private Bytes");
             appRamCard = MakeMetricCard("0 MB", "Sum Working Set");
             appFirewallCard = MakeMetricCard("Unknown", "Firewall");
-            cardRow.Controls.AddRange(new Control[] { appConnectionCard, appMemoryCard, appRamCard, appFirewallCard });
-            appRight.Controls.Add(cardRow, 0, 1);
+            appMetricCards.Controls.AddRange(new Control[] { appConnectionCard, appMemoryCard, appRamCard, appFirewallCard });
+            appRight.Controls.Add(appMetricCards, 0, 1);
 
-            var appActions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0), Padding = new Padding(0) };
+            appActions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0), Padding = new Padding(0) };
             appRefreshButton = MakeButton("Refresh Apps", 120);
             appBlockButton = MakeButton("Block App", 105);
             appUnblockButton = MakeButton("Unblock App", 115);
@@ -425,7 +430,7 @@ namespace BetterTaskManager
             appFirewallDetailsLabel = new Label
             {
                 Text = "Select an app to inspect its Better Task Manager firewall rule.",
-                Width = 460,
+                Width = 360,
                 Height = 30,
                 AutoEllipsis = true,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -456,12 +461,12 @@ namespace BetterTaskManager
             appRight.Controls.Add(appConnectionsGrid, 0, 4);
 
             var processPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };
-            processPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            processPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             processPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
             processPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             processTab.Controls.Add(processPanel);
 
-            var processToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 6, 8, 4) };
+            processToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(8, 6, 8, 4) };
             refreshButton = MakeButton("Refresh", 90);
             killButton = MakeButton("Force Kill", 100);
             trimSelectedButton = MakeButton("Trim Selected Memory", 160);
@@ -515,12 +520,12 @@ namespace BetterTaskManager
             processPanel.Controls.Add(processGrid, 0, 2);
 
             var networkPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };
-            networkPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
-            networkPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+            networkPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            networkPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             networkPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             networkTab.Controls.Add(networkPanel);
 
-            var networkToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 6, 8, 4) };
+            networkToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(8, 6, 8, 4) };
             networkRefreshButton = MakeButton("Refresh", 90);
             blockButton = MakeButton("Block App", 100);
             unblockButton = MakeButton("Unblock App", 110);
@@ -543,7 +548,7 @@ namespace BetterTaskManager
             networkToolbar.Controls.AddRange(new Control[] { networkRefreshButton, blockButton, unblockButton, exportNetworkButton, networkFilterLabel, networkFilterBox });
             networkPanel.Controls.Add(networkToolbar, 0, 0);
 
-            var networkInfoBar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 0, 8, 0) };
+            var networkInfoBar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(8, 0, 8, 0) };
             networkInfoBar.Controls.AddRange(new Control[] { networkStatusLabel, bandwidthLabel });
             networkPanel.Controls.Add(networkInfoBar, 0, 1);
 
@@ -575,10 +580,10 @@ namespace BetterTaskManager
             networkPanel.Controls.Add(networkGrid, 0, 2);
 
             var historyPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1 };
-            historyPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            historyPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             historyPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             historyTab.Controls.Add(historyPanel);
-            var historyToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 6, 8, 4) };
+            historyToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(8, 6, 8, 4) };
             reloadHistoryButton = MakeButton("Reload History", 120);
             var exportHistoryButton = MakeButton("Export CSV", 100);
             clearHistoryButton = MakeButton("Clear History", 105);
@@ -2635,6 +2640,7 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Memory dashboard did not expose the initial System CPU sampling state.");
             }
+            VerifyNarrowLayout();
             refreshIntervalBox.SelectedIndex = 3;
             networkGrid.Columns["Process"].Width = 222;
             SaveAppSettings();
@@ -2645,6 +2651,47 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Main window did not persist Live interval and column width preferences.");
             }
+        }
+
+        private void VerifyNarrowLayout()
+        {
+            WindowState = FormWindowState.Normal;
+            Size = MinimumSize;
+            PerformLayout();
+            navBar.PerformLayout();
+            if (!VisibleFlowChildrenFit(navBar)) throw new InvalidOperationException("Global navigation clipped controls at minimum window width.");
+
+            ShowPage(appsTab);
+            PerformLayout();
+            appMetricCards.PerformLayout();
+            appActions.PerformLayout();
+            if (!VisibleFlowChildrenFit(appMetricCards) || !VisibleFlowChildrenFit(appActions))
+            {
+                throw new InvalidOperationException("Apps cards or actions clipped controls at minimum window width.");
+            }
+
+            ShowPage(processTab);
+            PerformLayout();
+            processToolbar.PerformLayout();
+            if (!VisibleFlowChildrenFit(processToolbar)) throw new InvalidOperationException("Process toolbar clipped controls at minimum window width.");
+
+            ShowPage(networkTab);
+            PerformLayout();
+            networkToolbar.PerformLayout();
+            if (!VisibleFlowChildrenFit(networkToolbar)) throw new InvalidOperationException("Network toolbar clipped controls at minimum window width.");
+
+            ShowPage(historyTab);
+            PerformLayout();
+            historyToolbar.PerformLayout();
+            if (!VisibleFlowChildrenFit(historyToolbar)) throw new InvalidOperationException("History toolbar clipped controls at minimum window width.");
+        }
+
+        internal static bool VisibleFlowChildrenFit(FlowLayoutPanel panel)
+        {
+            if (panel == null || panel.ClientSize.Width <= 0 || panel.ClientSize.Height <= 0) return false;
+            return panel.Controls.Cast<Control>()
+                .Where(control => control.Visible)
+                .All(control => control.Left >= 0 && control.Top >= 0 && control.Right <= panel.ClientSize.Width && control.Bottom <= panel.ClientSize.Height);
         }
 
         private async Task VerifySnapshotCollectionGateAsync()
@@ -3357,9 +3404,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.22" || form.Text != "Better Task Manager v1.1.0-preview.22")
+                if (Application.ProductVersion != "1.1.0-preview.23" || form.Text != "Better Task Manager v1.1.0-preview.23")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.22.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.23.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
