@@ -4093,9 +4093,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.37" || form.Text != "Better Task Manager v1.1.0-preview.37")
+                if (Application.ProductVersion != "1.1.0-preview.38" || form.Text != "Better Task Manager v1.1.0-preview.38")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.37.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.38.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

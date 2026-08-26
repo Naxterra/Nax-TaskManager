@@ -16,7 +16,7 @@ dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll
 .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-smoke-test
 ```
 
-The same sequence runs in `.github\workflows\windows-ci.yml` on pushes and pull requests. It also publishes and uploads the portable executable as `BetterTaskManager-portable-win-x64`. This workflow has been validated locally but will not run on GitHub until the branch containing it is pushed.
+The same sequence runs in `.github\workflows\windows-ci.yml` on pushes and pull requests. It also publishes and uploads the complete portable folder as `BetterTaskManager-portable-win-x64`. This workflow has been validated locally but will not run on GitHub until the branch containing it is pushed.
 
 ## Publish the Current Preview
 
@@ -27,15 +27,15 @@ The same sequence runs in `.github\workflows\windows-ci.yml` on pushes and pull 
 The self-contained single-file Windows x64 preview is placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.37-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.38-portable-win-x64
 ```
 
 Create a ZIP for manual testing or a GitHub prerelease with:
 
 ```powershell
 Compress-Archive `
-  -LiteralPath .\artifacts\BetterTaskManager-v1.1.0-preview.37-portable-win-x64 `
-  -DestinationPath .\artifacts\BetterTaskManager-v1.1.0-preview.37-portable-win-x64.zip `
+  -LiteralPath .\artifacts\BetterTaskManager-v1.1.0-preview.38-portable-win-x64 `
+  -DestinationPath .\artifacts\BetterTaskManager-v1.1.0-preview.38-portable-win-x64.zip `
   -CompressionLevel Optimal
 ```
 

@@ -53,10 +53,10 @@ jobs:
         shell: pwsh
         run: .\scripts\publish-v1.ps1
 
-      - name: Upload portable executable
+      - name: Upload portable package
         uses: actions/upload-artifact@v7
         with:
           name: BetterTaskManager-portable-win-x64
-          path: artifacts/BetterTaskManager-v*-portable-win-x64/BetterTaskManager.exe
+          path: artifacts/BetterTaskManager-v*-portable-win-x64/
           if-no-files-found: error
           retention-days: 14

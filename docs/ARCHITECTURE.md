@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.37 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.38 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -46,7 +46,7 @@ Top-level navigation and dense command surfaces use autosized wrapping flow layo
 
 WinForms bootstraps through generated `ApplicationConfiguration.Initialize()` with `ApplicationHighDpiMode=PerMonitorV2`, then requests native and framework dark modes before constructing forms. Runtime smoke coverage asserts the configured DPI mode so packaged builds cannot silently fall back to implicit system-aware scaling.
 
-The Windows CI workflow installs the .NET 11 preview channel, restores/builds Release, launches self-test and watchdog-backed UI smoke modes as waited processes, publishes the single-file win-x64 profile, and uploads only the resulting executable. CI has read-only repository permissions and no destructive or privileged test steps.
+The Windows CI workflow installs the .NET 11 preview channel, restores/builds Release, launches self-test and watchdog-backed UI smoke modes as waited processes, publishes the single-file win-x64 profile, and uploads the complete portable folder. The publish script derives its version from the project and performs guarded exact-child cleanup before staging the executable, README, changelog, license, and SHA-256 manifest. CI has read-only repository permissions and no destructive or privileged test steps.
 
 The main form uses KeyPreview and maps global shortcuts to commands before routing them through shared navigation or the active page's existing refresh/filter/export paths. Static mapping tests cover view, paging, filter, export, refresh, and Live commands; UI smoke coverage verifies real navigation, both paging directions, focus, and clear behavior without invoking file dialogs.
 
