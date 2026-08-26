@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.11 - Unreleased
+## 1.1.0-preview.12 - Unreleased
 
 ### Added
 
@@ -16,6 +16,7 @@
 - Added real live monitoring to History: the active page now samples native connections, records new/state-changed observations, and refreshes the current filtered view at the selected interval.
 - Added instant all-column Network search across application, PID, user, protocol, endpoints, state, and path.
 - Added explicit per-PID resolution state so successful and denied executable-path/user lookups are both cached across collectors.
+- Expanded Apps search across name, path, user, firewall state, process IDs/count, and connection count.
 
 ### Changed
 
@@ -29,6 +30,7 @@
 - Network filtering and typed column sorting now operate on the cached snapshot and persist across manual or Live collection refreshes.
 - Split Network actions/search from its snapshot and bandwidth status line, and assigned stable column widths for a calmer layout.
 - Process identity cache entries now carry process start time, are shared safely by Apps, Processes, Network, and History, and are invalidated when Windows reuses a PID.
+- Apps filtering and typed sorting now operate on the cached grouped snapshot; active sort and selected app persist across search and Live refreshes.
 
 ### Fixed
 
@@ -44,6 +46,7 @@
 - Eliminated full process enumeration and protected path/user lookups on every Process search keystroke while preserving active column sorting and exact **View Processes** PID reconciliation.
 - Removed content-based Network column resizing during refresh, avoiding repeated width measurement on large connection snapshots.
 - Eliminated repeated protected-process path/user calls on every Live tick and synchronized the shared CPU baseline cache to prevent concurrent Apps/Processes refresh races.
+- Fixed the Apps firewall column falling back to name sorting and stopped search or refresh from silently discarding the active Apps sort.
 
 ## v1.0.0 - 2026-06-06
 

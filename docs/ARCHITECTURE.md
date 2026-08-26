@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.11 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.12 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -26,7 +26,7 @@ The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and c
 
 The desktop starts unelevated. Privilege state and elevation are global navigation concerns; firewall mutation and system-level memory actions remain unavailable until the executable is restarted with `runas`.
 
-The Apps view groups rows by executable path and sums private-byte and working-set values across all PIDs in that group. The Processes view remains per-PID. Both views expose their snapshot time and Apps exposes its contributing process count so the scopes are directly comparable. A working set contains private and shared pages, so summing per-PID working sets can count a shared page more than once.
+The Apps view groups rows by executable path and sums private-byte and working-set values across all PIDs in that group. Search, typed sorting, and selection operate on the grouped in-memory snapshot and remain active when Live monitoring replaces it. The Processes view remains per-PID. Both views expose their snapshot time and Apps exposes its contributing process count so the scopes are directly comparable. A working set contains private and shared pages, so summing per-PID working sets can count a shared page more than once.
 
 ## Planned Collection Model
 

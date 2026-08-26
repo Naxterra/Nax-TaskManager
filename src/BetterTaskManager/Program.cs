@@ -628,7 +628,7 @@ namespace BetterTaskManager
             memoryPanel.Controls.Add(memoryStatusLabel);
 
             appRefreshButton.Click += async (s, e) => await RefreshAppsAsync(true);
-            appSearchBox.TextChanged += (s, e) => { FillAppGrid(latestAppProfiles); ShowSelectedApp(); };
+            appSearchBox.TextChanged += (s, e) => { FillAppGridFromCache(); ShowSelectedApp(); };
             appGrid.SelectionChanged += (s, e) => ShowSelectedApp();
             appBlockButton.Click += async (s, e) => await BlockSelectedAppAsync(true);
             appUnblockButton.Click += async (s, e) => await BlockSelectedAppAsync(false);
@@ -891,7 +891,7 @@ namespace BetterTaskManager
 
             if (grid == appGrid)
             {
-                FillAppGrid(SortApps(latestAppProfiles, columnName, ascending));
+                FillAppGridFromCache();
                 ShowSelectedApp();
             }
             else if (grid == appConnectionsGrid)
@@ -918,12 +918,13 @@ namespace BetterTaskManager
             grid.Columns[columnName].HeaderCell.SortGlyphDirection = ascending ? SortOrder.Ascending : SortOrder.Descending;
         }
 
-        private static List<AppProfile> SortApps(List<AppProfile> apps, string columnName, bool ascending)
+        private List<AppProfile> SortApps(List<AppProfile> apps, string columnName, bool ascending)
         {
             IEnumerable<AppProfile> query;
             if (columnName == "Processes") query = apps.OrderBy(a => a.Pids.Count);
             else if (columnName == "Connections") query = apps.OrderBy(a => a.ConnectionCount);
             else if (columnName == "Ram") query = apps.OrderBy(a => a.RamMb);
+            else if (columnName == "Firewall") query = apps.OrderBy(a => GetFirewallStatus(a.Path), StringComparer.OrdinalIgnoreCase);
             else query = apps.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase);
             if (!ascending) query = query.Reverse();
             return query.ToList();
@@ -1062,7 +1063,7 @@ namespace BetterTaskManager
                 latestNetworkSnapshot = data.Item5;
                 firewallStatusCache.Clear();
                 foreach (var pair in data.Item4) firewallStatusCache[pair.Key] = pair.Value;
-                FillAppGrid(latestAppProfiles);
+                FillAppGridFromCache();
                 UpdateBandwidthLabel();
                 ShowSelectedApp();
             }
@@ -1177,9 +1178,34 @@ namespace BetterTaskManager
             return titleSeparator > 0 ? processName.Substring(0, titleSeparator) : processName;
         }
 
+        private void FillAppGridFromCache()
+        {
+            string filter = appSearchBox.Text.Trim();
+            var apps = latestAppProfiles
+                .Where(app => AppProfileMatchesFilter(app, filter, GetFirewallStatus(app.Path)))
+                .ToList();
+            Tuple<string, bool> sort;
+            if (gridSortState.TryGetValue(appGrid, out sort)) apps = SortApps(apps, sort.Item1, sort.Item2);
+            FillAppGrid(apps);
+        }
+
+        internal static bool AppProfileMatchesFilter(AppProfile app, string filter, string firewallStatus)
+        {
+            if (string.IsNullOrWhiteSpace(filter)) return true;
+            if (app == null) return false;
+
+            string query = filter.Trim();
+            return (app.Name ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (app.Path ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (app.User ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (firewallStatus ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                app.Pids.Any(pid => pid.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                app.Pids.Count.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                app.ConnectionCount.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         private void FillAppGrid(List<AppProfile> apps)
         {
-            string search = appSearchBox.Text.Trim().ToLowerInvariant();
             string previousPath = null;
             if (appGrid.SelectedRows.Count > 0) previousPath = Convert.ToString(appGrid.SelectedRows[0].Cells["Path"].Value);
 
@@ -1190,12 +1216,6 @@ namespace BetterTaskManager
                 appGrid.Rows.Clear();
                 foreach (var app in apps)
                 {
-                    if (!string.IsNullOrWhiteSpace(search))
-                    {
-                        string haystack = (app.Name + " " + app.Path + " " + app.User).ToLowerInvariant();
-                        if (!haystack.Contains(search)) continue;
-                    }
-
                     int index = appGrid.Rows.Add(app.Name, GetFirewallStatus(app.Path), app.Pids.Count, app.ConnectionCount,
                         app.RamMb.ToString("0.0", CultureInfo.CurrentCulture), app.Path);
                     if (!string.IsNullOrWhiteSpace(previousPath) && string.Equals(previousPath, app.Path, StringComparison.OrdinalIgnoreCase))
@@ -2208,6 +2228,33 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Network sorting was not preserved for the cached snapshot.");
             }
+
+            var alphaApp = new AppProfile { Name = "alpha", Path = "C:\\Apps\\alpha.exe", User = "TEST\\One", ConnectionCount = 1, RamMb = 20 };
+            alphaApp.Pids.Add(101);
+            var betaApp = new AppProfile { Name = "beta", Path = "C:\\Apps\\beta.exe", User = "TEST\\Two", ConnectionCount = 5, RamMb = 40 };
+            betaApp.Pids.Add(202);
+            latestAppProfiles = new List<AppProfile> { alphaApp, betaApp };
+            firewallStatusCache[alphaApp.Path] = FirewallStatusNoBlock;
+            firewallStatusCache[betaApp.Path] = FirewallStatusBlocked;
+            ShowPage(appsTab);
+            appSearchBox.Text = "alpha";
+            if (appGrid.Rows.Count != 1 || Convert.ToString(appGrid.Rows[0].Cells["App"].Value) != "alpha")
+            {
+                throw new InvalidOperationException("Apps search did not filter the cached snapshot.");
+            }
+
+            appSearchBox.Clear();
+            gridSortState[appGrid] = Tuple.Create("Connections", false);
+            FillAppGridFromCache();
+            if (appGrid.Rows.Count != 2 || Convert.ToString(appGrid.Rows[0].Cells["App"].Value) != "beta")
+            {
+                throw new InvalidOperationException("Apps sorting was not preserved for the cached snapshot.");
+            }
+            string selectedAppPath = appGrid.SelectedRows.Count == 0 ? "" : Convert.ToString(appGrid.SelectedRows[0].Cells["Path"].Value);
+            if (!string.Equals(selectedAppPath, alphaApp.Path, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Apps selection was not preserved through filtering and sorting.");
+            }
         }
 
         private void RestartAsAdmin()
@@ -2785,6 +2832,15 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Network snapshot filtering failed.");
             }
+            var appFilterProbe = new AppProfile { Name = "browser", Path = "C:\\Apps\\browser.exe", User = "TEST\\User", ConnectionCount = 7 };
+            appFilterProbe.Pids.Add(4242);
+            if (!MainForm.AppProfileMatchesFilter(appFilterProbe, "4242", "BTM Blocked") ||
+                !MainForm.AppProfileMatchesFilter(appFilterProbe, "blocked", "BTM Blocked") ||
+                !MainForm.AppProfileMatchesFilter(appFilterProbe, "browser.exe", "BTM Blocked") ||
+                MainForm.AppProfileMatchesFilter(appFilterProbe, "missing", "BTM Blocked"))
+            {
+                throw new InvalidOperationException("Apps snapshot filtering failed.");
+            }
             int pathResolutionCalls = 0;
             int userResolutionCalls = 0;
             ProcessDetails resolvedDetails = MainForm.ResolveMissingProcessDetails(null,
@@ -2820,9 +2876,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.11" || form.Text != "Better Task Manager v1.1.0-preview.11")
+                if (Application.ProductVersion != "1.1.0-preview.12" || form.Text != "Better Task Manager v1.1.0-preview.12")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.11.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.12.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

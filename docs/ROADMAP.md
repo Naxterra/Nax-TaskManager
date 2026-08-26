@@ -16,6 +16,7 @@
 - Made Process searching an instant in-memory operation over the latest complete snapshot.
 - Added cached all-column Network search with persistent typed sorting and fixed-width rendering.
 - Added synchronized process identity and CPU caches to reduce repeated work during Live monitoring.
+- Made Apps search, typed sorting, and selection persistent over cached grouped snapshots.
 
 ## v2.0
 
