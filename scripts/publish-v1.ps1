@@ -2,8 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $root "src\BetterTaskManager\BetterTaskManager.csproj"
-$output = Join-Path $root "artifacts\BetterTaskManager-v1.0"
+$output = Join-Path $root "artifacts\BetterTaskManager-v1.1.0-preview.2-portable-win-x64"
 
-dotnet publish $project -c Release -r win-x64 --self-contained false -o $output
-Write-Host "Published Better Task Manager v1.0 to $output"
+dotnet publish $project -c Release -p:PublishProfile=win-x64-portable -o $output
+Write-Host "Published portable Better Task Manager v1.1.0-preview.2 to $output"
 

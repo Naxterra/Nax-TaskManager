@@ -8,11 +8,14 @@
     <AssemblyName>BetterTaskManager</AssemblyName>
     <RootNamespace>BetterTaskManager</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0</InformationalVersion>
+    <Version>1.1.0-preview.2</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <InformationalVersion>1.1.0-preview.2</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Better Task Manager</Product>
+    <Title>Better Task Manager</Title>
+    <AssemblyTitle>Better Task Manager</AssemblyTitle>
     <Authors>Better Task Manager Contributors</Authors>
     <Description>A Windows process, memory, firewall, and network visibility tool inspired by Task Manager and Portmaster.</Description>
     <RepositoryType>git</RepositoryType>

@@ -108,25 +108,37 @@ namespace BetterTaskManager
         public double RamMb;
     }
 
+    internal sealed class BufferedDataGridView : DataGridView
+    {
+        public BufferedDataGridView()
+        {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+        }
+    }
+
     public sealed class MainForm : Form
     {
+        private const string FirewallStatusBlocked = "BTM Blocked";
+        private const string FirewallStatusNoBlock = "No BTM Block";
+
         private static class Theme
         {
-            public static readonly Color Window = Color.FromArgb(10, 12, 15);
-            public static readonly Color Surface = Color.FromArgb(16, 19, 23);
-            public static readonly Color SurfaceAlt = Color.FromArgb(20, 24, 29);
-            public static readonly Color SurfaceRaised = Color.FromArgb(25, 30, 36);
-            public static readonly Color Border = Color.FromArgb(45, 53, 63);
-            public static readonly Color BorderStrong = Color.FromArgb(70, 84, 101);
-            public static readonly Color Text = Color.FromArgb(239, 244, 250);
-            public static readonly Color MutedText = Color.FromArgb(164, 174, 188);
-            public static readonly Color Accent = Color.FromArgb(43, 94, 133);
-            public static readonly Color AccentHover = Color.FromArgb(50, 109, 153);
-            public static readonly Color AccentSelected = Color.FromArgb(37, 87, 128);
-            public static readonly Color Good = Color.FromArgb(73, 201, 129);
-            public static readonly Color Warning = Color.FromArgb(230, 183, 83);
-            public static readonly Color Danger = Color.FromArgb(242, 101, 101);
-            public static readonly Color Info = Color.FromArgb(125, 184, 232);
+            public static readonly Color Window = Color.FromArgb(18, 25, 36);
+            public static readonly Color Surface = Color.FromArgb(24, 33, 47);
+            public static readonly Color SurfaceAlt = Color.FromArgb(30, 42, 58);
+            public static readonly Color SurfaceRaised = Color.FromArgb(39, 53, 72);
+            public static readonly Color Border = Color.FromArgb(58, 76, 101);
+            public static readonly Color BorderStrong = Color.FromArgb(80, 104, 137);
+            public static readonly Color Text = Color.FromArgb(235, 242, 250);
+            public static readonly Color MutedText = Color.FromArgb(163, 180, 201);
+            public static readonly Color Accent = Color.FromArgb(63, 126, 178);
+            public static readonly Color AccentHover = Color.FromArgb(77, 151, 207);
+            public static readonly Color AccentSelected = Color.FromArgb(48, 105, 153);
+            public static readonly Color Good = Color.FromArgb(91, 205, 160);
+            public static readonly Color Warning = Color.FromArgb(235, 187, 92);
+            public static readonly Color Danger = Color.FromArgb(239, 111, 117);
+            public static readonly Color Info = Color.FromArgb(119, 185, 235);
         }
 
         private readonly bool isAdmin;
@@ -135,7 +147,9 @@ namespace BetterTaskManager
         private readonly Button appRefreshButton;
         private readonly Button appBlockButton;
         private readonly Button appUnblockButton;
+        private readonly Button appViewProcessesButton;
         private readonly Label appFirewallCard;
+        private readonly Label appFirewallDetailsLabel;
         private readonly TextBox appSearchBox;
         private readonly Label appTitleLabel;
         private readonly Label appMetaLabel;
@@ -148,18 +162,22 @@ namespace BetterTaskManager
         private readonly Button killButton;
         private readonly Button trimSelectedButton;
         private readonly Button loadDetailsButton;
-        private readonly CheckBox autoRefreshCheck;
+        private readonly CheckBox liveMonitoringCheck;
+        private readonly ComboBox refreshIntervalBox;
+        private readonly Label liveStatusLabel;
         private readonly Button restartAdminButton;
         private readonly Label statusLabel;
+        private readonly Label processSummaryLabel;
         private readonly TextBox filterBox;
         private readonly Button networkRefreshButton;
         private readonly Button blockButton;
         private readonly Button unblockButton;
-        private readonly Button historyButton;
         private readonly Label networkStatusLabel;
         private readonly Label bandwidthLabel;
         private readonly DataGridView historyGrid;
         private readonly Panel historyTab;
+        private readonly Label historyNoteLabel;
+        private readonly Button reloadHistoryButton;
         private readonly Button trimAllButton;
         private readonly Button clearStandbyButton;
         private readonly Button emptySystemButton;
@@ -167,6 +185,7 @@ namespace BetterTaskManager
         private readonly Panel pageHost;
         private readonly FlowLayoutPanel navBar;
         private readonly Panel appsTab;
+        private readonly Panel processTab;
         private readonly Panel networkTab;
         private Control activePage;
         private readonly Timer timer;
@@ -176,21 +195,26 @@ namespace BetterTaskManager
         private List<ProcessRow> latestProcessRows = new List<ProcessRow>();
         private List<NetworkRow> latestNetworkRows = new List<NetworkRow>();
         private List<AppProfile> latestAppProfiles = new List<AppProfile>();
+        private DateTime latestAppsSnapshot = DateTime.MinValue;
+        private DateTime latestProcessSnapshot = DateTime.MinValue;
+        private DateTime latestNetworkSnapshot = DateTime.MinValue;
         private Dictionary<int, ProcessDetails> detailsCache = new Dictionary<int, ProcessDetails>();
         private bool detailsLoaded = false;
+        private bool refreshingApps = false;
         private bool refreshingProcesses = false;
         private bool refreshingNetwork = false;
+        private bool updatingAppGrid = false;
+        private bool settingProcessFilter = false;
+        private bool loadingHistory = false;
         private readonly Dictionary<string, string> firewallStatusCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        private readonly string historyFolder;
-        private readonly string historyPath;
-        private DateTime lastHistoryWrite = DateTime.MinValue;
+        private readonly NetworkHistoryStore historyStore;
         private long lastAdapterReceived = -1;
         private long lastAdapterSent = -1;
         private DateTime lastAdapterSample = DateTime.MinValue;
 
         public MainForm()
         {
-            Text = "Better Task Manager v1.0";
+            Text = "Better Task Manager v" + Application.ProductVersion;
             Size = new Size(1560, 900);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9);
@@ -198,8 +222,8 @@ namespace BetterTaskManager
             ForeColor = Theme.Text;
 
             isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            historyFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
-            historyPath = Path.Combine(historyFolder, "network-history.csv");
+            string historyFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
+            historyStore = new NetworkHistoryStore(Path.Combine(historyFolder, "network-history.csv"));
 
             var rootShell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Margin = new Padding(0), Padding = new Padding(0) };
             rootShell.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
@@ -213,7 +237,7 @@ namespace BetterTaskManager
             rootShell.Controls.Add(pageHost, 0, 1);
 
             appsTab = MakePage("Apps");
-            var processTab = MakePage("Processes");
+            processTab = MakePage("Processes");
             networkTab = MakePage("Network");
             historyTab = MakePage("History");
             var memoryTab = MakePage("Memory");
@@ -222,15 +246,41 @@ namespace BetterTaskManager
             var appsNavButton = MakeNavButton("Apps");
             var processesNavButton = MakeNavButton("Processes");
             var networkNavButton = MakeNavButton("Network");
+            var historyNavButton = MakeNavButton("History");
             var memoryNavButton = MakeNavButton("Memory");
-            navBar.Controls.AddRange(new Control[] { appsNavButton, processesNavButton, networkNavButton, memoryNavButton });
-            appsNavButton.Click += (s, e) => ShowPage(appsTab);
-            processesNavButton.Click += (s, e) => ShowPage(processTab);
+            navBar.Controls.AddRange(new Control[] { appsNavButton, processesNavButton, networkNavButton, historyNavButton, memoryNavButton });
+
+            liveMonitoringCheck = new CheckBox
+            {
+                Text = "Live monitoring",
+                AutoSize = true,
+                Checked = false,
+                Margin = new Padding(18, 10, 6, 0)
+            };
+            refreshIntervalBox = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 78,
+                Margin = new Padding(4, 5, 6, 0)
+            };
+            refreshIntervalBox.Items.AddRange(new object[] { "1 sec", "2 sec", "5 sec", "15 sec" });
+            refreshIntervalBox.SelectedIndex = 2;
+            liveStatusLabel = new Label
+            {
+                Text = "Paused",
+                AutoSize = true,
+                ForeColor = Theme.MutedText,
+                Margin = new Padding(4, 11, 0, 0)
+            };
+            navBar.Controls.AddRange(new Control[] { liveMonitoringCheck, refreshIntervalBox, liveStatusLabel });
+            appsNavButton.Click += async (s, e) => { ShowPage(appsTab); await RefreshAppsAsync(false); };
+            processesNavButton.Click += async (s, e) => { ShowPage(processTab); await RefreshProcessesAsync(false); };
             networkNavButton.Click += async (s, e) => { ShowPage(networkTab); await RefreshNetworkAsync(); };
+            historyNavButton.Click += async (s, e) => await ShowHistoryAsync();
             memoryNavButton.Click += (s, e) => ShowPage(memoryTab);
 
             var appShell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 1, ColumnCount = 2, Margin = new Padding(0), Padding = new Padding(0) };
-            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 450));
+            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 540));
             appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             appsTab.Controls.Add(appShell);
 
@@ -254,14 +304,16 @@ namespace BetterTaskManager
             AddColumns(appGrid, new[] {
                 Tuple.Create("App", "Application"),
                 Tuple.Create("Firewall", "Firewall"),
+                Tuple.Create("Processes", "Procs"),
                 Tuple.Create("Connections", "Conn"),
-                Tuple.Create("Ram", "Memory MB"),
+                Tuple.Create("Ram", "Working Set MB"),
                 Tuple.Create("Path", "Path")
             });
-            appGrid.Columns["App"].Width = 210;
-            appGrid.Columns["Firewall"].Width = 72;
-            appGrid.Columns["Connections"].Width = 58;
-            appGrid.Columns["Ram"].Width = 100;
+            appGrid.Columns["App"].Width = 170;
+            appGrid.Columns["Firewall"].Width = 120;
+            appGrid.Columns["Processes"].Width = 55;
+            appGrid.Columns["Connections"].Width = 55;
+            appGrid.Columns["Ram"].Width = 95;
             appGrid.Columns["Path"].Visible = false;
             LockGridColumns(appGrid);
             appLeft.Controls.Add(appHeader, 0, 0);
@@ -286,9 +338,9 @@ namespace BetterTaskManager
             appRight.Controls.Add(selectedHeader, 0, 0);
 
             var cardRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0), Padding = new Padding(0) };
-            appConnectionCard = MakeMetricCard("0", "Connections");
-            appMemoryCard = MakeMetricCard("0 MB", "Private/Commit");
-            appRamCard = MakeMetricCard("0 MB", "Memory");
+            appConnectionCard = MakeMetricCard("0", "Group Connections");
+            appMemoryCard = MakeMetricCard("0 MB", "Sum Private/Commit");
+            appRamCard = MakeMetricCard("0 MB", "Sum Working Set");
             appFirewallCard = MakeMetricCard("Unknown", "Firewall");
             cardRow.Controls.AddRange(new Control[] { appConnectionCard, appMemoryCard, appRamCard, appFirewallCard });
             appRight.Controls.Add(cardRow, 0, 1);
@@ -297,7 +349,18 @@ namespace BetterTaskManager
             appRefreshButton = MakeButton("Refresh Apps", 120);
             appBlockButton = MakeButton("Block App", 105);
             appUnblockButton = MakeButton("Unblock App", 115);
-            appActions.Controls.AddRange(new Control[] { appRefreshButton, appBlockButton, appUnblockButton });
+            appViewProcessesButton = MakeButton("View Processes", 125);
+            appFirewallDetailsLabel = new Label
+            {
+                Text = "Select an app to inspect its Better Task Manager firewall rule.",
+                Width = 460,
+                Height = 30,
+                AutoEllipsis = true,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = Theme.MutedText,
+                Margin = new Padding(10, 0, 0, 0)
+            };
+            appActions.Controls.AddRange(new Control[] { appRefreshButton, appBlockButton, appUnblockButton, appViewProcessesButton, appFirewallDetailsLabel });
             appRight.Controls.Add(appActions, 0, 2);
 
             appRight.Controls.Add(new Label { Text = "Connections", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11, FontStyle.Bold), TextAlign = ContentAlignment.BottomLeft }, 0, 3);
@@ -320,8 +383,9 @@ namespace BetterTaskManager
             LockGridColumns(appConnectionsGrid);
             appRight.Controls.Add(appConnectionsGrid, 0, 4);
 
-            var processPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1 };
+            var processPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };
             processPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            processPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
             processPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             processTab.Controls.Add(processPanel);
 
@@ -330,7 +394,7 @@ namespace BetterTaskManager
             killButton = MakeButton("Force Kill", 100);
             trimSelectedButton = MakeButton("Trim Selected Memory", 160);
             loadDetailsButton = MakeButton("Load Users/Paths", 130);
-            autoRefreshCheck = new CheckBox { Text = "Auto Refresh", Width = 105, Checked = false, Margin = new Padding(10, 8, 0, 0) };
+            var exportProcessesButton = MakeButton("Export CSV", 100);
             restartAdminButton = MakeButton("Restart as Admin", 125);
             restartAdminButton.Visible = !isAdmin;
             var filterLabel = new Label { Text = "Filter:", AutoSize = true, Margin = new Padding(12, 9, 4, 0) };
@@ -342,8 +406,17 @@ namespace BetterTaskManager
                 Margin = new Padding(16, 9, 4, 0),
                 ForeColor = isAdmin ? Theme.Good : Theme.Danger
             };
-            processToolbar.Controls.AddRange(new Control[] { refreshButton, killButton, trimSelectedButton, loadDetailsButton, autoRefreshCheck, restartAdminButton, filterLabel, filterBox, statusLabel });
+            processToolbar.Controls.AddRange(new Control[] { refreshButton, killButton, trimSelectedButton, loadDetailsButton, exportProcessesButton, restartAdminButton, filterLabel, filterBox, statusLabel });
             processPanel.Controls.Add(processToolbar, 0, 0);
+
+            processSummaryLabel = new Label
+            {
+                Text = "Visible rows: 0",
+                Dock = DockStyle.Fill,
+                Padding = new Padding(8, 5, 8, 0),
+                ForeColor = Theme.Info
+            };
+            processPanel.Controls.Add(processSummaryLabel, 0, 1);
 
             processGrid = NewGrid();
             AddColumns(processGrid, new[] {
@@ -352,8 +425,8 @@ namespace BetterTaskManager
                 Tuple.Create("User", "User"),
                 Tuple.Create("CPU", "CPU %"),
                 Tuple.Create("PrivateMB", "Private/Commit MB"),
-                Tuple.Create("WorkingSetMB", "Memory MB"),
-                Tuple.Create("PeakWorkingSetMB", "Peak RAM MB"),
+                Tuple.Create("WorkingSetMB", "Working Set MB"),
+                Tuple.Create("PeakWorkingSetMB", "Peak Working Set MB"),
                 Tuple.Create("Threads", "Threads"),
                 Tuple.Create("Path", "Application Path")
             });
@@ -368,7 +441,7 @@ namespace BetterTaskManager
             processGrid.Columns["Threads"].Width = 80;
             processGrid.Columns["Path"].Width = 520;
             LockGridColumns(processGrid);
-            processPanel.Controls.Add(processGrid, 0, 1);
+            processPanel.Controls.Add(processGrid, 0, 2);
 
             var networkPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1 };
             networkPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
@@ -379,8 +452,7 @@ namespace BetterTaskManager
             networkRefreshButton = MakeButton("Refresh", 90);
             blockButton = MakeButton("Block App", 100);
             unblockButton = MakeButton("Unblock App", 110);
-            historyButton = MakeButton("Connection Log", 130);
-            historyButton.Visible = false;
+            var exportNetworkButton = MakeButton("Export CSV", 100);
             networkStatusLabel = new Label
             {
                 Text = "Live ports and destinations.",
@@ -394,7 +466,7 @@ namespace BetterTaskManager
                 Margin = new Padding(16, 9, 4, 0),
                 ForeColor = Theme.Info
             };
-            networkToolbar.Controls.AddRange(new Control[] { networkRefreshButton, blockButton, unblockButton, historyButton, networkStatusLabel, bandwidthLabel });
+            networkToolbar.Controls.AddRange(new Control[] { networkRefreshButton, blockButton, unblockButton, exportNetworkButton, networkStatusLabel, bandwidthLabel });
             networkPanel.Controls.Add(networkToolbar, 0, 0);
 
             networkGrid = NewGrid();
@@ -417,14 +489,15 @@ namespace BetterTaskManager
             historyPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             historyTab.Controls.Add(historyPanel);
             var historyToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 6, 8, 4) };
-            var reloadHistoryButton = MakeButton("Reload History", 120);
-            var historyNote = new Label
+            reloadHistoryButton = MakeButton("Reload History", 120);
+            var exportHistoryButton = MakeButton("Export CSV", 100);
+            historyNoteLabel = new Label
             {
-                Text = "Shows saved connection snapshots from the last 30 days.",
+                Text = "Shows new and changed connections from the last 30 days (newest first).",
                 AutoSize = true,
                 Margin = new Padding(16, 9, 4, 0)
             };
-            historyToolbar.Controls.AddRange(new Control[] { reloadHistoryButton, historyNote });
+            historyToolbar.Controls.AddRange(new Control[] { reloadHistoryButton, exportHistoryButton, historyNoteLabel });
             historyPanel.Controls.Add(historyToolbar, 0, 0);
             historyGrid = NewGrid();
             AddColumns(historyGrid, new[] {
@@ -452,36 +525,49 @@ namespace BetterTaskManager
             memoryStatusLabel = new Label { Text = "", AutoSize = true, Width = 900 };
             memoryPanel.Controls.AddRange(new Control[] { trimAllButton, clearStandbyButton, emptySystemButton, memoryStatusLabel });
 
-            appRefreshButton.Click += async (s, e) => await RefreshAppsAsync();
-            appSearchBox.TextChanged += (s, e) => FillAppGrid(latestAppProfiles);
+            appRefreshButton.Click += async (s, e) => await RefreshAppsAsync(true);
+            appSearchBox.TextChanged += (s, e) => { FillAppGrid(latestAppProfiles); ShowSelectedApp(); };
             appGrid.SelectionChanged += (s, e) => ShowSelectedApp();
             appBlockButton.Click += async (s, e) => await BlockSelectedAppAsync(true);
             appUnblockButton.Click += async (s, e) => await BlockSelectedAppAsync(false);
+            appViewProcessesButton.Click += (s, e) => ViewSelectedAppProcesses();
 
             refreshButton.Click += async (s, e) => await RefreshProcessesAsync(false);
             loadDetailsButton.Click += async (s, e) => await LoadDetailsAndRefreshAsync();
-            filterBox.TextChanged += async (s, e) => await RefreshProcessesAsync(false);
+            filterBox.TextChanged += async (s, e) => { if (!settingProcessFilter) await RefreshProcessesAsync(false); };
             killButton.Click += async (s, e) => await KillSelectedAsync();
             trimSelectedButton.Click += async (s, e) => await TrimSelectedAsync();
+            exportProcessesButton.Click += async (s, e) => await ExportGridAsync(processGrid, "processes");
             restartAdminButton.Click += (s, e) => RestartAsAdmin();
 
             networkRefreshButton.Click += async (s, e) => await RefreshNetworkAsync();
             networkTab.Enter += async (s, e) => await RefreshNetworkAsync();
             blockButton.Click += async (s, e) => await BlockSelectedAsync(true);
             unblockButton.Click += async (s, e) => await BlockSelectedAsync(false);
-            historyButton.Click += (s, e) => ShowHistory();
-            reloadHistoryButton.Click += (s, e) => LoadHistoryGrid();
+            exportNetworkButton.Click += async (s, e) => await ExportGridAsync(networkGrid, "network-connections");
+            reloadHistoryButton.Click += async (s, e) => await LoadHistoryGridAsync();
+            exportHistoryButton.Click += async (s, e) => await ExportGridAsync(historyGrid, "connection-history");
 
             trimAllButton.Click += async (s, e) => await TrimAllAsync();
             clearStandbyButton.Click += (s, e) => ClearStandby();
             emptySystemButton.Click += (s, e) => EmptySystemWorkingSets();
 
-            timer = new Timer { Interval = 15000 };
+            timer = new Timer { Interval = 5000, Enabled = false };
             timer.Tick += async (s, e) =>
             {
-                if (!autoRefreshCheck.Checked) return;
-                await RefreshProcessesAsync(false);
-                if (activePage == networkTab) await RefreshNetworkAsync();
+                if (!liveMonitoringCheck.Checked) return;
+                await RefreshActivePageAsync();
+            };
+            liveMonitoringCheck.CheckedChanged += async (s, e) =>
+            {
+                timer.Enabled = liveMonitoringCheck.Checked;
+                liveStatusLabel.Text = liveMonitoringCheck.Checked ? "Live" : "Paused";
+                liveStatusLabel.ForeColor = liveMonitoringCheck.Checked ? Theme.Good : Theme.MutedText;
+                if (liveMonitoringCheck.Checked) await RefreshActivePageAsync();
+            };
+            refreshIntervalBox.SelectedIndexChanged += (s, e) =>
+            {
+                timer.Interval = RefreshIntervalMilliseconds(refreshIntervalBox.SelectedIndex);
             };
 
             Shown += async (s, e) =>
@@ -489,12 +575,36 @@ namespace BetterTaskManager
                 ApplyDarkTheme(this);
                 ApplyNativeDarkTheme(this);
                 ShowPage(appsTab);
-                await RefreshAppsAsync();
-                timer.Start();
+                await RefreshAppsAsync(true);
             };
 
             ApplyDarkTheme(this);
             ShowPage(appsTab);
+        }
+
+        private async Task RefreshActivePageAsync()
+        {
+            if (activePage == appsTab) await RefreshAppsAsync(false);
+            else if (activePage == processTab) await RefreshProcessesAsync(false);
+            else if (activePage == networkTab) await RefreshNetworkAsync();
+        }
+
+        internal static int RefreshIntervalMilliseconds(int selectedIndex)
+        {
+            switch (selectedIndex)
+            {
+                case 0: return 1000;
+                case 1: return 2000;
+                case 3: return 15000;
+                default: return 5000;
+            }
+        }
+
+        internal static string SnapshotLabel(DateTime snapshot)
+        {
+            return snapshot == DateTime.MinValue
+                ? "Snapshot unavailable"
+                : "Snapshot " + snapshot.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -601,7 +711,7 @@ namespace BetterTaskManager
 
         private static DataGridView NewGrid()
         {
-            var grid = new DataGridView
+            var grid = new BufferedDataGridView
             {
                 Dock = DockStyle.Fill,
                 ReadOnly = true,
@@ -687,7 +797,8 @@ namespace BetterTaskManager
         private static List<AppProfile> SortApps(List<AppProfile> apps, string columnName, bool ascending)
         {
             IEnumerable<AppProfile> query;
-            if (columnName == "Connections") query = apps.OrderBy(a => a.ConnectionCount);
+            if (columnName == "Processes") query = apps.OrderBy(a => a.Pids.Count);
+            else if (columnName == "Connections") query = apps.OrderBy(a => a.ConnectionCount);
             else if (columnName == "Ram") query = apps.OrderBy(a => a.RamMb);
             else query = apps.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase);
             if (!ascending) query = query.Reverse();
@@ -773,31 +884,39 @@ namespace BetterTaskManager
             }
         }
 
-        private async Task RefreshAppsAsync()
+        private async Task RefreshAppsAsync(bool refreshFirewall)
         {
+            if (refreshingApps) return;
+            refreshingApps = true;
             appRefreshButton.Enabled = false;
             appTitleLabel.Text = "Loading apps...";
-            appMetaLabel.Text = "Collecting processes and current connections";
+            appMetaLabel.Text = "Collecting processes, connections, and firewall state";
             try
             {
                 string filter = "";
                 var cache = detailsCache;
                 bool useDetails = detailsLoaded;
+                var knownFirewallStatuses = new Dictionary<string, string>(firewallStatusCache, StringComparer.OrdinalIgnoreCase);
                 var data = await Task.Run(() =>
                 {
+                    DateTime snapshotTime = DateTime.Now;
                     var processes = BuildProcessRows(filter, cache, useDetails);
                     var network = BuildNetworkRows();
                     var apps = BuildAppProfiles(processes, network);
-                    return Tuple.Create(processes, network, apps);
+                    var firewall = refreshFirewall ? LoadFirewallStatuses(apps) : knownFirewallStatuses;
+                    SaveNetworkHistory(network);
+                    return Tuple.Create(processes, network, apps, firewall, snapshotTime);
                 });
 
                 latestProcessRows = data.Item1;
                 latestNetworkRows = data.Item2;
                 latestAppProfiles = data.Item3;
+                latestAppsSnapshot = data.Item5;
+                latestProcessSnapshot = data.Item5;
+                latestNetworkSnapshot = data.Item5;
+                firewallStatusCache.Clear();
+                foreach (var pair in data.Item4) firewallStatusCache[pair.Key] = pair.Value;
                 FillAppGrid(latestAppProfiles);
-                FillProcessGrid(latestProcessRows);
-                FillNetworkGrid(latestNetworkRows);
-                SaveNetworkHistory(latestNetworkRows);
                 UpdateBandwidthLabel();
                 ShowSelectedApp();
             }
@@ -809,10 +928,28 @@ namespace BetterTaskManager
             finally
             {
                 appRefreshButton.Enabled = true;
+                refreshingApps = false;
             }
         }
 
-        private static List<AppProfile> BuildAppProfiles(List<ProcessRow> processes, List<NetworkRow> network)
+        private static Dictionary<string, string> LoadFirewallStatuses(IEnumerable<AppProfile> apps)
+        {
+            var statuses = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var paths = apps.Select(a => a.Path).Where(path => !string.IsNullOrWhiteSpace(path)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (paths.Count == 0) return statuses;
+
+            CommandResult result = CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=all");
+            foreach (string path in paths)
+            {
+                statuses[path] = result.Succeeded && result.StandardOutput.IndexOf(RuleNameForPath(path), StringComparison.OrdinalIgnoreCase) >= 0
+                    ? FirewallStatusBlocked
+                    : result.Succeeded ? FirewallStatusNoBlock : "Unknown";
+            }
+
+            return statuses;
+        }
+
+        internal static List<AppProfile> BuildAppProfiles(List<ProcessRow> processes, List<NetworkRow> network)
         {
             var apps = new Dictionary<string, AppProfile>(StringComparer.OrdinalIgnoreCase);
 
@@ -884,6 +1021,7 @@ namespace BetterTaskManager
             string previousPath = null;
             if (appGrid.SelectedRows.Count > 0) previousPath = Convert.ToString(appGrid.SelectedRows[0].Cells["Path"].Value);
 
+            updatingAppGrid = true;
             appGrid.SuspendLayout();
             try
             {
@@ -896,7 +1034,8 @@ namespace BetterTaskManager
                         if (!haystack.Contains(search)) continue;
                     }
 
-                    int index = appGrid.Rows.Add(app.Name, GetFirewallStatus(app.Path), app.ConnectionCount, app.RamMb.ToString("0.0", CultureInfo.CurrentCulture), app.Path);
+                    int index = appGrid.Rows.Add(app.Name, GetFirewallStatus(app.Path), app.Pids.Count, app.ConnectionCount,
+                        app.RamMb.ToString("0.0", CultureInfo.CurrentCulture), app.Path);
                     if (!string.IsNullOrWhiteSpace(previousPath) && string.Equals(previousPath, app.Path, StringComparison.OrdinalIgnoreCase))
                     {
                         appGrid.Rows[index].Selected = true;
@@ -908,39 +1047,43 @@ namespace BetterTaskManager
             finally
             {
                 appGrid.ResumeLayout();
+                updatingAppGrid = false;
             }
         }
 
         private void ShowSelectedApp()
         {
+            if (updatingAppGrid) return;
             if (appGrid.SelectedRows.Count == 0)
             {
                 appTitleLabel.Text = "Select an app";
                 appMetaLabel.Text = "";
-                appConnectionCard.Text = "0\nConnections";
-                appMemoryCard.Text = "0 MB\nPrivate/Commit";
-                appRamCard.Text = "0 MB\nMemory";
+                appConnectionCard.Text = "0\nGroup Connections";
+                appMemoryCard.Text = "0 MB\nSum Private/Commit";
+                appRamCard.Text = "0 MB\nSum Working Set";
                 appFirewallCard.Text = "Unknown\nFirewall";
+                appFirewallDetailsLabel.Text = "Select an app to inspect its Better Task Manager firewall rule.";
                 appConnectionsGrid.Rows.Clear();
                 return;
             }
 
-            string name = Convert.ToString(appGrid.SelectedRows[0].Cells["App"].Value);
-            string path = Convert.ToString(appGrid.SelectedRows[0].Cells["Path"].Value);
-            var app = latestAppProfiles.FirstOrDefault(a =>
-                (!string.IsNullOrWhiteSpace(path) && string.Equals(a.Path, path, StringComparison.OrdinalIgnoreCase)) ||
-                (string.IsNullOrWhiteSpace(path) && string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase)));
-
+            AppProfile app = SelectedAppProfile();
             if (app == null) return;
 
             appTitleLabel.Text = app.Name;
             string pids = app.Pids.Count == 0 ? "No active PID" : "PID " + string.Join(", ", app.Pids.Take(8).Select(p => p.ToString(CultureInfo.InvariantCulture)));
             if (app.Pids.Count > 8) pids += " +" + (app.Pids.Count - 8).ToString(CultureInfo.InvariantCulture);
-            appMetaLabel.Text = "Grouped app view    " + pids + "    " + (string.IsNullOrWhiteSpace(app.User) ? "User unknown" : app.User) + "    " + (string.IsNullOrWhiteSpace(app.Path) ? "Path unavailable" : app.Path);
-            appConnectionCard.Text = app.ConnectionCount.ToString(CultureInfo.InvariantCulture) + "\nConnections";
-            appMemoryCard.Text = app.PrivateMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nPrivate/Commit";
-            appRamCard.Text = app.RamMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nMemory";
-            appFirewallCard.Text = GetFirewallStatus(app.Path) + "\nFirewall";
+            appMetaLabel.Text = SnapshotLabel(latestAppsSnapshot) + "    " + app.Pids.Count.ToString(CultureInfo.CurrentCulture) + " processes aggregated    " + pids +
+                "    " + (string.IsNullOrWhiteSpace(app.User) ? "User unknown" : app.User) + "    " + (string.IsNullOrWhiteSpace(app.Path) ? "Path unavailable" : app.Path);
+            appConnectionCard.Text = app.ConnectionCount.ToString(CultureInfo.InvariantCulture) + "\nGroup Connections";
+            appMemoryCard.Text = app.PrivateMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nSum Private/Commit";
+            appRamCard.Text = app.RamMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nSum Working Set";
+            string firewallStatus = GetFirewallStatus(app.Path);
+            appFirewallCard.Text = firewallStatus + "\nFirewall";
+            appFirewallDetailsLabel.Text = FirewallExplanation(app.Path, firewallStatus);
+            appFirewallDetailsLabel.ForeColor = firewallStatus == FirewallStatusBlocked
+                ? Theme.Danger
+                : firewallStatus == FirewallStatusNoBlock ? Theme.MutedText : Theme.Warning;
 
             appConnectionsGrid.SuspendLayout();
             try
@@ -963,6 +1106,37 @@ namespace BetterTaskManager
             }
         }
 
+        private AppProfile SelectedAppProfile()
+        {
+            if (appGrid.SelectedRows.Count == 0) return null;
+            string name = Convert.ToString(appGrid.SelectedRows[0].Cells["App"].Value);
+            string path = Convert.ToString(appGrid.SelectedRows[0].Cells["Path"].Value);
+            return latestAppProfiles.FirstOrDefault(app =>
+                (!string.IsNullOrWhiteSpace(path) && string.Equals(app.Path, path, StringComparison.OrdinalIgnoreCase)) ||
+                (string.IsNullOrWhiteSpace(path) && string.Equals(app.Name, name, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private void ViewSelectedAppProcesses()
+        {
+            AppProfile app = SelectedAppProfile();
+            if (app == null || app.Pids.Count == 0)
+            {
+                MessageBox.Show(this, "The selected app has no active process IDs in this snapshot.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            settingProcessFilter = true;
+            try { filterBox.Text = app.Name; }
+            finally { settingProcessFilter = false; }
+
+            List<ProcessRow> matchingRows = latestProcessRows.Where(row => app.Pids.Contains(row.Pid)).ToList();
+            latestProcessSnapshot = latestAppsSnapshot;
+            ShowPage(processTab);
+            FillProcessGrid(matchingRows);
+            statusLabel.Text = SnapshotLabel(latestProcessSnapshot) + "    Same Apps snapshot: " + app.Name + " (" + matchingRows.Count.ToString(CultureInfo.CurrentCulture) + " processes)";
+            statusLabel.ForeColor = Theme.Info;
+        }
+
         private async Task BlockSelectedAppAsync(bool block)
         {
             if (appGrid.SelectedRows.Count == 0) return;
@@ -983,15 +1157,25 @@ namespace BetterTaskManager
             if (block)
             {
                 if (MessageBox.Show(this, "Block outbound network access for:\n" + path, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-                await Task.Run(() => RunCommand("netsh.exe", "advfirewall firewall add rule name=\"" + rule + "\" dir=out program=\"" + path + "\" action=block profile=any"));
+                var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule, "dir=out", "program=" + path, "action=block", "profile=any"));
+                if (!result.Succeeded)
+                {
+                    ShowCommandFailure("Blocking outbound network access", result);
+                    return;
+                }
             }
             else
             {
-                await Task.Run(() => RunCommand("netsh.exe", "advfirewall firewall delete rule name=\"" + rule + "\""));
+                var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule));
+                if (!result.Succeeded)
+                {
+                    ShowCommandFailure("Removing the firewall rule", result);
+                    return;
+                }
             }
 
-            firewallStatusCache.Remove(path);
-            await RefreshAppsAsync();
+            firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
+            await RefreshAppsAsync(false);
         }
 
         private static void ApplyDarkTheme(Control root)
@@ -1021,6 +1205,13 @@ namespace BetterTaskManager
                     ((TextBox)control).BorderStyle = BorderStyle.FixedSingle;
                     control.BackColor = Theme.SurfaceAlt;
                     control.ForeColor = Theme.Text;
+                }
+                else if (control is ComboBox)
+                {
+                    var comboBox = (ComboBox)control;
+                    comboBox.FlatStyle = FlatStyle.Flat;
+                    comboBox.BackColor = Theme.SurfaceAlt;
+                    comboBox.ForeColor = Theme.Text;
                 }
                 else if (control is CheckBox)
                 {
@@ -1079,10 +1270,11 @@ namespace BetterTaskManager
 
                 var rows = await Task.Run(() => BuildProcessRows(filter, cache, useDetails));
                 latestProcessRows = rows;
+                latestProcessSnapshot = DateTime.Now;
                 FillProcessGrid(rows);
-                statusLabel.Text = isAdmin
+                statusLabel.Text = SnapshotLabel(latestProcessSnapshot) + "    " + (isAdmin
                     ? (detailsLoaded ? "Running as administrator - users/paths loaded" : "Running as administrator")
-                    : "Not administrator: some actions may fail";
+                    : "Not administrator: some actions may fail");
                 statusLabel.ForeColor = isAdmin ? Theme.Good : Theme.Danger;
             }
             catch (Exception ex)
@@ -1162,23 +1354,33 @@ namespace BetterTaskManager
 
         private void FillProcessGrid(List<ProcessRow> rows)
         {
+            int? selectedPid = SelectedPid(processGrid);
+            int firstDisplayedRow = FirstDisplayedRow(processGrid);
+            int selectedIndex = -1;
             processGrid.SuspendLayout();
             try
             {
                 processGrid.Rows.Clear();
                 foreach (var row in rows)
                 {
-                    processGrid.Rows.Add(row.Pid, row.Name, NormalizeDisplayText(row.User), row.Cpu.ToString("0.0", CultureInfo.CurrentCulture),
+                    int index = processGrid.Rows.Add(row.Pid, row.Name, NormalizeDisplayText(row.User), row.Cpu.ToString("0.0", CultureInfo.CurrentCulture),
                         row.PrivateMb.ToString("0.0", CultureInfo.CurrentCulture),
                         row.WorkingSetMb.ToString("0.0", CultureInfo.CurrentCulture),
                         row.PeakWorkingSetMb.ToString("0.0", CultureInfo.CurrentCulture),
                         row.Threads, row.Path);
+                    if (selectedPid == row.Pid) selectedIndex = index;
                 }
             }
             finally
             {
                 processGrid.ResumeLayout();
             }
+
+            RestoreGridPosition(processGrid, selectedIndex, firstDisplayedRow);
+            processSummaryLabel.ForeColor = Theme.Info;
+            processSummaryLabel.Text = "Visible rows: " + rows.Count.ToString(CultureInfo.CurrentCulture) +
+                "    Sum Private/Commit: " + rows.Sum(row => row.PrivateMb).ToString("0.0", CultureInfo.CurrentCulture) + " MB" +
+                "    Sum Working Set: " + rows.Sum(row => row.WorkingSetMb).ToString("0.0", CultureInfo.CurrentCulture) + " MB";
         }
 
         private async Task LoadDetailsAndRefreshAsync()
@@ -1237,12 +1439,17 @@ namespace BetterTaskManager
             networkStatusLabel.ForeColor = Theme.Warning;
             try
             {
-                var rows = await Task.Run(() => BuildNetworkRows());
+                var rows = await Task.Run(() =>
+                {
+                    var networkRows = BuildNetworkRows();
+                    SaveNetworkHistory(networkRows);
+                    return networkRows;
+                });
                 latestNetworkRows = rows;
+                latestNetworkSnapshot = rows.Count > 0 ? rows[0].Timestamp : DateTime.Now;
                 FillNetworkGrid(rows);
-                SaveNetworkHistory(rows);
                 UpdateBandwidthLabel();
-                networkStatusLabel.Text = "Loaded " + rows.Count + " network rows. Per-app bandwidth needs ETW/WFP collector.";
+                networkStatusLabel.Text = SnapshotLabel(latestNetworkSnapshot) + "    Loaded " + rows.Count + " network rows. Per-app bandwidth needs ETW/WFP collector.";
                 networkStatusLabel.ForeColor = Theme.MutedText;
             }
             catch (Exception ex)
@@ -1269,54 +1476,29 @@ namespace BetterTaskManager
             }
 
             var rows = new List<NetworkRow>();
-            var output = RunCommand("netstat.exe", "-ano");
-            foreach (var raw in output.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (var connection in NativeNetworkCollector.GetAll())
             {
-                var line = raw.Trim();
-                if (!(line.StartsWith("TCP", StringComparison.OrdinalIgnoreCase) || line.StartsWith("UDP", StringComparison.OrdinalIgnoreCase))) continue;
-                var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length < 4) continue;
-
-                string protocol = parts[0];
-                var local = SplitEndpoint(parts[1]);
-                var remote = SplitEndpoint(parts[2]);
-                string state = "";
-                int pid = 0;
-
-                if (protocol.Equals("TCP", StringComparison.OrdinalIgnoreCase) && parts.Length >= 5)
-                {
-                    state = NormalizeDisplayText(parts[3]);
-                    int.TryParse(parts[4], out pid);
-                }
-                else if (protocol.Equals("UDP", StringComparison.OrdinalIgnoreCase))
-                {
-                    state = "Listening";
-                    int.TryParse(parts[3], out pid);
-                }
-
                 ProcessDetails details = null;
-                detailsCache.TryGetValue(pid, out details);
+                detailsCache.TryGetValue(connection.OwningPid, out details);
                 string name;
-                processNames.TryGetValue(pid, out name);
+                processNames.TryGetValue(connection.OwningPid, out name);
                 string path = details == null ? "" : details.Path;
                 string user = details == null ? "" : details.User;
-                if (string.IsNullOrWhiteSpace(path)) path = GetProcessPathFast(pid);
-                if (string.IsNullOrWhiteSpace(user)) user = GetProcessUserFast(pid);
-                user = NormalizeDisplayText(user);
-                state = NormalizeConnectionState(state);
+                if (string.IsNullOrWhiteSpace(path)) path = GetProcessPathFast(connection.OwningPid);
+                if (string.IsNullOrWhiteSpace(user)) user = GetProcessUserFast(connection.OwningPid);
 
                 rows.Add(new NetworkRow
                 {
                     Timestamp = now,
                     Process = name ?? "",
-                    Pid = pid,
-                    User = user,
-                    Protocol = protocol,
-                    LocalAddress = local.Item1,
-                    LocalPort = local.Item2,
-                    RemoteAddress = remote.Item1,
-                    RemotePort = remote.Item2,
-                    State = state,
+                    Pid = connection.OwningPid,
+                    User = NormalizeDisplayText(user),
+                    Protocol = connection.Protocol,
+                    LocalAddress = connection.LocalAddress,
+                    LocalPort = connection.LocalPort.ToString(CultureInfo.InvariantCulture),
+                    RemoteAddress = connection.RemoteAddress,
+                    RemotePort = connection.Protocol == "UDP" ? "" : connection.RemotePort.ToString(CultureInfo.InvariantCulture),
+                    State = connection.State,
                     Path = path
                 });
             }
@@ -1325,20 +1507,26 @@ namespace BetterTaskManager
 
         private void FillNetworkGrid(List<NetworkRow> rows)
         {
+            string selectedKey = SelectedNetworkKey();
+            int firstDisplayedRow = FirstDisplayedRow(networkGrid);
+            int selectedIndex = -1;
             networkGrid.SuspendLayout();
             try
             {
                 networkGrid.Rows.Clear();
                 foreach (var row in rows)
                 {
-                    networkGrid.Rows.Add(row.Process, row.Pid, NormalizeDisplayText(row.User), row.Protocol, row.LocalAddress, row.LocalPort,
+                    int index = networkGrid.Rows.Add(row.Process, row.Pid, NormalizeDisplayText(row.User), row.Protocol, row.LocalAddress, row.LocalPort,
                         row.RemoteAddress, row.RemotePort, NormalizeConnectionState(row.State), row.Path);
+                    if (selectedKey == NetworkKey(row.Pid, row.Protocol, row.LocalAddress, row.LocalPort, row.RemoteAddress, row.RemotePort)) selectedIndex = index;
                 }
             }
             finally
             {
                 networkGrid.ResumeLayout();
             }
+
+            RestoreGridPosition(networkGrid, selectedIndex, firstDisplayedRow);
         }
 
         private async Task KillSelectedAsync()
@@ -1350,8 +1538,22 @@ namespace BetterTaskManager
                 return;
             }
             if (MessageBox.Show(this, "Force kill PID " + pid.Value + " and its child processes?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            await Task.Run(() => RunCommand("taskkill.exe", "/PID " + pid.Value + " /F /T"));
-            await RefreshProcessesAsync(false);
+            try
+            {
+                await Task.Run(() =>
+                {
+                    using (var process = Process.GetProcessById(pid.Value))
+                    {
+                        process.Kill(true);
+                        process.WaitForExit(5000);
+                    }
+                });
+                await RefreshProcessesAsync(false);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Force-killing PID " + pid.Value + " failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private async Task TrimSelectedAsync()
@@ -1435,98 +1637,93 @@ namespace BetterTaskManager
             if (block)
             {
                 if (MessageBox.Show(this, "Block outbound network access for:\n" + path, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-                await Task.Run(() => RunCommand("netsh.exe", "advfirewall firewall add rule name=\"" + rule + "\" dir=out program=\"" + path + "\" action=block profile=any"));
+                var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule, "dir=out", "program=" + path, "action=block", "profile=any"));
+                if (!result.Succeeded)
+                {
+                    ShowCommandFailure("Blocking outbound network access", result);
+                    return;
+                }
                 MessageBox.Show(this, "Blocked outbound network access for this app.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
-                await Task.Run(() => RunCommand("netsh.exe", "advfirewall firewall delete rule name=\"" + rule + "\""));
+                var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule));
+                if (!result.Succeeded)
+                {
+                    ShowCommandFailure("Removing the firewall rule", result);
+                    return;
+                }
                 MessageBox.Show(this, "Removed this app's Better Task Manager block rule.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+
+            firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
         }
 
-        private void ShowHistory()
+        private async Task ShowHistoryAsync()
         {
-            Directory.CreateDirectory(historyFolder);
-            LoadHistoryGrid();
             ShowPage(historyTab);
+            await LoadHistoryGridAsync();
         }
 
-        private void LoadHistoryGrid()
+        private async Task LoadHistoryGridAsync()
         {
-            historyGrid.SuspendLayout();
+            if (loadingHistory) return;
+            loadingHistory = true;
+            reloadHistoryButton.Enabled = false;
+            historyNoteLabel.Text = "Loading recent connection changes...";
             try
             {
-                historyGrid.Rows.Clear();
-                if (!File.Exists(historyPath)) return;
-
-                foreach (var line in File.ReadLines(historyPath).Skip(1))
+                List<string[]> rows = await Task.Run(() => historyStore.LoadRecent(2000));
+                var gridRows = new List<DataGridViewRow>(rows.Count);
+                foreach (string[] fields in rows)
                 {
-                    var fields = ParseCsvLine(line);
-                    if (fields.Count < 11) continue;
-                    historyGrid.Rows.Add(fields[0], fields[1], fields[2], fields[3], fields[4],
-                        fields[5], fields[6], fields[7], fields[8], fields[9], fields[10]);
+                    var gridRow = new DataGridViewRow();
+                    gridRow.CreateCells(historyGrid, fields.Cast<object>().ToArray());
+                    gridRows.Add(gridRow);
                 }
+
+                historyGrid.SuspendLayout();
+                historyGrid.Rows.Clear();
+                if (gridRows.Count > 0) historyGrid.Rows.AddRange(gridRows.ToArray());
+                historyNoteLabel.ForeColor = Theme.MutedText;
+                historyNoteLabel.Text = rows.Count == 2000
+                    ? "Showing the newest 2,000 connection changes from the last 30 days."
+                    : "Showing " + rows.Count.ToString(CultureInfo.CurrentCulture) + " connection changes from the last 30 days (newest first).";
+            }
+            catch (Exception ex)
+            {
+                historyNoteLabel.Text = "History load failed: " + ex.Message;
+                historyNoteLabel.ForeColor = Theme.Danger;
             }
             finally
             {
                 historyGrid.ResumeLayout();
+                reloadHistoryButton.Enabled = true;
+                loadingHistory = false;
             }
-        }
-
-        private static List<string> ParseCsvLine(string line)
-        {
-            var result = new List<string>();
-            var current = new StringBuilder();
-            bool inQuotes = false;
-
-            for (int i = 0; i < line.Length; i++)
-            {
-                char c = line[i];
-                if (c == '"')
-                {
-                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
-                    {
-                        current.Append('"');
-                        i++;
-                    }
-                    else
-                    {
-                        inQuotes = !inQuotes;
-                    }
-                }
-                else if (c == ',' && !inQuotes)
-                {
-                    result.Add(current.ToString());
-                    current.Clear();
-                }
-                else
-                {
-                    current.Append(c);
-                }
-            }
-
-            result.Add(current.ToString());
-            return result;
         }
 
         private void RestartAsAdmin()
         {
-            string script = Environment.GetCommandLineArgs().FirstOrDefault(a => a.EndsWith(".ps1", StringComparison.OrdinalIgnoreCase));
-            if (string.IsNullOrWhiteSpace(script))
+            try
             {
-                MessageBox.Show(this, "Could not find the script path to restart.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                var psi = new ProcessStartInfo
+                {
+                    FileName = Application.ExecutablePath,
+                    Verb = "runas",
+                    UseShellExecute = true
+                };
+                if (Process.Start(psi) != null) Close();
             }
-            var psi = new ProcessStartInfo
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
             {
-                FileName = "powershell.exe",
-                Arguments = "-NoProfile -STA -ExecutionPolicy Bypass -File \"" + script + "\"",
-                Verb = "runas",
-                UseShellExecute = true
-            };
-            Process.Start(psi);
-            Close();
+                statusLabel.Text = "Administrator restart was cancelled.";
+                statusLabel.ForeColor = Theme.Warning;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Could not restart as administrator.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private int? SelectedPid(DataGridView grid)
@@ -1543,43 +1740,117 @@ namespace BetterTaskManager
             return Convert.ToString(networkGrid.SelectedRows[0].Cells["Path"].Value);
         }
 
+        private string SelectedNetworkKey()
+        {
+            if (networkGrid.SelectedRows.Count == 0) return "";
+            DataGridViewRow row = networkGrid.SelectedRows[0];
+            return NetworkKey(
+                Convert.ToInt32(row.Cells["PID"].Value, CultureInfo.InvariantCulture),
+                Convert.ToString(row.Cells["Protocol"].Value),
+                Convert.ToString(row.Cells["LocalAddress"].Value),
+                Convert.ToString(row.Cells["LocalPort"].Value),
+                Convert.ToString(row.Cells["RemoteAddress"].Value),
+                Convert.ToString(row.Cells["RemotePort"].Value));
+        }
+
+        private static string NetworkKey(int pid, string protocol, string localAddress, string localPort, string remoteAddress, string remotePort)
+        {
+            return string.Join("\u001F", new[]
+            {
+                pid.ToString(CultureInfo.InvariantCulture),
+                protocol ?? "",
+                localAddress ?? "",
+                localPort ?? "",
+                remoteAddress ?? "",
+                remotePort ?? ""
+            });
+        }
+
+        private static int FirstDisplayedRow(DataGridView grid)
+        {
+            try { return grid.FirstDisplayedScrollingRowIndex; }
+            catch (InvalidOperationException) { return -1; }
+        }
+
+        private static void RestoreGridPosition(DataGridView grid, int selectedIndex, int firstDisplayedRow)
+        {
+            if (selectedIndex >= 0 && selectedIndex < grid.Rows.Count)
+            {
+                grid.ClearSelection();
+                grid.Rows[selectedIndex].Selected = true;
+            }
+
+            if (firstDisplayedRow >= 0 && grid.Rows.Count > 0)
+            {
+                try { grid.FirstDisplayedScrollingRowIndex = Math.Min(firstDisplayedRow, grid.Rows.Count - 1); }
+                catch (InvalidOperationException) { }
+                catch (ArgumentOutOfRangeException) { }
+            }
+        }
+
+        private async Task ExportGridAsync(DataGridView grid, string filePrefix)
+        {
+            if (grid.Rows.Cast<DataGridViewRow>().All(row => row.IsNewRow))
+            {
+                MessageBox.Show(this, "There are no rows to export.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var dialog = new SaveFileDialog
+            {
+                Title = "Export CSV",
+                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                DefaultExt = "csv",
+                AddExtension = true,
+                RestoreDirectory = true,
+                FileName = filePrefix + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".csv"
+            })
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+                var columns = grid.Columns.Cast<DataGridViewColumn>()
+                    .Where(column => column.Visible)
+                    .OrderBy(column => column.DisplayIndex)
+                    .ToList();
+                var exportRows = new List<IEnumerable<string>>
+                {
+                    columns.Select(column => SpreadsheetSafe(column.HeaderText)).ToArray()
+                };
+
+                foreach (DataGridViewRow row in grid.Rows)
+                {
+                    if (row.IsNewRow) continue;
+                    exportRows.Add(columns.Select(column => SpreadsheetSafe(Convert.ToString(row.Cells[column.Index].Value, CultureInfo.CurrentCulture))).ToArray());
+                }
+
+                try
+                {
+                    await Task.Run(() => CsvFileWriter.Write(dialog.FileName, exportRows));
+                    MessageBox.Show(this, "Exported " + (exportRows.Count - 1).ToString(CultureInfo.CurrentCulture) + " rows to:\n" + dialog.FileName,
+                        "Export complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "CSV export failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
+
+        internal static string SpreadsheetSafe(string value)
+        {
+            value = value ?? "";
+            if (value.Length == 0) return value;
+            char first = value[0];
+            return first == '=' || first == '+' || first == '-' || first == '@' || first == '\t' || first == '\r'
+                ? "'" + value
+                : value;
+        }
+
         private void SaveNetworkHistory(List<NetworkRow> rows)
         {
-            if ((DateTime.Now - lastHistoryWrite).TotalSeconds < 30) return;
-            lastHistoryWrite = DateTime.Now;
             try
             {
-                Directory.CreateDirectory(historyFolder);
-                var cutoff = DateTime.Now.AddDays(-30);
-                var lines = new List<string>();
-                lines.Add("Timestamp,Process,PID,User,Protocol,LocalAddress,LocalPort,RemoteAddress,RemotePort,State,Path");
-                if (File.Exists(historyPath))
-                {
-                    foreach (var line in File.ReadLines(historyPath).Skip(1))
-                    {
-                        var first = line.Split(',').FirstOrDefault();
-                        DateTime timestamp;
-                        if (DateTime.TryParse(first, out timestamp) && timestamp >= cutoff) lines.Add(line);
-                    }
-                }
-                foreach (var row in rows)
-                {
-                    lines.Add(string.Join(",", new[]
-                    {
-                        Csv(row.Timestamp.ToString("s")),
-                        Csv(row.Process),
-                        Csv(row.Pid.ToString(CultureInfo.InvariantCulture)),
-                        Csv(row.User),
-                        Csv(row.Protocol),
-                        Csv(row.LocalAddress),
-                        Csv(row.LocalPort),
-                        Csv(row.RemoteAddress),
-                        Csv(row.RemotePort),
-                        Csv(row.State),
-                        Csv(row.Path)
-                    }));
-                }
-                File.WriteAllLines(historyPath, lines, Encoding.UTF8);
+                historyStore.SaveSnapshot(rows, DateTime.Now);
             }
             catch { }
         }
@@ -1708,12 +1979,6 @@ namespace BetterTaskManager
             return state;
         }
 
-        private static string Csv(string value)
-        {
-            value = value ?? "";
-            return "\"" + value.Replace("\"", "\"\"") + "\"";
-        }
-
         private static string RuleNameForPath(string path)
         {
             using (var sha = SHA1.Create())
@@ -1726,54 +1991,21 @@ namespace BetterTaskManager
         private string GetFirewallStatus(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) return "Unknown";
-            try
-            {
-                string cached;
-                if (firewallStatusCache.TryGetValue(path, out cached)) return cached;
-                string ruleName = RuleNameForPath(path);
-                string result = RunCommand("netsh.exe", "advfirewall firewall show rule name=\"" + ruleName + "\"");
-                string status = result.IndexOf(ruleName, StringComparison.OrdinalIgnoreCase) >= 0 ? "Blocked" : "Allowed";
-                firewallStatusCache[path] = status;
-                return status;
-            }
-            catch
-            {
-                return "Unknown";
-            }
+            string cached;
+            return firewallStatusCache.TryGetValue(path, out cached) ? cached : "Unknown";
         }
 
-        private static Tuple<string, string> SplitEndpoint(string endpoint)
+        private static string FirewallExplanation(string path, string status)
         {
-            if (string.IsNullOrWhiteSpace(endpoint) || endpoint == "*:*") return Tuple.Create("", "");
-            endpoint = endpoint.Trim();
-            if (endpoint.StartsWith("["))
-            {
-                int close = endpoint.LastIndexOf("]:", StringComparison.Ordinal);
-                if (close > 0) return Tuple.Create(endpoint.Substring(1, close - 1), endpoint.Substring(close + 2));
-            }
-            int idx = endpoint.LastIndexOf(':');
-            if (idx < 0) return Tuple.Create(endpoint, "");
-            return Tuple.Create(endpoint.Substring(0, idx), endpoint.Substring(idx + 1));
+            if (string.IsNullOrWhiteSpace(path)) return "No executable path is available for a program-specific rule.";
+            if (status == FirewallStatusBlocked) return "Active outbound block on all profiles: " + RuleNameForPath(path);
+            if (status == FirewallStatusNoBlock) return "No Better Task Manager outbound block rule. Other Windows Firewall policies may still apply.";
+            return "Better Task Manager could not read the rule state. Rule name: " + RuleNameForPath(path);
         }
 
-        private static string RunCommand(string file, string args)
+        private void ShowCommandFailure(string action, CommandResult result)
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = file,
-                Arguments = args,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-            using (var process = Process.Start(psi))
-            {
-                string output = process.StandardOutput.ReadToEnd();
-                string error = process.StandardError.ReadToEnd();
-                process.WaitForExit(15000);
-                return output + (string.IsNullOrWhiteSpace(error) ? "" : "\n" + error);
-            }
+            MessageBox.Show(this, action + " failed.\n\n" + result.FailureSummary(), "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private static int SafeThreadCount(Process process)
@@ -1804,14 +2036,32 @@ namespace BetterTaskManager
     public static class Program
     {
         [STAThread]
-        public static void Main()
+        public static void Main(string[] args)
         {
+            if (args != null && args.Any(a => string.Equals(a, "--self-test", StringComparison.OrdinalIgnoreCase)))
+            {
+                try
+                {
+                    Console.WriteLine(SelfTest());
+                    Environment.ExitCode = 0;
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine("Self-test failed: " + ex.Message);
+                    Environment.ExitCode = 1;
+                }
+                return;
+            }
+
             Run();
         }
 
         public static void Run()
         {
             TryEnableNativeDarkControls();
+#pragma warning disable WFO5001
+            Application.SetColorMode(SystemColorMode.Dark);
+#pragma warning restore WFO5001
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.ThreadException += (s, e) =>
@@ -1851,9 +2101,125 @@ namespace BetterTaskManager
 
         public static string SelfTest()
         {
+            CommandResult success = CommandRunner.Run("cmd.exe", "/d", "/c", "echo better-task-manager-self-test");
+            if (!success.Succeeded) throw new InvalidOperationException("Command runner success probe failed. " + success.FailureSummary());
+            if (success.StandardOutput.IndexOf("better-task-manager-self-test", StringComparison.Ordinal) < 0) throw new InvalidOperationException("Command runner did not capture standard output.");
+
+            CommandResult failure = CommandRunner.Run("cmd.exe", "/d", "/c", "echo expected-failure 1>&2 & exit 7");
+            if (failure.Succeeded || failure.ExitCode != 7) throw new InvalidOperationException("Command runner failure probe did not preserve exit code 7.");
+            if (failure.StandardError.IndexOf("expected-failure", StringComparison.Ordinal) < 0) throw new InvalidOperationException("Command runner did not capture standard error.");
+
+            List<NativeConnection> connections = NativeNetworkCollector.GetAll();
+            if (connections.Any(c =>
+                (c.Protocol != "TCP" && c.Protocol != "UDP") ||
+                !System.Net.IPAddress.TryParse(c.LocalAddress, out _) ||
+                (c.Protocol == "TCP" && !System.Net.IPAddress.TryParse(c.RemoteAddress, out _)) ||
+                (c.Protocol == "UDP" && (!string.IsNullOrEmpty(c.RemoteAddress) || c.RemotePort != 0)) ||
+                string.IsNullOrWhiteSpace(c.State) ||
+                c.LocalPort < 0 || c.LocalPort > 65535 ||
+                c.RemotePort < 0 || c.RemotePort > 65535 ||
+                c.OwningPid < 0))
+            {
+                throw new InvalidOperationException("Native network collector returned an invalid row.");
+            }
+
+            TestHistoryStore();
+            TestAppAggregation();
+            if (MainForm.RefreshIntervalMilliseconds(0) != 1000 || MainForm.RefreshIntervalMilliseconds(1) != 2000 ||
+                MainForm.RefreshIntervalMilliseconds(2) != 5000 || MainForm.RefreshIntervalMilliseconds(3) != 15000)
+            {
+                throw new InvalidOperationException("Live monitoring interval mapping failed.");
+            }
+
             using (var form = new MainForm())
             {
-                return "Self-test OK. C# WinForms prototype compiled.";
+                if (Application.ProductVersion != "1.1.0-preview.2" || form.Text != "Better Task Manager v1.1.0-preview.2")
+                {
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.2.");
+                }
+                return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, and " + connections.Count + " native network rows passed.";
+            }
+        }
+
+        private static void TestHistoryStore()
+        {
+            string temporaryFolder = Path.Combine(Path.GetTempPath(), "BetterTaskManager-SelfTest-" + Guid.NewGuid().ToString("N"));
+            string historyPath = Path.Combine(temporaryFolder, "network-history.csv");
+            try
+            {
+                var store = new NetworkHistoryStore(historyPath);
+                DateTime firstSeen = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local);
+                var row = new NetworkRow
+                {
+                    Timestamp = firstSeen,
+                    Process = "Test, App",
+                    Pid = 4242,
+                    User = "TEST\\User",
+                    Protocol = "TCP",
+                    LocalAddress = "127.0.0.1",
+                    LocalPort = "12345",
+                    RemoteAddress = "127.0.0.1",
+                    RemotePort = "443",
+                    State = "Established",
+                    Path = "C:\\Apps\\Test, \"Quoted\"\\app.exe"
+                };
+
+                if (store.SaveSnapshot(new[] { row }, firstSeen) != 1) throw new InvalidOperationException("History store did not save the first connection observation.");
+                if (store.SaveSnapshot(new[] { row }, firstSeen.AddSeconds(31)) != 0) throw new InvalidOperationException("History store duplicated an unchanged connection.");
+                if (store.SaveSnapshot(Array.Empty<NetworkRow>(), firstSeen.AddSeconds(62)) != 0) throw new InvalidOperationException("History store wrote an empty snapshot.");
+
+                row.Timestamp = firstSeen.AddSeconds(93);
+                if (store.SaveSnapshot(new[] { row }, row.Timestamp) != 1) throw new InvalidOperationException("History store did not record a connection that reappeared.");
+
+                List<string[]> loaded = store.LoadRecent(100);
+                if (loaded.Count != 2 || loaded[0][10] != row.Path || loaded[0][1] != row.Process) throw new InvalidOperationException("History CSV round-trip failed.");
+                if (store.LoadRecent(1).Count != 1) throw new InvalidOperationException("History row limit was not enforced.");
+
+                string exportPath = Path.Combine(temporaryFolder, "export.csv");
+                CsvFileWriter.Write(exportPath, new[]
+                {
+                    new[] { "Name", "Path" },
+                    new[] { "Quoted, App", "C:\\Apps\\\"Quoted\"\\app.exe" }
+                });
+                string[] exportLines = File.ReadAllLines(exportPath, Encoding.UTF8);
+                List<string> exportedFields = exportLines.Length == 2 ? NetworkHistoryStore.ParseCsvLine(exportLines[1]) : new List<string>();
+                if (exportedFields.Count != 2 || exportedFields[0] != "Quoted, App" || exportedFields[1] != "C:\\Apps\\\"Quoted\"\\app.exe")
+                {
+                    throw new InvalidOperationException("CSV export escaping failed.");
+                }
+                if (MainForm.SpreadsheetSafe("=SUM(A1:A2)") != "'=SUM(A1:A2)" || MainForm.SpreadsheetSafe("normal") != "normal")
+                {
+                    throw new InvalidOperationException("Spreadsheet formula protection failed.");
+                }
+
+                store.SaveSnapshot(Array.Empty<NetworkRow>(), firstSeen.AddDays(31));
+                if (store.LoadRecent(100).Count != 0) throw new InvalidOperationException("History retention did not prune entries older than 30 days.");
+            }
+            finally
+            {
+                try { if (Directory.Exists(temporaryFolder)) Directory.Delete(temporaryFolder, true); } catch { }
+            }
+        }
+
+        private static void TestAppAggregation()
+        {
+            const string sharedPath = "C:\\Apps\\Browser\\browser.exe";
+            var processes = new List<ProcessRow>
+            {
+                new ProcessRow { Pid = 101, Name = "browser", Path = sharedPath, PrivateMb = 100.5, WorkingSetMb = 80.25 },
+                new ProcessRow { Pid = 202, Name = "browser", Path = sharedPath, PrivateMb = 200.25, WorkingSetMb = 120.5 }
+            };
+            var connections = new List<NetworkRow>
+            {
+                new NetworkRow { Pid = 101, Process = "browser", Path = sharedPath, Protocol = "TCP" },
+                new NetworkRow { Pid = 202, Process = "browser", Path = sharedPath, Protocol = "UDP" }
+            };
+
+            AppProfile profile = MainForm.BuildAppProfiles(processes, connections).Single();
+            if (profile.Pids.Count != 2 || profile.ConnectionCount != 2 ||
+                Math.Abs(profile.PrivateMb - 300.75) > 0.001 || Math.Abs(profile.RamMb - 200.75) > 0.001)
+            {
+                throw new InvalidOperationException("Grouped app aggregation does not match the sum of its per-process rows.");
             }
         }
     }

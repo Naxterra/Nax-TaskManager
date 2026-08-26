@@ -1,32 +1,40 @@
-# GitHub Setup
+# GitHub and Preview Release Guide
 
-This workspace is prepared for GitHub, but it has not been initialized as a Git repository yet.
-
-## Initialize Locally
-
-```powershell
-git init
-git add .gitignore .github README.md CHANGELOG.md SECURITY.md RELEASE_NOTES-v1.0.md BetterTaskManager.slnx docs scripts src
-git commit -m "Release Better Task Manager v1.0.0"
-git tag v1.0.0
-```
-
-## Connect To GitHub
-
-Create an empty GitHub repository, then run:
-
-```powershell
-git remote add origin https://github.com/YOUR-USER/YOUR-REPO.git
-git branch -M main
-git push -u origin main
-git push origin v1.0.0
-```
-
-## Release Asset
-
-Upload this zip to the GitHub release:
+This repository is already initialized and connected to:
 
 ```text
-outputs\BetterTaskManager-v1.0-win-x64.zip
+https://github.com/Naxterra/Better-Task-Manager
 ```
+
+The checked-in `release-assets\BetterTaskManager-v1.0-win-x64.zip` file is the stable v1.0 artifact and should remain unchanged while preview work is being validated.
+
+## Build and Verify
+
+```powershell
+dotnet build .\BetterTaskManager.slnx -c Release
+dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll --self-test
+```
+
+## Publish the Current Preview
+
+```powershell
+.\scripts\publish-v1.ps1
+```
+
+The self-contained single-file Windows x64 preview is placed in:
+
+```text
+artifacts\BetterTaskManager-v1.1.0-preview.2-portable-win-x64
+```
+
+Create a ZIP for manual testing or a GitHub prerelease with:
+
+```powershell
+Compress-Archive `
+  -LiteralPath .\artifacts\BetterTaskManager-v1.1.0-preview.2-portable-win-x64 `
+  -DestinationPath .\artifacts\BetterTaskManager-v1.1.0-preview.2-portable-win-x64.zip `
+  -CompressionLevel Optimal
+```
+
+Do not create or push a stable tag until the preview has been approved and the version, changelog date, release notes, and packaged artifact all agree.
 
