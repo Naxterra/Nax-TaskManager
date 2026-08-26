@@ -22,6 +22,7 @@
 - Replaced recurring automatic Live error dialogs with recoverable inline status.
 - Made History sorting type-safe for mixed TCP/UDP endpoint data.
 - Added a confirmed atomic reset for user-local connection history.
+- Added same-snapshot grouped CPU to the Apps view with per-PID reconciliation tests.
 
 ## v2.0
 

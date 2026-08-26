@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.17 - Unreleased
+## 1.1.0-preview.18 - Unreleased
 
 ### Added
 
@@ -22,6 +22,7 @@
 - Added a global red **Live error** state that returns to green **Live** after the next successful automatic refresh.
 - Added typed History sorting for timestamp, PID, local port, and remote port columns.
 - Added a confirmed **Clear History** action for permanently removing the user-local connection-history store without administrator rights.
+- Added grouped Apps CPU as the sum of normalized per-PID CPU values from the exact same Process snapshot.
 
 ### Changed
 
@@ -41,6 +42,7 @@
 - Automatic and manual refresh origins now propagate through the active-page dispatcher so error presentation can match user intent.
 - History text columns remain case-insensitive while numeric and timestamp columns now sort by their real values.
 - Clearing History atomically rewrites the CSV header, resets cached rows/paging, and resets connection deduplication so later observations can be recorded normally.
+- Apps CPU is visible, locale-formatted, searchable, numerically sortable, and included in selected-app snapshot metadata with a reconciliation tooltip.
 
 ### Fixed
 
@@ -62,6 +64,7 @@
 - Prevented recurring Process or Network error dialogs from stacking during Live monitoring; automatic failures are reported inline while manual refresh failures remain modal.
 - Fixed History Remote Port sorting throwing when blank UDP ports and numeric TCP ports were present together.
 - Serialized History clearing with live store writes so clearing cannot leave a partial CSV or stale deduplication state.
+- Extended grouped-app reconciliation tests to prove CPU, private bytes, and working set all equal their contributing per-PID sums.
 
 ## v1.0.0 - 2026-06-06
 

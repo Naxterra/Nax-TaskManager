@@ -4,11 +4,11 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.17`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.18`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
-- App-based overview with an explicit process count and summed private-byte and working-set values for each executable group. Cached all-field search, typed sorting (including firewall state), and selection persist across Live refreshes.
+- App-based overview with explicit process count plus same-snapshot summed CPU, private-byte, and working-set values for each executable group. Cached all-field search, typed sorting (including CPU and firewall state), and selection persist across Live refreshes.
 - Per-PID Process view with user, CPU, private bytes, working set, peak working set, threads, and executable path. Search filters the latest snapshot instantly by PID, name, user, or path without recollecting processes on every keystroke.
 - Network view showing application, PID, user, protocol, local endpoint, remote endpoint, state, and executable path. All-column search and typed column sorting operate instantly on the latest snapshot and persist across Live refreshes.
 - Native IPv4/IPv6 TCP and UDP collection with owning-process IDs.
@@ -83,13 +83,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.17-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.18-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.17-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.18-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download

@@ -108,6 +108,7 @@ namespace BetterTaskManager
         public string User = "";
         public readonly HashSet<int> Pids = new HashSet<int>();
         public int ConnectionCount;
+        public double Cpu;
         public double PrivateMb;
         public double RamMb;
     }
@@ -356,14 +357,18 @@ namespace BetterTaskManager
                 Tuple.Create("Firewall", "Firewall"),
                 Tuple.Create("Processes", "Procs"),
                 Tuple.Create("Connections", "Conn"),
-                Tuple.Create("Ram", "Working Set MB"),
+                Tuple.Create("Cpu", "CPU %"),
+                Tuple.Create("Ram", "WS MB"),
                 Tuple.Create("Path", "Path")
             });
-            appGrid.Columns["App"].Width = 170;
-            appGrid.Columns["Firewall"].Width = 120;
-            appGrid.Columns["Processes"].Width = 55;
-            appGrid.Columns["Connections"].Width = 55;
-            appGrid.Columns["Ram"].Width = 95;
+            appGrid.Columns["App"].Width = 145;
+            appGrid.Columns["Firewall"].Width = 105;
+            appGrid.Columns["Processes"].Width = 45;
+            appGrid.Columns["Connections"].Width = 45;
+            appGrid.Columns["Cpu"].Width = 65;
+            appGrid.Columns["Cpu"].ToolTipText = "Sum of normalized per-PID CPU from the same Apps snapshot.";
+            appGrid.Columns["Ram"].Width = 90;
+            appGrid.Columns["Ram"].ToolTipText = "Sum of per-PID working sets; shared pages can overlap.";
             appGrid.Columns["Path"].Visible = false;
             LockGridColumns(appGrid);
             appLeft.Controls.Add(appHeader, 0, 0);
@@ -974,6 +979,7 @@ namespace BetterTaskManager
             IEnumerable<AppProfile> query;
             if (columnName == "Processes") query = apps.OrderBy(a => a.Pids.Count);
             else if (columnName == "Connections") query = apps.OrderBy(a => a.ConnectionCount);
+            else if (columnName == "Cpu") query = apps.OrderBy(a => a.Cpu);
             else if (columnName == "Ram") query = apps.OrderBy(a => a.RamMb);
             else if (columnName == "Firewall") query = apps.OrderBy(a => GetFirewallStatus(a.Path), StringComparer.OrdinalIgnoreCase);
             else query = apps.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase);
@@ -1221,6 +1227,7 @@ namespace BetterTaskManager
                 if (string.IsNullOrWhiteSpace(app.Path)) app.Path = row.Path;
                 if (string.IsNullOrWhiteSpace(app.User)) app.User = row.User;
                 app.Pids.Add(row.Pid);
+                app.Cpu += row.Cpu;
                 app.PrivateMb += row.PrivateMb;
                 app.RamMb += row.WorkingSetMb;
             }
@@ -1290,7 +1297,8 @@ namespace BetterTaskManager
                 (firewallStatus ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 app.Pids.Any(pid => pid.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
                 app.Pids.Count.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                app.ConnectionCount.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+                app.ConnectionCount.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                app.Cpu.ToString("0.0", CultureInfo.CurrentCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private void FillAppGrid(List<AppProfile> apps)
@@ -1306,7 +1314,7 @@ namespace BetterTaskManager
                 foreach (var app in apps)
                 {
                     int index = appGrid.Rows.Add(app.Name, GetFirewallStatus(app.Path), app.Pids.Count, app.ConnectionCount,
-                        app.RamMb.ToString("0.0", CultureInfo.CurrentCulture), app.Path);
+                        app.Cpu.ToString("0.0", CultureInfo.CurrentCulture), app.RamMb.ToString("0.0", CultureInfo.CurrentCulture), app.Path);
                     if (!string.IsNullOrWhiteSpace(previousPath) && string.Equals(previousPath, app.Path, StringComparison.OrdinalIgnoreCase))
                     {
                         appGrid.Rows[index].Selected = true;
@@ -1348,7 +1356,8 @@ namespace BetterTaskManager
             string pids = app.Pids.Count == 0 ? "No active PID" : "PID " + string.Join(", ", app.Pids.Take(8).Select(p => p.ToString(CultureInfo.InvariantCulture)));
             if (app.Pids.Count > 8) pids += " +" + (app.Pids.Count - 8).ToString(CultureInfo.InvariantCulture);
             appMetaLabel.Text = SnapshotLabel(latestAppsSnapshot) + "    " + app.Pids.Count.ToString(CultureInfo.CurrentCulture) + " processes aggregated    " + pids +
-                "    " + (string.IsNullOrWhiteSpace(app.User) ? "User unknown" : app.User) + "    " + (string.IsNullOrWhiteSpace(app.Path) ? "Path unavailable" : app.Path);
+                "    CPU " + app.Cpu.ToString("0.0", CultureInfo.CurrentCulture) + "%    " +
+                (string.IsNullOrWhiteSpace(app.User) ? "User unknown" : app.User) + "    " + (string.IsNullOrWhiteSpace(app.Path) ? "Path unavailable" : app.Path);
             appConnectionCard.Text = app.ConnectionCount.ToString(CultureInfo.InvariantCulture) + "\nGroup Connections";
             appMemoryCard.Text = app.PrivateMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nSum Private Bytes";
             appRamCard.Text = app.RamMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nSum Working Set";
@@ -2448,9 +2457,9 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Network sorting was not preserved for the cached snapshot.");
             }
 
-            var alphaApp = new AppProfile { Name = "alpha", Path = "C:\\Apps\\alpha.exe", User = "TEST\\One", ConnectionCount = 1, RamMb = 20 };
+            var alphaApp = new AppProfile { Name = "alpha", Path = "C:\\Apps\\alpha.exe", User = "TEST\\One", ConnectionCount = 1, Cpu = 1.5, RamMb = 20 };
             alphaApp.Pids.Add(101);
-            var betaApp = new AppProfile { Name = "beta", Path = "C:\\Apps\\beta.exe", User = "TEST\\Two", ConnectionCount = 5, RamMb = 40 };
+            var betaApp = new AppProfile { Name = "beta", Path = "C:\\Apps\\beta.exe", User = "TEST\\Two", ConnectionCount = 5, Cpu = 7.5, RamMb = 40 };
             betaApp.Pids.Add(202);
             latestAppProfiles = new List<AppProfile> { alphaApp, betaApp };
             firewallStatusCache[alphaApp.Path] = FirewallStatusNoBlock;
@@ -2473,6 +2482,13 @@ namespace BetterTaskManager
             if (!string.Equals(selectedAppPath, alphaApp.Path, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("Apps selection was not preserved through filtering and sorting.");
+            }
+            gridSortState[appGrid] = Tuple.Create("Cpu", false);
+            FillAppGridFromCache();
+            if (Convert.ToString(appGrid.Rows[0].Cells["App"].Value) != "beta" ||
+                Convert.ToString(appGrid.Rows[0].Cells["Cpu"].Value) != betaApp.Cpu.ToString("0.0", CultureInfo.CurrentCulture))
+            {
+                throw new InvalidOperationException("Grouped Apps CPU was not rendered or sorted numerically.");
             }
 
             await VerifySnapshotCollectionGateAsync();
@@ -3104,11 +3120,12 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Network snapshot filtering failed.");
             }
-            var appFilterProbe = new AppProfile { Name = "browser", Path = "C:\\Apps\\browser.exe", User = "TEST\\User", ConnectionCount = 7 };
+            var appFilterProbe = new AppProfile { Name = "browser", Path = "C:\\Apps\\browser.exe", User = "TEST\\User", ConnectionCount = 7, Cpu = 7.5 };
             appFilterProbe.Pids.Add(4242);
             if (!MainForm.AppProfileMatchesFilter(appFilterProbe, "4242", "BTM Blocked") ||
                 !MainForm.AppProfileMatchesFilter(appFilterProbe, "blocked", "BTM Blocked") ||
                 !MainForm.AppProfileMatchesFilter(appFilterProbe, "browser.exe", "BTM Blocked") ||
+                !MainForm.AppProfileMatchesFilter(appFilterProbe, appFilterProbe.Cpu.ToString("0.0", CultureInfo.CurrentCulture), "BTM Blocked") ||
                 MainForm.AppProfileMatchesFilter(appFilterProbe, "missing", "BTM Blocked"))
             {
                 throw new InvalidOperationException("Apps snapshot filtering failed.");
@@ -3152,9 +3169,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.17" || form.Text != "Better Task Manager v1.1.0-preview.17")
+                if (Application.ProductVersion != "1.1.0-preview.18" || form.Text != "Better Task Manager v1.1.0-preview.18")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.17.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.18.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -3233,8 +3250,8 @@ namespace BetterTaskManager
             const string sharedPath = "C:\\Apps\\Browser\\browser.exe";
             var processes = new List<ProcessRow>
             {
-                new ProcessRow { Pid = 101, Name = "browser", Path = sharedPath, PrivateMb = 100.5, WorkingSetMb = 80.25 },
-                new ProcessRow { Pid = 202, Name = "browser", Path = sharedPath, PrivateMb = 200.25, WorkingSetMb = 120.5 }
+                new ProcessRow { Pid = 101, Name = "browser", Path = sharedPath, Cpu = 1.5, PrivateMb = 100.5, WorkingSetMb = 80.25 },
+                new ProcessRow { Pid = 202, Name = "browser", Path = sharedPath, Cpu = 2.25, PrivateMb = 200.25, WorkingSetMb = 120.5 }
             };
             var connections = new List<NetworkRow>
             {
@@ -3244,7 +3261,7 @@ namespace BetterTaskManager
 
             AppProfile profile = MainForm.BuildAppProfiles(processes, connections).Single();
             if (profile.Pids.Count != 2 || profile.ConnectionCount != 2 ||
-                Math.Abs(profile.PrivateMb - 300.75) > 0.001 || Math.Abs(profile.RamMb - 200.75) > 0.001)
+                Math.Abs(profile.Cpu - 3.75) > 0.001 || Math.Abs(profile.PrivateMb - 300.75) > 0.001 || Math.Abs(profile.RamMb - 200.75) > 0.001)
             {
                 throw new InvalidOperationException("Grouped app aggregation does not match the sum of its per-process rows.");
             }
