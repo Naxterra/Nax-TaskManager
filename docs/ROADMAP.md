@@ -25,6 +25,7 @@
 - Added same-snapshot grouped CPU to the Apps view with per-PID reconciliation tests.
 - Distinguished unavailable first-snapshot CPU from measured idle and tied baselines to process identity.
 - Added native System CPU to the real-time Memory dashboard.
+- Added safe user-local persistence for window state and refresh interval.
 
 ## v2.0
 

@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.20 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.21 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -25,6 +25,8 @@ The desktop UI can monitor its active Apps, Processes, Network, History, or Memo
 The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and committed-memory counters. Its page-based values are converted using the native page size. A stateful `GetSystemTimes` collector computes System CPU from idle, kernel, and user deltas; kernel time includes idle time, so busy percentage is `(kernel + user - idle) / (kernel + user)`. Both collectors refresh manually or through the same Live monitoring intervals.
 
 The desktop starts unelevated. Privilege state and elevation are global navigation concerns; firewall mutation and system-level memory actions remain unavailable until the executable is restarted with `runas`.
+
+Non-destructive UI preferences are stored as atomic JSON under `%LOCALAPPDATA%\BetterTaskManager`. The app restores a screen-clamped window size, maximized state, and refresh interval. Live enabled state is excluded so launching the app never begins background sampling unexpectedly.
 
 The Apps view groups rows by executable path and sums normalized CPU, private-byte, and working-set values across all PIDs in that group. CPU requires two samples of the same process instance; availability and process start time travel with each row so first samples and PID reuse cannot masquerade as measured idle. Search, typed sorting, and selection operate on the grouped in-memory snapshot and remain active when Live monitoring replaces it. The Processes view remains per-PID and reports sampled visible-row CPU coverage. Both views expose their snapshot time and Apps exposes its contributing process count so the scopes are directly comparable. A working set contains private and shared pages, so summing per-PID working sets can count a shared page more than once.
 

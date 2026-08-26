@@ -249,15 +249,27 @@ namespace BetterTaskManager
         private int historyPageStart = 0;
         private readonly Dictionary<string, string> firewallStatusCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly NetworkHistoryStore historyStore;
+        private readonly AppSettingsStore settingsStore;
         private readonly NativeCpuCollector systemCpuCollector = new NativeCpuCollector();
         private long lastAdapterReceived = -1;
         private long lastAdapterSent = -1;
         private DateTime lastAdapterSample = DateTime.MinValue;
 
-        public MainForm(bool skipInitialRefresh = false, string historyPath = null)
+        public MainForm(bool skipInitialRefresh = false, string historyPath = null, string settingsPath = null)
         {
+            string appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
+            if (string.IsNullOrWhiteSpace(settingsPath)) settingsPath = Path.Combine(appDataFolder, "settings.json");
+            settingsStore = new AppSettingsStore(settingsPath);
+            AppSettings appSettings = settingsStore.Load();
+            Rectangle workingArea = Screen.PrimaryScreen == null ? SystemInformation.WorkingArea : Screen.PrimaryScreen.WorkingArea;
+            int minimumWidth = Math.Min(1000, Math.Max(1, workingArea.Width));
+            int minimumHeight = Math.Min(650, Math.Max(1, workingArea.Height));
+
             Text = "Better Task Manager v" + Application.ProductVersion;
-            Size = new Size(1560, 900);
+            MinimumSize = new Size(minimumWidth, minimumHeight);
+            Size = new Size(
+                ClampWindowDimension(appSettings.WindowWidth, minimumWidth, workingArea.Width, 1560),
+                ClampWindowDimension(appSettings.WindowHeight, minimumHeight, workingArea.Height, 900));
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9);
             BackColor = Theme.Window;
@@ -266,8 +278,7 @@ namespace BetterTaskManager
             isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
             if (string.IsNullOrWhiteSpace(historyPath))
             {
-                string historyFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
-                historyPath = Path.Combine(historyFolder, "network-history.csv");
+                historyPath = Path.Combine(appDataFolder, "network-history.csv");
             }
             historyStore = new NetworkHistoryStore(historyPath);
 
@@ -310,7 +321,7 @@ namespace BetterTaskManager
                 Margin = new Padding(4, 5, 6, 0)
             };
             refreshIntervalBox.Items.AddRange(new object[] { "1 sec", "2 sec", "5 sec", "15 sec" });
-            refreshIntervalBox.SelectedIndex = 2;
+            refreshIntervalBox.SelectedIndex = Math.Max(0, Math.Min(appSettings.RefreshIntervalIndex, refreshIntervalBox.Items.Count - 1));
             liveStatusLabel = new Label
             {
                 Text = "Paused",
@@ -709,9 +720,11 @@ namespace BetterTaskManager
                 ApplyDarkTheme(this);
                 ApplyNativeDarkTheme(this);
                 ApplyPrivilegeState();
+                if (appSettings.Maximized) WindowState = FormWindowState.Maximized;
                 ShowPage(appsTab);
                 if (!skipInitialRefresh) await RefreshAppsAsync(true);
             };
+            FormClosing += (s, e) => SaveAppSettings();
 
             ApplyDarkTheme(this);
             ApplyPrivilegeState();
@@ -727,6 +740,23 @@ namespace BetterTaskManager
             unblockButton.Enabled = isAdmin;
             clearStandbyButton.Enabled = isAdmin;
             emptySystemButton.Enabled = isAdmin;
+        }
+
+        private void SaveAppSettings()
+        {
+            try
+            {
+                Size savedSize = WindowState == FormWindowState.Normal ? Size : RestoreBounds.Size;
+                settingsStore.Save(new AppSettings
+                {
+                    WindowWidth = savedSize.Width,
+                    WindowHeight = savedSize.Height,
+                    Maximized = WindowState == FormWindowState.Maximized,
+                    RefreshIntervalIndex = Math.Max(0, refreshIntervalBox.SelectedIndex)
+                });
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         private async Task RefreshActivePageAsync(bool automatic = false)
@@ -785,6 +815,14 @@ namespace BetterTaskManager
                 case 3: return 15000;
                 default: return 5000;
             }
+        }
+
+        internal static int ClampWindowDimension(int value, int minimum, int maximum, int fallback)
+        {
+            int safeMinimum = Math.Max(1, minimum);
+            int safeMaximum = Math.Max(safeMinimum, maximum);
+            int candidate = value > 0 ? value : fallback;
+            return Math.Max(safeMinimum, Math.Min(candidate, safeMaximum));
         }
 
         internal static string SnapshotLabel(DateTime snapshot)
@@ -2535,6 +2573,12 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Memory dashboard did not expose the initial System CPU sampling state.");
             }
+            refreshIntervalBox.SelectedIndex = 3;
+            SaveAppSettings();
+            if (settingsStore.Load().RefreshIntervalIndex != 3)
+            {
+                throw new InvalidOperationException("Main window did not persist the selected Live interval.");
+            }
         }
 
         private async Task VerifySnapshotCollectionGateAsync()
@@ -2999,7 +3043,9 @@ namespace BetterTaskManager
 
             int completed = 0;
             string temporaryFolder = Path.Combine(Path.GetTempPath(), "BetterTaskManager-HistoryUiTest-" + Guid.NewGuid().ToString("N"));
-            var form = new MainForm(true, Path.Combine(temporaryFolder, "network-history.csv"));
+            var form = new MainForm(true,
+                Path.Combine(temporaryFolder, "network-history.csv"),
+                Path.Combine(temporaryFolder, "settings.json"));
             Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromSeconds(10));
@@ -3129,6 +3175,7 @@ namespace BetterTaskManager
             }
 
             TestHistoryStore();
+            TestSettingsStore();
             TestAppAggregation();
             if (!MainForm.HistoryRowMatchesFilter(new[] { "2026-01-01", "browser", "42", "user", "TCP", "127.0.0.1", "5000", "10.0.0.1", "443", "Established", "C:\\browser.exe" }, "443") ||
                 MainForm.HistoryRowMatchesFilter(new[] { "browser", "Established" }, "missing") ||
@@ -3225,6 +3272,12 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Live monitoring interval mapping failed.");
             }
+            if (MainForm.ClampWindowDimension(2000, 800, 1600, 1200) != 1600 ||
+                MainForm.ClampWindowDimension(400, 800, 1600, 1200) != 800 ||
+                MainForm.ClampWindowDimension(0, 800, 1600, 1200) != 1200)
+            {
+                throw new InvalidOperationException("Window dimension clamping failed.");
+            }
             if (MainForm.ShouldShowRefreshDialog(true) || !MainForm.ShouldShowRefreshDialog(false))
             {
                 throw new InvalidOperationException("Automatic refresh dialog suppression policy failed.");
@@ -3232,9 +3285,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.20" || form.Text != "Better Task Manager v1.1.0-preview.20")
+                if (Application.ProductVersion != "1.1.0-preview.21" || form.Text != "Better Task Manager v1.1.0-preview.21")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.20.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.21.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -3300,6 +3353,33 @@ namespace BetterTaskManager
                 if (store.SaveSnapshot(new[] { row }, row.Timestamp) != 1 || store.LoadRecent(100).Count != 1)
                 {
                     throw new InvalidOperationException("History clear did not reset connection deduplication state.");
+                }
+            }
+            finally
+            {
+                try { if (Directory.Exists(temporaryFolder)) Directory.Delete(temporaryFolder, true); } catch { }
+            }
+        }
+
+        private static void TestSettingsStore()
+        {
+            string temporaryFolder = Path.Combine(Path.GetTempPath(), "BetterTaskManager-SettingsTest-" + Guid.NewGuid().ToString("N"));
+            string settingsPath = Path.Combine(temporaryFolder, "settings.json");
+            try
+            {
+                var store = new AppSettingsStore(settingsPath);
+                store.Save(new AppSettings { WindowWidth = 1280, WindowHeight = 720, Maximized = true, RefreshIntervalIndex = 3 });
+                AppSettings loaded = store.Load();
+                if (loaded.WindowWidth != 1280 || loaded.WindowHeight != 720 || !loaded.Maximized || loaded.RefreshIntervalIndex != 3)
+                {
+                    throw new InvalidOperationException("App settings round-trip failed.");
+                }
+
+                File.WriteAllText(settingsPath, "{not valid json", Encoding.UTF8);
+                AppSettings fallback = store.Load();
+                if (fallback.WindowWidth != 1560 || fallback.WindowHeight != 900 || fallback.Maximized || fallback.RefreshIntervalIndex != 2)
+                {
+                    throw new InvalidOperationException("Corrupt settings did not fall back to defaults.");
                 }
             }
             finally
