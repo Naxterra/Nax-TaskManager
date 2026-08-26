@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.6 - Unreleased
+## 1.1.0-preview.7 - Unreleased
 
 ### Added
 
@@ -11,6 +11,8 @@
 - Added one-click grouped-app reconciliation: **View Processes** opens the contributing PIDs from the same snapshot and shows visible-row memory sums.
 - Added a native Memory dashboard with physical load, used/available RAM, system cache, commit total/limit/peak, and process/thread/handle counts; it participates in selectable Live monitoring.
 - Added global privilege status and **Restart as Admin** navigation; firewall and system-level memory controls are gated consistently in Standard mode.
+- Added instant all-column filtering to the History view; sorting and CSV export operate on the complete filtered result.
+- Added a watchdog-backed History UI smoke test that verifies loading, filtering, restoration, and a responsive message-loop continuation.
 
 ### Changed
 
@@ -30,6 +32,7 @@
 - Moved history persistence off the UI thread, guarded overlapping refreshes, stopped rebuilding hidden grids, and preserved grid selection and scroll position during live updates.
 - Apps now refresh when navigating back to the grouped view, preventing a stale Apps snapshot from being compared with a newly refreshed Processes snapshot without an explicit timestamp.
 - Network collection now resolves user/path details once per PID and reuses the same-snapshot Process rows during Apps refresh instead of repeating protected-process lookups for every connection.
+- Replaced the expensive History data grid with a fixed-column virtual list and a 100-row render window over the newest 2,000 cached records, eliminating multi-second UI freezes without truncating filtered CSV exports.
 
 ## v1.0.0 - 2026-06-06
 
