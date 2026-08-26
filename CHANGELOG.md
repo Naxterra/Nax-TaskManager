@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.29 - Unreleased
+## 1.1.0-preview.30 - Unreleased
 
 ### Added
 
@@ -34,6 +34,7 @@
 - Added global F5, Ctrl+F, Escape, Ctrl+E, and Ctrl+L shortcuts with contextual tooltip guidance.
 - Added Ctrl+1–5 view navigation and Page Up/Page Down History paging, including numpad navigation support.
 - Added stateful per-adapter download/upload sampling with stable-interface counts.
+- Added selection-aware **Open Folder** and **Copy Path** actions to Apps, Processes, and Network.
 
 ### Changed
 
@@ -65,6 +66,7 @@
 - Shortcut actions route through the active page's existing manual refresh, cached filter, export, and Live semantics; Memory intentionally has no filter/export shortcut action.
 - Mouse clicks and keyboard view changes now share one asynchronous navigation route, preventing refresh behavior from drifting between input methods.
 - Bandwidth rates now use only adapter IDs present in both samples with nondecreasing counters; new or reset interfaces wait for a fresh baseline.
+- Folder opening uses direct Windows shell activation of the resolved directory; clipboard copying retries brief contention and reports success inline.
 
 ### Fixed
 
@@ -98,6 +100,7 @@
 - Removed the redundant Network panel Enter refresh so focusing its filter no longer starts an unintended native collection.
 - Added runtime shortcut tests for actual Memory navigation and both History paging directions in addition to exhaustive static mapping coverage.
 - Fixed negative total bandwidth values when VPN, Wi-Fi, or other interface counters reset or disappear between snapshots.
+- Path actions now disable themselves when selection/path data is unavailable, and they remain inside responsive wrapping toolbars at narrow widths.
 
 ## v1.0.0 - 2026-06-06
 

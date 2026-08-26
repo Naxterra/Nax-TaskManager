@@ -180,6 +180,8 @@ namespace BetterTaskManager
         private readonly Button appBlockButton;
         private readonly Button appUnblockButton;
         private readonly Button appViewProcessesButton;
+        private readonly Button appOpenFolderButton;
+        private readonly Button appCopyPathButton;
         private readonly Label appFirewallCard;
         private readonly Label appFirewallDetailsLabel;
         private readonly TextBox appSearchBox;
@@ -194,6 +196,8 @@ namespace BetterTaskManager
         private readonly Button killButton;
         private readonly Button trimSelectedButton;
         private readonly Button loadDetailsButton;
+        private readonly Button processOpenFolderButton;
+        private readonly Button processCopyPathButton;
         private readonly CheckBox liveMonitoringCheck;
         private readonly ComboBox refreshIntervalBox;
         private readonly Label liveStatusLabel;
@@ -203,6 +207,8 @@ namespace BetterTaskManager
         private readonly Label processSummaryLabel;
         private readonly TextBox filterBox;
         private readonly Button networkRefreshButton;
+        private readonly Button networkOpenFolderButton;
+        private readonly Button networkCopyPathButton;
         private readonly Button blockButton;
         private readonly Button unblockButton;
         private readonly Label networkStatusLabel;
@@ -445,6 +451,8 @@ namespace BetterTaskManager
             appBlockButton = MakeButton("Block App", 105);
             appUnblockButton = MakeButton("Unblock App", 115);
             appViewProcessesButton = MakeButton("View Processes", 125);
+            appOpenFolderButton = MakeButton("Open Folder", 105);
+            appCopyPathButton = MakeButton("Copy Path", 90);
             appFirewallDetailsLabel = new Label
             {
                 Text = "Select an app to inspect its Better Task Manager firewall rule.",
@@ -455,7 +463,7 @@ namespace BetterTaskManager
                 ForeColor = Theme.MutedText,
                 Margin = new Padding(10, 0, 0, 0)
             };
-            appActions.Controls.AddRange(new Control[] { appRefreshButton, exportAppsButton, appBlockButton, appUnblockButton, appViewProcessesButton, appFirewallDetailsLabel });
+            appActions.Controls.AddRange(new Control[] { appRefreshButton, exportAppsButton, appBlockButton, appUnblockButton, appViewProcessesButton, appOpenFolderButton, appCopyPathButton, appFirewallDetailsLabel });
             appRight.Controls.Add(appActions, 0, 2);
 
             appRight.Controls.Add(new Label { Text = "Connections", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11, FontStyle.Bold), TextAlign = ContentAlignment.BottomLeft }, 0, 3);
@@ -489,6 +497,8 @@ namespace BetterTaskManager
             killButton = MakeButton("Force Kill", 100);
             trimSelectedButton = MakeButton("Trim Selected Memory", 160);
             loadDetailsButton = MakeButton("Load Users/Paths", 130);
+            processOpenFolderButton = MakeButton("Open Folder", 105);
+            processCopyPathButton = MakeButton("Copy Path", 90);
             var exportProcessesButton = MakeButton("Export CSV", 100);
             var filterLabel = new Label { Text = "Filter:", AutoSize = true, Margin = new Padding(12, 9, 4, 0) };
             filterBox = new TextBox { Width = 260 };
@@ -499,7 +509,7 @@ namespace BetterTaskManager
                 Margin = new Padding(16, 9, 4, 0),
                 ForeColor = isAdmin ? Theme.Good : Theme.Danger
             };
-            processToolbar.Controls.AddRange(new Control[] { refreshButton, killButton, trimSelectedButton, loadDetailsButton, exportProcessesButton, filterLabel, filterBox, statusLabel });
+            processToolbar.Controls.AddRange(new Control[] { refreshButton, killButton, trimSelectedButton, loadDetailsButton, exportProcessesButton, processOpenFolderButton, processCopyPathButton, filterLabel, filterBox, statusLabel });
             processPanel.Controls.Add(processToolbar, 0, 0);
 
             processSummaryLabel = new Label
@@ -548,6 +558,8 @@ namespace BetterTaskManager
             blockButton = MakeButton("Block App", 100);
             unblockButton = MakeButton("Unblock App", 110);
             var exportNetworkButton = MakeButton("Export CSV", 100);
+            networkOpenFolderButton = MakeButton("Open Folder", 105);
+            networkCopyPathButton = MakeButton("Copy Path", 90);
             var networkFilterLabel = new Label { Text = "Filter:", AutoSize = true, Margin = new Padding(8, 9, 4, 0) };
             networkFilterBox = new TextBox { Width = 260, PlaceholderText = "App, PID, endpoint, state, path..." };
             networkStatusLabel = new Label
@@ -563,7 +575,7 @@ namespace BetterTaskManager
                 Margin = new Padding(16, 6, 4, 0),
                 ForeColor = Theme.Info
             };
-            networkToolbar.Controls.AddRange(new Control[] { networkRefreshButton, blockButton, unblockButton, exportNetworkButton, networkFilterLabel, networkFilterBox });
+            networkToolbar.Controls.AddRange(new Control[] { networkRefreshButton, blockButton, unblockButton, exportNetworkButton, networkOpenFolderButton, networkCopyPathButton, networkFilterLabel, networkFilterBox });
             networkPanel.Controls.Add(networkToolbar, 0, 0);
 
             var networkInfoBar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(8, 0, 8, 0) };
@@ -704,6 +716,14 @@ namespace BetterTaskManager
             {
                 shortcutToolTip.SetToolTip(button, "Export active view (Ctrl+E)");
             }
+            foreach (Button button in new[] { appOpenFolderButton, processOpenFolderButton, networkOpenFolderButton })
+            {
+                shortcutToolTip.SetToolTip(button, "Open the selected executable's folder");
+            }
+            foreach (Button button in new[] { appCopyPathButton, processCopyPathButton, networkCopyPathButton })
+            {
+                shortcutToolTip.SetToolTip(button, "Copy the selected executable path");
+            }
 
             appRefreshButton.Click += async (s, e) => await RefreshAppsAsync(true);
             exportAppsButton.Click += async (s, e) => await ExportAppsAsync();
@@ -712,6 +732,8 @@ namespace BetterTaskManager
             appBlockButton.Click += async (s, e) => await BlockSelectedAppAsync(true);
             appUnblockButton.Click += async (s, e) => await BlockSelectedAppAsync(false);
             appViewProcessesButton.Click += (s, e) => ViewSelectedAppProcesses();
+            appOpenFolderButton.Click += (s, e) => OpenSelectedExecutableFolder();
+            appCopyPathButton.Click += async (s, e) => await CopySelectedExecutablePathAsync();
 
             refreshButton.Click += async (s, e) => await RefreshProcessesAsync();
             loadDetailsButton.Click += async (s, e) => await LoadDetailsAndRefreshAsync();
@@ -725,12 +747,18 @@ namespace BetterTaskManager
             trimSelectedButton.Click += async (s, e) => await TrimSelectedAsync();
             exportProcessesButton.Click += async (s, e) => await ExportProcessesAsync();
             restartAdminButton.Click += (s, e) => RestartAsAdmin();
+            processGrid.SelectionChanged += (s, e) => UpdateExecutablePathActions();
+            processOpenFolderButton.Click += (s, e) => OpenSelectedExecutableFolder();
+            processCopyPathButton.Click += async (s, e) => await CopySelectedExecutablePathAsync();
 
             networkRefreshButton.Click += async (s, e) => await RefreshNetworkAsync();
             networkFilterBox.TextChanged += (s, e) => FillNetworkGridFromCache();
             blockButton.Click += async (s, e) => await BlockSelectedAsync(true);
             unblockButton.Click += async (s, e) => await BlockSelectedAsync(false);
             exportNetworkButton.Click += async (s, e) => await ExportNetworkAsync();
+            networkGrid.SelectionChanged += (s, e) => UpdateExecutablePathActions();
+            networkOpenFolderButton.Click += (s, e) => OpenSelectedExecutableFolder();
+            networkCopyPathButton.Click += async (s, e) => await CopySelectedExecutablePathAsync();
             reloadHistoryButton.Click += async (s, e) => await LoadHistoryGridAsync();
             exportHistoryButton.Click += async (s, e) => await ExportHistoryAsync();
             clearHistoryButton.Click += async (s, e) => await ClearHistoryAsync();
@@ -789,6 +817,8 @@ namespace BetterTaskManager
             ApplyDarkTheme(this);
             ApplyPrivilegeState();
             ShowPage(appsTab);
+            ShowSelectedApp();
+            UpdateExecutablePathActions();
         }
 
         private void ApplyPrivilegeState()
@@ -1629,6 +1659,8 @@ namespace BetterTaskManager
                 appBlockButton.Enabled = false;
                 appUnblockButton.Enabled = false;
                 appViewProcessesButton.Enabled = false;
+                appOpenFolderButton.Enabled = false;
+                appCopyPathButton.Enabled = false;
                 appConnectionsGrid.Rows.Clear();
                 return;
             }
@@ -1655,6 +1687,9 @@ namespace BetterTaskManager
             appBlockButton.Enabled = canChangeRule && firewallStatus != FirewallStatusBlocked;
             appUnblockButton.Enabled = canChangeRule && firewallStatus == FirewallStatusBlocked;
             appViewProcessesButton.Enabled = app.Pids.Count > 0;
+            bool hasExecutablePath = !string.IsNullOrWhiteSpace(app.Path);
+            appOpenFolderButton.Enabled = hasExecutablePath && !string.IsNullOrWhiteSpace(ExecutableDirectory(app.Path));
+            appCopyPathButton.Enabled = hasExecutablePath;
 
             appConnectionsGrid.SuspendLayout();
             try
@@ -2742,6 +2777,10 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Same-snapshot app PID scope was not preserved in the Process view.");
             }
+            if (!processCopyPathButton.Enabled || !processOpenFolderButton.Enabled)
+            {
+                throw new InvalidOperationException("Process executable path actions did not follow selection state.");
+            }
 
             latestNetworkRows = new List<NetworkRow>
             {
@@ -2762,6 +2801,10 @@ namespace BetterTaskManager
             if (networkGrid.Rows.Count != 2 || Convert.ToInt32(networkGrid.Rows[0].Cells["PID"].Value, CultureInfo.InvariantCulture) != 202)
             {
                 throw new InvalidOperationException("Network sorting was not preserved for the cached snapshot.");
+            }
+            if (!networkCopyPathButton.Enabled || !networkOpenFolderButton.Enabled)
+            {
+                throw new InvalidOperationException("Network executable path actions did not follow selection state.");
             }
             networkFilterBox.Text = "443";
             if (!await HandleGlobalShortcutAsync(Keys.Escape) || networkFilterBox.Text.Length != 0)
@@ -2798,6 +2841,10 @@ namespace BetterTaskManager
             if (!string.Equals(selectedAppPath, alphaApp.Path, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("Apps selection was not preserved through filtering and sorting.");
+            }
+            if (!appCopyPathButton.Enabled || !appOpenFolderButton.Enabled)
+            {
+                throw new InvalidOperationException("Apps executable path actions did not follow selection state.");
             }
             gridSortState[appGrid] = Tuple.Create("Cpu", false);
             FillAppGridFromCache();
@@ -2941,6 +2988,114 @@ namespace BetterTaskManager
             object value = grid.SelectedRows[0].Cells["PID"].Value;
             int pid;
             return int.TryParse(Convert.ToString(value), out pid) ? (int?)pid : null;
+        }
+
+        private string SelectedExecutablePath()
+        {
+            if (activePage == appsTab)
+            {
+                AppProfile app = SelectedAppProfile();
+                return app == null ? "" : app.Path ?? "";
+            }
+            if (activePage == processTab) return SelectedGridPath(processGrid);
+            if (activePage == networkTab) return SelectedGridPath(networkGrid);
+            return "";
+        }
+
+        private static string SelectedGridPath(DataGridView grid)
+        {
+            if (grid == null || grid.SelectedRows.Count == 0 || !grid.Columns.Contains("Path")) return "";
+            return Convert.ToString(grid.SelectedRows[0].Cells["Path"].Value) ?? "";
+        }
+
+        internal static string ExecutableDirectory(string executablePath)
+        {
+            if (string.IsNullOrWhiteSpace(executablePath)) return "";
+            try { return Path.GetDirectoryName(executablePath) ?? ""; }
+            catch (ArgumentException) { return ""; }
+            catch (NotSupportedException) { return ""; }
+        }
+
+        private void UpdateExecutablePathActions()
+        {
+            string processPath = SelectedGridPath(processGrid);
+            processCopyPathButton.Enabled = !string.IsNullOrWhiteSpace(processPath);
+            processOpenFolderButton.Enabled = !string.IsNullOrWhiteSpace(ExecutableDirectory(processPath));
+
+            string networkPath = SelectedGridPath(networkGrid);
+            networkCopyPathButton.Enabled = !string.IsNullOrWhiteSpace(networkPath);
+            networkOpenFolderButton.Enabled = !string.IsNullOrWhiteSpace(ExecutableDirectory(networkPath));
+        }
+
+        private void OpenSelectedExecutableFolder()
+        {
+            string path = SelectedExecutablePath();
+            string folder = ExecutableDirectory(path);
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+            {
+                MessageBox.Show(this, "The selected executable folder is unavailable.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = folder, UseShellExecute = true });
+                SetPathActionStatus("Opened folder: " + folder, Theme.Good);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Could not open the executable folder.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private async Task CopySelectedExecutablePathAsync()
+        {
+            string path = SelectedExecutablePath();
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                MessageBox.Show(this, "The selected row has no executable path.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                try
+                {
+                    Clipboard.SetText(path);
+                    SetPathActionStatus("Copied executable path.", Theme.Good);
+                    return;
+                }
+                catch (ExternalException) when (attempt < 2)
+                {
+                    await Task.Delay(50);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "Could not copy the executable path.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
+            MessageBox.Show(this, "The Windows clipboard remained busy. Try again.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        private void SetPathActionStatus(string text, Color color)
+        {
+            if (activePage == appsTab)
+            {
+                appFirewallDetailsLabel.Text = text;
+                appFirewallDetailsLabel.ForeColor = color;
+            }
+            else if (activePage == processTab)
+            {
+                statusLabel.Text = text;
+                statusLabel.ForeColor = color;
+            }
+            else if (activePage == networkTab)
+            {
+                networkStatusLabel.Text = text;
+                networkStatusLabel.ForeColor = color;
+            }
         }
 
         private string SelectedNetworkPath()
@@ -3661,6 +3816,11 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Column-width or maximized-state persistence policy failed.");
             }
+            if (!string.Equals(MainForm.ExecutableDirectory("C:\\Apps\\Tool\\tool.exe"), "C:\\Apps\\Tool", StringComparison.OrdinalIgnoreCase) ||
+                MainForm.ExecutableDirectory("") != "")
+            {
+                throw new InvalidOperationException("Executable folder resolution failed.");
+            }
             if (MainForm.ShouldShowRefreshDialog(true) || !MainForm.ShouldShowRefreshDialog(false))
             {
                 throw new InvalidOperationException("Automatic refresh dialog suppression policy failed.");
@@ -3681,9 +3841,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.29" || form.Text != "Better Task Manager v1.1.0-preview.29")
+                if (Application.ProductVersion != "1.1.0-preview.30" || form.Text != "Better Task Manager v1.1.0-preview.30")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.29.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.30.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.29 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.30 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -19,6 +19,8 @@ The app collects live process data directly from Windows process APIs. Process c
 Apps, Processes, Network, and History share a synchronized per-PID identity cache. Path/user resolution state is explicit, so both successful results and access-denied empty results are reused instead of retried on each Live tick. Process start time guards against PID reuse, and full process snapshots prune exited PIDs. Apps refresh also passes its same-snapshot process rows directly into network attribution. Network search and typed sorting operate on the complete in-memory snapshot; they do not invoke the native collector and remain applied when Live monitoring replaces the snapshot.
 
 Adapter bandwidth is sampled separately from connection ownership. Counters are keyed by stable network-interface ID; rate calculation includes only interfaces present in consecutive samples whose received/sent totals remain monotonic. Interface additions, removals, and resets therefore cannot create negative aggregate rates, but the result remains adapter-level rather than per-process.
+
+Apps, Processes, and Network resolve selected executable paths through one active-page helper. Copy uses the STA clipboard with short contention retries; Open Folder passes the resolved directory to `ProcessStartInfo` with `UseShellExecute=true`, avoiding command construction and console windows. Button availability follows each view's current selection.
 
 New and changed connection observations are written locally. Unchanged snapshots are suppressed, the minimum sampling interval is one second, and entries are pruned after 30 days. The History view asynchronously caches the newest 2,000 rows, filters that cache in memory, applies column-aware sorting (date, integer, or case-insensitive text), and pages a native virtual list through the complete result in 100-row windows. Manual and Live reloads preserve the current page when possible. CSV export includes the complete filtered result. A confirmed Clear action uses the same store lock as sampling, atomically restores a header-only file, and resets in-memory deduplication state.
 

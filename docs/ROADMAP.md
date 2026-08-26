@@ -34,6 +34,7 @@
 - Added discoverable active-page keyboard shortcuts and removed focus-triggered Network refresh.
 - Added keyboard view navigation and History paging through the shared navigation route.
 - Replaced unstable aggregate bandwidth deltas with per-adapter monotonic sampling.
+- Added safe selected executable path copy/open-folder workflows across primary views.
 
 ## v2.0
 
