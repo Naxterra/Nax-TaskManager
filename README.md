@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.45`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.47`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -46,8 +46,10 @@ The current development build is `1.1.0-preview.45`. The checked-in v1.0 downloa
   - Clear standby cache.
   - Release system cache.
 - Memory maintenance actions share one non-overlapping busy gate; native standby/system cache work runs off the UI thread and restores privilege-aware controls after success or failure.
+- Elevated startup now activates and verifies `SeProfileSingleProcessPrivilege` before enabling the two system-memory actions; elevation and actual action capability are reported separately.
 - Softer blue-slate dark UI with native dark controls and scrollbars.
 - Connection-change history with live native connection sampling, 30-day retention, duplicate suppression, one-second change granularity, instant all-column filtering, typed timestamp/PID/port sorting, responsive paging, complete filtered export, and a confirmed **Clear History** action for the user-local store.
+- A persisted **Record history** checkbox stops all future connection-history writes without deleting existing rows; live History remains available as a read-only refresh while recording is off.
 - Path-scoped cross-process History locking protects append/load/prune/clear when two app instances overlap, including Restart-as-Admin handoff.
 
 ## Current Preview Limits
@@ -107,13 +109,19 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.45-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.47-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.45-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.47-portable-win-x64\BetterTaskManager.exe
+```
+
+The publish script also refreshes this stable path on every successful build, so testers do not need to locate the newest numbered preview folder:
+
+```text
+artifacts\BetterTaskManager-latest-portable-win-x64\BetterTaskManager.exe
 ```
 
 Each portable folder contains `BetterTaskManager.exe`, `README.md`, `RELEASE_NOTES-v1.1-preview.md`, `CHANGELOG.md`, `SECURITY.md`, `LICENSE`, and `SHA256SUMS.txt`. Start with the preview release notes for a concise overview, then verify the executable from inside that folder with:

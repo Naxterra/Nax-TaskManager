@@ -12,6 +12,7 @@ namespace BetterTaskManager
         public int WindowHeight { get; set; } = 900;
         public bool Maximized { get; set; }
         public int RefreshIntervalIndex { get; set; } = 2;
+        public bool RecordHistory { get; set; } = true;
         public Dictionary<string, int> ColumnWidths { get; set; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
     }
 

@@ -10,7 +10,10 @@ This preview is a substantial update to the checked-in v1.0 release. It remains 
 - Native IPv4/IPv6 TCP/UDP collection replaces localized `netstat` parsing and preserves healthy table results when one address-family/protocol source fails.
 - Cached filtering and typed sorting avoid recollection on every search keystroke; filtered/sorted model exports are available for Apps, Processes, Network, and History.
 - History records new or changed connections with one-second sampling granularity, duplicate suppression, 30-day retention, 2,000-row view caching, responsive 100-row paging, cross-process file locking, filtered export, and confirmed clearing.
+- A persisted **Record history** checkbox stops future disk writes while keeping existing history available for viewing and export.
+- Every successful local publish updates a stable `BetterTaskManager-latest-portable-win-x64` folder and ZIP, avoiding stale numbered-preview launches.
 - Memory includes native System CPU, physical/commit/cache counters, bounded 60-sample CPU/RAM trends, and non-blocking maintenance actions.
+- Elevated sessions explicitly activate and verify the Windows system-memory privilege before enabling standby/system-cache maintenance, avoiding misleading administrator-only checks.
 - Firewall, Process mutation, Memory maintenance, snapshot collection, and History persistence have explicit non-overlapping gates and stale-result safeguards.
 - Force Kill/Trim validate process start time, reject PID reuse, and protect Better Task Manager's own process.
 - Portable packages include documentation, security/privacy guidance, license, and an executable SHA-256 manifest. Windows CI mirrors restore, build, self-test, UI smoke, and publish steps after the branch is pushed.
@@ -26,6 +29,8 @@ User-local data remains under `%LOCALAPPDATA%\BetterTaskManager`:
 - `crash.log` and `crash.previous.log`
 
 Existing history is retained and read by the preview. **Clear History** permanently resets the saved history but does not delete CSV exports saved elsewhere. Live monitoring always starts paused, even when the refresh interval is restored.
+
+History recording remains enabled by default for compatibility. Disable **Record history** on the History page to stop future Apps/Network/History observations without erasing saved rows.
 
 The checked-in `release-assets\BetterTaskManager-v1.0-win-x64.zip` remains unchanged as the stable v1.0 artifact.
 

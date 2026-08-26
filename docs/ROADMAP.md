@@ -50,6 +50,7 @@
 - Corrected and bundled current security/privacy guidance for preview distribution.
 - Bounded and serialized contextual crash logging across app instances.
 - Added tester-facing v1.1 preview release notes to deterministic packages.
+- Added a persisted privacy opt-out for all connection-history writes.
 
 ## v2.0
 

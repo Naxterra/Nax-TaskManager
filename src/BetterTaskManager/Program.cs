@@ -18,6 +18,23 @@ namespace BetterTaskManager
     {
         public const int PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
         public const int TOKEN_QUERY = 0x0008;
+        public const int TOKEN_ADJUST_PRIVILEGES = 0x0020;
+        public const int SE_PRIVILEGE_ENABLED = 0x00000002;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct Luid
+        {
+            public uint LowPart;
+            public int HighPart;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct TokenPrivileges
+        {
+            public uint PrivilegeCount;
+            public Luid Luid;
+            public uint Attributes;
+        }
 
         [DllImport("kernel32.dll", SetLastError=true)]
         public static extern IntPtr OpenProcess(int processAccess, bool inheritHandle, int processId);
@@ -43,6 +60,13 @@ namespace BetterTaskManager
         [DllImport("advapi32.dll", SetLastError=true)]
         public static extern bool OpenProcessToken(IntPtr processHandle, int desiredAccess, out IntPtr tokenHandle);
 
+        [DllImport("advapi32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+        public static extern bool LookupPrivilegeValue(string systemName, string name, out Luid luid);
+
+        [DllImport("advapi32.dll", SetLastError=true)]
+        public static extern bool AdjustTokenPrivileges(IntPtr tokenHandle, bool disableAllPrivileges, ref TokenPrivileges newState,
+            int bufferLength, IntPtr previousState, IntPtr returnLength);
+
         [DllImport("psapi.dll")]
         public static extern bool EmptyWorkingSet(IntPtr hProcess);
 
@@ -59,6 +83,44 @@ namespace BetterTaskManager
         {
             int command = 2;
             return NtSetSystemInformation(80, ref command, 4);
+        }
+
+        public static bool TryEnablePrivilege(string privilegeName, out int errorCode)
+        {
+            errorCode = 0;
+            IntPtr tokenHandle = IntPtr.Zero;
+            try
+            {
+                using (Process process = Process.GetCurrentProcess())
+                {
+                    if (!OpenProcessToken(process.Handle, TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, out tokenHandle))
+                    {
+                        errorCode = Marshal.GetLastWin32Error();
+                        return false;
+                    }
+                }
+
+                Luid luid;
+                if (!LookupPrivilegeValue(null, privilegeName, out luid))
+                {
+                    errorCode = Marshal.GetLastWin32Error();
+                    return false;
+                }
+
+                var privileges = new TokenPrivileges
+                {
+                    PrivilegeCount = 1,
+                    Luid = luid,
+                    Attributes = SE_PRIVILEGE_ENABLED
+                };
+                bool adjusted = AdjustTokenPrivileges(tokenHandle, false, ref privileges, 0, IntPtr.Zero, IntPtr.Zero);
+                errorCode = Marshal.GetLastWin32Error();
+                return adjusted && errorCode == 0;
+            }
+            finally
+            {
+                if (tokenHandle != IntPtr.Zero) CloseHandle(tokenHandle);
+            }
         }
     }
 
@@ -181,6 +243,8 @@ namespace BetterTaskManager
         }
 
         private readonly bool isAdmin;
+        private readonly bool hasSystemMemoryPrivilege;
+        private readonly int systemMemoryPrivilegeError;
         private readonly DataGridView appGrid;
         private readonly DataGridView appConnectionsGrid;
         private readonly Button appRefreshButton;
@@ -229,6 +293,7 @@ namespace BetterTaskManager
         private readonly Button historyPreviousButton;
         private readonly Button historyNextButton;
         private readonly TextBox historyFilterBox;
+        private readonly CheckBox historyRecordingCheck;
         private readonly Button trimAllButton;
         private readonly Button clearStandbyButton;
         private readonly Button emptySystemButton;
@@ -285,6 +350,7 @@ namespace BetterTaskManager
         private bool settingProcessFilter = false;
         private bool loadingHistory = false;
         private bool refreshingHistory = false;
+        private volatile bool historyRecordingEnabled = true;
         private bool memoryMaintenanceInProgress = false;
         private int historySortColumn = -1;
         private bool historySortAscending = true;
@@ -305,6 +371,7 @@ namespace BetterTaskManager
             settingsStore = new AppSettingsStore(settingsPath);
             shortcutToolTip = new ToolTip();
             AppSettings appSettings = settingsStore.Load();
+            historyRecordingEnabled = appSettings.RecordHistory;
             lastNonMinimizedWindowState = appSettings.Maximized ? FormWindowState.Maximized : FormWindowState.Normal;
             Rectangle workingArea = Screen.PrimaryScreen == null ? SystemInformation.WorkingArea : Screen.PrimaryScreen.WorkingArea;
             int minimumWidth = Math.Min(1000, Math.Max(1, workingArea.Width));
@@ -322,6 +389,7 @@ namespace BetterTaskManager
             ForeColor = Theme.Text;
 
             isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+            hasSystemMemoryPrivilege = NativeMethods.TryEnablePrivilege("SeProfileSingleProcessPrivilege", out systemMemoryPrivilegeError);
             if (string.IsNullOrWhiteSpace(historyPath))
             {
                 historyPath = Path.Combine(appDataFolder, "network-history.csv");
@@ -639,13 +707,14 @@ namespace BetterTaskManager
             historyNextButton.Enabled = false;
             var historyFilterLabel = new Label { Text = "Filter:", AutoSize = true, Margin = new Padding(8, 9, 4, 0) };
             historyFilterBox = new TextBox { Width = 260, PlaceholderText = "App, PID, address, state, path..." };
+            historyRecordingCheck = new CheckBox { Text = "Record history", AutoSize = true, Checked = historyRecordingEnabled, Margin = new Padding(12, 8, 4, 0) };
             historyNoteLabel = new Label
             {
                 Text = "Shows new and changed connections from the last 30 days (newest first).",
                 AutoSize = true,
                 Margin = new Padding(12, 9, 4, 0)
             };
-            historyToolbar.Controls.AddRange(new Control[] { reloadHistoryButton, exportHistoryButton, clearHistoryButton, historyPreviousButton, historyNextButton, historyFilterLabel, historyFilterBox, historyNoteLabel });
+            historyToolbar.Controls.AddRange(new Control[] { reloadHistoryButton, exportHistoryButton, clearHistoryButton, historyPreviousButton, historyNextButton, historyFilterLabel, historyFilterBox, historyRecordingCheck, historyNoteLabel });
             historyPanel.Controls.Add(historyToolbar, 0, 0);
             historyList = new BufferedListView
             {
@@ -718,7 +787,13 @@ namespace BetterTaskManager
                 ForeColor = Theme.MutedText,
                 Margin = new Padding(0, 8, 0, 2)
             });
-            memoryStatusLabel = new Label { Text = "", AutoSize = true, Width = 1400 };
+            memoryStatusLabel = new Label
+            {
+                Text = hasSystemMemoryPrivilege ? "System-memory privilege active." : SystemMemoryPrivilegeUnavailableText(),
+                ForeColor = hasSystemMemoryPrivilege ? Theme.Good : Theme.Warning,
+                AutoSize = true,
+                Width = 1400
+            };
             memoryPanel.Controls.Add(memoryStatusLabel);
             memoryTab.Resize += (s, e) => UpdateMemoryTrendWidth();
 
@@ -728,6 +803,15 @@ namespace BetterTaskManager
             shortcutToolTip.SetToolTip(networkNavButton, "Open Network (Ctrl+3)");
             shortcutToolTip.SetToolTip(historyNavButton, "Open History (Ctrl+4)");
             shortcutToolTip.SetToolTip(memoryNavButton, "Open Memory (Ctrl+5)");
+            shortcutToolTip.SetToolTip(adminStatusLabel, hasSystemMemoryPrivilege
+                ? "This process is elevated and the required system-memory privilege is active."
+                : SystemMemoryPrivilegeUnavailableText());
+            shortcutToolTip.SetToolTip(clearStandbyButton, hasSystemMemoryPrivilege
+                ? "Purge the Windows standby list for troubleshooting."
+                : SystemMemoryPrivilegeUnavailableText());
+            shortcutToolTip.SetToolTip(emptySystemButton, hasSystemMemoryPrivilege
+                ? "Empty system working sets for troubleshooting."
+                : SystemMemoryPrivilegeUnavailableText());
             shortcutToolTip.SetToolTip(historyPreviousButton, "Previous History page (Page Up)");
             shortcutToolTip.SetToolTip(historyNextButton, "Next History page (Page Down)");
             shortcutToolTip.SetToolTip(loadDetailsButton, "Clear and rebuild the cached process usernames and executable paths");
@@ -796,6 +880,11 @@ namespace BetterTaskManager
             historyPreviousButton.Click += (s, e) => MoveHistoryPage(-1);
             historyNextButton.Click += (s, e) => MoveHistoryPage(1);
             historyFilterBox.TextChanged += (s, e) => FillHistoryGrid(true);
+            historyRecordingCheck.CheckedChanged += (s, e) =>
+            {
+                historyRecordingEnabled = historyRecordingCheck.Checked;
+                UpdateHistoryRecordingStatus();
+            };
 
             trimAllButton.Click += async (s, e) => await TrimAllAsync();
             clearStandbyButton.Click += async (s, e) => await ClearStandbyAsync();
@@ -856,12 +945,14 @@ namespace BetterTaskManager
         private void ApplyPrivilegeState()
         {
             restartAdminButton.Visible = !isAdmin;
-            adminStatusLabel.Text = isAdmin ? "Administrator" : "Standard mode";
-            adminStatusLabel.ForeColor = isAdmin ? Theme.Good : Theme.MutedText;
+            adminStatusLabel.Text = isAdmin
+                ? (hasSystemMemoryPrivilege ? "Administrator · memory privilege ready" : "Administrator · memory privilege unavailable")
+                : "Standard mode";
+            adminStatusLabel.ForeColor = hasSystemMemoryPrivilege ? Theme.Good : (isAdmin ? Theme.Warning : Theme.MutedText);
             UpdateFirewallActionButtons();
             trimAllButton.Enabled = !memoryMaintenanceInProgress;
-            clearStandbyButton.Enabled = isAdmin && !memoryMaintenanceInProgress;
-            emptySystemButton.Enabled = isAdmin && !memoryMaintenanceInProgress;
+            clearStandbyButton.Enabled = hasSystemMemoryPrivilege && !memoryMaintenanceInProgress;
+            emptySystemButton.Enabled = hasSystemMemoryPrivilege && !memoryMaintenanceInProgress;
         }
 
         private void UpdateMemoryTrendWidth()
@@ -986,6 +1077,7 @@ namespace BetterTaskManager
                     WindowHeight = savedSize.Height,
                     Maximized = ShouldPersistMaximized(WindowState, lastNonMinimizedWindowState),
                     RefreshIntervalIndex = Math.Max(0, refreshIntervalBox.SelectedIndex),
+                    RecordHistory = historyRecordingEnabled,
                     ColumnWidths = CaptureColumnWidths()
                 });
             }
@@ -2633,9 +2725,9 @@ namespace BetterTaskManager
 
         private async Task ClearStandbyAsync()
         {
-            if (!isAdmin)
+            if (!hasSystemMemoryPrivilege)
             {
-                MessageBox.Show(this, "Run as administrator to clear standby cache.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, SystemMemoryPrivilegeUnavailableText(), "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             if (MessageBox.Show(this, "Clear Windows standby cache?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
@@ -2644,9 +2736,9 @@ namespace BetterTaskManager
 
         private async Task EmptySystemWorkingSetsAsync()
         {
-            if (!isAdmin)
+            if (!hasSystemMemoryPrivilege)
             {
-                MessageBox.Show(this, "Run as administrator to use this system-level memory action.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, SystemMemoryPrivilegeUnavailableText(), "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             if (MessageBox.Show(this, "Release system cache/working sets? Use this only for troubleshooting memory pressure.", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
@@ -2777,8 +2869,10 @@ namespace BetterTaskManager
                 visibleHistoryRows = new List<string[]>();
                 historyPageStart = 0;
                 FillHistoryGrid(true);
-                historyNoteLabel.Text = "Connection history cleared. Live monitoring can record new changes.";
-                historyNoteLabel.ForeColor = Theme.Good;
+                historyNoteLabel.Text = historyRecordingEnabled
+                    ? "Connection history cleared. Live monitoring can record new changes."
+                    : "Connection history cleared. Recording remains off.";
+                historyNoteLabel.ForeColor = historyRecordingEnabled ? Theme.Good : Theme.Warning;
             }
             catch (Exception ex)
             {
@@ -2804,6 +2898,13 @@ namespace BetterTaskManager
             historyNoteLabel.ForeColor = Theme.Warning;
             try
             {
+                if (!historyRecordingEnabled)
+                {
+                    latestHistoryRows = await Task.Run(() => historyStore.LoadRecent(2000));
+                    FillHistoryGrid(false);
+                    MarkLiveRefreshSuccess();
+                    return;
+                }
                 var result = await RunSnapshotCollectionAsync(historyTab, () =>
                 {
                     var issues = new List<string>();
@@ -2878,6 +2979,16 @@ namespace BetterTaskManager
                 historyNoteLabel.Text = first.ToString(CultureInfo.CurrentCulture) + "-" + last.ToString(CultureInfo.CurrentCulture) +
                     "/" + visibleHistoryRows.Count.ToString(CultureInfo.CurrentCulture) + " matches (" + scope + "); export includes all matches.";
             }
+            if (!historyRecordingEnabled)
+            {
+                historyNoteLabel.Text = "Recording off. " + historyNoteLabel.Text;
+                historyNoteLabel.ForeColor = Theme.Warning;
+            }
+        }
+
+        private void UpdateHistoryRecordingStatus()
+        {
+            FillHistoryGrid(false);
         }
 
         private void HistoryListRetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)
@@ -3157,7 +3268,7 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Memory maintenance gate did not enter a single busy state.");
             }
             EndMemoryMaintenance();
-            if (!trimAllButton.Enabled || clearStandbyButton.Enabled != isAdmin || emptySystemButton.Enabled != isAdmin)
+            if (!trimAllButton.Enabled || clearStandbyButton.Enabled != hasSystemMemoryPrivilege || emptySystemButton.Enabled != hasSystemMemoryPrivilege)
             {
                 throw new InvalidOperationException("Memory maintenance controls did not return to their idle privilege state.");
             }
@@ -3170,12 +3281,23 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Memory navigation did not append the next RAM trend sample.");
             }
+            int historyCountBeforeOptOut = historyStore.LoadRecent(2000).Count;
+            historyRecordingCheck.Checked = false;
+            SaveNetworkHistory(new List<NetworkRow>
+            {
+                new NetworkRow { Timestamp = DateTime.Now, Process = "opt-out-probe", Pid = 9999, Protocol = "TCP", LocalAddress = "127.0.0.1", LocalPort = "1", RemoteAddress = "127.0.0.1", RemotePort = "2", State = "Established", Path = "C:\\opt-out.exe" }
+            });
+            if (historyRecordingEnabled || historyStore.LoadRecent(2000).Count != historyCountBeforeOptOut ||
+                historyNoteLabel.Text.IndexOf("Recording off", StringComparison.Ordinal) < 0)
+            {
+                throw new InvalidOperationException("History recording opt-out did not stop writes and disclose state.");
+            }
             refreshIntervalBox.SelectedIndex = 3;
             networkGrid.Columns["Process"].Width = 222;
             SaveAppSettings();
             AppSettings savedUiSettings = settingsStore.Load();
             int savedNetworkWidth;
-            if (savedUiSettings.RefreshIntervalIndex != 3 || savedUiSettings.ColumnWidths == null ||
+            if (savedUiSettings.RefreshIntervalIndex != 3 || savedUiSettings.RecordHistory || savedUiSettings.ColumnWidths == null ||
                 !savedUiSettings.ColumnWidths.TryGetValue("Network.Process", out savedNetworkWidth) || savedNetworkWidth != 222)
             {
                 throw new InvalidOperationException("Main window did not persist Live interval and column width preferences.");
@@ -3663,6 +3785,7 @@ namespace BetterTaskManager
 
         private void SaveNetworkHistory(List<NetworkRow> rows)
         {
+            if (!historyRecordingEnabled) return;
             try
             {
                 historyStore.SaveSnapshot(rows, DateTime.Now);
@@ -3742,9 +3865,16 @@ namespace BetterTaskManager
         {
             if (result == 0) return "Success.";
             uint unsigned = unchecked((uint)result);
-            if (unsigned == 0xC0000061) return "Failed: Windows says the required privilege is not available. Try running from an elevated local administrator session.";
+            if (unsigned == 0xC0000061) return "Failed: Windows did not grant SeProfileSingleProcessPrivilege to this process.";
             if (unsigned == 0xC0000005) return "Failed: Windows denied access.";
             return "Failed: Windows returned native status 0x" + unsigned.ToString("X8", CultureInfo.InvariantCulture) + ".";
+        }
+
+        private string SystemMemoryPrivilegeUnavailableText()
+        {
+            if (!isAdmin) return "System-memory actions require Restart as Admin and SeProfileSingleProcessPrivilege.";
+            if (systemMemoryPrivilegeError == 1300) return "This elevated token does not contain SeProfileSingleProcessPrivilege; the two system-memory actions are unavailable under the current Windows policy.";
+            return "Windows could not enable SeProfileSingleProcessPrivilege (error " + systemMemoryPrivilegeError.ToString(CultureInfo.InvariantCulture) + "); the two system-memory actions are unavailable.";
         }
 
         private static string NormalizeDisplayText(string value)
@@ -3985,6 +4115,17 @@ namespace BetterTaskManager
             CommandResult failure = CommandRunner.Run("cmd.exe", "/d", "/c", "echo expected-failure 1>&2 & exit 7");
             if (failure.Succeeded || failure.ExitCode != 7) throw new InvalidOperationException("Command runner failure probe did not preserve exit code 7.");
             if (failure.StandardError.IndexOf("expected-failure", StringComparison.Ordinal) < 0) throw new InvalidOperationException("Command runner did not capture standard error.");
+
+            int enabledPrivilegeError;
+            if (!NativeMethods.TryEnablePrivilege("SeChangeNotifyPrivilege", out enabledPrivilegeError))
+            {
+                throw new InvalidOperationException("Token privilege activation probe failed with Windows error " + enabledPrivilegeError.ToString(CultureInfo.InvariantCulture) + ".");
+            }
+            int missingPrivilegeError;
+            if (NativeMethods.TryEnablePrivilege("BetterTaskManagerPrivilegeThatDoesNotExist", out missingPrivilegeError) || missingPrivilegeError == 0)
+            {
+                throw new InvalidOperationException("Token privilege activation did not reject an unknown privilege name.");
+            }
 
             NativeNetworkSnapshot nativeNetworkSnapshot = NativeNetworkCollector.GetSnapshot();
             List<NativeConnection> connections = nativeNetworkSnapshot.Connections;
@@ -4245,9 +4386,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.45" || form.Text != "Better Task Manager v1.1.0-preview.45")
+                if (Application.ProductVersion != "1.1.0-preview.47" || form.Text != "Better Task Manager v1.1.0-preview.47")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.45.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.47.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -4359,11 +4500,12 @@ namespace BetterTaskManager
                     WindowHeight = 720,
                     Maximized = true,
                     RefreshIntervalIndex = 3,
+                    RecordHistory = false,
                     ColumnWidths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["Network.Process"] = 222 }
                 });
                 AppSettings loaded = store.Load();
                 int networkWidth;
-                if (loaded.WindowWidth != 1280 || loaded.WindowHeight != 720 || !loaded.Maximized || loaded.RefreshIntervalIndex != 3 ||
+                if (loaded.WindowWidth != 1280 || loaded.WindowHeight != 720 || !loaded.Maximized || loaded.RefreshIntervalIndex != 3 || loaded.RecordHistory ||
                     loaded.ColumnWidths == null || !loaded.ColumnWidths.TryGetValue("Network.Process", out networkWidth) || networkWidth != 222)
                 {
                     throw new InvalidOperationException("App settings round-trip failed.");
@@ -4371,7 +4513,7 @@ namespace BetterTaskManager
 
                 File.WriteAllText(settingsPath, "{not valid json", Encoding.UTF8);
                 AppSettings fallback = store.Load();
-                if (fallback.WindowWidth != 1560 || fallback.WindowHeight != 900 || fallback.Maximized || fallback.RefreshIntervalIndex != 2 || fallback.ColumnWidths == null)
+                if (fallback.WindowWidth != 1560 || fallback.WindowHeight != 900 || fallback.Maximized || fallback.RefreshIntervalIndex != 2 || !fallback.RecordHistory || fallback.ColumnWidths == null)
                 {
                     throw new InvalidOperationException("Corrupt settings did not fall back to defaults.");
                 }

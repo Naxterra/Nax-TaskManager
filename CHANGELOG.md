@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.45 - Unreleased
+## 1.1.0-preview.47 - Unreleased
 
 ### Added
 
@@ -50,6 +50,7 @@
 - Added comprehensive current security/privacy documentation to the repository and portable package.
 - Added bounded cross-process crash logging with one rotated previous file.
 - Added concise tester-facing v1.1 preview release notes covering highlights, upgrade/local data, safety/privacy, validation, and known limits.
+- Added a persisted **Record history** privacy control.
 
 ### Changed
 
@@ -97,6 +98,8 @@
 - Security guidance now documents unelevated startup, privileged/destructive gates, local history/settings/crash data, export sensitivity, firewall rule scope, non-destructive tests, and checksum limitations.
 - Crash reports now include timestamp, app version, .NET runtime, OS, process bitness, DPI mode, and exception details; oversized entries are truncated with an explicit marker.
 - Deterministic portable staging now bundles `RELEASE_NOTES-v1.1-preview.md` ahead of the detailed changelog and security guide.
+- Apps, Network, and live History writes now read one thread-safe recording flag; disabling it retains existing rows for view/export and turns live History into read-only reloads.
+- Portable publishing now refreshes a stable `BetterTaskManager-latest-portable-win-x64` folder and ZIP alongside the numbered preview artifacts.
 
 ### Fixed
 
@@ -146,6 +149,9 @@
 - Fixed stale documentation claiming the app requests elevation at startup, renamed README limits for the current preview, and added `SECURITY.md` to deterministic package staging.
 - Prevented `crash.log` from growing indefinitely or racing overlapping app instances; current and previous logs remain capped at 1 MiB each.
 - Documented that existing local history/settings remain in place, Live starts paused, v1.0 remains unchanged, and background ETW/WFP functionality is still outside the desktop preview.
+- Added isolated opt-out tests proving disabled recording prevents a unique snapshot write, displays **Recording off**, and persists through settings round-trip while corrupt settings default to recording enabled.
+- Fixed elevated Memory actions failing with `STATUS_PRIVILEGE_NOT_HELD`: the process now enables `SeProfileSingleProcessPrivilege`, verifies whether Windows assigned it, and only enables **Clear Standby Cache** and **Release System Cache** when the capability is genuinely available.
+- Replaced the contradictory “Administrator”/“required privilege unavailable” guidance with separate elevation and memory-privilege status plus the actual Windows error when activation fails.
 
 ## v1.0.0 - 2026-06-06
 

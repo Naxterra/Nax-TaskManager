@@ -24,19 +24,18 @@ The same sequence runs in `.github\workflows\windows-ci.yml` on pushes and pull 
 .\scripts\publish-v1.ps1
 ```
 
-The self-contained single-file Windows x64 preview is placed in:
+The self-contained single-file Windows x64 preview is placed in both a versioned folder and a stable latest-build folder:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.45-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.47-portable-win-x64
+artifacts\BetterTaskManager-latest-portable-win-x64
 ```
 
-Create a ZIP for manual testing or a GitHub prerelease with:
+The publish script also creates both ZIP packages automatically:
 
-```powershell
-Compress-Archive `
-  -LiteralPath .\artifacts\BetterTaskManager-v1.1.0-preview.45-portable-win-x64 `
-  -DestinationPath .\artifacts\BetterTaskManager-v1.1.0-preview.45-portable-win-x64.zip `
-  -CompressionLevel Optimal
+```text
+artifacts\BetterTaskManager-v1.1.0-preview.47-portable-win-x64.zip
+artifacts\BetterTaskManager-latest-portable-win-x64.zip
 ```
 
 Do not create or push a stable tag until the preview has been approved and the version, changelog date, release notes, and packaged artifact all agree.

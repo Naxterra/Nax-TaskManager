@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.45 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.47 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -32,13 +32,17 @@ Selected Process mutations use one UI busy gate. Centralized action-state calcul
 
 Bulk working-set trim enumerates processes off the UI thread, excludes PID 0 and the controlling Better Task Manager process, catches failures per target, and returns trimmed/failed/skipped counts. Its UI action is restored in `finally`, and only the active Memory snapshot is refreshed afterward.
 
-All Memory maintenance shares a UI-level busy gate. Bulk trim, standby purge, and system working-set release cannot overlap; native work executes off the UI thread, all action buttons disable together, and `finally` restores controls according to the current administrator state. UI smoke coverage verifies these transitions without executing destructive native calls.
+All Memory maintenance shares a UI-level busy gate. Bulk trim, standby purge, and system working-set release cannot overlap; native work executes off the UI thread, all action buttons disable together, and `finally` restores controls according to the current per-action capability state. UI smoke coverage verifies these transitions without executing destructive native calls.
 
 New and changed connection observations are written locally. Unchanged snapshots are suppressed, the minimum sampling interval is one second, and entries are pruned after 30 days. The store combines its object lock with a path-derived `Local\\` named mutex, serializing transactions across separate normal/elevated app instances with abandon recovery and bounded wait. The History view asynchronously caches the newest 2,000 rows, filters that cache in memory, applies column-aware sorting (date, integer, or case-insensitive text), and pages a native virtual list through the complete result in 100-row windows. Manual and Live reloads preserve the current page when possible. CSV export includes the complete filtered result. A confirmed Clear action atomically restores a header-only file and resets in-memory deduplication state.
+
+A persisted thread-safe recording flag gates every `SaveSnapshot` call made by Apps, Network, or live History. With recording disabled, existing rows remain readable/exportable, filters/paging continue to work, and live History performs only a bounded store reload. Corrupt/missing settings default to recording enabled for backward compatibility.
 
 The desktop UI can monitor its active Apps, Processes, Network, History, or Memory page every 1, 2, 5, or 15 seconds. On History, each live tick samples native connection tables, records new or state-changed observations, then reloads the retained view. Heavy snapshot work runs away from the UI thread behind one asynchronous gate in addition to per-view reentrancy guards. This prevents cross-page collectors from overlapping; queued and completed work is discarded when its originating page is no longer active. Automatic failures are reported inline with a global **Live error** state rather than modal dialogs, while explicit user refreshes retain modal error feedback.
 
 The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and committed-memory counters. Its page-based values are converted using the native page size. A stateful `GetSystemTimes` collector computes System CPU from idle, kernel, and user deltas; kernel time includes idle time, so busy percentage is `(kernel + user - idle) / (kernel + user)`. Both collectors refresh manually or through the same Live monitoring intervals. Each refresh appends valid CPU and RAM-load percentages to responsive double-buffered controls capped at 60 samples; no chart-specific timer or background work exists.
+
+System-memory list commands require `SeProfileSingleProcessPrivilege`, not merely membership in the Administrators group. Startup attempts to enable that privilege on the process token and stores the result; the two corresponding controls use this capability result rather than elevation alone. Firewall controls continue to use elevation because they execute through the Windows firewall command surface.
 
 The desktop starts unelevated. Privilege state and elevation are global navigation concerns; firewall mutation and system-level memory actions remain unavailable until the executable is restarted with `runas`.
 
