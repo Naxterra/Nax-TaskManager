@@ -29,6 +29,7 @@
 - Persisted clamped data-column widths and corrected minimized/maximized restoration.
 - Made navigation and dense command surfaces responsive at narrow window widths.
 - Enabled and verified PerMonitorV2 scaling for mixed-DPI displays.
+- Added complete grouped Apps CSV export from the cached filtered/sorted model.
 
 ## v2.0
 

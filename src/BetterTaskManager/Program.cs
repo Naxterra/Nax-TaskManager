@@ -424,6 +424,7 @@ namespace BetterTaskManager
 
             appActions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0), Padding = new Padding(0) };
             appRefreshButton = MakeButton("Refresh Apps", 120);
+            var exportAppsButton = MakeButton("Export CSV", 100);
             appBlockButton = MakeButton("Block App", 105);
             appUnblockButton = MakeButton("Unblock App", 115);
             appViewProcessesButton = MakeButton("View Processes", 125);
@@ -437,7 +438,7 @@ namespace BetterTaskManager
                 ForeColor = Theme.MutedText,
                 Margin = new Padding(10, 0, 0, 0)
             };
-            appActions.Controls.AddRange(new Control[] { appRefreshButton, appBlockButton, appUnblockButton, appViewProcessesButton, appFirewallDetailsLabel });
+            appActions.Controls.AddRange(new Control[] { appRefreshButton, exportAppsButton, appBlockButton, appUnblockButton, appViewProcessesButton, appFirewallDetailsLabel });
             appRight.Controls.Add(appActions, 0, 2);
 
             appRight.Controls.Add(new Label { Text = "Connections", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11, FontStyle.Bold), TextAlign = ContentAlignment.BottomLeft }, 0, 3);
@@ -667,6 +668,7 @@ namespace BetterTaskManager
             memoryPanel.Controls.Add(memoryStatusLabel);
 
             appRefreshButton.Click += async (s, e) => await RefreshAppsAsync(true);
+            exportAppsButton.Click += async (s, e) => await ExportAppsAsync();
             appSearchBox.TextChanged += (s, e) => { FillAppGridFromCache(); ShowSelectedApp(); };
             appGrid.SelectionChanged += (s, e) => ShowSelectedApp();
             appBlockButton.Click += async (s, e) => await BlockSelectedAppAsync(true);
@@ -1388,13 +1390,18 @@ namespace BetterTaskManager
 
         private void FillAppGridFromCache()
         {
+            FillAppGrid(AppProfilesForCurrentView());
+        }
+
+        private List<AppProfile> AppProfilesForCurrentView()
+        {
             string filter = appSearchBox.Text.Trim();
             var apps = latestAppProfiles
                 .Where(app => AppProfileMatchesFilter(app, filter, GetFirewallStatus(app.Path)))
                 .ToList();
             Tuple<string, bool> sort;
             if (gridSortState.TryGetValue(appGrid, out sort)) apps = SortApps(apps, sort.Item1, sort.Item2);
-            FillAppGrid(apps);
+            return apps;
         }
 
         internal static bool AppProfileMatchesFilter(AppProfile app, string filter, string firewallStatus)
@@ -2872,6 +2879,68 @@ namespace BetterTaskManager
             }
         }
 
+        private async Task ExportAppsAsync()
+        {
+            List<AppProfile> apps = AppProfilesForCurrentView();
+            if (apps.Count == 0)
+            {
+                MessageBox.Show(this, "There are no app rows to export.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var dialog = new SaveFileDialog
+            {
+                Title = "Export Apps CSV",
+                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                DefaultExt = "csv",
+                AddExtension = true,
+                RestoreDirectory = true,
+                FileName = "apps-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".csv"
+            })
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+                var exportRows = new List<IEnumerable<string>>
+                {
+                    new[] { "Snapshot", "Application", "Firewall", "ProcessCount", "CPUPercent", "CPUSampledProcesses", "Connections", "PrivateBytesMB", "WorkingSetMB", "User", "Path" }
+                };
+                foreach (AppProfile app in apps)
+                {
+                    exportRows.Add(AppExportFields(app, latestAppsSnapshot, GetFirewallStatus(app.Path)).Select(SpreadsheetSafe).ToArray());
+                }
+
+                try
+                {
+                    await Task.Run(() => CsvFileWriter.Write(dialog.FileName, exportRows));
+                    MessageBox.Show(this, "Exported " + apps.Count.ToString(CultureInfo.CurrentCulture) + " grouped apps to:\n" + dialog.FileName,
+                        "Export complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "Apps CSV export failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
+
+        internal static string[] AppExportFields(AppProfile app, DateTime snapshot, string firewallStatus)
+        {
+            if (app == null) throw new ArgumentNullException(nameof(app));
+            return new[]
+            {
+                snapshot == DateTime.MinValue ? "" : snapshot.ToString("s", CultureInfo.InvariantCulture),
+                app.Name ?? "",
+                firewallStatus ?? "Unknown",
+                app.Pids.Count.ToString(CultureInfo.InvariantCulture),
+                app.CpuSampleCount == 0 ? "" : app.Cpu.ToString("0.0", CultureInfo.InvariantCulture),
+                app.CpuSampleCount.ToString(CultureInfo.InvariantCulture),
+                app.ConnectionCount.ToString(CultureInfo.InvariantCulture),
+                app.PrivateMb.ToString("0.0", CultureInfo.InvariantCulture),
+                app.RamMb.ToString("0.0", CultureInfo.InvariantCulture),
+                app.User ?? "",
+                app.Path ?? ""
+            };
+        }
+
         private async Task ExportHistoryAsync()
         {
             if (visibleHistoryRows.Count == 0)
@@ -3407,9 +3476,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.24" || form.Text != "Better Task Manager v1.1.0-preview.24")
+                if (Application.ProductVersion != "1.1.0-preview.25" || form.Text != "Better Task Manager v1.1.0-preview.25")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.24.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.25.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -3538,6 +3607,19 @@ namespace BetterTaskManager
                 Math.Abs(profile.Cpu - 3.75) > 0.001 || Math.Abs(profile.PrivateMb - 300.75) > 0.001 || Math.Abs(profile.RamMb - 200.75) > 0.001)
             {
                 throw new InvalidOperationException("Grouped app aggregation does not match the sum of its per-process rows.");
+            }
+
+            DateTime snapshot = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local);
+            string[] exportFields = MainForm.AppExportFields(profile, snapshot, "No BTM Block");
+            if (exportFields.Length != 11 || exportFields[0] != "2026-01-02T03:04:05" || exportFields[3] != "2" ||
+                exportFields[4] != "3.8" || exportFields[5] != "2" || exportFields[6] != "2" ||
+                exportFields[7] != "300.8" || exportFields[8] != "200.8" || exportFields[10] != sharedPath)
+            {
+                throw new InvalidOperationException("Grouped Apps CSV fields do not match the reconciled snapshot values.");
+            }
+            if (MainForm.AppExportFields(new AppProfile(), DateTime.MinValue, "Unknown")[4] != "")
+            {
+                throw new InvalidOperationException("Apps CSV did not leave unavailable CPU blank.");
             }
         }
     }

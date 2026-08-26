@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.24 - Unreleased
+## 1.1.0-preview.25 - Unreleased
 
 ### Added
 
@@ -29,6 +29,7 @@
 - Added persistence for user-resized Apps, Processes, Network, and History column widths.
 - Added responsive multi-row wrapping for global navigation and dense page command bars.
 - Added explicit `PerMonitorV2` high-DPI configuration and runtime verification.
+- Added non-blocking CSV export for the current filtered and sorted Apps model.
 
 ### Changed
 
@@ -55,6 +56,7 @@
 - Restored column widths are clamped to 40–1200 pixels, and closing while minimized preserves the last non-minimized maximized state correctly.
 - The Apps master/detail split is now proportional; metric cards and actions wrap as the detail pane narrows while tables remain scrollable.
 - Replaced duplicated legacy WinForms startup calls with generated `ApplicationConfiguration.Initialize()` bootstrap while preserving native and supported dark-mode initialization.
+- Apps export writes snapshot time, firewall, process count, CPU and sampled-process count, connections, Private Bytes, Working Set, user, and executable path using invariant numeric values.
 
 ### Fixed
 
@@ -83,6 +85,7 @@
 - Extended settings tests cover column-width round trips, UI capture, clamping, and minimized/maximized state policy.
 - Added minimum-window UI bounds checks for navigation, Apps cards/actions, and Process/Network/History toolbars.
 - Added UI smoke coverage proving the packaged app starts in `PerMonitorV2` mode without regressing responsive layout or dark controls.
+- Added Apps export schema/reconciliation tests, blank unavailable CPU handling, and spreadsheet-formula protection for every model field.
 
 ## v1.0.0 - 2026-06-06
 

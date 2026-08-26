@@ -25,15 +25,15 @@ dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll
 The self-contained single-file Windows x64 preview is placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.24-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.25-portable-win-x64
 ```
 
 Create a ZIP for manual testing or a GitHub prerelease with:
 
 ```powershell
 Compress-Archive `
-  -LiteralPath .\artifacts\BetterTaskManager-v1.1.0-preview.24-portable-win-x64 `
-  -DestinationPath .\artifacts\BetterTaskManager-v1.1.0-preview.24-portable-win-x64.zip `
+  -LiteralPath .\artifacts\BetterTaskManager-v1.1.0-preview.25-portable-win-x64 `
+  -DestinationPath .\artifacts\BetterTaskManager-v1.1.0-preview.25-portable-win-x64.zip `
   -CompressionLevel Optimal
 ```
 
