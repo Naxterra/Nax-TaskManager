@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.23 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.24 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -29,6 +29,8 @@ The desktop starts unelevated. Privilege state and elevation are global navigati
 Non-destructive UI preferences are stored as atomic JSON under `%LOCALAPPDATA%\BetterTaskManager`. The app restores a screen-clamped window size, maximized state, refresh interval, and clamped widths for fixed/virtual data columns. The last non-minimized state preserves maximization when closing from the taskbar. Live enabled state is excluded so launching the app never begins background sampling unexpectedly.
 
 Top-level navigation and dense command surfaces use autosized wrapping flow layouts. The Apps master/detail split uses percentage sizing, with cards and actions wrapping independently; data grids retain explicit column widths and horizontal scrolling. UI smoke tests shrink the form to its minimum size and assert that visible command controls remain inside their containers.
+
+WinForms bootstraps through generated `ApplicationConfiguration.Initialize()` with `ApplicationHighDpiMode=PerMonitorV2`, then requests native and framework dark modes before constructing forms. Runtime smoke coverage asserts the configured DPI mode so packaged builds cannot silently fall back to implicit system-aware scaling.
 
 The Apps view groups rows by executable path and sums normalized CPU, private-byte, and working-set values across all PIDs in that group. CPU requires two samples of the same process instance; availability and process start time travel with each row so first samples and PID reuse cannot masquerade as measured idle. Search, typed sorting, and selection operate on the grouped in-memory snapshot and remain active when Live monitoring replaces it. The Processes view remains per-PID and reports sampled visible-row CPU coverage. Both views expose their snapshot time and Apps exposes its contributing process count so the scopes are directly comparable. A working set contains private and shared pages, so summing per-PID working sets can count a shared page more than once.
 

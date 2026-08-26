@@ -2463,6 +2463,10 @@ namespace BetterTaskManager
 
         internal async Task RunUiSmokeTestAsync()
         {
+            if (Application.HighDpiMode != HighDpiMode.PerMonitorV2)
+            {
+                throw new InvalidOperationException("WinForms did not start in PerMonitorV2 high-DPI mode.");
+            }
             await ShowHistoryAsync();
             if (historyList.VirtualListSize != Math.Min(latestHistoryRows.Count, HistoryDisplayLimit))
             {
@@ -3147,12 +3151,7 @@ namespace BetterTaskManager
 
         private static void RunUiSmokeTest()
         {
-            TryEnableNativeDarkControls();
-#pragma warning disable WFO5001
-            Application.SetColorMode(SystemColorMode.Dark);
-#pragma warning restore WFO5001
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+            ConfigureApplicationVisuals();
 
             int completed = 0;
             string temporaryFolder = Path.Combine(Path.GetTempPath(), "BetterTaskManager-HistoryUiTest-" + Guid.NewGuid().ToString("N"));
@@ -3199,12 +3198,7 @@ namespace BetterTaskManager
 
         public static void Run()
         {
-            TryEnableNativeDarkControls();
-#pragma warning disable WFO5001
-            Application.SetColorMode(SystemColorMode.Dark);
-#pragma warning restore WFO5001
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+            ConfigureApplicationVisuals();
             Application.ThreadException += (s, e) =>
             {
                 WriteCrashLog(e.Exception);
@@ -3217,6 +3211,15 @@ namespace BetterTaskManager
                 MessageBox.Show(ex == null ? "Unknown error" : ex.Message + "\n\nA crash log was written to %LOCALAPPDATA%\\BetterTaskManager\\crash.log", "Better Task Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             };
             Application.Run(new MainForm());
+        }
+
+        private static void ConfigureApplicationVisuals()
+        {
+            ApplicationConfiguration.Initialize();
+            TryEnableNativeDarkControls();
+#pragma warning disable WFO5001
+            Application.SetColorMode(SystemColorMode.Dark);
+#pragma warning restore WFO5001
         }
 
         private static void TryEnableNativeDarkControls()
@@ -3404,9 +3407,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.23" || form.Text != "Better Task Manager v1.1.0-preview.23")
+                if (Application.ProductVersion != "1.1.0-preview.24" || form.Text != "Better Task Manager v1.1.0-preview.24")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.23.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.24.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

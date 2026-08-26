@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.23 - Unreleased
+## 1.1.0-preview.24 - Unreleased
 
 ### Added
 
@@ -28,6 +28,7 @@
 - Added user-local persistence for window size, maximized state, and the selected Live refresh interval.
 - Added persistence for user-resized Apps, Processes, Network, and History column widths.
 - Added responsive multi-row wrapping for global navigation and dense page command bars.
+- Added explicit `PerMonitorV2` high-DPI configuration and runtime verification.
 
 ### Changed
 
@@ -53,6 +54,7 @@
 - Restored window dimensions are clamped to the current primary working area; Live enabled state is intentionally not persisted and always starts paused.
 - Restored column widths are clamped to 40–1200 pixels, and closing while minimized preserves the last non-minimized maximized state correctly.
 - The Apps master/detail split is now proportional; metric cards and actions wrap as the detail pane narrows while tables remain scrollable.
+- Replaced duplicated legacy WinForms startup calls with generated `ApplicationConfiguration.Initialize()` bootstrap while preserving native and supported dark-mode initialization.
 
 ### Fixed
 
@@ -80,6 +82,7 @@
 - Settings writes are atomic, corrupt JSON falls back to defaults, and self/UI tests use isolated temporary settings files rather than the real user profile.
 - Extended settings tests cover column-width round trips, UI capture, clamping, and minimized/maximized state policy.
 - Added minimum-window UI bounds checks for navigation, Apps cards/actions, and Process/Network/History toolbars.
+- Added UI smoke coverage proving the packaged app starts in `PerMonitorV2` mode without regressing responsive layout or dark controls.
 
 ## v1.0.0 - 2026-06-06
 

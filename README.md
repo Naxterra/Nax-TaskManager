@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.23`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.24`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -17,6 +17,7 @@ The current development build is `1.1.0-preview.23`. The checked-in v1.0 downloa
 - Automatic Live refresh failures stay inline and change the global status to red **Live error** instead of opening recurring modal dialogs. A successful later tick restores green **Live**; explicit manual refresh failures still show a dialog.
 - Window size, maximized state, selected refresh interval, and user-resized Apps/Processes/Network/History columns are saved atomically in `%LOCALAPPDATA%\BetterTaskManager\settings.json`. Restored dimensions and column widths are clamped safely; Live itself always starts paused.
 - Global navigation, Apps cards/actions, and Process/Network/History command bars autosize and wrap at narrow window widths instead of clipping controls. The Apps split uses proportional columns while data tables retain horizontal scrolling.
+- Explicit WinForms `PerMonitorV2` DPI awareness with generated application bootstrap, allowing forms, child controls, common controls, and dialogs to rescale when moved between monitors with different scaling.
 - Optional live monitoring with 1, 2, 5, or 15-second refresh intervals for Apps, Processes, Network, History, and Memory views.
 - Snapshot timestamps on Apps, Processes, and Network so grouped and per-PID samples can be compared accurately.
 - One-click **View Processes** reconciliation showing the exact contributing PIDs from the same Apps snapshot, with visible-row private-byte and working-set sums.
@@ -86,13 +87,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.23-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.24-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.23-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.24-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download
