@@ -114,6 +114,13 @@ namespace BetterTaskManager
         public double RamMb;
     }
 
+    internal sealed class MemoryTrimResult
+    {
+        public int Trimmed;
+        public int Failed;
+        public int Skipped;
+    }
+
     internal sealed class BufferedDataGridView : DataGridView
     {
         public BufferedDataGridView()
@@ -2418,23 +2425,51 @@ namespace BetterTaskManager
 
         private async Task TrimAllAsync()
         {
-            if (MessageBox.Show(this, "Trim memory for all accessible apps? This can reduce visible RAM use but apps may reload data afterward.", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            if (MessageBox.Show(this, "Trim memory for all accessible apps? Better Task Manager itself is excluded.\n\nThis can reduce visible RAM use, but apps may reload data afterward.", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             trimAllButton.Enabled = false;
-            int count = await Task.Run(() =>
+            try
             {
-                int trimmed = 0;
-                foreach (var process in Process.GetProcesses())
+                int currentProcessId = Environment.ProcessId;
+                MemoryTrimResult result = await Task.Run(() =>
                 {
-                    try { if (NativeMethods.EmptyWorkingSet(process.Handle)) trimmed++; }
-                    catch { }
-                    finally { process.Dispose(); }
-                }
-                return trimmed;
-            });
-            trimAllButton.Enabled = true;
-            memoryStatusLabel.Text = "Trimmed working sets for " + count + " processes.";
-            await RefreshProcessesAsync();
-            RefreshMemoryPage();
+                    var summary = new MemoryTrimResult();
+                    foreach (var process in Process.GetProcesses())
+                    {
+                        try
+                        {
+                            if (!ShouldTrimProcess(process.Id, currentProcessId))
+                            {
+                                summary.Skipped++;
+                                continue;
+                            }
+                            if (NativeMethods.EmptyWorkingSet(process.Handle)) summary.Trimmed++;
+                            else summary.Failed++;
+                        }
+                        catch { summary.Failed++; }
+                        finally { process.Dispose(); }
+                    }
+                    return summary;
+                });
+                memoryStatusLabel.ForeColor = result.Failed == 0 ? Theme.Good : Theme.Warning;
+                memoryStatusLabel.Text = "Working-set trim: " + result.Trimmed.ToString(CultureInfo.CurrentCulture) + " trimmed, " +
+                    result.Failed.ToString(CultureInfo.CurrentCulture) + " inaccessible/failed, " +
+                    result.Skipped.ToString(CultureInfo.CurrentCulture) + " skipped.";
+                RefreshMemoryPage();
+            }
+            catch (Exception ex)
+            {
+                memoryStatusLabel.ForeColor = Theme.Danger;
+                memoryStatusLabel.Text = "Working-set trim failed: " + ex.Message;
+            }
+            finally
+            {
+                trimAllButton.Enabled = true;
+            }
+        }
+
+        internal static bool ShouldTrimProcess(int processId, int currentProcessId)
+        {
+            return processId > 0 && processId != currentProcessId;
         }
 
         private bool RefreshMemoryPage()
@@ -3862,7 +3897,8 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Process identity cache did not reject PID reuse.");
             }
             if (!MainForm.ProcessStartTimesMatch(100, 100) || MainForm.ProcessStartTimesMatch(100, 200) ||
-                !MainForm.ProcessStartTimesMatch(0, 200) || MainForm.CanForceKillProcess(4242, 4242) || !MainForm.CanForceKillProcess(4242, 7))
+                !MainForm.ProcessStartTimesMatch(0, 200) || MainForm.CanForceKillProcess(4242, 4242) || !MainForm.CanForceKillProcess(4242, 7) ||
+                MainForm.ShouldTrimProcess(4242, 4242) || MainForm.ShouldTrimProcess(0, 4242) || !MainForm.ShouldTrimProcess(7, 4242))
             {
                 throw new InvalidOperationException("Destructive process identity safety policy failed.");
             }
@@ -3908,9 +3944,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.31" || form.Text != "Better Task Manager v1.1.0-preview.31")
+                if (Application.ProductVersion != "1.1.0-preview.32" || form.Text != "Better Task Manager v1.1.0-preview.32")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.31.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.32.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
