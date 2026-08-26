@@ -45,6 +45,7 @@
 - Made portable packages deterministic and self-describing with an internal checksum manifest.
 - Added bounded real-time CPU and RAM-load trend charts to Memory.
 - Staged Apps rendering ahead of guarded asynchronous firewall enrichment.
+- Added bounded partial-result resilience to native IPv4/IPv6 TCP/UDP collection.
 
 ## v2.0
 

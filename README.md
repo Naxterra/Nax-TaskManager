@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.40`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.41`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -17,6 +17,7 @@ The current development build is `1.1.0-preview.40`. The checked-in v1.0 downloa
 - Force Kill and Trim validate process start time before acting, reject reused stale PIDs, and prevent Better Task Manager from force-killing itself. Force Kill confirmation includes process name, PID, path, and child-process scope.
 - Process mutations share a non-overlapping busy state: Force Kill, Trim, Open Folder, and Copy Path disable during Process refresh/mutation and recover together afterward.
 - Native IPv4/IPv6 TCP and UDP collection with owning-process IDs.
+- Partial native collection resilience: a failed address-family/protocol table produces a scoped warning while healthy TCP/UDP tables remain visible; all failures still stop the snapshot.
 - Synchronized per-PID identity caching shared by Apps, Processes, Network, and History collectors. Successful and access-denied path/user lookups are reused until the process exits or its PID is reused.
 - A shared asynchronous snapshot gate prevents Apps, Processes, Network, and live History collectors from running concurrently. Queued work for pages that are no longer active is discarded instead of consuming CPU or applying stale UI results.
 - Automatic Live refresh failures stay inline and change the global status to red **Live error** instead of opening recurring modal dialogs. A successful later tick restores green **Live**; explicit manual refresh failures still show a dialog.
@@ -103,13 +104,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.40-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.41-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.40-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.41-portable-win-x64\BetterTaskManager.exe
 ```
 
 Each portable folder contains `BetterTaskManager.exe`, `README.md`, `CHANGELOG.md`, `LICENSE`, and `SHA256SUMS.txt`. Verify the executable from inside that folder with:

@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.40 - Unreleased
+## 1.1.0-preview.41 - Unreleased
 
 ### Added
 
@@ -45,6 +45,7 @@
 - Added deterministic, self-describing portable package staging with bundled README, changelog, license, and executable SHA-256 manifest.
 - Added responsive 60-sample System CPU and physical RAM-load trend charts to the Memory dashboard.
 - Split Apps refresh into immediate process/network rendering followed by asynchronous firewall status enrichment.
+- Added partial-result native network snapshots with per-table issue reporting.
 
 ### Changed
 
@@ -87,6 +88,7 @@
 - The publish script derives version from the project, validates the exact artifacts child path, removes stale staging content, and regenerates the package from scratch.
 - Trend charts are code-native, double-buffered, bounded to 0–100%, and driven only by existing manual/Live Memory refreshes.
 - Late firewall results now require both matching Apps snapshot time and unchanged firewall mutation revision before updating cache/grid state.
+- Native TCP/UDP table allocation is bounded to 4 bytes–64 MiB and retries table growth up to five times before reporting a scoped failure.
 
 ### Fixed
 
@@ -131,6 +133,7 @@
 - CI now uploads the complete portable folder instead of only the executable; package tests compare `SHA256SUMS.txt` with a freshly computed executable hash.
 - Added trend normalization, rolling-capacity, initial CPU availability, RAM append, and UI integration tests.
 - Prevented slow or failed firewall enumeration from delaying or relabeling an otherwise successful Apps snapshot, and prevented stale reads from overwriting a concurrent rule mutation.
+- Prevented one unavailable IPv4/IPv6 TCP/UDP table from discarding every healthy connection table; verified documented network-order IPv6 scope parsing remains intact.
 
 ## v1.0.0 - 2026-06-06
 

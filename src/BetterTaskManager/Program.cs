@@ -265,6 +265,7 @@ namespace BetterTaskManager
         private readonly object cpuCacheSync = new object();
         private List<ProcessRow> latestProcessRows = new List<ProcessRow>();
         private List<NetworkRow> latestNetworkRows = new List<NetworkRow>();
+        private List<string> latestNetworkIssues = new List<string>();
         private List<AppProfile> latestAppProfiles = new List<AppProfile>();
         private List<string[]> latestHistoryRows = new List<string[]>();
         private List<string[]> visibleHistoryRows = new List<string[]>();
@@ -1435,15 +1436,17 @@ namespace BetterTaskManager
                 {
                     DateTime snapshotTime = DateTime.Now;
                     var processes = BuildProcessRows(cache);
-                    var network = BuildNetworkRows(processes);
+                    var networkIssues = new List<string>();
+                    var network = BuildNetworkRows(processes, networkIssues);
                     var apps = BuildAppProfiles(processes, network);
                     SaveNetworkHistory(network);
-                    return Tuple.Create(processes, network, apps, snapshotTime);
+                    return Tuple.Create(processes, network, apps, snapshotTime, networkIssues);
                 });
                 if (data == null) return;
 
                 latestProcessRows = data.Item1;
                 latestNetworkRows = data.Item2;
+                latestNetworkIssues = data.Item5;
                 latestAppProfiles = data.Item3;
                 latestAppsSnapshot = data.Item4;
                 latestProcessSnapshot = data.Item4;
@@ -2222,14 +2225,17 @@ namespace BetterTaskManager
             networkStatusLabel.ForeColor = Theme.Warning;
             try
             {
-                var rows = await RunSnapshotCollectionAsync(networkTab, () =>
+                var result = await RunSnapshotCollectionAsync(networkTab, () =>
                 {
-                    var networkRows = BuildNetworkRows();
+                    var issues = new List<string>();
+                    var networkRows = BuildNetworkRows(null, issues);
                     SaveNetworkHistory(networkRows);
-                    return networkRows;
+                    return Tuple.Create(networkRows, issues);
                 });
-                if (rows == null) return;
+                if (result == null) return;
+                var rows = result.Item1;
                 latestNetworkRows = rows;
+                latestNetworkIssues = result.Item2;
                 latestNetworkSnapshot = rows.Count > 0 ? rows[0].Timestamp : DateTime.Now;
                 FillNetworkGridFromCache();
                 UpdateBandwidthLabel();
@@ -2251,7 +2257,7 @@ namespace BetterTaskManager
             }
         }
 
-        private List<NetworkRow> BuildNetworkRows(IEnumerable<ProcessRow> knownProcessRows = null)
+        private List<NetworkRow> BuildNetworkRows(IEnumerable<ProcessRow> knownProcessRows = null, List<string> issues = null)
         {
             var now = DateTime.Now;
             var processIdentities = new Dictionary<int, Tuple<string, long>>();
@@ -2281,8 +2287,10 @@ namespace BetterTaskManager
                 }
             }
 
+            NativeNetworkSnapshot nativeSnapshot = NativeNetworkCollector.GetSnapshot();
+            if (issues != null) issues.AddRange(nativeSnapshot.Issues);
             var rows = new List<NetworkRow>();
-            foreach (var connection in NativeNetworkCollector.GetAll())
+            foreach (var connection in nativeSnapshot.Connections)
             {
                 ProcessDetails details = null;
                 snapshotDetails.TryGetValue(connection.OwningPid, out details);
@@ -2326,8 +2334,15 @@ namespace BetterTaskManager
             FillNetworkGrid(rows);
             networkStatusLabel.Text = SnapshotLabel(latestNetworkSnapshot) + "    " +
                 rows.Count.ToString(CultureInfo.CurrentCulture) + "/" + latestNetworkRows.Count.ToString(CultureInfo.CurrentCulture) +
-                " connections shown. Per-app bandwidth needs ETW/WFP collector.";
-            networkStatusLabel.ForeColor = Theme.MutedText;
+                " connections shown. Per-app bandwidth needs ETW/WFP collector." + NetworkIssueSummary(latestNetworkIssues);
+            networkStatusLabel.ForeColor = latestNetworkIssues.Count == 0 ? Theme.MutedText : Theme.Warning;
+        }
+
+        internal static string NetworkIssueSummary(IEnumerable<string> issues)
+        {
+            var list = (issues ?? Enumerable.Empty<string>()).Where(issue => !string.IsNullOrWhiteSpace(issue)).ToList();
+            if (list.Count == 0) return "";
+            return " Collector warning" + (list.Count == 1 ? "" : "s") + ": " + string.Join(" | ", list.Take(2)) + (list.Count > 2 ? " | +" + (list.Count - 2).ToString(CultureInfo.CurrentCulture) : "");
         }
 
         private List<NetworkRow> NetworkRowsForCurrentView()
@@ -2779,19 +2794,22 @@ namespace BetterTaskManager
             {
                 var result = await RunSnapshotCollectionAsync(historyTab, () =>
                 {
-                    List<NetworkRow> connections = BuildNetworkRows();
+                    var issues = new List<string>();
+                    List<NetworkRow> connections = BuildNetworkRows(null, issues);
                     DateTime sampledAt = connections.Count > 0 ? connections[0].Timestamp : DateTime.Now;
                     int recorded = historyStore.SaveSnapshot(connections, sampledAt);
                     List<string[]> history = historyStore.LoadRecent(2000);
-                    return Tuple.Create(history, connections.Count, recorded, sampledAt);
+                    return Tuple.Create(history, connections.Count, recorded, sampledAt, issues);
                 });
                 if (result == null) return;
 
                 latestHistoryRows = result.Item1;
+                latestNetworkIssues = result.Item5;
                 FillHistoryGrid(false);
                 historyNoteLabel.Text = "Live " + result.Item4.ToString("HH:mm:ss", CultureInfo.CurrentCulture) + ": " +
                     result.Item2.ToString(CultureInfo.CurrentCulture) + " active, " +
-                    result.Item3.ToString(CultureInfo.CurrentCulture) + " recorded. " + historyNoteLabel.Text;
+                    result.Item3.ToString(CultureInfo.CurrentCulture) + " recorded. " + historyNoteLabel.Text + NetworkIssueSummary(result.Item5);
+                if (result.Item5.Count > 0) historyNoteLabel.ForeColor = Theme.Warning;
                 MarkLiveRefreshSuccess();
             }
             catch (Exception ex)
@@ -3937,7 +3955,8 @@ namespace BetterTaskManager
             if (failure.Succeeded || failure.ExitCode != 7) throw new InvalidOperationException("Command runner failure probe did not preserve exit code 7.");
             if (failure.StandardError.IndexOf("expected-failure", StringComparison.Ordinal) < 0) throw new InvalidOperationException("Command runner did not capture standard error.");
 
-            List<NativeConnection> connections = NativeNetworkCollector.GetAll();
+            NativeNetworkSnapshot nativeNetworkSnapshot = NativeNetworkCollector.GetSnapshot();
+            List<NativeConnection> connections = nativeNetworkSnapshot.Connections;
             if (connections.Any(c =>
                 (c.Protocol != "TCP" && c.Protocol != "UDP") ||
                 !System.Net.IPAddress.TryParse(c.LocalAddress, out _) ||
@@ -3949,6 +3968,20 @@ namespace BetterTaskManager
                 c.OwningPid < 0))
             {
                 throw new InvalidOperationException("Native network collector returned an invalid row.");
+            }
+            var partialNetworkSnapshot = new NativeNetworkSnapshot();
+            NativeNetworkCollector.AddSourceResult(partialNetworkSnapshot, "working", () => new List<NativeConnection> { new NativeConnection { Protocol = "TCP" } });
+            NativeNetworkCollector.AddSourceResult(partialNetworkSnapshot, "failed", () => throw new InvalidOperationException("expected table failure"));
+            bool lowerBufferRejected = false;
+            bool upperBufferRejected = false;
+            try { NativeNetworkCollector.ValidateBufferSize(3, "test"); } catch (InvalidDataException) { lowerBufferRejected = true; }
+            try { NativeNetworkCollector.ValidateBufferSize((64 * 1024 * 1024) + 1, "test"); } catch (InvalidDataException) { upperBufferRejected = true; }
+            string issueSummary = MainForm.NetworkIssueSummary(new[] { "one", "two", "three" });
+            if (partialNetworkSnapshot.Connections.Count != 1 || partialNetworkSnapshot.Issues.Count != 1 ||
+                partialNetworkSnapshot.Issues[0].IndexOf("expected table failure", StringComparison.Ordinal) < 0 ||
+                !lowerBufferRejected || !upperBufferRejected || issueSummary.IndexOf("+1", StringComparison.Ordinal) < 0)
+            {
+                throw new InvalidOperationException("Partial native network collection or buffer validation failed.");
             }
 
             var previousAdapters = new Dictionary<string, AdapterCounters>(StringComparer.OrdinalIgnoreCase)
@@ -4178,9 +4211,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.40" || form.Text != "Better Task Manager v1.1.0-preview.40")
+                if (Application.ProductVersion != "1.1.0-preview.41" || form.Text != "Better Task Manager v1.1.0-preview.41")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.40.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.41.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

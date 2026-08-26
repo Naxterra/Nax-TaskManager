@@ -18,6 +18,12 @@ namespace BetterTaskManager
         public int OwningPid { get; set; }
     }
 
+    internal sealed class NativeNetworkSnapshot
+    {
+        public readonly List<NativeConnection> Connections = new List<NativeConnection>();
+        public readonly List<string> Issues = new List<string>();
+    }
+
     internal static class NativeNetworkCollector
     {
         private const int AddressFamilyInet = 2;
@@ -31,6 +37,7 @@ namespace BetterTaskManager
         private const int Tcp6RowSize = 56;
         private const int Udp4RowSize = 12;
         private const int Udp6RowSize = 28;
+        private const int MaximumTableSize = 64 * 1024 * 1024;
 
         [DllImport("iphlpapi.dll", ExactSpelling = true)]
         [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
@@ -54,12 +61,35 @@ namespace BetterTaskManager
 
         public static List<NativeConnection> GetAll()
         {
-            var rows = new List<NativeConnection>();
-            ParseTcpTable(ReadTable(true, AddressFamilyInet), false, rows);
-            ParseTcpTable(ReadTable(true, AddressFamilyInet6), true, rows);
-            ParseUdpTable(ReadTable(false, AddressFamilyInet), false, rows);
-            ParseUdpTable(ReadTable(false, AddressFamilyInet6), true, rows);
-            return rows;
+            return GetSnapshot().Connections;
+        }
+
+        public static NativeNetworkSnapshot GetSnapshot()
+        {
+            var snapshot = new NativeNetworkSnapshot();
+            AddSourceResult(snapshot, "IPv4 TCP", () => ParseTcpRows(ReadTable(true, AddressFamilyInet), false));
+            AddSourceResult(snapshot, "IPv6 TCP", () => ParseTcpRows(ReadTable(true, AddressFamilyInet6), true));
+            AddSourceResult(snapshot, "IPv4 UDP", () => ParseUdpRows(ReadTable(false, AddressFamilyInet), false));
+            AddSourceResult(snapshot, "IPv6 UDP", () => ParseUdpRows(ReadTable(false, AddressFamilyInet6), true));
+            if (snapshot.Issues.Count == 4)
+            {
+                throw new InvalidOperationException("Every native network table failed: " + string.Join(" | ", snapshot.Issues));
+            }
+            return snapshot;
+        }
+
+        internal static void AddSourceResult(NativeNetworkSnapshot snapshot, string sourceName, Func<List<NativeConnection>> reader)
+        {
+            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+            try
+            {
+                List<NativeConnection> rows = reader == null ? new List<NativeConnection>() : reader();
+                if (rows != null) snapshot.Connections.AddRange(rows);
+            }
+            catch (Exception ex)
+            {
+                snapshot.Issues.Add((sourceName ?? "Network table") + ": " + ex.Message);
+            }
         }
 
         private static byte[] ReadTable(bool tcp, int addressFamily)
@@ -72,8 +102,9 @@ namespace BetterTaskManager
             }
 
             if (size == 0) return new byte[TableHeaderSize];
+            ValidateBufferSize(size, ApiName(tcp) + " initial buffer");
 
-            for (int attempt = 0; attempt < 3; attempt++)
+            for (int attempt = 0; attempt < 5; attempt++)
             {
                 IntPtr buffer = Marshal.AllocHGlobal(size);
                 try
@@ -102,6 +133,7 @@ namespace BetterTaskManager
                         throw new InvalidDataException(ApiName(tcp) + " requested an invalid retry buffer size of " + returnedSize + " bytes.");
                     }
 
+                    ValidateBufferSize(returnedSize, ApiName(tcp) + " retry buffer");
                     size = returnedSize;
                 }
                 finally
@@ -110,7 +142,15 @@ namespace BetterTaskManager
                 }
             }
 
-            throw new InvalidOperationException(ApiName(tcp) + " table changed too quickly to capture after three attempts.");
+            throw new InvalidOperationException(ApiName(tcp) + " table changed too quickly to capture after five attempts.");
+        }
+
+        internal static void ValidateBufferSize(int size, string description)
+        {
+            if (size < TableHeaderSize || size > MaximumTableSize)
+            {
+                throw new InvalidDataException((description ?? "Native table") + " size " + size + " is outside the supported " + TableHeaderSize + "-" + MaximumTableSize + " byte range.");
+            }
         }
 
         private static uint ReadNativeTable(bool tcp, IntPtr buffer, ref int size, int addressFamily)
@@ -137,6 +177,13 @@ namespace BetterTaskManager
             }
         }
 
+        private static List<NativeConnection> ParseTcpRows(byte[] data, bool ipv6)
+        {
+            var rows = new List<NativeConnection>();
+            ParseTcpTable(data, ipv6, rows);
+            return rows;
+        }
+
         private static void ParseUdpTable(byte[] data, bool ipv6, List<NativeConnection> rows)
         {
             int rowSize = ipv6 ? Udp6RowSize : Udp4RowSize;
@@ -147,6 +194,13 @@ namespace BetterTaskManager
                 int offset = TableHeaderSize + (index * rowSize);
                 rows.Add(ipv6 ? ParseUdp6Row(data, offset) : ParseUdp4Row(data, offset));
             }
+        }
+
+        private static List<NativeConnection> ParseUdpRows(byte[] data, bool ipv6)
+        {
+            var rows = new List<NativeConnection>();
+            ParseUdpTable(data, ipv6, rows);
+            return rows;
         }
 
         private static int ValidateTable(byte[] data, int rowSize, string tableName)
