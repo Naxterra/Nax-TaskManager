@@ -1939,8 +1939,7 @@ namespace BetterTaskManager
                         lock (cpuCacheSync)
                         {
                             Tuple<TimeSpan, DateTime, long> old;
-                            if (lastCpu.TryGetValue(pid, out old) &&
-                                (old.Item3 == 0 || processStartTimeUtcTicks == 0 || old.Item3 == processStartTimeUtcTicks))
+                            if (lastCpu.TryGetValue(pid, out old) && ProcessStartTimesMatch(old.Item3, processStartTimeUtcTicks))
                             {
                                 double seconds = Math.Max(0.5, (now - old.Item2).TotalSeconds);
                                 cpuPercent = Math.Max(0, Math.Min(100, Math.Round((totalCpu - old.Item1).TotalSeconds / (seconds * Environment.ProcessorCount) * 100, 1)));
@@ -2014,8 +2013,7 @@ namespace BetterTaskManager
 
         internal static bool CachedDetailsMatchProcessInstance(ProcessDetails cached, long processStartTimeUtcTicks)
         {
-            return cached == null || cached.ProcessStartTimeUtcTicks == 0 || processStartTimeUtcTicks == 0 ||
-                cached.ProcessStartTimeUtcTicks == processStartTimeUtcTicks;
+            return cached == null || ProcessStartTimesMatch(cached.ProcessStartTimeUtcTicks, processStartTimeUtcTicks);
         }
 
         private void FillProcessGridFromCache()
@@ -2309,21 +2307,72 @@ namespace BetterTaskManager
             RestoreGridPosition(networkGrid, selectedIndex, firstDisplayedRow);
         }
 
-        private async Task KillSelectedAsync()
+        private ProcessRow SelectedProcessRow()
         {
             int? pid = SelectedPid(processGrid);
-            if (pid == null)
+            return pid == null ? null : latestProcessRows.FirstOrDefault(row => row.Pid == pid.Value);
+        }
+
+        internal static bool ProcessStartTimesMatch(long snapshotStartTimeUtcTicks, long currentStartTimeUtcTicks)
+        {
+            return snapshotStartTimeUtcTicks == 0 || currentStartTimeUtcTicks == 0 || snapshotStartTimeUtcTicks == currentStartTimeUtcTicks;
+        }
+
+        internal static bool CanForceKillProcess(int selectedPid, int currentProcessId)
+        {
+            return selectedPid > 0 && selectedPid != currentProcessId;
+        }
+
+        private bool SelectedProcessInstanceIsCurrent(ProcessRow selected)
+        {
+            try
+            {
+                using (var process = Process.GetProcessById(selected.Pid))
+                {
+                    if (ProcessStartTimesMatch(selected.ProcessStartTimeUtcTicks, SafeProcessStartTimeUtcTicks(process))) return true;
+                }
+                MessageBox.Show(this, "This PID now belongs to a different process. Refresh and select the process again.",
+                    "Stale process selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            catch (ArgumentException)
+            {
+                MessageBox.Show(this, "The selected process has already exited. Refresh the Process view.",
+                    "Process exited", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+        }
+
+        private async Task KillSelectedAsync()
+        {
+            ProcessRow selected = SelectedProcessRow();
+            if (selected == null)
             {
                 MessageBox.Show(this, "Select a process first.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            if (MessageBox.Show(this, "Force kill PID " + pid.Value + " and its child processes?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            if (!CanForceKillProcess(selected.Pid, Environment.ProcessId))
+            {
+                MessageBox.Show(this, "Better Task Manager cannot force-kill its own process.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (!SelectedProcessInstanceIsCurrent(selected)) return;
+
+            string identity = selected.Name + "\nPID " + selected.Pid.ToString(CultureInfo.InvariantCulture) +
+                (string.IsNullOrWhiteSpace(selected.Path) ? "" : "\n" + selected.Path);
+            if (MessageBox.Show(this, "Force kill this process and its child processes?\n\n" + identity,
+                "Confirm force kill", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             try
             {
                 await Task.Run(() =>
                 {
-                    using (var process = Process.GetProcessById(pid.Value))
+                    using (var process = Process.GetProcessById(selected.Pid))
                     {
+                        long currentStartTime = SafeProcessStartTimeUtcTicks(process);
+                        if (!ProcessStartTimesMatch(selected.ProcessStartTimeUtcTicks, currentStartTime))
+                        {
+                            throw new InvalidOperationException("The PID now belongs to a different process. Refresh and select it again.");
+                        }
                         process.Kill(true);
                         process.WaitForExit(5000);
                     }
@@ -2332,26 +2381,39 @@ namespace BetterTaskManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "Force-killing PID " + pid.Value + " failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "Force-killing PID " + selected.Pid + " failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
         private async Task TrimSelectedAsync()
         {
-            int? pid = SelectedPid(processGrid);
-            if (pid == null)
+            ProcessRow selected = SelectedProcessRow();
+            if (selected == null)
             {
                 MessageBox.Show(this, "Select a process first.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            await Task.Run(() =>
+            if (!SelectedProcessInstanceIsCurrent(selected)) return;
+            try
             {
-                using (var process = Process.GetProcessById(pid.Value))
+                await Task.Run(() =>
                 {
-                    NativeMethods.EmptyWorkingSet(process.Handle);
-                }
-            });
-            await RefreshProcessesAsync();
+                    using (var process = Process.GetProcessById(selected.Pid))
+                    {
+                        long currentStartTime = SafeProcessStartTimeUtcTicks(process);
+                        if (!ProcessStartTimesMatch(selected.ProcessStartTimeUtcTicks, currentStartTime))
+                        {
+                            throw new InvalidOperationException("The PID now belongs to a different process. Refresh and select it again.");
+                        }
+                        if (!NativeMethods.EmptyWorkingSet(process.Handle)) throw new InvalidOperationException("Windows did not trim this process working set.");
+                    }
+                });
+                await RefreshProcessesAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Trimming PID " + selected.Pid + " failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private async Task TrimAllAsync()
@@ -3799,6 +3861,11 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Process identity cache did not reject PID reuse.");
             }
+            if (!MainForm.ProcessStartTimesMatch(100, 100) || MainForm.ProcessStartTimesMatch(100, 200) ||
+                !MainForm.ProcessStartTimesMatch(0, 200) || MainForm.CanForceKillProcess(4242, 4242) || !MainForm.CanForceKillProcess(4242, 7))
+            {
+                throw new InvalidOperationException("Destructive process identity safety policy failed.");
+            }
             if (MainForm.RefreshIntervalMilliseconds(0) != 1000 || MainForm.RefreshIntervalMilliseconds(1) != 2000 ||
                 MainForm.RefreshIntervalMilliseconds(2) != 5000 || MainForm.RefreshIntervalMilliseconds(3) != 15000)
             {
@@ -3841,9 +3908,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.30" || form.Text != "Better Task Manager v1.1.0-preview.30")
+                if (Application.ProductVersion != "1.1.0-preview.31" || form.Text != "Better Task Manager v1.1.0-preview.31")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.30.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.31.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

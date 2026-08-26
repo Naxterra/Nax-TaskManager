@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.30 - Unreleased
+## 1.1.0-preview.31 - Unreleased
 
 ### Added
 
@@ -35,6 +35,7 @@
 - Added Ctrl+1–5 view navigation and Page Up/Page Down History paging, including numpad navigation support.
 - Added stateful per-adapter download/upload sampling with stable-interface counts.
 - Added selection-aware **Open Folder** and **Copy Path** actions to Apps, Processes, and Network.
+- Added process-start-time validation and self-process protection for destructive Process actions.
 
 ### Changed
 
@@ -67,6 +68,7 @@
 - Mouse clicks and keyboard view changes now share one asynchronous navigation route, preventing refresh behavior from drifting between input methods.
 - Bandwidth rates now use only adapter IDs present in both samples with nondecreasing counters; new or reset interfaces wait for a fresh baseline.
 - Folder opening uses direct Windows shell activation of the resolved directory; clipboard copying retries brief contention and reports success inline.
+- Force Kill confirmation now identifies the process by name, PID, and path and explicitly states that child processes are included.
 
 ### Fixed
 
@@ -101,6 +103,7 @@
 - Added runtime shortcut tests for actual Memory navigation and both History paging directions in addition to exhaustive static mapping coverage.
 - Fixed negative total bandwidth values when VPN, Wi-Fi, or other interface counters reset or disappear between snapshots.
 - Path actions now disable themselves when selection/path data is unavailable, and they remain inside responsive wrapping toolbars at narrow widths.
+- Fixed stale PID reuse potentially targeting a different process between snapshot and Force Kill/Trim; Trim failures now receive scoped error handling.
 
 ## v1.0.0 - 2026-06-06
 

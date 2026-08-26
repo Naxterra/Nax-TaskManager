@@ -35,6 +35,7 @@
 - Added keyboard view navigation and History paging through the shared navigation route.
 - Replaced unstable aggregate bandwidth deltas with per-adapter monotonic sampling.
 - Added safe selected executable path copy/open-folder workflows across primary views.
+- Hardened Force Kill and Trim against PID reuse and self-termination.
 
 ## v2.0
 
