@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.2 - Unreleased
+## 1.1.0-preview.3 - Unreleased
 
 ### Added
 
@@ -17,7 +17,7 @@
 - Reworked connection history to record new or changed connections instead of duplicating every full snapshot.
 - Replaced the near-black palette with a softer blue-slate theme and enabled the supported WinForms dark color mode for native controls and scrollbars.
 - Replaced the misleading generic `Allowed` firewall label with rule-specific `BTM Blocked` and `No BTM Block` states and an exact outbound-rule explanation.
-- Clarified app aggregation with a process-count column, summed-memory labels, aligned working-set terminology, and snapshot timestamps on all live views.
+- Clarified app aggregation with a process-count column, precise Private Bytes/Working Set names, shared-page overlap guidance, summed-memory labels, and snapshot timestamps on all live views.
 
 ### Fixed
 

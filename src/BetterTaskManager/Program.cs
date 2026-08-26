@@ -339,7 +339,7 @@ namespace BetterTaskManager
 
             var cardRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0), Padding = new Padding(0) };
             appConnectionCard = MakeMetricCard("0", "Group Connections");
-            appMemoryCard = MakeMetricCard("0 MB", "Sum Private/Commit");
+            appMemoryCard = MakeMetricCard("0 MB", "Sum Private Bytes");
             appRamCard = MakeMetricCard("0 MB", "Sum Working Set");
             appFirewallCard = MakeMetricCard("Unknown", "Firewall");
             cardRow.Controls.AddRange(new Control[] { appConnectionCard, appMemoryCard, appRamCard, appFirewallCard });
@@ -424,7 +424,7 @@ namespace BetterTaskManager
                 Tuple.Create("App", "Process"),
                 Tuple.Create("User", "User"),
                 Tuple.Create("CPU", "CPU %"),
-                Tuple.Create("PrivateMB", "Private/Commit MB"),
+                Tuple.Create("PrivateMB", "Private Bytes MB"),
                 Tuple.Create("WorkingSetMB", "Working Set MB"),
                 Tuple.Create("PeakWorkingSetMB", "Peak Working Set MB"),
                 Tuple.Create("Threads", "Threads"),
@@ -1059,7 +1059,7 @@ namespace BetterTaskManager
                 appTitleLabel.Text = "Select an app";
                 appMetaLabel.Text = "";
                 appConnectionCard.Text = "0\nGroup Connections";
-                appMemoryCard.Text = "0 MB\nSum Private/Commit";
+                appMemoryCard.Text = "0 MB\nSum Private Bytes";
                 appRamCard.Text = "0 MB\nSum Working Set";
                 appFirewallCard.Text = "Unknown\nFirewall";
                 appFirewallDetailsLabel.Text = "Select an app to inspect its Better Task Manager firewall rule.";
@@ -1076,7 +1076,7 @@ namespace BetterTaskManager
             appMetaLabel.Text = SnapshotLabel(latestAppsSnapshot) + "    " + app.Pids.Count.ToString(CultureInfo.CurrentCulture) + " processes aggregated    " + pids +
                 "    " + (string.IsNullOrWhiteSpace(app.User) ? "User unknown" : app.User) + "    " + (string.IsNullOrWhiteSpace(app.Path) ? "Path unavailable" : app.Path);
             appConnectionCard.Text = app.ConnectionCount.ToString(CultureInfo.InvariantCulture) + "\nGroup Connections";
-            appMemoryCard.Text = app.PrivateMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nSum Private/Commit";
+            appMemoryCard.Text = app.PrivateMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nSum Private Bytes";
             appRamCard.Text = app.RamMb.ToString("0.0", CultureInfo.CurrentCulture) + " MB\nSum Working Set";
             string firewallStatus = GetFirewallStatus(app.Path);
             appFirewallCard.Text = firewallStatus + "\nFirewall";
@@ -1379,8 +1379,9 @@ namespace BetterTaskManager
             RestoreGridPosition(processGrid, selectedIndex, firstDisplayedRow);
             processSummaryLabel.ForeColor = Theme.Info;
             processSummaryLabel.Text = "Visible rows: " + rows.Count.ToString(CultureInfo.CurrentCulture) +
-                "    Sum Private/Commit: " + rows.Sum(row => row.PrivateMb).ToString("0.0", CultureInfo.CurrentCulture) + " MB" +
-                "    Sum Working Set: " + rows.Sum(row => row.WorkingSetMb).ToString("0.0", CultureInfo.CurrentCulture) + " MB";
+                "    Sum Private Bytes: " + rows.Sum(row => row.PrivateMb).ToString("0.0", CultureInfo.CurrentCulture) + " MB" +
+                "    Sum Working Set: " + rows.Sum(row => row.WorkingSetMb).ToString("0.0", CultureInfo.CurrentCulture) + " MB" +
+                "    Working-set sums can overlap shared pages.";
         }
 
         private async Task LoadDetailsAndRefreshAsync()
@@ -2133,9 +2134,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.2" || form.Text != "Better Task Manager v1.1.0-preview.2")
+                if (Application.ProductVersion != "1.1.0-preview.3" || form.Text != "Better Task Manager v1.1.0-preview.3")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.2.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.3.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, and " + connections.Count + " native network rows passed.";
             }

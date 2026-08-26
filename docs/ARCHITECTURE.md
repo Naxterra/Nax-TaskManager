@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.2 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.3 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -20,7 +20,7 @@ New and changed connection observations are written locally. Unchanged snapshots
 
 The desktop UI can monitor its active Apps, Processes, or Network page every 1, 2, 5, or 15 seconds. Collection and history I/O run away from the UI thread, with per-view reentrancy guards preventing overlapping refreshes.
 
-The Apps view groups rows by executable path and sums private/commit and working-set values across all PIDs in that group. The Processes view remains per-PID. Both views expose their snapshot time and Apps exposes its contributing process count so the scopes are directly comparable.
+The Apps view groups rows by executable path and sums private-byte and working-set values across all PIDs in that group. The Processes view remains per-PID. Both views expose their snapshot time and Apps exposes its contributing process count so the scopes are directly comparable. A working set contains private and shared pages, so summing per-PID working sets can count a shared page more than once.
 
 ## Planned Collection Model
 
