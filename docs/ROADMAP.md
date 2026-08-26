@@ -51,6 +51,7 @@
 - Bounded and serialized contextual crash logging across app instances.
 - Added tester-facing v1.1 preview release notes to deterministic packages.
 - Added a persisted privacy opt-out for all connection-history writes.
+- Added repeated cross-page responsiveness soak coverage and corrected Apps detail alignment.
 
 ## v2.0
 

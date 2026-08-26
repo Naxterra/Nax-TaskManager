@@ -200,6 +200,38 @@ namespace BetterTaskManager
         }
     }
 
+    internal sealed class TightLabel : Label
+    {
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaintBackground(e);
+            TextFormatFlags flags = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix |
+                TextFormatFlags.SingleLine | TextFormatFlags.PreserveGraphicsClipping;
+            if (AutoEllipsis) flags |= TextFormatFlags.EndEllipsis;
+            if (RightToLeft == RightToLeft.Yes) flags |= TextFormatFlags.RightToLeft;
+
+            switch (TextAlign)
+            {
+                case ContentAlignment.TopCenter: flags |= TextFormatFlags.HorizontalCenter | TextFormatFlags.Top; break;
+                case ContentAlignment.TopRight: flags |= TextFormatFlags.Right | TextFormatFlags.Top; break;
+                case ContentAlignment.MiddleLeft: flags |= TextFormatFlags.Left | TextFormatFlags.VerticalCenter; break;
+                case ContentAlignment.MiddleCenter: flags |= TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter; break;
+                case ContentAlignment.MiddleRight: flags |= TextFormatFlags.Right | TextFormatFlags.VerticalCenter; break;
+                case ContentAlignment.BottomLeft: flags |= TextFormatFlags.Left | TextFormatFlags.Bottom; break;
+                case ContentAlignment.BottomCenter: flags |= TextFormatFlags.HorizontalCenter | TextFormatFlags.Bottom; break;
+                case ContentAlignment.BottomRight: flags |= TextFormatFlags.Right | TextFormatFlags.Bottom; break;
+                default: flags |= TextFormatFlags.Left | TextFormatFlags.Top; break;
+            }
+
+            Rectangle textBounds = new Rectangle(
+                ClientRectangle.Left + Padding.Left,
+                ClientRectangle.Top + Padding.Top,
+                Math.Max(0, ClientRectangle.Width - Padding.Horizontal),
+                Math.Max(0, ClientRectangle.Height - Padding.Vertical));
+            TextRenderer.DrawText(e.Graphics, Text ?? "", Font, textBounds, ForeColor, flags);
+        }
+    }
+
     internal enum GlobalShortcutCommand
     {
         None,
@@ -470,14 +502,16 @@ namespace BetterTaskManager
             appLeft.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             appShell.Controls.Add(appLeft, 0, 0);
 
-            var appHeader = new Label
+            var appHeader = new TightLabel
             {
                 Text = "Apps",
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 15, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0),
+                Padding = new Padding(0)
             };
-            appSearchBox = new TextBox { Dock = DockStyle.Fill };
+            appSearchBox = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(0) };
             appSearchBox.PlaceholderText = "Search apps";
             appGrid = NewGrid();
             appGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
@@ -504,19 +538,20 @@ namespace BetterTaskManager
             appLeft.Controls.Add(appSearchBox, 0, 1);
             appLeft.Controls.Add(appGrid, 0, 2);
 
-            var appRight = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 5, ColumnCount = 1, Padding = new Padding(24, 18, 24, 18), Margin = new Padding(0) };
+            var appRight = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 6, ColumnCount = 1, Padding = new Padding(24, 18, 24, 18), Margin = new Padding(0) };
             appRight.RowStyles.Add(new RowStyle(SizeType.Absolute, 104));
             appRight.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             appRight.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            appRight.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
             appRight.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
             appRight.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             appShell.Controls.Add(appRight, 1, 0);
 
-            var selectedHeader = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1 };
+            var selectedHeader = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Margin = new Padding(0), Padding = new Padding(0) };
             selectedHeader.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
             selectedHeader.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            appTitleLabel = new Label { Text = "Select an app", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 24, FontStyle.Bold), TextAlign = ContentAlignment.BottomLeft };
-            appMetaLabel = new Label { Text = "Refresh to load application activity", Dock = DockStyle.Fill, AutoEllipsis = true };
+            appTitleLabel = new TightLabel { Text = "Select an app", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 24, FontStyle.Bold), TextAlign = ContentAlignment.BottomLeft, Margin = new Padding(0), Padding = new Padding(0) };
+            appMetaLabel = new TightLabel { Text = "Refresh to load application activity", Dock = DockStyle.Fill, AutoEllipsis = true, Margin = new Padding(0), Padding = new Padding(0) };
             selectedHeader.Controls.Add(appTitleLabel, 0, 0);
             selectedHeader.Controls.Add(appMetaLabel, 0, 1);
             appRight.Controls.Add(selectedHeader, 0, 0);
@@ -537,7 +572,7 @@ namespace BetterTaskManager
             appViewProcessesButton = MakeButton("View Processes", 125);
             appOpenFolderButton = MakeButton("Open Folder", 105);
             appCopyPathButton = MakeButton("Copy Path", 90);
-            appFirewallDetailsLabel = new Label
+            appFirewallDetailsLabel = new TightLabel
             {
                 Text = "Select an app to inspect its Better Task Manager firewall rule.",
                 Width = 360,
@@ -545,13 +580,17 @@ namespace BetterTaskManager
                 AutoEllipsis = true,
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = Theme.MutedText,
-                Margin = new Padding(10, 0, 0, 0)
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0),
+                Padding = new Padding(0)
             };
-            appActions.Controls.AddRange(new Control[] { appRefreshButton, exportAppsButton, appBlockButton, appUnblockButton, appViewProcessesButton, appOpenFolderButton, appCopyPathButton, appFirewallDetailsLabel });
+            appActions.Controls.AddRange(new Control[] { appRefreshButton, exportAppsButton, appBlockButton, appUnblockButton, appViewProcessesButton, appOpenFolderButton, appCopyPathButton });
             appRight.Controls.Add(appActions, 0, 2);
+            appRight.Controls.Add(appFirewallDetailsLabel, 0, 3);
 
-            appRight.Controls.Add(new Label { Text = "Connections", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11, FontStyle.Bold), TextAlign = ContentAlignment.BottomLeft }, 0, 3);
+            appRight.Controls.Add(new TightLabel { Text = "Connections", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11, FontStyle.Bold), TextAlign = ContentAlignment.BottomLeft, Margin = new Padding(0), Padding = new Padding(0) }, 0, 4);
             appConnectionsGrid = NewGrid();
+            appConnectionsGrid.Margin = new Padding(0);
             appConnectionsGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             AddColumns(appConnectionsGrid, new[] {
                 Tuple.Create("Protocol", "Protocol"),
@@ -568,7 +607,7 @@ namespace BetterTaskManager
             appConnectionsGrid.Columns["User"].FillWeight = 120;
             appConnectionsGrid.Columns["Path"].FillWeight = 300;
             LockGridColumns(appConnectionsGrid);
-            appRight.Controls.Add(appConnectionsGrid, 0, 4);
+            appRight.Controls.Add(appConnectionsGrid, 0, 5);
 
             var processPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };
             processPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -1720,14 +1759,14 @@ namespace BetterTaskManager
                 try
                 {
                     string file = Path.GetFileNameWithoutExtension(path);
-                    if (!string.IsNullOrWhiteSpace(file)) return file;
+                    if (!string.IsNullOrWhiteSpace(file)) return file.Trim();
                 }
                 catch { }
             }
 
             if (string.IsNullOrWhiteSpace(processName)) return "Unknown App";
             int titleSeparator = processName.IndexOf(" - ", StringComparison.Ordinal);
-            return titleSeparator > 0 ? processName.Substring(0, titleSeparator) : processName;
+            return (titleSeparator > 0 ? processName.Substring(0, titleSeparator) : processName).Trim();
         }
 
         private void FillAppGridFromCache()
@@ -1831,7 +1870,7 @@ namespace BetterTaskManager
             AppProfile app = SelectedAppProfile();
             if (app == null) return;
 
-            appTitleLabel.Text = app.Name;
+            appTitleLabel.Text = (app.Name ?? "").Trim();
             string pids = app.Pids.Count == 0 ? "No active PID" : "PID " + string.Join(", ", app.Pids.Take(8).Select(p => p.ToString(CultureInfo.InvariantCulture)));
             if (app.Pids.Count > 8) pids += " +" + (app.Pids.Count - 8).ToString(CultureInfo.InvariantCulture);
             appMetaLabel.Text = SnapshotLabel(latestAppsSnapshot) + "    " + app.Pids.Count.ToString(CultureInfo.CurrentCulture) + " processes aggregated    " + pids +
@@ -3304,6 +3343,70 @@ namespace BetterTaskManager
             }
         }
 
+        internal async Task RunUiSoakTestAsync()
+        {
+            const int rounds = 3;
+            const int maximumRefreshMilliseconds = 8000;
+            int heartbeat = 0;
+            using (var heartbeatTimer = new Timer { Interval = 50 })
+            {
+                heartbeatTimer.Tick += (s, e) => heartbeat++;
+                heartbeatTimer.Start();
+
+                for (int round = 1; round <= rounds; round++)
+                {
+                    await VerifySoakRefreshAsync("Apps", appsTab, () => RefreshAppsAsync(false, true),
+                        () => !refreshingApps && appRefreshButton.Enabled, heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
+                    await VerifySoakRefreshAsync("Processes", processTab, () => RefreshProcessesAsync(true),
+                        () => !refreshingProcesses && refreshButton.Enabled, heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
+                    await VerifySoakRefreshAsync("Network", networkTab, () => RefreshNetworkAsync(true),
+                        () => !refreshingNetwork && networkRefreshButton.Enabled, heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
+                    await VerifySoakRefreshAsync("History", historyTab, () => RefreshHistoryLiveAsync(),
+                        () => !loadingHistory && !refreshingHistory && reloadHistoryButton.Enabled && clearHistoryButton.Enabled,
+                        heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
+                    await VerifySoakRefreshAsync("Memory", memoryTab, () =>
+                    {
+                        if (!RefreshMemoryPage()) throw new InvalidOperationException("Memory refresh returned a failure state.");
+                        return Task.CompletedTask;
+                    }, () => true, heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
+                }
+
+                heartbeatTimer.Stop();
+            }
+
+            if (snapshotCollectionGate.CurrentCount != 1)
+            {
+                throw new InvalidOperationException("Snapshot collection gate was not released after the UI soak test.");
+            }
+        }
+
+        private async Task VerifySoakRefreshAsync(string pageName, Control page, Func<Task> refresh, Func<bool> idleState,
+            Timer heartbeatTimer, Func<int> heartbeatValue, int maximumRefreshMilliseconds, int round)
+        {
+            ShowPage(page);
+            int heartbeatBefore = heartbeatValue();
+            var stopwatch = Stopwatch.StartNew();
+            await refresh();
+            stopwatch.Stop();
+            await Task.Delay(75);
+
+            if (stopwatch.ElapsedMilliseconds > maximumRefreshMilliseconds)
+            {
+                throw new InvalidOperationException(pageName + " refresh exceeded " + maximumRefreshMilliseconds.ToString(CultureInfo.InvariantCulture) +
+                    " ms during soak round " + round.ToString(CultureInfo.InvariantCulture) + ".");
+            }
+            if (!idleState())
+            {
+                throw new InvalidOperationException(pageName + " did not return to its idle action state during soak round " +
+                    round.ToString(CultureInfo.InvariantCulture) + ".");
+            }
+            if (!heartbeatTimer.Enabled || heartbeatValue() <= heartbeatBefore)
+            {
+                throw new InvalidOperationException("The UI message pump did not recover after " + pageName + " soak refresh round " +
+                    round.ToString(CultureInfo.InvariantCulture) + ".");
+            }
+        }
+
         private void VerifyNarrowLayout()
         {
             WindowState = FormWindowState.Normal;
@@ -3320,6 +3423,7 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Apps cards or actions clipped controls at minimum window width.");
             }
+            VerifyAppsDetailAlignment();
 
             ShowPage(processTab);
             PerformLayout();
@@ -3335,6 +3439,30 @@ namespace BetterTaskManager
             PerformLayout();
             historyToolbar.PerformLayout();
             if (!VisibleFlowChildrenFit(historyToolbar)) throw new InvalidOperationException("History toolbar clipped controls at minimum window width.");
+        }
+
+        private void VerifyAppsDetailAlignment()
+        {
+            int[] leftEdges = new Control[] { appTitleLabel, appMetaLabel, appMetricCards, appActions, appFirewallDetailsLabel, appConnectionsGrid }
+                .Select(control => control.PointToScreen(Point.Empty).X)
+                .ToArray();
+            if (leftEdges.Max() - leftEdges.Min() > 1)
+            {
+                throw new InvalidOperationException("Apps detail heading, metadata, cards, actions, status, and connection grid do not share one left edge.");
+            }
+            if (appFirewallDetailsLabel.Parent == appActions)
+            {
+                throw new InvalidOperationException("Apps firewall status must use its own aligned row instead of wrapping inside the action bar.");
+            }
+            if (!(appTitleLabel is TightLabel) || !(appMetaLabel is TightLabel) || !(appFirewallDetailsLabel is TightLabel))
+            {
+                throw new InvalidOperationException("Apps aligned text must use tight rendering without glyph-overhang padding.");
+            }
+            if (appSearchBox.Dock != DockStyle.None || appSearchBox.Anchor != (AnchorStyles.Left | AnchorStyles.Right) ||
+                appSearchBox.Height > appSearchBox.PreferredHeight + 1)
+            {
+                throw new InvalidOperationException("Apps search must retain its native text height and center vertically in its layout row.");
+            }
         }
 
         internal static bool VisibleFlowChildrenFit(FlowLayoutPanel panel)
@@ -3987,18 +4115,19 @@ namespace BetterTaskManager
                 return;
             }
 
-            if (args != null && args.Any(a =>
+            bool runUiSoak = args != null && args.Any(a => string.Equals(a, "--ui-soak-test", StringComparison.OrdinalIgnoreCase));
+            if (runUiSoak || (args != null && args.Any(a =>
                 string.Equals(a, "--ui-smoke-test", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(a, "--history-ui-smoke-test", StringComparison.OrdinalIgnoreCase)))
+                string.Equals(a, "--history-ui-smoke-test", StringComparison.OrdinalIgnoreCase))))
             {
-                RunUiSmokeTest();
+                RunUiSmokeTest(runUiSoak);
                 return;
             }
 
             Run();
         }
 
-        private static void RunUiSmokeTest()
+        private static void RunUiSmokeTest(bool runSoak)
         {
             ConfigureApplicationVisuals();
 
@@ -4009,7 +4138,7 @@ namespace BetterTaskManager
                 Path.Combine(temporaryFolder, "settings.json"));
             Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(10));
+                await Task.Delay(runSoak ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(10));
                 if (System.Threading.Interlocked.CompareExchange(ref completed, 1, 0) == 0)
                 {
                     Environment.Exit(2);
@@ -4021,6 +4150,7 @@ namespace BetterTaskManager
                 try
                 {
                     await form.RunUiSmokeTestAsync();
+                    if (runSoak) await form.RunUiSoakTestAsync();
                     await Task.Delay(500);
                     System.Threading.Interlocked.Exchange(ref completed, 1);
                     Environment.ExitCode = 0;
@@ -4386,9 +4516,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.47" || form.Text != "Better Task Manager v1.1.0-preview.47")
+                if (Application.ProductVersion != "1.1.0-preview.49" || form.Text != "Better Task Manager v1.1.0-preview.49")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.47.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.49.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

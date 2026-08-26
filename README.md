@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.47`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.49`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -96,9 +96,15 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-smoke-test
 ```
 
+The longer non-destructive UI soak test repeats Apps, Processes, Network, History, and Memory refreshes across three page-switching rounds. It enforces an eight-second per-refresh ceiling, verifies the UI message pump recovers after each refresh, and checks that refresh gates and action controls return to idle:
+
+```powershell
+.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-soak-test
+```
+
 ## Continuous Integration
 
-`.github/workflows/windows-ci.yml` runs on Windows for pushes, pull requests, and manual dispatch. It installs the .NET 11 preview channel, restores and builds Release, runs both non-destructive test modes, publishes the self-contained executable, and uploads it as a 14-day workflow artifact. The workflow becomes active when this branch is pushed to GitHub.
+`.github/workflows/windows-ci.yml` runs on Windows for pushes, pull requests, and manual dispatch. It installs the .NET 11 preview channel, restores and builds Release, runs the self-test plus UI smoke and soak modes, publishes the self-contained executable, and uploads it as a 14-day workflow artifact. The workflow becomes active when this branch is pushed to GitHub.
 
 ## Publish
 
@@ -106,16 +112,24 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 .\scripts\publish-v1.ps1
 ```
 
+If a tester currently has the stable latest executable open, stage only the numbered folder and ZIP without interrupting that session:
+
+```powershell
+.\scripts\publish-v1.ps1 -SkipLatest
+```
+
+Run the normal publish command after the old latest window closes to refresh the stable path.
+
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.47-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.49-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.47-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.49-portable-win-x64\BetterTaskManager.exe
 ```
 
 The publish script also refreshes this stable path on every successful build, so testers do not need to locate the newest numbered preview folder:

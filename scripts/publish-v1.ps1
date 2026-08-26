@@ -1,3 +1,8 @@
+[CmdletBinding()]
+param(
+    [switch]$SkipLatest
+)
+
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
@@ -39,17 +44,23 @@ $hash = Get-FileHash -LiteralPath $executable -Algorithm SHA256
 $manifest = $hash.Hash.ToLowerInvariant() + " *BetterTaskManager.exe" + [Environment]::NewLine
 [System.IO.File]::WriteAllText((Join-Path $outputFull "SHA256SUMS.txt"), $manifest, [System.Text.Encoding]::ASCII)
 
-if (Test-Path -LiteralPath $latestOutputFull) { Remove-Item -LiteralPath $latestOutputFull -Recurse -Force }
-Copy-Item -LiteralPath $outputFull -Destination $latestOutputFull -Recurse
-
 $versionedZip = Join-Path $artifacts ($folderName + ".zip")
 $latestZip = Join-Path $artifacts ($latestFolderName + ".zip")
 if (Test-Path -LiteralPath $versionedZip) { Remove-Item -LiteralPath $versionedZip -Force }
-if (Test-Path -LiteralPath $latestZip) { Remove-Item -LiteralPath $latestZip -Force }
 Compress-Archive -LiteralPath $outputFull -DestinationPath $versionedZip -CompressionLevel Optimal
-Compress-Archive -LiteralPath $latestOutputFull -DestinationPath $latestZip -CompressionLevel Optimal
+
+if (-not $SkipLatest) {
+    if (Test-Path -LiteralPath $latestOutputFull) { Remove-Item -LiteralPath $latestOutputFull -Recurse -Force }
+    Copy-Item -LiteralPath $outputFull -Destination $latestOutputFull -Recurse
+    if (Test-Path -LiteralPath $latestZip) { Remove-Item -LiteralPath $latestZip -Force }
+    Compress-Archive -LiteralPath $latestOutputFull -DestinationPath $latestZip -CompressionLevel Optimal
+}
 
 Write-Host "Published portable Better Task Manager v$version to $outputFull"
-Write-Host "Updated latest executable at $(Join-Path $latestOutputFull 'BetterTaskManager.exe')"
-Write-Host "Created versioned and latest ZIP packages."
+if ($SkipLatest) {
+    Write-Host "Created the versioned ZIP and left the running latest build untouched."
+} else {
+    Write-Host "Updated latest executable at $(Join-Path $latestOutputFull 'BetterTaskManager.exe')"
+    Write-Host "Created versioned and latest ZIP packages."
+}
 

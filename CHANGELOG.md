@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.47 - Unreleased
+## 1.1.0-preview.49 - Unreleased
 
 ### Added
 
@@ -100,6 +100,8 @@
 - Deterministic portable staging now bundles `RELEASE_NOTES-v1.1-preview.md` ahead of the detailed changelog and security guide.
 - Apps, Network, and live History writes now read one thread-safe recording flag; disabling it retains existing rows for view/export and turns live History into read-only reloads.
 - Portable publishing now refreshes a stable `BetterTaskManager-latest-portable-win-x64` folder and ZIP alongside the numbered preview artifacts.
+- Added a watchdog-backed `--ui-soak-test` that repeats all five page refresh paths for three rounds, enforces a bounded refresh duration, and verifies message-pump and action-gate recovery; Windows CI now runs it.
+- Portable publishing accepts `-SkipLatest` so a numbered preview can be staged without interrupting a tester who is still running the stable latest executable.
 
 ### Fixed
 
@@ -152,6 +154,10 @@
 - Added isolated opt-out tests proving disabled recording prevents a unique snapshot write, displays **Recording off**, and persists through settings round-trip while corrupt settings default to recording enabled.
 - Fixed elevated Memory actions failing with `STATUS_PRIVILEGE_NOT_HELD`: the process now enables `SeProfileSingleProcessPrivilege`, verifies whether Windows assigned it, and only enables **Clear Standby Cache** and **Release System Cache** when the capability is genuinely available.
 - Replaced the contradictory “Administrator”/“required privilege unavailable” guidance with separate elevation and memory-privilege status plus the actual Windows error when activation fails.
+- Fixed the Apps detail heading, metadata, metric cards, action row, firewall status, Connections heading, and grid starting at different horizontal positions.
+- Moved Apps firewall status into its own aligned row so it no longer wraps beneath the action buttons with an extra left offset.
+- Fixed the Apps search field being stretched to the full row height, which placed its text against the upper edge; it now retains its native edit height and is vertically centered.
+- Removed WinForms glyph-overhang padding from Apps headings/status text and trim display names before rendering, eliminating the apparent leading spaces before names such as `svchost`.
 
 ## v1.0.0 - 2026-06-06
 

@@ -12,6 +12,7 @@ This preview is a substantial update to the checked-in v1.0 release. It remains 
 - History records new or changed connections with one-second sampling granularity, duplicate suppression, 30-day retention, 2,000-row view caching, responsive 100-row paging, cross-process file locking, filtered export, and confirmed clearing.
 - A persisted **Record history** checkbox stops future disk writes while keeping existing history available for viewing and export.
 - Every successful local publish updates a stable `BetterTaskManager-latest-portable-win-x64` folder and ZIP, avoiding stale numbered-preview launches.
+- Apps search text is vertically centered, and detail headings use tight rendering without apparent leading spaces; all detail content shares one left edge, including firewall status on its own row.
 - Memory includes native System CPU, physical/commit/cache counters, bounded 60-sample CPU/RAM trends, and non-blocking maintenance actions.
 - Elevated sessions explicitly activate and verify the Windows system-memory privilege before enabling standby/system-cache maintenance, avoiding misleading administrator-only checks.
 - Firewall, Process mutation, Memory maintenance, snapshot collection, and History persistence have explicit non-overlapping gates and stale-result safeguards.
@@ -62,4 +63,4 @@ dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll
 .\scripts\publish-v1.ps1
 ```
 
-The self-test and UI smoke modes are non-destructive: they do not kill processes, alter firewall rules, or execute native memory cleanup actions.
+The self-test plus UI smoke and three-round soak modes are non-destructive: they do not kill processes, alter firewall rules, or execute native memory cleanup actions.

@@ -49,6 +49,13 @@ jobs:
           $process = Start-Process -FilePath $exe.Path -ArgumentList '--ui-smoke-test' -PassThru -Wait
           if ($process.ExitCode -ne 0) { exit $process.ExitCode }
 
+      - name: Run repeated live-refresh UI soak test
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path '.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe'
+          $process = Start-Process -FilePath $exe.Path -ArgumentList '--ui-soak-test' -PassThru -Wait
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+
       - name: Publish self-contained portable executable
         shell: pwsh
         run: .\scripts\publish-v1.ps1
