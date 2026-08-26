@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.36 - Unreleased
+## 1.1.0-preview.37 - Unreleased
 
 ### Added
 
@@ -41,6 +41,7 @@
 - Added one shared non-overlapping busy state for selected Process mutations.
 - Added one shared non-overlapping firewall mutation gate across Apps and Network.
 - Added deterministic path-scoped Windows named-mutex locking for History transactions across app instances.
+- Added a Windows GitHub Actions workflow for .NET 11 preview restore, Release build, self-test, UI smoke test, self-contained publish, and artifact upload.
 
 ### Changed
 
@@ -79,6 +80,7 @@
 - Force Kill, Trim, Open Folder, and Copy Path now follow selection, refresh, mutation, and self-process eligibility from one centralized action-state method.
 - Firewall action eligibility now combines administrator state, selection/path availability, active refresh, global mutation state, and known Apps rule state.
 - History save/load/clear/prune now use both in-process locking and a cross-process mutex with abandoned-owner recovery and a 10-second timeout.
+- CI uses current official action majors, read-only repository permissions, per-ref cancellation, a 20-minute job timeout, and the app's own UI watchdog.
 
 ### Fixed
 
@@ -119,6 +121,7 @@
 - Prevented overlapping Force Kill/Trim operations and disabled stale path/mutation actions while Process or Network refreshes replace their grids.
 - Prevented simultaneous Apps/Network firewall commands and guaranteed both pages' controls recover in `finally` after success, failure, or early command return.
 - Prevented overlapping normal/elevated or manually duplicated app instances from racing header creation, append, prune replacement, or clear operations on the same history CSV.
+- Added documentation distinguishing locally verified workflow commands from GitHub execution, which begins only after the branch is pushed.
 
 ## v1.0.0 - 2026-06-06
 

@@ -41,6 +41,7 @@
 - Centralized Process mutation/path action state and prevented overlapping operations.
 - Unified Apps/Network firewall eligibility behind one cross-view mutation gate.
 - Added cross-process transaction locking for the shared connection-history file.
+- Added Windows CI for build, tests, portable publish, and artifact upload.
 
 ## v2.0
 

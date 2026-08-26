@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.36`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.37`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -88,6 +88,10 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-smoke-test
 ```
 
+## Continuous Integration
+
+`.github/workflows/windows-ci.yml` runs on Windows for pushes, pull requests, and manual dispatch. It installs the .NET 11 preview channel, restores and builds Release, runs both non-destructive test modes, publishes the self-contained executable, and uploads it as a 14-day workflow artifact. The workflow becomes active when this branch is pushed to GitHub.
+
 ## Publish
 
 ```powershell
@@ -97,13 +101,13 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.36-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.37-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.36-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.37-portable-win-x64\BetterTaskManager.exe
 ```
 
 ## Download

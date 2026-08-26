@@ -1,0 +1,62 @@
+name: Windows CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-publish:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install .NET 11 preview SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore .\BetterTaskManager.slnx
+
+      - name: Build Release
+        shell: pwsh
+        run: dotnet build .\BetterTaskManager.slnx -c Release --no-restore --nologo
+
+      - name: Run non-destructive self-test
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path '.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe'
+          $process = Start-Process -FilePath $exe.Path -ArgumentList '--self-test' -PassThru -Wait
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+
+      - name: Run watchdog-backed UI smoke test
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path '.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe'
+          $process = Start-Process -FilePath $exe.Path -ArgumentList '--ui-smoke-test' -PassThru -Wait
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+
+      - name: Publish self-contained portable executable
+        shell: pwsh
+        run: .\scripts\publish-v1.ps1
+
+      - name: Upload portable executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: BetterTaskManager-portable-win-x64
+          path: artifacts/BetterTaskManager-v*-portable-win-x64/BetterTaskManager.exe
+          if-no-files-found: error
+          retention-days: 14
