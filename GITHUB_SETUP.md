@@ -17,7 +17,7 @@ dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll
 .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-soak-test
 ```
 
-The same sequence runs in `.github\workflows\windows-ci.yml` on pushes and pull requests. It also publishes and uploads the complete portable folder as `BetterTaskManager-portable-win-x64`. This workflow has been validated locally but will not run on GitHub until the branch containing it is pushed.
+The same sequence runs in `.github\workflows\windows-ci.yml` on pushes and pull requests. It also publishes and uploads the complete portable folder, including `TESTING.md`, as `BetterTaskManager-portable-win-x64`. This workflow has been validated locally but will not run on GitHub until the branch containing it is pushed.
 
 ## Publish the Current Preview
 

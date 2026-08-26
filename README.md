@@ -138,7 +138,7 @@ The publish script also refreshes this stable path on every successful build, so
 artifacts\BetterTaskManager-latest-portable-win-x64\BetterTaskManager.exe
 ```
 
-Each portable folder contains `BetterTaskManager.exe`, `README.md`, `RELEASE_NOTES-v1.1-preview.md`, `CHANGELOG.md`, `SECURITY.md`, `LICENSE`, and `SHA256SUMS.txt`. Start with the preview release notes for a concise overview, then verify the executable from inside that folder with:
+Each portable folder contains `BetterTaskManager.exe`, `README.md`, `RELEASE_NOTES-v1.1-preview.md`, `TESTING.md`, `CHANGELOG.md`, `SECURITY.md`, `LICENSE`, and `SHA256SUMS.txt`. Start with the preview release notes, use `TESTING.md` for a non-destructive issue-by-issue checklist, then verify the executable from inside that folder with:
 
 ```powershell
 (Get-FileHash .\BetterTaskManager.exe -Algorithm SHA256).Hash.ToLowerInvariant()

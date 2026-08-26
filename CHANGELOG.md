@@ -51,6 +51,7 @@
 - Added bounded cross-process crash logging with one rotated previous file.
 - Added concise tester-facing v1.1 preview release notes covering highlights, upgrade/local data, safety/privacy, validation, and known limits.
 - Added a persisted **Record history** privacy control.
+- Added a packaged non-destructive manual test checklist covering every original preview report and the exact evidence expected for each result.
 
 ### Changed
 

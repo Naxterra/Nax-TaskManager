@@ -1,0 +1,59 @@
+# Better Task Manager Preview Test Checklist
+
+Use `artifacts\BetterTaskManager-latest-portable-win-x64\BetterTaskManager.exe`. Confirm the title bar shows the expected preview before reporting a result. These checks avoid process termination, firewall changes, history deletion, and native memory cleanup.
+
+## Startup and responsiveness
+
+1. Close existing Better Task Manager windows, then start the stable latest executable.
+2. Confirm no Command Prompt or PowerShell window opens with it.
+3. Switch repeatedly through Apps, Processes, Network, History, and Memory while pressing **Refresh** where available.
+4. Type and clear filters while a page is populated. The window should remain movable and responsive; Live failures should appear inline rather than as recurring dialogs.
+
+For an automated non-destructive repetition of the same refresh paths, close the interactive window and run:
+
+```powershell
+.\artifacts\BetterTaskManager-latest-portable-win-x64\BetterTaskManager.exe --ui-soak-test
+```
+
+An exit code of `0` means three complete cross-page rounds stayed within the per-refresh limit and every refresh gate returned to idle.
+
+## Live monitoring
+
+1. Open **Memory**, select `1 sec`, and enable **Live monitoring**.
+2. Confirm the top status reads **Live**, snapshot time advances, and the CPU/RAM trend lines gain samples without opening dialogs.
+3. Visit Apps, Processes, Network, and History while Live remains enabled and confirm the active page continues updating.
+4. Disable Live and confirm the status returns to **Paused** and stops changing.
+
+## Apps and Processes value reconciliation
+
+1. On Apps, wait for a second snapshot so CPU values are sampled rather than `...`.
+2. Select an app group and note its process count, **Sum Private Bytes**, and **Sum Working Set**.
+3. Choose **View Processes**. Confirm the visible PID count matches the Apps group.
+4. Sum the visible per-PID **Private Bytes MB** and **Working Set MB** values. They should match the grouped cards to displayed precision when both views use the same snapshot.
+5. Remember that Working Set includes shared pages, so summed process working sets are not a system-wide unique-page total.
+
+## Dark theme and alignment
+
+1. Check the vertical and horizontal scrollbars on Apps, Processes, Network, and History; tracks, thumbs, and arrow areas should remain dark rather than switching to a bright system theme.
+2. Confirm the dark background is blue-slate rather than pitch black and selected rows remain readable.
+3. On Apps, confirm **Search apps** is vertically centered in its field.
+4. Confirm **Apps**, the selected application name, metadata, cards, actions, firewall status, **Connections**, and the connection grid share consistent left edges.
+5. Confirm application headings such as `svchost` have no apparent leading spaces.
+
+## Privilege reporting
+
+1. In Standard mode, open Memory and confirm **Clear Standby Cache** and **Release System Cache** are disabled with an explanation that elevation and `SeProfileSingleProcessPrivilege` are required.
+2. Choose **Restart as Admin** and approve the Windows elevation prompt yourself.
+3. Confirm the header distinguishes **memory privilege ready** from **memory privilege unavailable**. The two system-memory buttons should be enabled only in the ready state.
+4. It is not necessary to execute either cleanup action to validate capability detection.
+
+## History privacy control
+
+1. Open History and clear **Record history** without using **Clear History**.
+2. Refresh Apps and Network, then return to History.
+3. Confirm existing rows remain viewable/exportable, the page reports **Recording off**, and no new observations are appended.
+4. Restart the app and confirm the Record history preference persists.
+
+## Reporting a failure
+
+Include the exact preview number, page, Live interval/state, Standard/Admin status, and the shortest sequence that reproduces the problem. Screenshots are useful, but review usernames, executable paths, IP addresses, and endpoints before sharing them publicly.

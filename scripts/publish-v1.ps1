@@ -37,6 +37,7 @@ if (-not (Test-Path -LiteralPath $executable)) { throw "Published executable not
 Copy-Item -LiteralPath (Join-Path $root "README.md") -Destination (Join-Path $outputFull "README.md")
 Copy-Item -LiteralPath (Join-Path $root "CHANGELOG.md") -Destination (Join-Path $outputFull "CHANGELOG.md")
 Copy-Item -LiteralPath (Join-Path $root "RELEASE_NOTES-v1.1-preview.md") -Destination (Join-Path $outputFull "RELEASE_NOTES-v1.1-preview.md")
+Copy-Item -LiteralPath (Join-Path $root "TESTING.md") -Destination (Join-Path $outputFull "TESTING.md")
 Copy-Item -LiteralPath (Join-Path $root "SECURITY.md") -Destination (Join-Path $outputFull "SECURITY.md")
 Copy-Item -LiteralPath (Join-Path $root "LICENSE") -Destination (Join-Path $outputFull "LICENSE")
 

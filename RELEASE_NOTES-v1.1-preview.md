@@ -60,7 +60,10 @@ From the repository root:
 dotnet build .\BetterTaskManager.slnx -c Release
 dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll --self-test
 .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-smoke-test
+.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-soak-test
 .\scripts\publish-v1.ps1
 ```
 
 The self-test plus UI smoke and three-round soak modes are non-destructive: they do not kill processes, alter firewall rules, or execute native memory cleanup actions.
+
+For hands-on verification of the original freeze, console-window, Live monitoring, value-reconciliation, dark-scrollbar, alignment, privilege, and history-privacy reports, follow `TESTING.md` from the portable folder.
