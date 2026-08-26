@@ -132,6 +132,16 @@ namespace BetterTaskManager
         }
     }
 
+    internal enum GlobalShortcutCommand
+    {
+        None,
+        Refresh,
+        FocusFilter,
+        ClearFilter,
+        Export,
+        ToggleLive
+    }
+
     public sealed class MainForm : Form
     {
         private const int HistoryDisplayLimit = 100;
@@ -256,6 +266,7 @@ namespace BetterTaskManager
         private readonly NetworkHistoryStore historyStore;
         private readonly AppSettingsStore settingsStore;
         private readonly NativeCpuCollector systemCpuCollector = new NativeCpuCollector();
+        private readonly ToolTip shortcutToolTip;
         private FormWindowState lastNonMinimizedWindowState = FormWindowState.Normal;
         private long lastAdapterReceived = -1;
         private long lastAdapterSent = -1;
@@ -266,6 +277,7 @@ namespace BetterTaskManager
             string appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
             if (string.IsNullOrWhiteSpace(settingsPath)) settingsPath = Path.Combine(appDataFolder, "settings.json");
             settingsStore = new AppSettingsStore(settingsPath);
+            shortcutToolTip = new ToolTip();
             AppSettings appSettings = settingsStore.Load();
             lastNonMinimizedWindowState = appSettings.Maximized ? FormWindowState.Maximized : FormWindowState.Normal;
             Rectangle workingArea = Screen.PrimaryScreen == null ? SystemInformation.WorkingArea : Screen.PrimaryScreen.WorkingArea;
@@ -273,6 +285,7 @@ namespace BetterTaskManager
             int minimumHeight = Math.Min(650, Math.Max(1, workingArea.Height));
 
             Text = "Better Task Manager v" + Application.ProductVersion;
+            KeyPreview = true;
             MinimumSize = new Size(minimumWidth, minimumHeight);
             Size = new Size(
                 ClampWindowDimension(appSettings.WindowWidth, minimumWidth, workingArea.Width, 1560),
@@ -667,6 +680,20 @@ namespace BetterTaskManager
             memoryStatusLabel = new Label { Text = "", AutoSize = true, Width = 1400 };
             memoryPanel.Controls.Add(memoryStatusLabel);
 
+            shortcutToolTip.SetToolTip(liveMonitoringCheck, "Toggle Live monitoring (Ctrl+L)");
+            shortcutToolTip.SetToolTip(appSearchBox, "Focus search (Ctrl+F); clear search (Escape)");
+            shortcutToolTip.SetToolTip(filterBox, "Focus search (Ctrl+F); clear search (Escape)");
+            shortcutToolTip.SetToolTip(networkFilterBox, "Focus search (Ctrl+F); clear search (Escape)");
+            shortcutToolTip.SetToolTip(historyFilterBox, "Focus search (Ctrl+F); clear search (Escape)");
+            foreach (Button button in new[] { appRefreshButton, refreshButton, networkRefreshButton, reloadHistoryButton, memoryRefreshButton })
+            {
+                shortcutToolTip.SetToolTip(button, "Refresh active view (F5)");
+            }
+            foreach (Button button in new[] { exportAppsButton, exportProcessesButton, exportNetworkButton, exportHistoryButton })
+            {
+                shortcutToolTip.SetToolTip(button, "Export active view (Ctrl+E)");
+            }
+
             appRefreshButton.Click += async (s, e) => await RefreshAppsAsync(true);
             exportAppsButton.Click += async (s, e) => await ExportAppsAsync();
             appSearchBox.TextChanged += (s, e) => { FillAppGridFromCache(); ShowSelectedApp(); };
@@ -689,7 +716,6 @@ namespace BetterTaskManager
             restartAdminButton.Click += (s, e) => RestartAsAdmin();
 
             networkRefreshButton.Click += async (s, e) => await RefreshNetworkAsync();
-            networkTab.Enter += async (s, e) => await RefreshNetworkAsync();
             networkFilterBox.TextChanged += (s, e) => FillNetworkGridFromCache();
             blockButton.Click += async (s, e) => await BlockSelectedAsync(true);
             unblockButton.Click += async (s, e) => await BlockSelectedAsync(false);
@@ -723,6 +749,14 @@ namespace BetterTaskManager
             {
                 timer.Interval = RefreshIntervalMilliseconds(refreshIntervalBox.SelectedIndex);
             };
+            KeyDown += async (s, e) =>
+            {
+                if (await HandleGlobalShortcutAsync(e.KeyData))
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                }
+            };
 
             Shown += async (s, e) =>
             {
@@ -734,6 +768,7 @@ namespace BetterTaskManager
                 if (!skipInitialRefresh) await RefreshAppsAsync(true);
             };
             FormClosing += (s, e) => SaveAppSettings();
+            FormClosed += (s, e) => shortcutToolTip.Dispose();
             Resize += (s, e) =>
             {
                 if (WindowState != FormWindowState.Minimized) lastNonMinimizedWindowState = WindowState;
@@ -754,6 +789,81 @@ namespace BetterTaskManager
             unblockButton.Enabled = isAdmin;
             clearStandbyButton.Enabled = isAdmin;
             emptySystemButton.Enabled = isAdmin;
+        }
+
+        internal static GlobalShortcutCommand GetGlobalShortcutCommand(Keys keyData, string pageName)
+        {
+            if (keyData == Keys.F5) return GlobalShortcutCommand.Refresh;
+            if (keyData == (Keys.Control | Keys.L)) return GlobalShortcutCommand.ToggleLive;
+
+            bool searchablePage = pageName == "Apps" || pageName == "Processes" || pageName == "Network" || pageName == "History";
+            if (keyData == (Keys.Control | Keys.F) && searchablePage) return GlobalShortcutCommand.FocusFilter;
+            if (keyData == Keys.Escape && searchablePage) return GlobalShortcutCommand.ClearFilter;
+            if (keyData == (Keys.Control | Keys.E) && searchablePage) return GlobalShortcutCommand.Export;
+            return GlobalShortcutCommand.None;
+        }
+
+        private async Task<bool> HandleGlobalShortcutAsync(Keys keyData)
+        {
+            string pageName = Convert.ToString(activePage == null ? null : activePage.Tag) ?? "";
+            GlobalShortcutCommand command = GetGlobalShortcutCommand(keyData, pageName);
+            if (command == GlobalShortcutCommand.None) return false;
+
+            if (command == GlobalShortcutCommand.ToggleLive)
+            {
+                liveMonitoringCheck.Checked = !liveMonitoringCheck.Checked;
+                return true;
+            }
+
+            if (command == GlobalShortcutCommand.Refresh)
+            {
+                await RefreshCurrentPageManuallyAsync();
+                return true;
+            }
+
+            TextBox filter = ActiveFilterBox();
+            if (command == GlobalShortcutCommand.FocusFilter)
+            {
+                if (filter == null) return false;
+                filter.Focus();
+                filter.SelectAll();
+                return true;
+            }
+            if (command == GlobalShortcutCommand.ClearFilter)
+            {
+                if (filter == null) return false;
+                filter.Clear();
+                return true;
+            }
+
+            await ExportCurrentPageAsync();
+            return true;
+        }
+
+        private TextBox ActiveFilterBox()
+        {
+            if (activePage == appsTab) return appSearchBox;
+            if (activePage == processTab) return filterBox;
+            if (activePage == networkTab) return networkFilterBox;
+            if (activePage == historyTab) return historyFilterBox;
+            return null;
+        }
+
+        private async Task RefreshCurrentPageManuallyAsync()
+        {
+            if (activePage == appsTab) await RefreshAppsAsync(true);
+            else if (activePage == processTab) await RefreshProcessesAsync();
+            else if (activePage == networkTab) await RefreshNetworkAsync();
+            else if (activePage == historyTab) await LoadHistoryGridAsync();
+            else if (activePage == memoryTab) RefreshMemoryPage();
+        }
+
+        private async Task ExportCurrentPageAsync()
+        {
+            if (activePage == appsTab) await ExportAppsAsync();
+            else if (activePage == processTab) await ExportProcessesAsync();
+            else if (activePage == networkTab) await ExportNetworkAsync();
+            else if (activePage == historyTab) await ExportHistoryAsync();
         }
 
         private void SaveAppSettings()
@@ -2610,6 +2720,15 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Network sorting was not preserved for the cached snapshot.");
             }
+            networkFilterBox.Text = "443";
+            if (!await HandleGlobalShortcutAsync(Keys.Escape) || networkFilterBox.Text.Length != 0)
+            {
+                throw new InvalidOperationException("Escape did not clear the active Network filter.");
+            }
+            if (!await HandleGlobalShortcutAsync(Keys.Control | Keys.F) || !networkFilterBox.Focused)
+            {
+                throw new InvalidOperationException("Ctrl+F did not focus the active Network filter.");
+            }
 
             var alphaApp = new AppProfile { Name = "alpha", Path = "C:\\Apps\\alpha.exe", User = "TEST\\One", ConnectionCount = 1, Cpu = 1.5, CpuSampleCount = 1, RamMb = 20 };
             alphaApp.Pids.Add(101);
@@ -3493,12 +3612,21 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Automatic refresh dialog suppression policy failed.");
             }
+            if (MainForm.GetGlobalShortcutCommand(Keys.F5, "Memory") != GlobalShortcutCommand.Refresh ||
+                MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.L, "Memory") != GlobalShortcutCommand.ToggleLive ||
+                MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.F, "Network") != GlobalShortcutCommand.FocusFilter ||
+                MainForm.GetGlobalShortcutCommand(Keys.Escape, "Apps") != GlobalShortcutCommand.ClearFilter ||
+                MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.E, "History") != GlobalShortcutCommand.Export ||
+                MainForm.GetGlobalShortcutCommand(Keys.Control | Keys.E, "Memory") != GlobalShortcutCommand.None)
+            {
+                throw new InvalidOperationException("Global keyboard shortcut mapping failed.");
+            }
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.26" || form.Text != "Better Task Manager v1.1.0-preview.26")
+                if (Application.ProductVersion != "1.1.0-preview.27" || form.Text != "Better Task Manager v1.1.0-preview.27")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.26.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.27.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

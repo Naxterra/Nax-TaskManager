@@ -31,6 +31,7 @@
 - Enabled and verified PerMonitorV2 scaling for mixed-DPI displays.
 - Added complete grouped Apps CSV export from the cached filtered/sorted model.
 - Converted Process and Network exports to typed models and unified asynchronous CSV saving.
+- Added discoverable active-page keyboard shortcuts and removed focus-triggered Network refresh.
 
 ## v2.0
 
