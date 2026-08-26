@@ -23,6 +23,7 @@
 - Made History sorting type-safe for mixed TCP/UDP endpoint data.
 - Added a confirmed atomic reset for user-local connection history.
 - Added same-snapshot grouped CPU to the Apps view with per-PID reconciliation tests.
+- Distinguished unavailable first-snapshot CPU from measured idle and tied baselines to process identity.
 
 ## v2.0
 
