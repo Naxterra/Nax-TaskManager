@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.42`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.43`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -49,7 +49,7 @@ The current development build is `1.1.0-preview.42`. The checked-in v1.0 downloa
 - Connection-change history with live native connection sampling, 30-day retention, duplicate suppression, one-second change granularity, instant all-column filtering, typed timestamp/PID/port sorting, responsive paging, complete filtered export, and a confirmed **Clear History** action for the user-local store.
 - Path-scoped cross-process History locking protects append/load/prune/clear when two app instances overlap, including Restart-as-Admin handoff.
 
-## Important Limits in v1.0
+## Current Preview Limits
 
 This is not yet a Portmaster replacement.
 
@@ -106,16 +106,16 @@ The watchdog-backed UI smoke test briefly opens the app and verifies responsive 
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.42-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.43-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.42-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.43-portable-win-x64\BetterTaskManager.exe
 ```
 
-Each portable folder contains `BetterTaskManager.exe`, `README.md`, `CHANGELOG.md`, `LICENSE`, and `SHA256SUMS.txt`. Verify the executable from inside that folder with:
+Each portable folder contains `BetterTaskManager.exe`, `README.md`, `CHANGELOG.md`, `SECURITY.md`, `LICENSE`, and `SHA256SUMS.txt`. Verify the executable from inside that folder with:
 
 ```powershell
 (Get-FileHash .\BetterTaskManager.exe -Algorithm SHA256).Hash.ToLowerInvariant()

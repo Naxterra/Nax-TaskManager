@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.42 - Unreleased
+## 1.1.0-preview.43 - Unreleased
 
 ### Added
 
@@ -47,6 +47,7 @@
 - Split Apps refresh into immediate process/network rendering followed by asynchronous firewall status enrichment.
 - Added partial-result native network snapshots with per-table issue reporting.
 - Added amber partial-network disclosure to Apps grouped connection metadata.
+- Added comprehensive current security/privacy documentation to the repository and portable package.
 
 ### Changed
 
@@ -91,6 +92,7 @@
 - Late firewall results now require both matching Apps snapshot time and unchanged firewall mutation revision before updating cache/grid state.
 - Native TCP/UDP table allocation is bounded to 4 bytes–64 MiB and retries table growth up to five times before reporting a scoped failure.
 - Renamed **Load Users/Paths** to **Reload Users/Paths** and clarified that normal collection resolves/caches identities automatically while the button rebuilds the cache manually.
+- Security guidance now documents unelevated startup, privileged/destructive gates, local history/settings/crash data, export sensitivity, firewall rule scope, non-destructive tests, and checksum limitations.
 
 ### Fixed
 
@@ -137,6 +139,7 @@
 - Prevented slow or failed firewall enumeration from delaying or relabeling an otherwise successful Apps snapshot, and prevented stale reads from overwriting a concurrent rule mutation.
 - Prevented one unavailable IPv4/IPv6 TCP/UDP table from discarding every healthy connection table; verified documented network-order IPv6 scope parsing remains intact.
 - Replaced obsolete Network path guidance with protected-process/elevation guidance and added Apps completeness status tests.
+- Fixed stale documentation claiming the app requests elevation at startup, renamed README limits for the current preview, and added `SECURITY.md` to deterministic package staging.
 
 ## v1.0.0 - 2026-06-06
 

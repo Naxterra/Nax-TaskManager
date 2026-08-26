@@ -47,6 +47,7 @@
 - Staged Apps rendering ahead of guarded asynchronous firewall enrichment.
 - Added bounded partial-result resilience to native IPv4/IPv6 TCP/UDP collection.
 - Surfaced partial network completeness in Apps and clarified identity-cache reload semantics.
+- Corrected and bundled current security/privacy guidance for preview distribution.
 
 ## v2.0
 
