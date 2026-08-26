@@ -12,6 +12,7 @@
 - Added a softer blue-slate theme with native dark scrollbar support.
 - Added CSV export for Process, Network, and History views.
 - Clarified Better Task Manager firewall rule state and selected-app rule details.
+- Added a native real-time system Memory dashboard.
 
 ## v2.0
 

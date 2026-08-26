@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.4 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.5 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -20,7 +20,9 @@ An Apps refresh reuses its process rows for network path/user attribution. A sta
 
 New and changed connection observations are written locally. Unchanged snapshots are suppressed, entries are pruned after 30 days, and the History view asynchronously renders at most the newest 2,000 rows.
 
-The desktop UI can monitor its active Apps, Processes, or Network page every 1, 2, 5, or 15 seconds. Collection and history I/O run away from the UI thread, with per-view reentrancy guards preventing overlapping refreshes.
+The desktop UI can monitor its active Apps, Processes, Network, or Memory page every 1, 2, 5, or 15 seconds. Collection and history I/O run away from the UI thread, with per-view reentrancy guards preventing overlapping refreshes.
+
+The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and committed-memory counters. Its page-based values are converted using the native page size and refreshed manually or through the same Live monitoring intervals.
 
 The Apps view groups rows by executable path and sums private-byte and working-set values across all PIDs in that group. The Processes view remains per-PID. Both views expose their snapshot time and Apps exposes its contributing process count so the scopes are directly comparable. A working set contains private and shared pages, so summing per-PID working sets can count a shared page more than once.
 

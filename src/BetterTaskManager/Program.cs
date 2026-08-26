@@ -181,12 +181,20 @@ namespace BetterTaskManager
         private readonly Button trimAllButton;
         private readonly Button clearStandbyButton;
         private readonly Button emptySystemButton;
+        private readonly Button memoryRefreshButton;
+        private readonly Label memorySnapshotLabel;
+        private readonly Label memoryLoadCard;
+        private readonly Label memoryUsedCard;
+        private readonly Label memoryAvailableCard;
+        private readonly Label memoryCommitCard;
+        private readonly Label memoryCacheCard;
         private readonly Label memoryStatusLabel;
         private readonly Panel pageHost;
         private readonly FlowLayoutPanel navBar;
         private readonly Panel appsTab;
         private readonly Panel processTab;
         private readonly Panel networkTab;
+        private readonly Panel memoryTab;
         private Control activePage;
         private readonly Timer timer;
         private readonly Dictionary<DataGridView, Tuple<string, bool>> gridSortState = new Dictionary<DataGridView, Tuple<string, bool>>();
@@ -240,7 +248,7 @@ namespace BetterTaskManager
             processTab = MakePage("Processes");
             networkTab = MakePage("Network");
             historyTab = MakePage("History");
-            var memoryTab = MakePage("Memory");
+            memoryTab = MakePage("Memory");
             pageHost.Controls.AddRange(new Control[] { appsTab, processTab, networkTab, historyTab, memoryTab });
 
             var appsNavButton = MakeNavButton("Apps");
@@ -277,7 +285,7 @@ namespace BetterTaskManager
             processesNavButton.Click += async (s, e) => { ShowPage(processTab); await RefreshProcessesAsync(); };
             networkNavButton.Click += async (s, e) => { ShowPage(networkTab); await RefreshNetworkAsync(); };
             historyNavButton.Click += async (s, e) => await ShowHistoryAsync();
-            memoryNavButton.Click += (s, e) => ShowPage(memoryTab);
+            memoryNavButton.Click += (s, e) => { ShowPage(memoryTab); RefreshMemoryPage(); };
 
             var appShell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 1, ColumnCount = 2, Margin = new Padding(0), Padding = new Padding(0) };
             appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 540));
@@ -517,13 +525,37 @@ namespace BetterTaskManager
 
             var memoryPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(16), FlowDirection = FlowDirection.TopDown, WrapContents = false };
             memoryTab.Controls.Add(memoryPanel);
-            memoryPanel.Controls.Add(new Label { Text = "Memory cleanup", Font = new Font("Segoe UI", 13, FontStyle.Bold), AutoSize = true });
-            memoryPanel.Controls.Add(new Label { Text = "Troubleshooting actions for freeing cached or reserved RAM. Normal Windows caching is usually healthy.", AutoSize = true, Width = 900 });
+            memoryPanel.Controls.Add(new Label { Text = "Memory", Font = new Font("Segoe UI", 15, FontStyle.Bold), AutoSize = true });
+            memorySnapshotLabel = new Label { Text = "Snapshot unavailable", AutoSize = true, Width = 1400, ForeColor = Theme.MutedText };
+            memoryPanel.Controls.Add(memorySnapshotLabel);
+
+            var memoryCards = new FlowLayoutPanel { Width = 1400, Height = 84, WrapContents = false, Margin = new Padding(0, 8, 0, 8) };
+            memoryLoadCard = MakeMetricCard("0%", "Physical Load");
+            memoryUsedCard = MakeMetricCard("0 GiB", "Used RAM");
+            memoryAvailableCard = MakeMetricCard("0 GiB", "Available RAM");
+            memoryCommitCard = MakeMetricCard("0 / 0 GiB", "Commit / Limit");
+            memoryCacheCard = MakeMetricCard("0 GiB", "System Cache");
+            memoryCards.Controls.AddRange(new Control[] { memoryLoadCard, memoryUsedCard, memoryAvailableCard, memoryCommitCard, memoryCacheCard });
+            memoryPanel.Controls.Add(memoryCards);
+
+            memoryPanel.Controls.Add(new Label { Text = "Maintenance actions", Font = new Font("Segoe UI", 11, FontStyle.Bold), AutoSize = true, Margin = new Padding(0, 8, 0, 2) });
+            var memoryActions = new FlowLayoutPanel { Width = 1400, Height = 40, WrapContents = false, Margin = new Padding(0) };
+            memoryRefreshButton = MakeButton("Refresh", 90);
             trimAllButton = MakeButton("Trim App Memory", 260);
             clearStandbyButton = MakeButton("Clear Standby Cache", 260);
             emptySystemButton = MakeButton("Release System Cache", 260);
-            memoryStatusLabel = new Label { Text = "", AutoSize = true, Width = 900 };
-            memoryPanel.Controls.AddRange(new Control[] { trimAllButton, clearStandbyButton, emptySystemButton, memoryStatusLabel });
+            memoryActions.Controls.AddRange(new Control[] { memoryRefreshButton, trimAllButton, clearStandbyButton, emptySystemButton });
+            memoryPanel.Controls.Add(memoryActions);
+            memoryPanel.Controls.Add(new Label
+            {
+                Text = "Windows uses available RAM for cache intentionally. Cleanup actions are troubleshooting tools, not routine optimization.",
+                AutoSize = true,
+                Width = 1400,
+                ForeColor = Theme.MutedText,
+                Margin = new Padding(0, 8, 0, 2)
+            });
+            memoryStatusLabel = new Label { Text = "", AutoSize = true, Width = 1400 };
+            memoryPanel.Controls.Add(memoryStatusLabel);
 
             appRefreshButton.Click += async (s, e) => await RefreshAppsAsync(true);
             appSearchBox.TextChanged += (s, e) => { FillAppGrid(latestAppProfiles); ShowSelectedApp(); };
@@ -551,6 +583,7 @@ namespace BetterTaskManager
             trimAllButton.Click += async (s, e) => await TrimAllAsync();
             clearStandbyButton.Click += (s, e) => ClearStandby();
             emptySystemButton.Click += (s, e) => EmptySystemWorkingSets();
+            memoryRefreshButton.Click += (s, e) => RefreshMemoryPage();
 
             timer = new Timer { Interval = 5000, Enabled = false };
             timer.Tick += async (s, e) =>
@@ -587,6 +620,7 @@ namespace BetterTaskManager
             if (activePage == appsTab) await RefreshAppsAsync(false);
             else if (activePage == processTab) await RefreshProcessesAsync();
             else if (activePage == networkTab) await RefreshNetworkAsync();
+            else if (activePage == memoryTab) RefreshMemoryPage();
         }
 
         internal static int RefreshIntervalMilliseconds(int selectedIndex)
@@ -1606,6 +1640,38 @@ namespace BetterTaskManager
             trimAllButton.Enabled = true;
             memoryStatusLabel.Text = "Trimmed working sets for " + count + " processes.";
             await RefreshProcessesAsync();
+            RefreshMemoryPage();
+        }
+
+        private void RefreshMemoryPage()
+        {
+            try
+            {
+                SystemMemorySnapshot snapshot = NativeMemoryCollector.GetSnapshot();
+                memoryLoadCard.Text = snapshot.PhysicalLoadPercent.ToString("0.0", CultureInfo.CurrentCulture) + "%\nPhysical Load";
+                memoryLoadCard.ForeColor = snapshot.PhysicalLoadPercent >= 90 ? Theme.Danger : snapshot.PhysicalLoadPercent >= 75 ? Theme.Warning : Theme.Good;
+                memoryUsedCard.Text = FormatGiB(snapshot.PhysicalUsedBytes) + "\nUsed RAM";
+                memoryAvailableCard.Text = FormatGiB(snapshot.PhysicalAvailableBytes) + "\nAvailable RAM";
+                memoryCommitCard.Text = FormatGiB(snapshot.CommitTotalBytes) + " / " + FormatGiB(snapshot.CommitLimitBytes) + "\nCommit / Limit";
+                memoryCacheCard.Text = FormatGiB(snapshot.SystemCacheBytes) + "\nSystem Cache";
+                memorySnapshotLabel.ForeColor = Theme.MutedText;
+                memorySnapshotLabel.Text = SnapshotLabel(snapshot.Timestamp) +
+                    "    Total RAM " + FormatGiB(snapshot.PhysicalTotalBytes) +
+                    "    Commit peak " + FormatGiB(snapshot.CommitPeakBytes) +
+                    "    Processes " + snapshot.ProcessCount.ToString(CultureInfo.CurrentCulture) +
+                    "    Threads " + snapshot.ThreadCount.ToString(CultureInfo.CurrentCulture) +
+                    "    Handles " + snapshot.HandleCount.ToString(CultureInfo.CurrentCulture);
+            }
+            catch (Exception ex)
+            {
+                memorySnapshotLabel.ForeColor = Theme.Danger;
+                memorySnapshotLabel.Text = "Memory snapshot failed: " + ex.Message;
+            }
+        }
+
+        private static string FormatGiB(ulong bytes)
+        {
+            return (bytes / 1024d / 1024d / 1024d).ToString("0.0", CultureInfo.CurrentCulture) + " GiB";
         }
 
         private void ClearStandby()
@@ -1618,6 +1684,7 @@ namespace BetterTaskManager
             if (MessageBox.Show(this, "Clear Windows standby cache?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             int result = NativeMethods.PurgeStandbyList();
             memoryStatusLabel.Text = "Clear standby cache: " + NativeMemoryResultText(result);
+            RefreshMemoryPage();
         }
 
         private void EmptySystemWorkingSets()
@@ -1630,6 +1697,7 @@ namespace BetterTaskManager
             if (MessageBox.Show(this, "Release system cache/working sets? Use this only for troubleshooting memory pressure.", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             int result = NativeMethods.EmptySystemWorkingSets();
             memoryStatusLabel.Text = "System working set cleanup: " + NativeMemoryResultText(result);
+            RefreshMemoryPage();
         }
 
         private async Task BlockSelectedAsync(bool block)
@@ -2137,6 +2205,14 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Native network collector returned an invalid row.");
             }
 
+            SystemMemorySnapshot memory = NativeMemoryCollector.GetSnapshot();
+            if (memory.PhysicalTotalBytes == 0 || memory.PhysicalAvailableBytes > memory.PhysicalTotalBytes ||
+                memory.CommitTotalBytes > memory.CommitLimitBytes || memory.PhysicalLoadPercent < 0 || memory.PhysicalLoadPercent > 100 ||
+                memory.ProcessCount == 0 || memory.ThreadCount == 0)
+            {
+                throw new InvalidOperationException("Native memory collector returned an invalid system snapshot.");
+            }
+
             TestHistoryStore();
             TestAppAggregation();
             if (MainForm.RefreshIntervalMilliseconds(0) != 1000 || MainForm.RefreshIntervalMilliseconds(1) != 2000 ||
@@ -2147,11 +2223,11 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.4" || form.Text != "Better Task Manager v1.1.0-preview.4")
+                if (Application.ProductVersion != "1.1.0-preview.5" || form.Text != "Better Task Manager v1.1.0-preview.5")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.4.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.5.");
                 }
-                return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, and " + connections.Count + " native network rows passed.";
+                return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
         }
 
