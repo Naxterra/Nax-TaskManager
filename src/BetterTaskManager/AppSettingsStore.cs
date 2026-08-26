@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +12,7 @@ namespace BetterTaskManager
         public int WindowHeight { get; set; } = 900;
         public bool Maximized { get; set; }
         public int RefreshIntervalIndex { get; set; } = 2;
+        public Dictionary<string, int> ColumnWidths { get; set; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
     }
 
     internal sealed class AppSettingsStore

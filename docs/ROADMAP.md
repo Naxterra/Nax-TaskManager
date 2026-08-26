@@ -26,6 +26,7 @@
 - Distinguished unavailable first-snapshot CPU from measured idle and tied baselines to process identity.
 - Added native System CPU to the real-time Memory dashboard.
 - Added safe user-local persistence for window state and refresh interval.
+- Persisted clamped data-column widths and corrected minimized/maximized restoration.
 
 ## v2.0
 

@@ -251,6 +251,7 @@ namespace BetterTaskManager
         private readonly NetworkHistoryStore historyStore;
         private readonly AppSettingsStore settingsStore;
         private readonly NativeCpuCollector systemCpuCollector = new NativeCpuCollector();
+        private FormWindowState lastNonMinimizedWindowState = FormWindowState.Normal;
         private long lastAdapterReceived = -1;
         private long lastAdapterSent = -1;
         private DateTime lastAdapterSample = DateTime.MinValue;
@@ -261,6 +262,7 @@ namespace BetterTaskManager
             if (string.IsNullOrWhiteSpace(settingsPath)) settingsPath = Path.Combine(appDataFolder, "settings.json");
             settingsStore = new AppSettingsStore(settingsPath);
             AppSettings appSettings = settingsStore.Load();
+            lastNonMinimizedWindowState = appSettings.Maximized ? FormWindowState.Maximized : FormWindowState.Normal;
             Rectangle workingArea = Screen.PrimaryScreen == null ? SystemInformation.WorkingArea : Screen.PrimaryScreen.WorkingArea;
             int minimumWidth = Math.Min(1000, Math.Max(1, workingArea.Width));
             int minimumHeight = Math.Min(650, Math.Max(1, workingArea.Height));
@@ -725,7 +727,12 @@ namespace BetterTaskManager
                 if (!skipInitialRefresh) await RefreshAppsAsync(true);
             };
             FormClosing += (s, e) => SaveAppSettings();
+            Resize += (s, e) =>
+            {
+                if (WindowState != FormWindowState.Minimized) lastNonMinimizedWindowState = WindowState;
+            };
 
+            RestoreColumnWidths(appSettings.ColumnWidths);
             ApplyDarkTheme(this);
             ApplyPrivilegeState();
             ShowPage(appsTab);
@@ -751,12 +758,67 @@ namespace BetterTaskManager
                 {
                     WindowWidth = savedSize.Width,
                     WindowHeight = savedSize.Height,
-                    Maximized = WindowState == FormWindowState.Maximized,
-                    RefreshIntervalIndex = Math.Max(0, refreshIntervalBox.SelectedIndex)
+                    Maximized = ShouldPersistMaximized(WindowState, lastNonMinimizedWindowState),
+                    RefreshIntervalIndex = Math.Max(0, refreshIntervalBox.SelectedIndex),
+                    ColumnWidths = CaptureColumnWidths()
                 });
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
+        }
+
+        private void RestoreColumnWidths(Dictionary<string, int> widths)
+        {
+            if (widths == null) return;
+            RestoreGridColumnWidths(appGrid, "Apps", widths);
+            RestoreGridColumnWidths(processGrid, "Processes", widths);
+            RestoreGridColumnWidths(networkGrid, "Network", widths);
+            for (int index = 0; index < historyList.Columns.Count; index++)
+            {
+                int width;
+                if (widths.TryGetValue("History." + index.ToString(CultureInfo.InvariantCulture), out width))
+                {
+                    historyList.Columns[index].Width = ClampColumnWidth(width);
+                }
+            }
+        }
+
+        private static void RestoreGridColumnWidths(DataGridView grid, string prefix, Dictionary<string, int> widths)
+        {
+            foreach (DataGridViewColumn column in grid.Columns)
+            {
+                int width;
+                if (widths.TryGetValue(prefix + "." + column.Name, out width)) column.Width = ClampColumnWidth(width);
+            }
+        }
+
+        private Dictionary<string, int> CaptureColumnWidths()
+        {
+            var widths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            CaptureGridColumnWidths(appGrid, "Apps", widths);
+            CaptureGridColumnWidths(processGrid, "Processes", widths);
+            CaptureGridColumnWidths(networkGrid, "Network", widths);
+            for (int index = 0; index < historyList.Columns.Count; index++)
+            {
+                widths["History." + index.ToString(CultureInfo.InvariantCulture)] = historyList.Columns[index].Width;
+            }
+            return widths;
+        }
+
+        private static void CaptureGridColumnWidths(DataGridView grid, string prefix, Dictionary<string, int> widths)
+        {
+            foreach (DataGridViewColumn column in grid.Columns) widths[prefix + "." + column.Name] = column.Width;
+        }
+
+        internal static int ClampColumnWidth(int width)
+        {
+            return Math.Max(40, Math.Min(width, 1200));
+        }
+
+        internal static bool ShouldPersistMaximized(FormWindowState current, FormWindowState lastNonMinimized)
+        {
+            return current == FormWindowState.Maximized ||
+                (current == FormWindowState.Minimized && lastNonMinimized == FormWindowState.Maximized);
         }
 
         private async Task RefreshActivePageAsync(bool automatic = false)
@@ -2574,10 +2636,14 @@ namespace BetterTaskManager
                 throw new InvalidOperationException("Memory dashboard did not expose the initial System CPU sampling state.");
             }
             refreshIntervalBox.SelectedIndex = 3;
+            networkGrid.Columns["Process"].Width = 222;
             SaveAppSettings();
-            if (settingsStore.Load().RefreshIntervalIndex != 3)
+            AppSettings savedUiSettings = settingsStore.Load();
+            int savedNetworkWidth;
+            if (savedUiSettings.RefreshIntervalIndex != 3 || savedUiSettings.ColumnWidths == null ||
+                !savedUiSettings.ColumnWidths.TryGetValue("Network.Process", out savedNetworkWidth) || savedNetworkWidth != 222)
             {
-                throw new InvalidOperationException("Main window did not persist the selected Live interval.");
+                throw new InvalidOperationException("Main window did not persist Live interval and column width preferences.");
             }
         }
 
@@ -3278,6 +3344,12 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Window dimension clamping failed.");
             }
+            if (MainForm.ClampColumnWidth(10) != 40 || MainForm.ClampColumnWidth(5000) != 1200 ||
+                !MainForm.ShouldPersistMaximized(FormWindowState.Minimized, FormWindowState.Maximized) ||
+                MainForm.ShouldPersistMaximized(FormWindowState.Minimized, FormWindowState.Normal))
+            {
+                throw new InvalidOperationException("Column-width or maximized-state persistence policy failed.");
+            }
             if (MainForm.ShouldShowRefreshDialog(true) || !MainForm.ShouldShowRefreshDialog(false))
             {
                 throw new InvalidOperationException("Automatic refresh dialog suppression policy failed.");
@@ -3285,9 +3357,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.21" || form.Text != "Better Task Manager v1.1.0-preview.21")
+                if (Application.ProductVersion != "1.1.0-preview.22" || form.Text != "Better Task Manager v1.1.0-preview.22")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.21.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.22.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -3368,16 +3440,25 @@ namespace BetterTaskManager
             try
             {
                 var store = new AppSettingsStore(settingsPath);
-                store.Save(new AppSettings { WindowWidth = 1280, WindowHeight = 720, Maximized = true, RefreshIntervalIndex = 3 });
+                store.Save(new AppSettings
+                {
+                    WindowWidth = 1280,
+                    WindowHeight = 720,
+                    Maximized = true,
+                    RefreshIntervalIndex = 3,
+                    ColumnWidths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["Network.Process"] = 222 }
+                });
                 AppSettings loaded = store.Load();
-                if (loaded.WindowWidth != 1280 || loaded.WindowHeight != 720 || !loaded.Maximized || loaded.RefreshIntervalIndex != 3)
+                int networkWidth;
+                if (loaded.WindowWidth != 1280 || loaded.WindowHeight != 720 || !loaded.Maximized || loaded.RefreshIntervalIndex != 3 ||
+                    loaded.ColumnWidths == null || !loaded.ColumnWidths.TryGetValue("Network.Process", out networkWidth) || networkWidth != 222)
                 {
                     throw new InvalidOperationException("App settings round-trip failed.");
                 }
 
                 File.WriteAllText(settingsPath, "{not valid json", Encoding.UTF8);
                 AppSettings fallback = store.Load();
-                if (fallback.WindowWidth != 1560 || fallback.WindowHeight != 900 || fallback.Maximized || fallback.RefreshIntervalIndex != 2)
+                if (fallback.WindowWidth != 1560 || fallback.WindowHeight != 900 || fallback.Maximized || fallback.RefreshIntervalIndex != 2 || fallback.ColumnWidths == null)
                 {
                     throw new InvalidOperationException("Corrupt settings did not fall back to defaults.");
                 }
