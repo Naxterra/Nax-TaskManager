@@ -1142,9 +1142,43 @@ namespace BetterTaskManager
         private void SortHistoryRows()
         {
             if (historySortColumn < 0) return;
-            IEnumerable<string[]> sorted = visibleHistoryRows.OrderBy(row => SortKey(historySortColumn < row.Length ? row[historySortColumn] : ""));
-            if (!historySortAscending) sorted = sorted.Reverse();
-            visibleHistoryRows = sorted.ToList();
+            visibleHistoryRows = SortHistoryRowsForView(visibleHistoryRows, historySortColumn, historySortAscending);
+        }
+
+        internal static List<string[]> SortHistoryRowsForView(IEnumerable<string[]> rows, int columnIndex, bool ascending)
+        {
+            var source = (rows ?? Enumerable.Empty<string[]>()).ToList();
+            IEnumerable<string[]> sorted;
+            if (columnIndex == 0)
+            {
+                sorted = source.OrderBy(row => HistoryTimestampSortValue(HistoryField(row, columnIndex)));
+            }
+            else if (columnIndex == 2 || columnIndex == 6 || columnIndex == 8)
+            {
+                sorted = source.OrderBy(row => PortSortValue(HistoryField(row, columnIndex)));
+            }
+            else
+            {
+                sorted = source.OrderBy(row => HistoryField(row, columnIndex), StringComparer.OrdinalIgnoreCase);
+            }
+            if (!ascending) sorted = sorted.Reverse();
+            return sorted.ToList();
+        }
+
+        private static string HistoryField(string[] row, int columnIndex)
+        {
+            return row != null && columnIndex >= 0 && columnIndex < row.Length ? row[columnIndex] ?? "" : "";
+        }
+
+        private static long HistoryTimestampSortValue(string value)
+        {
+            DateTime timestamp;
+            if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out timestamp) ||
+                DateTime.TryParse(value, CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal, out timestamp))
+            {
+                return timestamp.Ticks;
+            }
+            return long.MinValue;
         }
 
         private static Dictionary<string, string> LoadFirewallStatuses(IEnumerable<AppProfile> apps)
@@ -2981,6 +3015,20 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("History filtering failed.");
             }
+            var mixedHistoryPorts = new List<string[]>
+            {
+                new[] { "2026-01-03T00:00:00", "https", "3", "user", "TCP", "127.0.0.1", "5002", "10.0.0.3", "443", "Established", "C:\\https.exe" },
+                new[] { "2026-01-01T00:00:00", "udp", "1", "user", "UDP", "0.0.0.0", "5353", "*", "", "Listening", "C:\\udp.exe" },
+                new[] { "2026-01-02T00:00:00", "dns", "2", "user", "TCP", "127.0.0.1", "5001", "10.0.0.2", "53", "Established", "C:\\dns.exe" }
+            };
+            List<string[]> portsAscending = MainForm.SortHistoryRowsForView(mixedHistoryPorts, 8, true);
+            List<string[]> portsDescending = MainForm.SortHistoryRowsForView(mixedHistoryPorts, 8, false);
+            List<string[]> timestampsAscending = MainForm.SortHistoryRowsForView(mixedHistoryPorts, 0, true);
+            if (portsAscending[0][1] != "udp" || portsAscending[1][1] != "dns" || portsAscending[2][1] != "https" ||
+                portsDescending[0][1] != "https" || timestampsAscending[0][1] != "udp" || timestampsAscending[2][1] != "https")
+            {
+                throw new InvalidOperationException("Typed History sorting failed for mixed TCP/UDP ports or timestamps.");
+            }
             var filterProbe = new ProcessRow { Pid = 4242, Name = "browser", User = "TEST\\User", Path = "C:\\Apps\\browser.exe" };
             if (!MainForm.ProcessRowMatchesFilter(filterProbe, "4242") ||
                 !MainForm.ProcessRowMatchesFilter(filterProbe, "test\\user") ||
@@ -3057,9 +3105,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.15" || form.Text != "Better Task Manager v1.1.0-preview.15")
+                if (Application.ProductVersion != "1.1.0-preview.16" || form.Text != "Better Task Manager v1.1.0-preview.16")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.15.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.16.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

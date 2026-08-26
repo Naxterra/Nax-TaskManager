@@ -20,6 +20,7 @@
 - Added responsive paging through the complete filtered and sorted History cache.
 - Serialized heavy snapshot collection and suppressed stale work during rapid page navigation.
 - Replaced recurring automatic Live error dialogs with recoverable inline status.
+- Made History sorting type-safe for mixed TCP/UDP endpoint data.
 
 ## v2.0
 
