@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.51 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.52 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -18,7 +18,7 @@ The app collects live process data directly from Windows process APIs. Process c
 
 Apps, Processes, Network, and History share a synchronized per-PID identity cache. Path/user resolution state is explicit, so both successful results and access-denied empty results are reused instead of retried on each Live tick. Process start time guards against PID reuse, and full process snapshots prune exited PIDs. Apps refresh also passes its same-snapshot process rows directly into network attribution. Network search and typed sorting operate on the complete in-memory snapshot; they do not invoke the native collector and remain applied when Live monitoring replaces the snapshot.
 
-Partial native table issues propagate to Network, live History, and Apps. Apps uses an amber compact completeness message so grouped connection totals disclose missing source tables. Identity resolution is automatic; **Reload Users/Paths** replaces the synchronized cache to retry every current PID explicitly.
+Partial native table issues propagate to Network, live History, and Apps. Apps uses an amber compact completeness message so grouped connection totals disclose missing source tables. Identity resolution is automatic; manual Process **Refresh** replaces the synchronized cache to retry every current PID explicitly, while Live uses cached results.
 
 Apps refresh is staged: the serialized heavy snapshot pipeline returns process/network/group data to the UI first, then optional firewall enumeration runs separately. The late result carries requested Apps snapshot time and firewall mutation revision; either mismatch discards it. Firewall-only exceptions remain scoped to the rule detail label and cannot turn the already-rendered Apps snapshot into a failure.
 
@@ -26,9 +26,9 @@ Adapter bandwidth is sampled separately from connection ownership. Counters are 
 
 Apps, Processes, and Network resolve selected executable paths through one active-page helper. Copy uses the STA clipboard with short contention retries; Open Folder passes the resolved directory to `ProcessStartInfo` with `UseShellExecute=true`, avoiding command construction and console windows. Button availability follows each view's current selection.
 
-Process snapshots carry process start time in addition to PID. Force Kill and Trim compare this identity before confirmation/action and again inside the background operation, preventing a recycled PID from targeting a different process. Force Kill also rejects the application's own PID; zero/unavailable start times retain best-effort compatibility for protected processes.
+Process snapshots carry process start time in addition to PID. Force Kill compares this identity before confirmation/action and again inside the background operation, preventing a recycled PID from targeting a different process. It also rejects the application's own PID; zero/unavailable start times retain best-effort compatibility for protected processes.
 
-Selected Process mutations use one UI busy gate. Centralized action-state calculation combines selection, current-process protection, Process refresh, and mutation state so kill, trim, and executable-path actions cannot overlap or remain enabled against a grid being replaced. `finally` restores eligibility after each mutation.
+Selected Process mutations use one UI busy gate. Centralized action-state calculation combines selection, current-process protection, Process refresh, and mutation state so kill and executable-path actions cannot overlap or remain enabled against a grid being replaced. `finally` restores eligibility after each mutation.
 
 Bulk working-set trim enumerates processes off the UI thread, excludes PID 0 and the controlling Better Task Manager process, and categorizes protected/access-denied targets, processes that exited during enumeration, and unexpected failures separately. Its UI action is restored in `finally`, and only the active Memory snapshot is refreshed afterward.
 
@@ -44,15 +44,15 @@ The Memory page uses `GetPerformanceInfo` for system-wide physical, cache, and c
 
 System-memory list commands require `SeProfileSingleProcessPrivilege`, not merely membership in the Administrators group. Startup attempts to enable that privilege on the process token and stores the result; the two corresponding controls use this capability result rather than elevation alone. Firewall controls continue to use elevation because they execute through the Windows firewall command surface.
 
-The desktop starts unelevated. Privilege state and elevation are global navigation concerns; firewall mutation and system-level memory actions remain unavailable until the executable is restarted with `runas`.
+The desktop starts unelevated. Firewall mutation launches the same console-free executable as a narrow `runas` helper with an exact block/unblock verb and path, then reports its exit code to the still-running main window. System-level memory actions continue to require a full elevated session because their token privilege and controls are session-wide.
 
-Apps and Network firewall controls share one mutation gate and one action-state calculation. Eligibility combines elevation, selected executable path, current refresh, active mutation, and rule state where known. Commands run off the UI thread, update the shared path-keyed rule cache, and restore both pages in `finally`.
+Apps and Network firewall controls share one mutation gate and one action-state calculation. Eligibility combines selected executable path, current refresh, active mutation, and rule state where known. Commands run off the UI thread or through the waited just-in-time elevated helper, update the shared path-keyed rule cache, and restore both pages in `finally`.
 
 Non-destructive UI preferences are stored as atomic JSON under `%LOCALAPPDATA%\BetterTaskManager`. The app restores a screen-clamped window size, maximized state, refresh interval, and clamped widths for fixed/virtual data columns. The last non-minimized state preserves maximization when closing from the taskbar. Live enabled state is excluded so launching the app never begins background sampling unexpectedly.
 
 Unexpected exception reports use a path-derived named mutex across app instances. Before append, the writer rotates `crash.log` to `crash.previous.log` when the new entry would exceed 1 MiB; oversized single entries are bounded and marked. Reports include version/runtime/OS/bitness/DPI context, while logging failures remain non-fatal.
 
-Top-level navigation and dense command surfaces use autosized wrapping flow layouts. The Apps master/detail split uses percentage sizing, with cards and actions wrapping independently; data grids retain explicit column widths and horizontal scrolling. UI smoke tests shrink the form to its minimum size and assert that visible command controls remain inside their containers.
+Top-level navigation and dense command surfaces use autosized wrapping flow layouts. Each page has its own dark context menu that forwards to the same Button actions as its toolbar; grid right-click first selects the target row, and text inputs retain their normal editing menu. The Apps master/detail split uses percentage sizing, with cards and actions wrapping independently; data grids retain explicit column widths and horizontal scrolling. UI smoke tests shrink the form to its minimum size and assert that visible command controls remain inside their containers.
 
 WinForms bootstraps through generated `ApplicationConfiguration.Initialize()` with `ApplicationHighDpiMode=PerMonitorV2`, then requests native and framework dark modes before constructing forms. Runtime smoke coverage asserts the configured DPI mode so packaged builds cannot silently fall back to implicit system-aware scaling.
 

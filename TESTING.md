@@ -8,6 +8,7 @@ Use `artifacts\BetterTaskManager-latest-portable-win-x64\BetterTaskManager.exe`.
 2. Confirm no Command Prompt or PowerShell window opens with it.
 3. Switch repeatedly through Apps, Processes, Network, History, and Memory while pressing **Refresh** where available.
 4. Type and clear filters while a page is populated. The window should remain movable and responsive; Live failures should appear inline rather than as recurring dialogs.
+5. Right-click a non-editing area or data table on every page. Confirm the menu mirrors that page's own actions, right-clicking a grid row selects that row, and search boxes retain their normal editing menu.
 
 For an automated non-destructive repetition of the same refresh paths, close the interactive window and run:
 
@@ -31,6 +32,7 @@ An exit code of `0` means three complete cross-page rounds stayed within the per
 3. Choose **View Processes**. Confirm the visible PID count matches the Apps group.
 4. Sum the visible per-PID **Private Bytes MB** and **Working Set MB** values. They should match the grouped cards to displayed precision when both views use the same snapshot.
 5. Remember that Working Set includes shared pages, so summed process working sets are not a system-wide unique-page total.
+6. On Processes, confirm **Peak Working Set MB** is fully visible and the toolbar contains one **Refresh** button with no separate Reload or per-process Trim action. Manual Refresh should retry usernames/paths as well as values.
 
 ## Dark theme and alignment
 
@@ -47,6 +49,12 @@ An exit code of `0` means three complete cross-page rounds stayed within the per
 2. Choose **Restart as Admin** and approve the Windows elevation prompt yourself.
 3. Confirm the header distinguishes **memory privilege ready** from **memory privilege unavailable**. The two system-memory buttons should be enabled only in the ready state.
 4. It is not necessary to execute either cleanup action to validate capability detection.
+
+## Firewall wording and elevation
+
+1. In Standard mode, select a Network row with an executable path and confirm **Block App** is enabled.
+2. **Not blocked by BTM** means only that no Better Task Manager outbound block rule exists; another Windows Firewall policy may still block the executable.
+3. Clicking Block/Unblock requests Windows administrator approval without restarting the main window. Cancel the UAC prompt if you do not intend to modify the firewall.
 
 ## Working-set Trim reporting
 

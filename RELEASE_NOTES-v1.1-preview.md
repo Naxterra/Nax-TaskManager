@@ -9,6 +9,8 @@ This preview is a substantial update to the checked-in v1.0 release. It remains 
 - Grouped Apps and per-PID Processes use explicit same-snapshot CPU, Private Bytes, and Working Set semantics with reconciliation counts and unavailable-CPU sampling states.
 - Native IPv4/IPv6 TCP/UDP collection replaces localized `netstat` parsing and preserves healthy table results when one address-family/protocol source fails.
 - Cached filtering and typed sorting avoid recollection on every search keystroke; filtered/sorted model exports are available for Apps, Processes, Network, and History.
+- Process manual Refresh now includes username/path rebuilding, Peak Working Set is fully visible, and per-process Trim is removed in favor of the Memory-page action.
+- Page-specific right-click menus mirror each section's own actions and select the clicked grid row before exposing target-sensitive operations.
 - History records new or changed connections with one-second sampling granularity, duplicate suppression, 30-day retention, 2,000-row view caching, responsive 100-row paging, cross-process file locking, filtered export, and confirmed clearing.
 - A persisted **Record history** checkbox stops future disk writes while keeping existing history available for viewing and export.
 - Every successful local publish updates a stable `BetterTaskManager-latest-portable-win-x64` folder and ZIP, avoiding stale numbered-preview launches.
@@ -39,8 +41,8 @@ The checked-in `release-assets\BetterTaskManager-v1.0-win-x64.zip` remains uncha
 
 ## Safety and Privacy
 
-- The app starts unelevated and enables privileged controls only after an explicit **Restart as Admin**.
-- Better Task Manager firewall labels describe only rules created by this app; **No BTM Block** does not claim that other firewall policies allow traffic.
+- The app starts unelevated. Firewall actions request just-in-time administrator approval while system-memory controls still use **Restart as Admin**.
+- Better Task Manager firewall labels describe only rules created by this app; **Not blocked by BTM** means no BTM outbound block rule exists and does not claim that other firewall policies allow traffic.
 - History, exports, and crash logs can contain usernames, executable paths, private IP addresses, and remote endpoints. Review them before sharing.
 - The packaged SHA-256 manifest verifies executable integrity against the package; it is not a code-signing certificate.
 

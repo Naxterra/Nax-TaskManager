@@ -1,22 +1,22 @@
 # Security and Privacy
 
-Better Task Manager is a Windows administration utility. It starts unelevated (`asInvoker`) and displays **Standard mode** until the user explicitly chooses **Restart as Admin**. Privileged controls remain disabled when elevation is unavailable.
+Better Task Manager is a Windows administration utility. It starts unelevated (`asInvoker`) and displays **Standard mode** until the user explicitly chooses **Restart as Admin**. Session-wide system-memory controls remain disabled without elevation; firewall buttons request narrow just-in-time approval when invoked.
 
 ## Privileged and Destructive Actions
 
 The app asks for confirmation before high-impact actions and may:
 
 - Force-kill a selected process and its child processes.
-- Trim selected or accessible process working sets.
+- Trim accessible process working sets from the Memory page.
 - Request Windows standby-cache or system working-set cleanup.
 - Add or remove a Better Task Manager outbound Windows Firewall rule for a selected executable path.
 - Permanently clear saved connection history.
 
-Force Kill and selected Trim validate PID plus process start time before acting. Better Task Manager refuses to force-kill itself, and bulk trim excludes its own process. Memory and firewall mutations use non-overlapping busy gates.
+Force Kill validates PID plus process start time before acting. Better Task Manager refuses to force-kill itself, and bulk trim excludes its own process. Memory and firewall mutations use non-overlapping busy gates.
 
 The standby-list and system-working-set commands additionally require `SeProfileSingleProcessPrivilege`. Better Task Manager attempts to enable and verify it on the process token; if Windows policy does not assign it, those two controls remain disabled even in an elevated administrator session and the UI reports the distinction.
 
-Firewall status describes only rules created by Better Task Manager. **No BTM Block** does not claim that another Windows Firewall policy allows traffic. Created rules apply outbound on all profiles for the selected executable path.
+Firewall status describes only rules created by Better Task Manager. **Not blocked by BTM** means this app has no BTM outbound block rule; it does not claim that another Windows Firewall policy allows traffic. Created rules apply outbound on all profiles for the selected executable path. In Standard mode, a confirmed firewall action starts a narrow console-free helper through Windows UAC; the helper accepts only one block/unblock verb and executable path, verifies that its token is elevated, runs the command, and exits.
 
 ## Local Data
 

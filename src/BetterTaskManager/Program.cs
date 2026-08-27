@@ -391,7 +391,7 @@ namespace BetterTaskManager
     {
         private const int HistoryDisplayLimit = 100;
         private const string FirewallStatusBlocked = "BTM Blocked";
-        private const string FirewallStatusNoBlock = "No BTM Block";
+        private const string FirewallStatusNoBlock = "Not blocked by BTM";
 
         private static class Theme
         {
@@ -435,8 +435,6 @@ namespace BetterTaskManager
         private readonly DataGridView networkGrid;
         private readonly Button refreshButton;
         private readonly Button killButton;
-        private readonly Button trimSelectedButton;
-        private readonly Button loadDetailsButton;
         private readonly Button processOpenFolderButton;
         private readonly Button processCopyPathButton;
         private readonly CheckBox liveMonitoringCheck;
@@ -510,10 +508,10 @@ namespace BetterTaskManager
         private DateTime latestNetworkSnapshot = DateTime.MinValue;
         private Dictionary<int, ProcessDetails> detailsCache = new Dictionary<int, ProcessDetails>();
         private readonly object detailsCacheSync = new object();
-        private bool detailsReloaded = false;
         private bool refreshingApps = false;
         private bool firewallActionInProgress = false;
         private bool refreshingProcesses = false;
+        private bool refreshingProcessDetails = false;
         private bool processActionInProgress = false;
         private bool refreshingNetwork = false;
         private bool updatingAppGrid = false;
@@ -532,6 +530,7 @@ namespace BetterTaskManager
         private readonly NativeCpuCollector systemCpuCollector = new NativeCpuCollector();
         private readonly NetworkBandwidthSampler bandwidthSampler = new NetworkBandwidthSampler();
         private readonly ToolTip shortcutToolTip;
+        private readonly List<ContextMenuStrip> sectionContextMenus = new List<ContextMenuStrip>();
         private FormWindowState lastNonMinimizedWindowState = FormWindowState.Normal;
 
         public MainForm(bool skipInitialRefresh = false, string historyPath = null, string settingsPath = null)
@@ -663,7 +662,8 @@ namespace BetterTaskManager
                 Tuple.Create("Path", "Path")
             });
             appGrid.Columns["App"].Width = 145;
-            appGrid.Columns["Firewall"].Width = 105;
+            appGrid.Columns["Firewall"].Width = 150;
+            appGrid.Columns["Firewall"].MinimumWidth = 150;
             appGrid.Columns["Processes"].Width = 45;
             appGrid.Columns["Connections"].Width = 45;
             appGrid.Columns["Cpu"].Width = 65;
@@ -756,8 +756,6 @@ namespace BetterTaskManager
             processToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(8, 6, 8, 4) };
             refreshButton = MakeButton("Refresh", 90);
             killButton = MakeButton("Force Kill", 100);
-            trimSelectedButton = MakeButton("Trim Selected Memory", 160);
-            loadDetailsButton = MakeButton("Reload Users/Paths", 145);
             processOpenFolderButton = MakeButton("Open Folder", 105);
             processCopyPathButton = MakeButton("Copy Path", 90);
             var exportProcessesButton = MakeButton("Export CSV", 100);
@@ -770,7 +768,7 @@ namespace BetterTaskManager
                 Margin = new Padding(16, 9, 4, 0),
                 ForeColor = isAdmin ? Theme.Good : Theme.Danger
             };
-            processToolbar.Controls.AddRange(new Control[] { refreshButton, killButton, trimSelectedButton, loadDetailsButton, exportProcessesButton, processOpenFolderButton, processCopyPathButton, filterLabel, filterBox, statusLabel });
+            processToolbar.Controls.AddRange(new Control[] { refreshButton, killButton, exportProcessesButton, processOpenFolderButton, processCopyPathButton, filterLabel, filterBox, statusLabel });
             processPanel.Controls.Add(processToolbar, 0, 0);
 
             processSummaryLabel = new Label
@@ -802,7 +800,8 @@ namespace BetterTaskManager
             processGrid.Columns["CPU"].ToolTipText = "Normalized CPU becomes available after a second snapshot for the same process instance.";
             processGrid.Columns["PrivateMB"].Width = 130;
             processGrid.Columns["WorkingSetMB"].Width = 150;
-            processGrid.Columns["PeakWorkingSetMB"].Width = 120;
+            processGrid.Columns["PeakWorkingSetMB"].Width = 175;
+            processGrid.Columns["PeakWorkingSetMB"].MinimumWidth = 175;
             processGrid.Columns["Threads"].Width = 80;
             processGrid.Columns["Path"].Width = 520;
             LockGridColumns(processGrid);
@@ -875,7 +874,7 @@ namespace BetterTaskManager
             historyPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             historyTab.Controls.Add(historyPanel);
             historyToolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(8, 6, 8, 4) };
-            reloadHistoryButton = MakeButton("Reload History", 120);
+            reloadHistoryButton = MakeButton("Refresh", 100);
             var exportHistoryButton = MakeButton("Export CSV", 100);
             clearHistoryButton = MakeButton("Clear History", 105);
             historyPreviousButton = MakeButton("Previous", 80);
@@ -974,6 +973,12 @@ namespace BetterTaskManager
             memoryPanel.Controls.Add(memoryStatusLabel);
             memoryTab.Resize += (s, e) => UpdateMemoryTrendWidth();
 
+            ConfigureSectionContextMenus(
+                exportAppsButton,
+                exportProcessesButton,
+                exportNetworkButton,
+                exportHistoryButton);
+
             shortcutToolTip.SetToolTip(liveMonitoringCheck, "Toggle Live monitoring (Ctrl+L)");
             shortcutToolTip.SetToolTip(appsNavButton, "Open Apps (Ctrl+1)");
             shortcutToolTip.SetToolTip(processesNavButton, "Open Processes (Ctrl+2)");
@@ -989,9 +994,15 @@ namespace BetterTaskManager
             shortcutToolTip.SetToolTip(emptySystemButton, hasSystemMemoryPrivilege
                 ? "Empty system working sets for troubleshooting."
                 : SystemMemoryPrivilegeUnavailableText());
+            string firewallActionTip = isAdmin
+                ? "Modify Better Task Manager's outbound block rule for the selected executable."
+                : "Modify Better Task Manager's outbound block rule; Windows will request administrator approval.";
+            foreach (Button button in new[] { appBlockButton, appUnblockButton, blockButton, unblockButton })
+            {
+                shortcutToolTip.SetToolTip(button, firewallActionTip);
+            }
             shortcutToolTip.SetToolTip(historyPreviousButton, "Previous History page (Page Up)");
             shortcutToolTip.SetToolTip(historyNextButton, "Next History page (Page Down)");
-            shortcutToolTip.SetToolTip(loadDetailsButton, "Clear and rebuild the cached process usernames and executable paths");
             shortcutToolTip.SetToolTip(appSearchBox, "Focus search (Ctrl+F); clear search (Escape)");
             shortcutToolTip.SetToolTip(filterBox, "Focus search (Ctrl+F); clear search (Escape)");
             shortcutToolTip.SetToolTip(networkFilterBox, "Focus search (Ctrl+F); clear search (Escape)");
@@ -1023,8 +1034,7 @@ namespace BetterTaskManager
             appOpenFolderButton.Click += (s, e) => OpenSelectedExecutableFolder();
             appCopyPathButton.Click += async (s, e) => await CopySelectedExecutablePathAsync();
 
-            refreshButton.Click += async (s, e) => await RefreshProcessesAsync();
-            loadDetailsButton.Click += async (s, e) => await LoadDetailsAndRefreshAsync();
+            refreshButton.Click += async (s, e) => await RefreshProcessesManuallyAsync();
             filterBox.TextChanged += (s, e) =>
             {
                 if (settingProcessFilter) return;
@@ -1032,7 +1042,6 @@ namespace BetterTaskManager
                 FillProcessGridFromCache();
             };
             killButton.Click += async (s, e) => await KillSelectedAsync();
-            trimSelectedButton.Click += async (s, e) => await TrimSelectedAsync();
             exportProcessesButton.Click += async (s, e) => await ExportProcessesAsync();
             restartAdminButton.Click += (s, e) => RestartAsAdmin();
             processGrid.SelectionChanged += (s, e) => UpdateExecutablePathActions();
@@ -1104,7 +1113,11 @@ namespace BetterTaskManager
                 if (!skipInitialRefresh) await RefreshAppsAsync(true);
             };
             FormClosing += (s, e) => SaveAppSettings();
-            FormClosed += (s, e) => shortcutToolTip.Dispose();
+            FormClosed += (s, e) =>
+            {
+                shortcutToolTip.Dispose();
+                foreach (ContextMenuStrip menu in sectionContextMenus) menu.Dispose();
+            };
             Resize += (s, e) =>
             {
                 if (WindowState != FormWindowState.Minimized) lastNonMinimizedWindowState = WindowState;
@@ -1130,6 +1143,95 @@ namespace BetterTaskManager
             trimAllButton.Enabled = !memoryMaintenanceInProgress;
             clearStandbyButton.Enabled = hasSystemMemoryPrivilege && !memoryMaintenanceInProgress;
             emptySystemButton.Enabled = hasSystemMemoryPrivilege && !memoryMaintenanceInProgress;
+        }
+
+        private void ConfigureSectionContextMenus(Button exportAppsButton, Button exportProcessesButton,
+            Button exportNetworkButton, Button exportHistoryButton)
+        {
+            ContextMenuStrip appsMenu = CreateSectionActionMenu(appRefreshButton, exportAppsButton, appBlockButton,
+                appUnblockButton, appViewProcessesButton, appOpenFolderButton, appCopyPathButton);
+            AssignSectionContextMenu(appsMenu, appsTab, appGrid, appConnectionsGrid, appMetricCards, appActions);
+
+            ContextMenuStrip processesMenu = CreateSectionActionMenu(refreshButton, killButton, exportProcessesButton,
+                processOpenFolderButton, processCopyPathButton);
+            AssignSectionContextMenu(processesMenu, processTab, processGrid, processToolbar, processSummaryLabel);
+
+            ContextMenuStrip networkMenu = CreateSectionActionMenu(networkRefreshButton, blockButton, unblockButton,
+                exportNetworkButton, networkOpenFolderButton, networkCopyPathButton);
+            AssignSectionContextMenu(networkMenu, networkTab, networkGrid, networkToolbar, networkStatusLabel, bandwidthLabel);
+
+            ContextMenuStrip historyMenu = CreateSectionActionMenu(reloadHistoryButton, exportHistoryButton, clearHistoryButton,
+                historyPreviousButton, historyNextButton);
+            var recordHistoryItem = new ToolStripMenuItem("Record history")
+            {
+                CheckOnClick = false,
+                BackColor = Theme.SurfaceRaised,
+                ForeColor = Theme.Text
+            };
+            recordHistoryItem.Click += (s, e) => historyRecordingCheck.Checked = !historyRecordingCheck.Checked;
+            historyMenu.Items.Add(new ToolStripSeparator());
+            historyMenu.Items.Add(recordHistoryItem);
+            historyMenu.Opening += (s, e) =>
+            {
+                recordHistoryItem.Checked = historyRecordingCheck.Checked;
+                recordHistoryItem.Enabled = historyRecordingCheck.Enabled;
+            };
+            AssignSectionContextMenu(historyMenu, historyTab, historyList, historyToolbar, historyNoteLabel);
+
+            ContextMenuStrip memoryMenu = CreateSectionActionMenu(memoryRefreshButton, trimAllButton, clearStandbyButton, emptySystemButton);
+            AssignSectionContextMenu(memoryMenu, memoryTab, memoryPanel, memoryTrendPanel, memoryCpuTrend, memoryLoadTrend);
+
+            foreach (DataGridView grid in new[] { appGrid, appConnectionsGrid, processGrid, networkGrid })
+            {
+                grid.CellMouseDown += SelectRightClickedGridRow;
+            }
+        }
+
+        private ContextMenuStrip CreateSectionActionMenu(params Button[] buttons)
+        {
+            var menu = new ContextMenuStrip
+            {
+                BackColor = Theme.SurfaceRaised,
+                ForeColor = Theme.Text,
+                ShowImageMargin = false
+            };
+            foreach (Button button in buttons.Where(button => button != null))
+            {
+                var item = new ToolStripMenuItem(button.Text)
+                {
+                    Tag = button,
+                    BackColor = Theme.SurfaceRaised,
+                    ForeColor = Theme.Text
+                };
+                item.Click += (s, e) => ((Button)((ToolStripMenuItem)s).Tag).PerformClick();
+                menu.Items.Add(item);
+            }
+            menu.Opening += (s, e) =>
+            {
+                foreach (ToolStripMenuItem item in menu.Items.OfType<ToolStripMenuItem>())
+                {
+                    Button source = item.Tag as Button;
+                    if (source != null) item.Enabled = source.Enabled && source.Visible;
+                }
+            };
+            sectionContextMenus.Add(menu);
+            return menu;
+        }
+
+        private static void AssignSectionContextMenu(ContextMenuStrip menu, params Control[] controls)
+        {
+            foreach (Control control in controls.Where(control => control != null)) control.ContextMenuStrip = menu;
+        }
+
+        private static void SelectRightClickedGridRow(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right || e.RowIndex < 0) return;
+            var grid = sender as DataGridView;
+            if (grid == null) return;
+            grid.ClearSelection();
+            grid.Rows[e.RowIndex].Selected = true;
+            int columnIndex = e.ColumnIndex >= 0 ? e.ColumnIndex : 0;
+            if (columnIndex < grid.Columns.Count) grid.CurrentCell = grid.Rows[e.RowIndex].Cells[columnIndex];
         }
 
         private void UpdateMemoryTrendWidth()
@@ -1229,7 +1331,7 @@ namespace BetterTaskManager
         private async Task RefreshCurrentPageManuallyAsync()
         {
             if (activePage == appsTab) await RefreshAppsAsync(true);
-            else if (activePage == processTab) await RefreshProcessesAsync();
+            else if (activePage == processTab) await RefreshProcessesManuallyAsync();
             else if (activePage == networkTab) await RefreshNetworkAsync();
             else if (activePage == historyTab) await LoadHistoryGridAsync();
             else if (activePage == memoryTab) RefreshMemoryPage();
@@ -1283,7 +1385,10 @@ namespace BetterTaskManager
             foreach (DataGridViewColumn column in grid.Columns)
             {
                 int width;
-                if (widths.TryGetValue(prefix + "." + column.Name, out width)) column.Width = ClampColumnWidth(width);
+                if (widths.TryGetValue(prefix + "." + column.Name, out width))
+                {
+                    column.Width = Math.Max(column.MinimumWidth, ClampColumnWidth(width));
+                }
             }
         }
 
@@ -2124,35 +2229,11 @@ namespace BetterTaskManager
                 return;
             }
 
-            if (!isAdmin)
-            {
-                MessageBox.Show(this, "Run as administrator to modify firewall rules.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            string rule = RuleNameForPath(path);
             if (block && MessageBox.Show(this, "Block outbound network access for:\n" + path, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             if (!BeginFirewallAction()) return;
             try
             {
-                if (block)
-                {
-                    var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule, "dir=out", "program=" + path, "action=block", "profile=any"));
-                    if (!result.Succeeded)
-                    {
-                        ShowCommandFailure("Blocking outbound network access", result);
-                        return;
-                    }
-                }
-                else
-                {
-                    var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule));
-                    if (!result.Succeeded)
-                    {
-                        ShowCommandFailure("Removing the firewall rule", result);
-                        return;
-                    }
-                }
+                if (!await TryApplyFirewallRuleAsync(path, block)) return;
 
                 firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
                 firewallStateRevision++;
@@ -2245,7 +2326,7 @@ namespace BetterTaskManager
             grid.RowsDefaultCellStyle.ForeColor = Theme.Text;
         }
 
-        private async Task RefreshProcessesAsync(bool automatic = false)
+        private async Task RefreshProcessesAsync(bool automatic = false, bool identitiesRebuilt = false)
         {
             if (refreshingProcesses) return;
             refreshingProcesses = true;
@@ -2265,8 +2346,8 @@ namespace BetterTaskManager
                 processPidScope = null;
                 FillProcessGridFromCache();
                 statusLabel.Text = SnapshotLabel(latestProcessSnapshot) + "    " + (isAdmin
-                    ? (detailsReloaded ? "Running as administrator - identity cache manually reloaded" : "Running as administrator")
-                    : "Not administrator: some actions may fail");
+                    ? (identitiesRebuilt ? "Running as administrator - identities refreshed" : "Running as administrator")
+                    : (identitiesRebuilt ? "Standard mode - identities refreshed where accessible" : "Standard mode: protected identities may be unavailable"));
                 statusLabel.ForeColor = isAdmin ? Theme.Good : Theme.Danger;
                 MarkLiveRefreshSuccess();
             }
@@ -2467,30 +2548,34 @@ namespace BetterTaskManager
                 "    Working-set sums can overlap shared pages.";
         }
 
-        private async Task LoadDetailsAndRefreshAsync()
+        private async Task RefreshProcessesManuallyAsync()
         {
-            if (refreshingProcesses) return;
-            loadDetailsButton.Enabled = false;
-            statusLabel.Text = "Rebuilding username and executable-path cache...";
+            if (refreshingProcesses || refreshingProcessDetails) return;
+            refreshingProcessDetails = true;
+            refreshButton.Enabled = false;
+            UpdateExecutablePathActions();
+            statusLabel.Text = "Refreshing processes, usernames, and executable paths...";
             statusLabel.ForeColor = Theme.Warning;
             try
             {
                 Dictionary<int, ProcessDetails> loadedDetails = await RunSnapshotCollectionAsync(processTab, () => LoadProcessDetails());
                 if (loadedDetails == null) return;
                 lock (detailsCacheSync) detailsCache = loadedDetails;
-                detailsReloaded = true;
-                await RefreshProcessesAsync();
             }
             catch (Exception ex)
             {
-                statusLabel.Text = "Details lookup failed";
+                statusLabel.Text = "Process identity refresh failed";
                 statusLabel.ForeColor = Theme.Danger;
-                MessageBox.Show(this, ex.Message, "Details lookup failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, ex.Message, "Process refresh failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
             finally
             {
-                loadDetailsButton.Enabled = true;
+                refreshingProcessDetails = false;
+                refreshButton.Enabled = true;
+                UpdateExecutablePathActions();
             }
+            await RefreshProcessesAsync(false, true);
         }
 
         private Dictionary<int, ProcessDetails> LoadProcessDetails()
@@ -2793,47 +2878,6 @@ namespace BetterTaskManager
             }
         }
 
-        private async Task TrimSelectedAsync()
-        {
-            ProcessRow selected = SelectedProcessRow();
-            if (selected == null)
-            {
-                MessageBox.Show(this, "Select a process first.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            if (!SelectedProcessInstanceIsCurrent(selected)) return;
-            if (!BeginProcessAction()) return;
-            try
-            {
-                await Task.Run(() =>
-                {
-                    using (var process = Process.GetProcessById(selected.Pid))
-                    {
-                        long currentStartTime = SafeProcessStartTimeUtcTicks(process);
-                        if (!ProcessStartTimesMatch(selected.ProcessStartTimeUtcTicks, currentStartTime))
-                        {
-                            throw new InvalidOperationException("The PID now belongs to a different process. Refresh and select it again.");
-                        }
-                        if (!NativeMethods.EmptyWorkingSet(process.Handle))
-                        {
-                            int error = Marshal.GetLastWin32Error();
-                            throw new System.ComponentModel.Win32Exception(error,
-                                "Windows did not trim this process working set (error " + error.ToString(CultureInfo.InvariantCulture) + ").");
-                        }
-                    }
-                });
-                await RefreshProcessesAsync();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, "Trimming PID " + selected.Pid + " failed.\n\n" + ex.Message, "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-            finally
-            {
-                EndProcessAction();
-            }
-        }
-
         private async Task TrimAllAsync()
         {
             if (MessageBox.Show(this, "Trim memory for all accessible apps? Better Task Manager itself is excluded.\n\nThis can reduce visible RAM use, but apps may reload data afterward.", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
@@ -3032,12 +3076,6 @@ namespace BetterTaskManager
 
         private async Task BlockSelectedAsync(bool block)
         {
-            if (!isAdmin)
-            {
-                MessageBox.Show(this, "Run as administrator to modify firewall rules.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
             string path = SelectedNetworkPath();
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -3045,39 +3083,89 @@ namespace BetterTaskManager
                 return;
             }
 
-            string rule = RuleNameForPath(path);
             if (block && MessageBox.Show(this, "Block outbound network access for:\n" + path, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             if (!BeginFirewallAction()) return;
             try
             {
-                if (block)
-                {
-                    var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule, "dir=out", "program=" + path, "action=block", "profile=any"));
-                    if (!result.Succeeded)
-                    {
-                        ShowCommandFailure("Blocking outbound network access", result);
-                        return;
-                    }
-                    MessageBox.Show(this, "Blocked outbound network access for this app.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    var result = await Task.Run(() => CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule));
-                    if (!result.Succeeded)
-                    {
-                        ShowCommandFailure("Removing the firewall rule", result);
-                        return;
-                    }
-                    MessageBox.Show(this, "Removed this app's Better Task Manager block rule.", "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                if (!await TryApplyFirewallRuleAsync(path, block)) return;
 
                 firewallStatusCache[path] = block ? FirewallStatusBlocked : FirewallStatusNoBlock;
                 firewallStateRevision++;
+                MessageBox.Show(this, block
+                    ? "Blocked outbound network access for this app."
+                    : "Removed this app's Better Task Manager block rule.",
+                    "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             finally
             {
                 EndFirewallAction();
             }
+        }
+
+        private async Task<bool> TryApplyFirewallRuleAsync(string path, bool block)
+        {
+            CommandResult result;
+            if (isAdmin)
+            {
+                result = await Task.Run(() => RunFirewallRuleCommand(path, block));
+            }
+            else
+            {
+                try
+                {
+                    result = await RunElevatedFirewallRuleCommandAsync(path, block);
+                }
+                catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+                {
+                    MessageBox.Show(this, "Administrator approval was cancelled. The firewall was not changed.",
+                        "Better Task Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return false;
+                }
+            }
+
+            if (result.Succeeded) return true;
+            ShowCommandFailure(block ? "Blocking outbound network access" : "Removing the firewall rule", result);
+            return false;
+        }
+
+        private static async Task<CommandResult> RunElevatedFirewallRuleCommandAsync(string path, bool block)
+        {
+            ProcessStartInfo startInfo = CreateFirewallHelperStartInfo(path, block);
+
+            Process process = Process.Start(startInfo);
+            if (process == null) return new CommandResult(-1, "", "Windows did not start the elevated firewall helper.", false);
+            using (process)
+            {
+                int exitCode = await Task.Run(() =>
+                {
+                    process.WaitForExit();
+                    return process.ExitCode;
+                });
+                return new CommandResult(exitCode, "", exitCode == 0 ? "" : "The elevated firewall helper returned exit code " + exitCode.ToString(CultureInfo.InvariantCulture) + ".", false);
+            }
+        }
+
+        internal static ProcessStartInfo CreateFirewallHelperStartInfo(string path, bool block)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = Application.ExecutablePath,
+                Verb = "runas",
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            startInfo.ArgumentList.Add(block ? "--firewall-block" : "--firewall-unblock");
+            startInfo.ArgumentList.Add(path ?? "");
+            return startInfo;
+        }
+
+        internal static CommandResult RunFirewallRuleCommand(string path, bool block)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return new CommandResult(87, "", "The executable path is empty.", false);
+            string rule = RuleNameForPath(path);
+            return block
+                ? CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule, "dir=out", "program=" + path, "action=block", "profile=any")
+                : CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule);
         }
 
         private async Task ShowHistoryAsync()
@@ -3284,6 +3372,29 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("WinForms did not start in PerMonitorV2 high-DPI mode.");
             }
+            string[] appContextActions = appGrid.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
+            string[] processContextActions = processGrid.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
+            string[] networkContextActions = networkGrid.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
+            string[] historyContextActions = historyList.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
+            string[] memoryContextActions = memoryPanel.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
+            if (sectionContextMenus.Count != 5 ||
+                !appContextActions.SequenceEqual(new[] { "Refresh Apps", "Export CSV", "Block App", "Unblock App", "View Processes", "Open Folder", "Copy Path" }) ||
+                !processContextActions.SequenceEqual(new[] { "Refresh", "Force Kill", "Export CSV", "Open Folder", "Copy Path" }) ||
+                !networkContextActions.SequenceEqual(new[] { "Refresh", "Block App", "Unblock App", "Export CSV", "Open Folder", "Copy Path" }) ||
+                !historyContextActions.SequenceEqual(new[] { "Refresh", "Export CSV", "Clear History", "Previous", "Next", "Record history" }) ||
+                !memoryContextActions.SequenceEqual(new[] { "Refresh", "Trim App Memory", "Clear Standby Cache", "Release System Cache" }) ||
+                appGrid.ContextMenuStrip == processGrid.ContextMenuStrip || processGrid.ContextMenuStrip == networkGrid.ContextMenuStrip ||
+                appSearchBox.ContextMenuStrip != null)
+            {
+                throw new InvalidOperationException("Page-specific right-click action menus were not configured correctly.");
+            }
+            if (processGrid.Columns["PeakWorkingSetMB"].Width < 175 || processGrid.Columns["PeakWorkingSetMB"].MinimumWidth < 175 ||
+                appGrid.Columns["Firewall"].Width < 150 || appGrid.Columns["Firewall"].MinimumWidth < 150 ||
+                processToolbar.Controls.OfType<Button>().Any(button => button.Text.IndexOf("Trim", StringComparison.OrdinalIgnoreCase) >= 0 || button.Text.IndexOf("Reload", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                processToolbar.Controls.OfType<Button>().Count(button => button.Text == "Refresh") != 1)
+            {
+                throw new InvalidOperationException("Process toolbar consolidation or Peak Working Set visibility regressed.");
+            }
             await ShowHistoryAsync();
             if (historyList.VirtualListSize != Math.Min(latestHistoryRows.Count, HistoryDisplayLimit))
             {
@@ -3405,13 +3516,13 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Process executable path actions did not follow selection state.");
             }
-            if (!killButton.Enabled || !trimSelectedButton.Enabled || !BeginProcessAction() || killButton.Enabled || trimSelectedButton.Enabled ||
+            if (!killButton.Enabled || !BeginProcessAction() || killButton.Enabled ||
                 processCopyPathButton.Enabled || processOpenFolderButton.Enabled || BeginProcessAction())
             {
                 throw new InvalidOperationException("Process mutation gate did not enter a single busy state.");
             }
             EndProcessAction();
-            if (!killButton.Enabled || !trimSelectedButton.Enabled || !processCopyPathButton.Enabled || !processOpenFolderButton.Enabled)
+            if (!killButton.Enabled || !processCopyPathButton.Enabled || !processOpenFolderButton.Enabled)
             {
                 throw new InvalidOperationException("Process actions did not recover after leaving the busy state.");
             }
@@ -3503,15 +3614,15 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Apps did not disclose partial native network data.");
             }
-            if (appBlockButton.Enabled != isAdmin || appUnblockButton.Enabled || !BeginFirewallAction() || appBlockButton.Enabled || appUnblockButton.Enabled ||
+            if (!appBlockButton.Enabled || appUnblockButton.Enabled || !BeginFirewallAction() || appBlockButton.Enabled || appUnblockButton.Enabled ||
                 blockButton.Enabled || unblockButton.Enabled || BeginFirewallAction())
             {
                 throw new InvalidOperationException("Firewall mutation gate did not enter a single cross-view busy state.");
             }
             EndFirewallAction();
-            if (appBlockButton.Enabled != isAdmin || appUnblockButton.Enabled || blockButton.Enabled != isAdmin || unblockButton.Enabled != isAdmin)
+            if (!appBlockButton.Enabled || appUnblockButton.Enabled || !blockButton.Enabled || !unblockButton.Enabled)
             {
-                throw new InvalidOperationException("Firewall action controls did not recover to selection and privilege state.");
+                throw new InvalidOperationException("Firewall action controls did not recover for standard-user just-in-time elevation.");
             }
             gridSortState[appGrid] = Tuple.Create("Cpu", false);
             FillAppGridFromCache();
@@ -3560,6 +3671,12 @@ namespace BetterTaskManager
             if (memoryLoadTrend.SampleCount != 2)
             {
                 throw new InvalidOperationException("Memory navigation did not append the next RAM trend sample.");
+            }
+            ((ToolStripMenuItem)memoryPanel.ContextMenuStrip.Items[0]).PerformClick();
+            await Task.Yield();
+            if (activePage != memoryTab || memoryLoadTrend.SampleCount != 3)
+            {
+                throw new InvalidOperationException("Memory right-click Refresh did not forward to the section action.");
             }
             int historyCountBeforeOptOut = historyStore.LoadRecent(2000).Count;
             historyRecordingCheck.Checked = false;
@@ -3816,9 +3933,8 @@ namespace BetterTaskManager
         {
             ProcessRow selectedProcess = SelectedProcessRow();
             string processPath = SelectedGridPath(processGrid);
-            bool processActionsAvailable = !refreshingProcesses && !processActionInProgress && selectedProcess != null;
+            bool processActionsAvailable = !refreshingProcesses && !refreshingProcessDetails && !processActionInProgress && selectedProcess != null;
             killButton.Enabled = processActionsAvailable && CanForceKillProcess(selectedProcess == null ? 0 : selectedProcess.Pid, Environment.ProcessId);
-            trimSelectedButton.Enabled = processActionsAvailable;
             processCopyPathButton.Enabled = processActionsAvailable && !string.IsNullOrWhiteSpace(processPath);
             processOpenFolderButton.Enabled = processActionsAvailable && !string.IsNullOrWhiteSpace(ExecutableDirectory(processPath));
 
@@ -3832,12 +3948,12 @@ namespace BetterTaskManager
             AppProfile app = SelectedAppProfile();
             string appPath = app == null ? "" : app.Path ?? "";
             string appStatus = GetFirewallStatus(appPath);
-            bool appEligible = isAdmin && !firewallActionInProgress && !refreshingApps && !string.IsNullOrWhiteSpace(appPath);
+            bool appEligible = !firewallActionInProgress && !refreshingApps && !string.IsNullOrWhiteSpace(appPath);
             appBlockButton.Enabled = appEligible && appStatus != FirewallStatusBlocked;
             appUnblockButton.Enabled = appEligible && appStatus == FirewallStatusBlocked;
 
             string networkPath = SelectedGridPath(networkGrid);
-            bool networkEligible = isAdmin && !firewallActionInProgress && !refreshingNetwork && !string.IsNullOrWhiteSpace(networkPath);
+            bool networkEligible = !firewallActionInProgress && !refreshingNetwork && !string.IsNullOrWhiteSpace(networkPath);
             blockButton.Enabled = networkEligible;
             unblockButton.Enabled = networkEligible;
         }
@@ -3858,7 +3974,7 @@ namespace BetterTaskManager
 
         private bool BeginProcessAction()
         {
-            if (processActionInProgress || refreshingProcesses) return false;
+            if (processActionInProgress || refreshingProcesses || refreshingProcessDetails) return false;
             processActionInProgress = true;
             UpdateExecutablePathActions();
             return true;
@@ -4277,7 +4393,7 @@ namespace BetterTaskManager
             return state;
         }
 
-        private static string RuleNameForPath(string path)
+        internal static string RuleNameForPath(string path)
         {
             using (var sha = SHA1.Create())
             {
@@ -4341,6 +4457,15 @@ namespace BetterTaskManager
         [STAThread]
         public static void Main(string[] args)
         {
+            bool firewallHelperRequested = args != null && args.Any(argument =>
+                string.Equals(argument, "--firewall-block", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(argument, "--firewall-unblock", StringComparison.OrdinalIgnoreCase));
+            if (firewallHelperRequested)
+            {
+                Environment.ExitCode = RunFirewallHelper(args);
+                return;
+            }
+
             if (args != null && args.Any(a => string.Equals(a, "--self-test", StringComparison.OrdinalIgnoreCase)))
             {
                 try
@@ -4366,6 +4491,30 @@ namespace BetterTaskManager
             }
 
             Run();
+        }
+
+        internal static bool TryParseFirewallHelperRequest(string[] args, out bool block, out string path)
+        {
+            block = false;
+            path = "";
+            if (args == null || args.Length != 2) return false;
+            if (string.Equals(args[0], "--firewall-block", StringComparison.OrdinalIgnoreCase)) block = true;
+            else if (!string.Equals(args[0], "--firewall-unblock", StringComparison.OrdinalIgnoreCase)) return false;
+            path = args[1] ?? "";
+            return !string.IsNullOrWhiteSpace(path);
+        }
+
+        private static int RunFirewallHelper(string[] args)
+        {
+            bool block;
+            string path;
+            if (!TryParseFirewallHelperRequest(args, out block, out path)) return 87;
+            bool administrator = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+            if (!administrator) return 5;
+            CommandResult result = MainForm.RunFirewallRuleCommand(path, block);
+            if (result.Succeeded) return 0;
+            if (result.TimedOut) return 1460;
+            return result.ExitCode == 0 ? 1 : result.ExitCode;
         }
 
         private static void RunUiSmokeTest(bool runSoak)
@@ -4486,6 +4635,20 @@ namespace BetterTaskManager
             CommandResult failure = CommandRunner.Run("cmd.exe", "/d", "/c", "echo expected-failure 1>&2 & exit 7");
             if (failure.Succeeded || failure.ExitCode != 7) throw new InvalidOperationException("Command runner failure probe did not preserve exit code 7.");
             if (failure.StandardError.IndexOf("expected-failure", StringComparison.Ordinal) < 0) throw new InvalidOperationException("Command runner did not capture standard error.");
+
+            bool helperBlock;
+            string helperPath;
+            ProcessStartInfo helperStartInfo = MainForm.CreateFirewallHelperStartInfo("C:\\Program Files\\Test App\\app.exe", true);
+            if (!TryParseFirewallHelperRequest(new[] { "--firewall-block", "C:\\Program Files\\Test App\\app.exe" }, out helperBlock, out helperPath) ||
+                !helperBlock || helperPath != "C:\\Program Files\\Test App\\app.exe" ||
+                !TryParseFirewallHelperRequest(new[] { "--firewall-unblock", "C:\\Apps\\app.exe" }, out helperBlock, out helperPath) || helperBlock ||
+                TryParseFirewallHelperRequest(new[] { "--firewall-block" }, out helperBlock, out helperPath) ||
+                !helperStartInfo.UseShellExecute || helperStartInfo.Verb != "runas" || helperStartInfo.ArgumentList.Count != 2 ||
+                helperStartInfo.ArgumentList[0] != "--firewall-block" || helperStartInfo.ArgumentList[1] != "C:\\Program Files\\Test App\\app.exe" ||
+                MainForm.RuleNameForPath("C:\\Apps\\APP.exe") != MainForm.RuleNameForPath("c:\\apps\\app.exe"))
+            {
+                throw new InvalidOperationException("Elevated firewall helper parsing or deterministic rule naming failed.");
+            }
 
             int enabledPrivilegeError;
             if (!NativeMethods.TryEnablePrivilege("SeChangeNotifyPrivilege", out enabledPrivilegeError))
@@ -4771,9 +4934,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.51" || form.Text != "Better Task Manager v1.1.0-preview.51")
+                if (Application.ProductVersion != "1.1.0-preview.52" || form.Text != "Better Task Manager v1.1.0-preview.52")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.51.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.52.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }
@@ -4965,7 +5128,7 @@ namespace BetterTaskManager
             }
 
             DateTime snapshot = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local);
-            string[] exportFields = MainForm.AppExportFields(profile, snapshot, "No BTM Block");
+            string[] exportFields = MainForm.AppExportFields(profile, snapshot, "Not blocked by BTM");
             if (exportFields.Length != 11 || exportFields[0] != "2026-01-02T03:04:05" || exportFields[3] != "2" ||
                 exportFields[4] != "3.8" || exportFields[5] != "2" || exportFields[6] != "2" ||
                 exportFields[7] != "300.8" || exportFields[8] != "200.8" || exportFields[10] != sharedPath)

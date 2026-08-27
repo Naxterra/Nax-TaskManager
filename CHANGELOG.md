@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.51 - Unreleased
+## 1.1.0-preview.52 - Unreleased
 
 ### Added
 
@@ -10,7 +10,7 @@
 - Added a self-contained single-file Windows x64 publish profile so preview testers do not need a separate .NET runtime installation.
 - Added one-click grouped-app reconciliation: **View Processes** opens the contributing PIDs from the same snapshot and shows visible-row memory sums.
 - Added a native Memory dashboard with physical load, used/available RAM, system cache, commit total/limit/peak, and process/thread/handle counts; it participates in selectable Live monitoring.
-- Added global privilege status and **Restart as Admin** navigation; firewall and system-level memory controls are gated consistently in Standard mode.
+- Added global privilege status and **Restart as Admin** navigation; system-level memory controls are gated in Standard mode while firewall actions request just-in-time elevation.
 - Added instant all-column filtering to the History view; sorting and CSV export operate on the complete filtered result.
 - Added a watchdog-backed UI smoke test that verifies responsive History loading/live sampling, cached Process filtering/sorting, same-snapshot PID scope, and a responsive message-loop continuation.
 - Added real live monitoring to History: the active page now samples native connections, records new/state-changed observations, and refreshes the current filtered view at the selected interval.
@@ -59,7 +59,7 @@
 - The app now starts without elevation or a console and can directly restart its executable as administrator when needed.
 - Reworked connection history to record new or changed connections instead of duplicating every full snapshot.
 - Replaced the near-black palette with a softer blue-slate theme and enabled the supported WinForms dark color mode for native controls and scrollbars.
-- Replaced the misleading generic `Allowed` firewall label with rule-specific `BTM Blocked` and `No BTM Block` states and an exact outbound-rule explanation.
+- Replaced the misleading generic `Allowed` firewall label with rule-specific `BTM Blocked` and `Not blocked by BTM` states and an exact outbound-rule explanation.
 - Clarified app aggregation with a process-count column, precise Private Bytes/Working Set names, shared-page overlap guidance, summed-memory labels, and snapshot timestamps on all live views.
 - Process search now filters the latest complete snapshot in memory by PID, name, user, or path; only manual/Live refresh performs a new Windows process collection.
 - Network filtering and typed column sorting now operate on the cached snapshot and persist across manual or Live collection refreshes.
@@ -87,15 +87,15 @@
 - Force Kill confirmation now identifies the process by name, PID, and path and explicitly states that child processes are included.
 - Bulk trim excludes Better Task Manager and PID 0, always restores its action button, and refreshes only the active Memory dashboard.
 - Standby-cache and system-working-set native calls now run through `Task.Run`; all maintenance controls disable together and restore according to administrator state in `finally`.
-- Force Kill, Trim, Open Folder, and Copy Path now follow selection, refresh, mutation, and self-process eligibility from one centralized action-state method.
-- Firewall action eligibility now combines administrator state, selection/path availability, active refresh, global mutation state, and known Apps rule state.
+- Force Kill, Open Folder, and Copy Path now follow selection, refresh, mutation, and self-process eligibility from one centralized action-state method.
+- Firewall action eligibility now combines selection/path availability, active refresh, global mutation state, and known Apps rule state; Standard mode elevates only the requested mutation.
 - History save/load/clear/prune now use both in-process locking and a cross-process mutex with abandoned-owner recovery and a 10-second timeout.
 - CI uses current official action majors, read-only repository permissions, per-ref cancellation, a 20-minute job timeout, and the app's own UI watchdog.
 - The publish script derives version from the project, validates the exact artifacts child path, removes stale staging content, and regenerates the package from scratch.
 - Trend charts are code-native, double-buffered, bounded to 0–100%, and driven only by existing manual/Live Memory refreshes.
 - Late firewall results now require both matching Apps snapshot time and unchanged firewall mutation revision before updating cache/grid state.
 - Native TCP/UDP table allocation is bounded to 4 bytes–64 MiB and retries table growth up to five times before reporting a scoped failure.
-- Renamed **Load Users/Paths** to **Reload Users/Paths** and clarified that normal collection resolves/caches identities automatically while the button rebuilds the cache manually.
+- Consolidated Process **Refresh** and **Reload Users/Paths** into one manual refresh that rebuilds identities and values; Live refreshes continue using the cache.
 - Security guidance now documents unelevated startup, privileged/destructive gates, local history/settings/crash data, export sensitivity, firewall rule scope, non-destructive tests, and checksum limitations.
 - Crash reports now include timestamp, app version, .NET runtime, OS, process bitness, DPI mode, and exception details; oversized entries are truncated with an explicit marker.
 - Deterministic portable staging now bundles `RELEASE_NOTES-v1.1-preview.md` ahead of the detailed changelog and security guide.
@@ -161,6 +161,11 @@
 - Removed WinForms glyph-overhang padding from Apps headings/status text and trim display names before rendering, eliminating the apparent leading spaces before names such as `svchost`.
 - Replaced the small low-contrast native sort glyph with one larger blue-white triangle drawn at the right edge of only the active sort column, including Remote Port.
 - Removed the noisy neutral arrow prefix from every unsorted header and restored compact single-line header labels.
+- Widened Peak Working Set so its full header remains visible without clipping.
+- Removed the duplicated per-process Trim action; working-set Trim remains under Memory with categorized results.
+- Added page-specific right-click action menus: each section mirrors its own toolbar operations, preserves normal text-edit menus, and selects a right-clicked grid row before exposing target-sensitive actions.
+- Standard-user Block/Unblock buttons now request just-in-time UAC elevation through a hidden helper process instead of remaining disabled or requiring a full app restart.
+- Renamed **No BTM Block** to **Not blocked by BTM** to state that only this app's outbound rule is absent, not that Windows permits the traffic.
 - Replaced the Apps search field's native baseline placement with an explicit vertically centered edit formatting rectangle and centered custom placeholder rendering.
 - Split bulk working-set Trim results into protected/access-denied, exited-during-scan, other failure, and intentional skip categories, with Standard/Admin-specific explanation.
 

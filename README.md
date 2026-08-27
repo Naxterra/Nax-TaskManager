@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.51`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.52`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -13,12 +13,13 @@ The current development build is `1.1.0-preview.51`. The checked-in v1.0 downloa
 - Apps renders process/network grouping before the slower firewall-rule scan completes; late firewall results are guarded by snapshot and mutation revision so they cannot overwrite newer data.
 - Apps marks partial native network data in amber so grouped connection counts are never presented as silently complete.
 - Per-PID Process view with user, CPU, private bytes, working set, peak working set, threads, and executable path. The visible-row summary reconciles sampled CPU and memory totals, including partial-sample counts. Search filters the latest snapshot instantly by PID, name, user, or path without recollecting processes on every keystroke.
-- User/path identity is resolved automatically and cached; **Reload Users/Paths** explicitly clears and rebuilds that cache for a manual retry.
+- One Process **Refresh** action rebuilds usernames/executable paths and refreshes process values; Live monitoring reuses the synchronized identity cache for responsiveness.
+- Process working-set Trim is kept on the Memory page rather than duplicated as a per-process action.
 - Network view showing application, PID, user, protocol, local endpoint, remote endpoint, state, and executable path. All-column search and typed column sorting operate instantly on the latest snapshot and persist across Live refreshes.
 - Stable total adapter bandwidth sampling tracks each active interface independently and ignores new, removed, or reset counters until a second monotonic sample exists.
 - Selection-aware **Open Folder** and **Copy Path** actions in Apps, Processes, and Network. Folder launch uses Windows shell activation directly and never opens a command prompt.
-- Force Kill and Trim validate process start time before acting, reject reused stale PIDs, and prevent Better Task Manager from force-killing itself. Force Kill confirmation includes process name, PID, path, and child-process scope.
-- Process mutations share a non-overlapping busy state: Force Kill, Trim, Open Folder, and Copy Path disable during Process refresh/mutation and recover together afterward.
+- Force Kill validates process start time before acting, rejects reused stale PIDs, and prevents Better Task Manager from force-killing itself. Its confirmation includes process name, PID, path, and child-process scope.
+- Process actions share a non-overlapping busy state: Force Kill, Open Folder, and Copy Path disable during Process refresh/mutation and recover together afterward.
 - Native IPv4/IPv6 TCP and UDP collection with owning-process IDs.
 - Partial native collection resilience: a failed address-family/protocol table produces a scoped warning while healthy TCP/UDP tables remain visible; all failures still stop the snapshot.
 - Synchronized per-PID identity caching shared by Apps, Processes, Network, and History collectors. Successful and access-denied path/user lookups are reused until the process exits or its PID is reused.
@@ -30,14 +31,15 @@ The current development build is `1.1.0-preview.51`. The checked-in v1.0 downloa
 - Explicit WinForms `PerMonitorV2` DPI awareness with generated application bootstrap, allowing forms, child controls, common controls, and dialogs to rescale when moved between monitors with different scaling.
 - Global keyboard shortcuts with tooltip discovery: **F5** refreshes the active view, **Ctrl+F** focuses its filter, **Escape** clears it, **Ctrl+E** exports it, and **Ctrl+L** toggles Live monitoring.
 - **Ctrl+1** through **Ctrl+5** navigate Apps, Processes, Network, History, and Memory; **Page Up/Page Down** browse History result pages.
+- Right-click a page's non-editing surfaces to access that section's own actions—for example Refresh/Force Kill/Export in Processes or Refresh/Block/Unblock/Export in Network.
 - Optional live monitoring with 1, 2, 5, or 15-second refresh intervals for Apps, Processes, Network, History, and Memory views.
 - Snapshot timestamps on Apps, Processes, and Network so grouped and per-PID samples can be compared accurately.
 - One-click **View Processes** reconciliation showing the exact contributing PIDs from the same Apps snapshot, with visible-row private-byte and working-set sums.
 - Model-based CSV export for filtered/sorted Apps, Processes, Network, and History. Exports include invariant snapshot/numeric fields, explicit CPU availability, complete identity/path data, and spreadsheet-formula protection rather than scraping localized grid text.
-- Per-app Windows Firewall block/unblock actions.
-- One cross-view firewall mutation gate keeps Apps and Network rule actions non-overlapping and selection/refresh/administrator aware.
-- Better Task Manager block-rule status in the app list, plus the exact outbound rule explanation for the selected app.
-- Global Standard/Administrator status with **Restart as Admin** available from every page; privileged controls are disabled until elevation.
+- Per-app Windows Firewall block/unblock actions. Standard mode requests just-in-time administrator approval through a console-free helper while the main window remains open.
+- One cross-view firewall mutation gate keeps Apps and Network rule actions non-overlapping and selection/refresh aware.
+- **Not blocked by BTM** means no Better Task Manager outbound block rule exists for that executable; other Windows Firewall policies may still block it.
+- Global Standard/Administrator status with **Restart as Admin** available from every page; system-memory controls remain disabled until elevation, while firewall buttons request approval when used.
 - Memory cleanup tools:
   - Live physical load, used/available RAM, system cache, and system commit/limit dashboard.
   - Native System CPU usage derived from Windows idle/kernel/user time deltas, with an explicit first-sample state.
@@ -68,7 +70,7 @@ This is not yet a Portmaster replacement.
 - Windows 10/11.
 - The packaged portable preview includes its own .NET runtime and does not require a separate .NET installation.
 - Building from source requires the .NET 11 SDK.
-- Administrator rights only when using firewall and system-memory maintenance actions.
+- Administrator approval is requested only when using firewall or system-memory maintenance actions.
 
 This project currently targets:
 
@@ -125,13 +127,13 @@ Run the normal publish command after the old latest window closes to refresh the
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.51-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.52-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.51-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.52-portable-win-x64\BetterTaskManager.exe
 ```
 
 The publish script also refreshes this stable path on every successful build, so testers do not need to locate the newest numbered preview folder:
