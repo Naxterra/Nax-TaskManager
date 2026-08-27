@@ -18,6 +18,21 @@ For an automated non-destructive repetition of the same refresh paths, close the
 
 An exit code of `0` means three complete cross-page rounds stayed within the per-refresh limit and every refresh gate returned to idle.
 
+## Windows installer
+
+1. Run the setup executable and confirm current-user mode is the default; optionally verify the all-users choice requests elevation.
+2. Confirm the selected Programs directory, Start Menu shortcut, optional desktop shortcut, and Add/Remove Programs entry are created.
+3. Confirm Setup, the installed executable, Start Menu/optional desktop shortcuts, taskbar window, and uninstall entry show the violet performance-chart icon rather than the generic WinForms icon.
+4. Run the same or a newer installer again and confirm it upgrades/repairs the existing installation rather than creating a second uninstall entry.
+5. Launch the installed executable and confirm the preview version, violet theme, German/English localization, Live monitoring, and page-specific actions match the portable build.
+6. Uninstall and confirm program files/shortcuts are removed while `%LOCALAPPDATA%\BetterTaskManager` user settings, history, exports, and crash logs remain.
+
+The automated equivalent is:
+
+```powershell
+.\scripts\test-installer.ps1
+```
+
 ## Live monitoring
 
 1. Open **Memory**, select `1 sec`, and enable **Live monitoring**.

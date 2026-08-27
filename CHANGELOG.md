@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.53 - Unreleased
+## 1.1.0-preview.54 - Unreleased
 
 ### Added
 
@@ -53,6 +53,9 @@
 - Added a persisted **Record history** privacy control.
 - Added a packaged non-destructive manual test checklist covering every original preview report and the exact evidence expected for each result.
 - Added automatic German localization with English fallback and `--language=de` / `--language=en` overrides, including dynamic status text, grids, section menus, tooltips, dialogs, and common connection states.
+- Added an upgrade-safe English/German Inno Setup installer with current-user/all-users modes, Start Menu and optional desktop shortcuts, Add/Remove Programs uninstall, dynamic light/dark wizard styling, and preserved user-local data.
+- Added pinned installer-tool bootstrap, deterministic installer/checksum build, isolated silent install/repair/app-test/uninstall verification, and installer artifacts in Windows CI.
+- Added a custom multi-resolution violet performance icon embedded in the application, setup executable, uninstall entry, Start Menu shortcut, desktop shortcut, and taskbar window.
 
 ### Changed
 
@@ -60,6 +63,8 @@
 - The app now starts without elevation or a console and can directly restart its executable as administrator when needed.
 - Reworked connection history to record new or changed connections instead of duplicating every full snapshot.
 - Replaced the near-black/blue palette with a softer violet-slate theme and enabled the supported WinForms dark color mode for native controls and scrollbars.
+- Removed the setup wizard's raw Markdown release-notes page; release notes remain installed as a document instead of interrupting installation flow.
+- Increased the process-level UI test watchdog for self-contained cold starts while retaining the strict eight-second ceiling on every individual page refresh.
 - Replaced the misleading generic `Allowed` firewall label with rule-specific `BTM Blocked` and `Not blocked by BTM` states and an exact outbound-rule explanation.
 - Clarified app aggregation with a process-count column, precise Private Bytes/Working Set names, shared-page overlap guidance, summed-memory labels, and snapshot timestamps on all live views.
 - Process search now filters the latest complete snapshot in memory by PID, name, user, or path; only manual/Live refresh performs a new Windows process collection.

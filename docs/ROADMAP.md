@@ -11,6 +11,7 @@
 - Added bounded, deduplicated 30-day connection history.
 - Added a softer violet-slate theme with native dark scrollbar support.
 - Added automatic German UI localization with English fallback and explicit language overrides.
+- Added an upgrade-safe, bilingual Windows installer with tested uninstall and portable-package parity.
 - Added CSV export for Process, Network, and History views.
 - Clarified Better Task Manager firewall rule state and selected-app rule details.
 - Added a native real-time system Memory dashboard.

@@ -23,10 +23,12 @@ This preview is a substantial update to the checked-in v1.0 release. It remains 
 - Firewall, Process mutation, Memory maintenance, snapshot collection, and History persistence have explicit non-overlapping gates and stale-result safeguards.
 - Force Kill/Trim validate process start time, reject PID reuse, and protect Better Task Manager's own process.
 - Portable packages include documentation, security/privacy guidance, license, and an executable SHA-256 manifest. Windows CI mirrors restore, build, self-test, UI smoke, and publish steps after the branch is pushed.
+- A proper English/German Windows installer supports current-user or all-users installation, Start Menu and optional desktop shortcuts, in-place upgrades, Add/Remove Programs uninstall, and dynamic light/dark wizard styling.
+- A custom violet performance-chart icon is embedded at multiple resolutions for consistent Setup, shortcut, taskbar, and application identity.
 
 ## Upgrade and Local Data
 
-No installer migration is required: extract the preview ZIP and run `BetterTaskManager.exe`.
+Use the setup executable for a normal installed experience, or extract the portable ZIP and run `BetterTaskManager.exe` without installation. Both contain the same self-contained x64 application.
 
 User-local data remains under `%LOCALAPPDATA%\BetterTaskManager`:
 
@@ -40,12 +42,15 @@ History recording remains enabled by default for compatibility. Disable **Record
 
 The checked-in `release-assets\BetterTaskManager-v1.0-win-x64.zip` remains unchanged as the stable v1.0 artifact.
 
+Installer upgrades reuse a fixed application identity. Uninstall removes installed program files and shortcuts but intentionally preserves `%LOCALAPPDATA%\BetterTaskManager` settings, history, exports, and crash logs.
+
 ## Safety and Privacy
 
 - The app starts unelevated. Firewall actions request just-in-time administrator approval while system-memory controls still use **Restart as Admin**.
 - Better Task Manager firewall labels describe only rules created by this app; **Not blocked by BTM** means no BTM outbound block rule exists and does not claim that other firewall policies allow traffic.
 - History, exports, and crash logs can contain usernames, executable paths, private IP addresses, and remote endpoints. Review them before sharing.
 - The packaged SHA-256 manifest verifies executable integrity against the package; it is not a code-signing certificate.
+- The preview setup executable is not Authenticode-signed, so Windows may show an unknown-publisher warning; verify it against the release SHA-256 manifest.
 
 See `SECURITY.md` for the complete current security and privacy model.
 

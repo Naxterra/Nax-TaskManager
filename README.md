@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.53`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.54`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -109,7 +109,7 @@ The longer non-destructive UI soak test repeats Apps, Processes, Network, Histor
 
 ## Continuous Integration
 
-`.github/workflows/windows-ci.yml` runs on Windows for pushes, pull requests, and manual dispatch. It installs the .NET 11 preview channel, restores and builds Release, runs the self-test plus English/German UI smoke and repeated soak modes, publishes the self-contained executable, and uploads it as a 14-day workflow artifact. The workflow becomes active when this branch is pushed to GitHub.
+`.github/workflows/windows-ci.yml` runs on Windows for pushes, pull requests, and manual dispatch. It installs the .NET 11 preview channel, restores and builds Release, runs the self-test plus English/German UI smoke and repeated soak modes, publishes the portable package, builds and tests the installer, and uploads both as 14-day workflow artifacts. The workflow becomes active when this branch is pushed to GitHub.
 
 ## Publish
 
@@ -128,13 +128,13 @@ Run the normal publish command after the old latest window closes to refresh the
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.53-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.54-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.53-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.54-portable-win-x64\BetterTaskManager.exe
 ```
 
 The publish script also refreshes this stable path on every successful build, so testers do not need to locate the newest numbered preview folder:
@@ -149,6 +149,35 @@ Each portable folder contains `BetterTaskManager.exe`, `README.md`, `RELEASE_NOT
 (Get-FileHash .\BetterTaskManager.exe -Algorithm SHA256).Hash.ToLowerInvariant()
 Get-Content .\SHA256SUMS.txt
 ```
+
+## Windows Installer
+
+Build the installer after publishing the portable package:
+
+```powershell
+.\scripts\build-installer.ps1
+.\scripts\test-installer.ps1
+```
+
+The build script bootstraps the pinned official Inno Setup compiler when necessary and creates:
+
+```text
+artifacts\BetterTaskManager-v1.1.0-preview.54-setup-win-x64.exe
+artifacts\SHA256SUMS-v1.1.0-preview.54.txt
+```
+
+The installer:
+
+- defaults to a non-administrative current-user installation and optionally supports all users;
+- installs into the appropriate Windows Programs folder;
+- creates an Add/Remove Programs uninstall entry and Start Menu shortcut;
+- offers an optional desktop shortcut and post-install launch;
+- reuses one fixed App ID so later versions upgrade the existing installation;
+- includes English and German wizard text and follows Windows light/dark mode;
+- uses the same custom multi-resolution violet icon for Setup, the app, shortcuts, taskbar, and uninstall entry;
+- preserves `%LOCALAPPDATA%\BetterTaskManager` settings, history, exports, and crash logs during uninstall.
+
+`test-installer.ps1` performs isolated silent install and repair/upgrade passes, runs the installed app's self-test and German UI smoke test, then silently uninstalls and verifies removal.
 
 ## Download
 

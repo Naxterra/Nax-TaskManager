@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.53 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.54 remains a single Windows desktop executable distributed as both a portable package and an optional installer.
 
 ```text
 WinForms UI
@@ -57,6 +57,10 @@ Top-level navigation and dense command surfaces use autosized wrapping flow layo
 WinForms bootstraps through generated `ApplicationConfiguration.Initialize()` with `ApplicationHighDpiMode=PerMonitorV2`, then requests native and framework dark modes before constructing forms. Runtime smoke coverage asserts the configured DPI mode so packaged builds cannot silently fall back to implicit system-aware scaling.
 
 Localization selects German automatically from `CurrentUICulture` with English fallback and optional command-line override. Static control/header/menu/tooltip text is translated once after construction; non-input control text changes are localized as dynamic statuses update, while grid formatting localizes display states without mutating cached/export models. Message boxes pass through the same translator, and English/German UI smoke modes verify both paths.
+
+The installer uses a fixed Inno Setup App ID so later versions replace the installed program in place rather than creating parallel uninstall entries. It defaults to non-administrative current-user mode, permits an explicit all-users override, installs the exact portable payload, registers Start Menu/optional desktop shortcuts and uninstall metadata, and deliberately leaves user-local runtime data outside the installation directory. CI tests first install plus repair/upgrade, installed executable tests, and uninstall in an isolated directory.
+
+One deterministic generator produces a PNG-backed multi-resolution ICO (16 through 256 pixels). The project embeds it as `ApplicationIcon`, and Inno Setup uses the same source for Setup; shortcuts and uninstall metadata resolve the installed executable's icon so every Windows surface shares one identity.
 
 The Windows CI workflow installs the .NET 11 preview channel, restores/builds Release, launches self-test plus watchdog-backed UI smoke and soak modes as waited processes, publishes the single-file win-x64 profile, and uploads the complete portable folder. The soak mode performs three rounds across all five page refresh paths, bounds individual refresh duration, verifies the UI message pump recovers, and checks that gates and controls return to idle. The publish script derives its version from the project and performs guarded exact-child cleanup before staging the executable, README, v1.1 preview release notes, changelog, security/privacy guide, license, and SHA-256 manifest. CI has read-only repository permissions and no destructive or privileged test steps.
 

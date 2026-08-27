@@ -4567,7 +4567,7 @@ namespace BetterTaskManager
                 Path.Combine(temporaryFolder, "settings.json"));
             Task.Run(async () =>
             {
-                await Task.Delay(runSoak ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(10));
+                await Task.Delay(runSoak ? TimeSpan.FromSeconds(90) : TimeSpan.FromSeconds(30));
                 if (System.Threading.Interlocked.CompareExchange(ref completed, 1, 0) == 0)
                 {
                     Environment.Exit(2);
@@ -4981,9 +4981,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.53" || form.Text != "Better Task Manager v1.1.0-preview.53")
+                if (Application.ProductVersion != "1.1.0-preview.54" || form.Text != "Better Task Manager v1.1.0-preview.54")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.53.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.54.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

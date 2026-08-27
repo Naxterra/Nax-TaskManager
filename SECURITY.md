@@ -32,9 +32,13 @@ The History page's persisted **Record history** checkbox can stop future disk wr
 
 CSV exports prefix spreadsheet-formula trigger characters, but exported data should still be reviewed before sharing publicly.
 
+The Windows installer defaults to current-user mode and writes program files, shortcuts, and its uninstall registration only. All-users mode is an explicit elevated choice. Uninstall intentionally preserves `%LOCALAPPDATA%\BetterTaskManager` user data so upgrades or reinstalls do not destroy history/settings; remove that folder manually only if the data is no longer wanted.
+
 ## Verification and Distribution
 
 Portable packages include `SHA256SUMS.txt` for the executable. This verifies file integrity against the packaged manifest; it is not a code-signing certificate or proof of publisher identity.
+
+Preview installer and executable artifacts are not Authenticode-signed, so Windows may display an unknown-publisher warning. Release checksum manifests protect download integrity but do not replace publisher signing.
 
 The built-in `--self-test` and `--ui-smoke-test` modes are non-destructive: they do not kill processes, clear memory, or modify firewall rules. The UI test uses isolated temporary settings and history files.
 
