@@ -4,7 +4,8 @@ This preview is a substantial update to the checked-in v1.0 release. It remains 
 
 ## Highlights
 
-- Responsive blue-slate dark interface with native dark controls, dark scrollbars, PerMonitorV2 scaling, narrow-window wrapping, saved window/column preferences, and global keyboard shortcuts.
+- Responsive violet-slate dark interface with native dark controls, dark scrollbars, PerMonitorV2 scaling, narrow-window wrapping, saved window/column preferences, and global keyboard shortcuts.
+- German UI localization follows the Windows display language automatically and covers static/dynamic UI text, menus, tooltips, dialogs, headers, and common states; English remains available via `--language=en`.
 - Apps, Processes, Network, History, and Memory all support manual or selectable 1/2/5/15-second Live refresh where applicable.
 - Grouped Apps and per-PID Processes use explicit same-snapshot CPU, Private Bytes, and Working Set semantics with reconciliation counts and unavailable-CPU sampling states.
 - Native IPv4/IPv6 TCP/UDP collection replaces localized `netstat` parsing and preserves healthy table results when one address-family/protocol source fails.
@@ -15,7 +16,7 @@ This preview is a substantial update to the checked-in v1.0 release. It remains 
 - A persisted **Record history** checkbox stops future disk writes while keeping existing history available for viewing and export.
 - Every successful local publish updates a stable `BetterTaskManager-latest-portable-win-x64` folder and ZIP, avoiding stale numbered-preview launches.
 - Apps search text is vertically centered, and detail headings use tight rendering without apparent leading spaces; all detail content shares one left edge, including firewall status on its own row.
-- Unsorted grid headers remain clean while the active sort column shows one larger blue-white triangle at its right edge, including Remote Port.
+- Unsorted grid headers remain clean while the active sort column shows one larger violet-white triangle at its right edge, including Remote Port.
 - Memory includes native System CPU, physical/commit/cache counters, bounded 60-sample CPU/RAM trends, and non-blocking maintenance actions.
 - Bulk Trim explains how many processes were protected/access denied, exited during enumeration, failed unexpectedly, or were intentionally skipped instead of combining them into one ambiguous failure count.
 - Elevated sessions explicitly activate and verify the Windows system-memory privilege before enabling standby/system-cache maintenance, avoiding misleading administrator-only checks.
@@ -64,6 +65,7 @@ From the repository root:
 dotnet build .\BetterTaskManager.slnx -c Release
 dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll --self-test
 .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-smoke-test
+.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-smoke-test --language=de
 .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-soak-test
 .\scripts\publish-v1.ps1
 ```

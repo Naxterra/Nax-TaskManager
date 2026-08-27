@@ -9,7 +9,8 @@
 - Replaced localized `netstat` parsing with native Windows IPv4/IPv6 TCP and UDP tables.
 - Added selectable live monitoring for Apps, Processes, Network, History, and Memory.
 - Added bounded, deduplicated 30-day connection history.
-- Added a softer blue-slate theme with native dark scrollbar support.
+- Added a softer violet-slate theme with native dark scrollbar support.
+- Added automatic German UI localization with English fallback and explicit language overrides.
 - Added CSV export for Process, Network, and History views.
 - Clarified Better Task Manager firewall rule state and selected-app rule details.
 - Added a native real-time system Memory dashboard.

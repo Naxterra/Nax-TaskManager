@@ -14,6 +14,7 @@ The checked-in `release-assets\BetterTaskManager-v1.0-win-x64.zip` file is the s
 dotnet build .\BetterTaskManager.slnx -c Release
 dotnet .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.dll --self-test
 .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-smoke-test
+.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-smoke-test --language=de
 .\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe --ui-soak-test
 ```
 
@@ -30,14 +31,14 @@ Use `-SkipLatest` to stage only the numbered folder and ZIP while a tester is ru
 The self-contained single-file Windows x64 preview is placed in both a versioned folder and a stable latest-build folder:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.52-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.53-portable-win-x64
 artifacts\BetterTaskManager-latest-portable-win-x64
 ```
 
 The publish script also creates both ZIP packages automatically:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.52-portable-win-x64.zip
+artifacts\BetterTaskManager-v1.1.0-preview.53-portable-win-x64.zip
 artifacts\BetterTaskManager-latest-portable-win-x64.zip
 ```
 

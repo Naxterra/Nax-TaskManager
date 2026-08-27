@@ -11,6 +11,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using MessageBox = BetterTaskManager.LocalizedMessageBox;
 
 namespace BetterTaskManager
 {
@@ -395,21 +396,21 @@ namespace BetterTaskManager
 
         private static class Theme
         {
-            public static readonly Color Window = Color.FromArgb(18, 25, 36);
-            public static readonly Color Surface = Color.FromArgb(24, 33, 47);
-            public static readonly Color SurfaceAlt = Color.FromArgb(30, 42, 58);
-            public static readonly Color SurfaceRaised = Color.FromArgb(39, 53, 72);
-            public static readonly Color Border = Color.FromArgb(58, 76, 101);
-            public static readonly Color BorderStrong = Color.FromArgb(80, 104, 137);
-            public static readonly Color Text = Color.FromArgb(235, 242, 250);
-            public static readonly Color MutedText = Color.FromArgb(163, 180, 201);
-            public static readonly Color Accent = Color.FromArgb(63, 126, 178);
-            public static readonly Color AccentHover = Color.FromArgb(77, 151, 207);
-            public static readonly Color AccentSelected = Color.FromArgb(48, 105, 153);
+            public static readonly Color Window = Color.FromArgb(27, 22, 41);
+            public static readonly Color Surface = Color.FromArgb(35, 29, 52);
+            public static readonly Color SurfaceAlt = Color.FromArgb(45, 37, 65);
+            public static readonly Color SurfaceRaised = Color.FromArgb(57, 47, 79);
+            public static readonly Color Border = Color.FromArgb(82, 67, 110);
+            public static readonly Color BorderStrong = Color.FromArgb(111, 87, 153);
+            public static readonly Color Text = Color.FromArgb(244, 240, 252);
+            public static readonly Color MutedText = Color.FromArgb(187, 174, 207);
+            public static readonly Color Accent = Color.FromArgb(139, 92, 246);
+            public static readonly Color AccentHover = Color.FromArgb(167, 139, 250);
+            public static readonly Color AccentSelected = Color.FromArgb(109, 75, 171);
             public static readonly Color Good = Color.FromArgb(91, 205, 160);
             public static readonly Color Warning = Color.FromArgb(235, 187, 92);
             public static readonly Color Danger = Color.FromArgb(239, 111, 117);
-            public static readonly Color Info = Color.FromArgb(119, 185, 235);
+            public static readonly Color Info = Color.FromArgb(196, 181, 253);
         }
 
         private readonly bool isAdmin;
@@ -1124,6 +1125,11 @@ namespace BetterTaskManager
             };
 
             RestoreColumnWidths(appSettings.ColumnWidths);
+            UiText.ApplyTo(this, shortcutToolTip, sectionContextMenus);
+            memoryCpuTrend.Title = UiText.Translate(memoryCpuTrend.Title);
+            memoryLoadTrend.Title = UiText.Translate(memoryLoadTrend.Title);
+            memoryCpuTrend.AccessibleName = UiText.Translate(memoryCpuTrend.AccessibleName);
+            memoryLoadTrend.AccessibleName = UiText.Translate(memoryLoadTrend.AccessibleName);
             ApplyDarkTheme(this);
             ApplyPrivilegeState();
             UpdateMemoryTrendWidth();
@@ -2068,6 +2074,7 @@ namespace BetterTaskManager
                 (app.Path ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 (app.User ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 (firewallStatus ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                UiText.Translate(firewallStatus ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 app.Pids.Any(pid => pid.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
                 app.Pids.Count.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 app.ConnectionCount.ToString(CultureInfo.InvariantCulture).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -2768,6 +2775,7 @@ namespace BetterTaskManager
                 (row.RemoteAddress ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 (row.RemotePort ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 NormalizeConnectionState(row.State).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                UiText.Translate(NormalizeConnectionState(row.State)).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 (row.Path ?? "").IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
@@ -3354,7 +3362,8 @@ namespace BetterTaskManager
             var item = new ListViewItem(row.Length > 0 ? row[0] : "");
             for (int index = 1; index < historyList.Columns.Count; index++)
             {
-                item.SubItems.Add(index < row.Length ? row[index] : "");
+                string value = index < row.Length ? row[index] : "";
+                item.SubItems.Add(index == 9 ? UiText.Translate(value) : value);
             }
             e.Item = item;
         }
@@ -3363,7 +3372,8 @@ namespace BetterTaskManager
         {
             if (string.IsNullOrWhiteSpace(filter)) return true;
             if (row == null) return false;
-            return row.Any(value => (value ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
+            return row.Any(value => (value ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                UiText.Translate(value ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
         internal async Task RunUiSmokeTestAsync()
@@ -3372,17 +3382,32 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("WinForms did not start in PerMonitorV2 high-DPI mode.");
             }
+            if (Theme.Window != Color.FromArgb(27, 22, 41) || Theme.Accent != Color.FromArgb(139, 92, 246) ||
+                Theme.AccentHover != Color.FromArgb(167, 139, 250) || Theme.AccentSelected != Color.FromArgb(109, 75, 171))
+            {
+                throw new InvalidOperationException("Violet-slate theme colors regressed.");
+            }
+            if (UiText.IsGerman &&
+                (!navBar.Controls.OfType<Button>().Any(button => button.Text == "Anwendungen") ||
+                 appSearchBox.PlaceholderText != "Anwendungen suchen" ||
+                 processGrid.Columns["PeakWorkingSetMB"].HeaderText != "Max. Arbeitssatz (MB)" ||
+                 Convert.ToString(refreshIntervalBox.Items[2], CultureInfo.InvariantCulture) != "5 Sek." ||
+                 appConnectionCard.Text.IndexOf("Gruppenverbindungen", StringComparison.Ordinal) < 0 ||
+                 memoryCpuTrend.Title.IndexOf("letzte 60 Messwerte", StringComparison.Ordinal) < 0))
+            {
+                throw new InvalidOperationException("German control, header, interval, card, or trend localization regressed.");
+            }
             string[] appContextActions = appGrid.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
             string[] processContextActions = processGrid.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
             string[] networkContextActions = networkGrid.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
             string[] historyContextActions = historyList.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
             string[] memoryContextActions = memoryPanel.ContextMenuStrip.Items.OfType<ToolStripMenuItem>().Select(item => item.Text).ToArray();
             if (sectionContextMenus.Count != 5 ||
-                !appContextActions.SequenceEqual(new[] { "Refresh Apps", "Export CSV", "Block App", "Unblock App", "View Processes", "Open Folder", "Copy Path" }) ||
-                !processContextActions.SequenceEqual(new[] { "Refresh", "Force Kill", "Export CSV", "Open Folder", "Copy Path" }) ||
-                !networkContextActions.SequenceEqual(new[] { "Refresh", "Block App", "Unblock App", "Export CSV", "Open Folder", "Copy Path" }) ||
-                !historyContextActions.SequenceEqual(new[] { "Refresh", "Export CSV", "Clear History", "Previous", "Next", "Record history" }) ||
-                !memoryContextActions.SequenceEqual(new[] { "Refresh", "Trim App Memory", "Clear Standby Cache", "Release System Cache" }) ||
+                !appContextActions.SequenceEqual(new[] { "Refresh Apps", "Export CSV", "Block App", "Unblock App", "View Processes", "Open Folder", "Copy Path" }.Select(UiText.Translate)) ||
+                !processContextActions.SequenceEqual(new[] { "Refresh", "Force Kill", "Export CSV", "Open Folder", "Copy Path" }.Select(UiText.Translate)) ||
+                !networkContextActions.SequenceEqual(new[] { "Refresh", "Block App", "Unblock App", "Export CSV", "Open Folder", "Copy Path" }.Select(UiText.Translate)) ||
+                !historyContextActions.SequenceEqual(new[] { "Refresh", "Export CSV", "Clear History", "Previous", "Next", "Record history" }.Select(UiText.Translate)) ||
+                !memoryContextActions.SequenceEqual(new[] { "Refresh", "Trim App Memory", "Clear Standby Cache", "Release System Cache" }.Select(UiText.Translate)) ||
                 appGrid.ContextMenuStrip == processGrid.ContextMenuStrip || processGrid.ContextMenuStrip == networkGrid.ContextMenuStrip ||
                 appSearchBox.ContextMenuStrip != null)
             {
@@ -3390,8 +3415,8 @@ namespace BetterTaskManager
             }
             if (processGrid.Columns["PeakWorkingSetMB"].Width < 175 || processGrid.Columns["PeakWorkingSetMB"].MinimumWidth < 175 ||
                 appGrid.Columns["Firewall"].Width < 150 || appGrid.Columns["Firewall"].MinimumWidth < 150 ||
-                processToolbar.Controls.OfType<Button>().Any(button => button.Text.IndexOf("Trim", StringComparison.OrdinalIgnoreCase) >= 0 || button.Text.IndexOf("Reload", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                processToolbar.Controls.OfType<Button>().Count(button => button.Text == "Refresh") != 1)
+                processToolbar.Controls.OfType<Button>().Count() != 5 ||
+                processToolbar.Controls.OfType<Button>().Count(button => button.Text == UiText.Translate("Refresh")) != 1)
             {
                 throw new InvalidOperationException("Process toolbar consolidation or Peak Working Set visibility regressed.");
             }
@@ -3549,7 +3574,7 @@ namespace BetterTaskManager
             }
             gridSortState[networkGrid] = Tuple.Create("RemotePort", true);
             RefreshSortIndicator(networkGrid);
-            if (networkGrid.Columns["RemotePort"].HeaderText != "Remote Port" ||
+            if (networkGrid.Columns["RemotePort"].HeaderText != UiText.Translate("Remote Port") ||
                 CurrentSortOrder(networkGrid, "RemotePort") != SortOrder.Ascending ||
                 CurrentSortOrder(networkGrid, "PID") != SortOrder.None ||
                 networkGrid.Columns["RemotePort"].HeaderCell.SortGlyphDirection != SortOrder.None)
@@ -3558,7 +3583,7 @@ namespace BetterTaskManager
             }
             gridSortState[networkGrid] = Tuple.Create("RemotePort", false);
             RefreshSortIndicator(networkGrid);
-            if (networkGrid.Columns["RemotePort"].HeaderText != "Remote Port" ||
+            if (networkGrid.Columns["RemotePort"].HeaderText != UiText.Translate("Remote Port") ||
                 CurrentSortOrder(networkGrid, "RemotePort") != SortOrder.Descending)
             {
                 throw new InvalidOperationException("Network Remote Port descending sort indicator did not update.");
@@ -3610,9 +3635,13 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Apps executable path actions did not follow selection state.");
             }
-            if (appMetaLabel.Text.IndexOf("Network data partial", StringComparison.Ordinal) < 0 || appMetaLabel.ForeColor != Theme.Warning)
+            if (appMetaLabel.Text.IndexOf(UiText.Translate("Network data partial:"), StringComparison.Ordinal) < 0 || appMetaLabel.ForeColor != Theme.Warning)
             {
                 throw new InvalidOperationException("Apps did not disclose partial native network data.");
+            }
+            if (appFirewallCard.Text.IndexOf(UiText.Translate("Not blocked by BTM"), StringComparison.Ordinal) < 0)
+            {
+                throw new InvalidOperationException("Selected-app firewall card did not follow the active UI language.");
             }
             if (!appBlockButton.Enabled || appUnblockButton.Enabled || !BeginFirewallAction() || appBlockButton.Enabled || appUnblockButton.Enabled ||
                 blockButton.Enabled || unblockButton.Enabled || BeginFirewallAction())
@@ -3685,7 +3714,7 @@ namespace BetterTaskManager
                 new NetworkRow { Timestamp = DateTime.Now, Process = "opt-out-probe", Pid = 9999, Protocol = "TCP", LocalAddress = "127.0.0.1", LocalPort = "1", RemoteAddress = "127.0.0.1", RemotePort = "2", State = "Established", Path = "C:\\opt-out.exe" }
             });
             if (historyRecordingEnabled || historyStore.LoadRecent(2000).Count != historyCountBeforeOptOut ||
-                historyNoteLabel.Text.IndexOf("Recording off", StringComparison.Ordinal) < 0)
+                historyNoteLabel.Text.IndexOf(UiText.Translate("Recording off."), StringComparison.Ordinal) < 0)
             {
                 throw new InvalidOperationException("History recording opt-out did not stop writes and disclose state.");
             }
@@ -3705,31 +3734,22 @@ namespace BetterTaskManager
         {
             const int rounds = 3;
             const int maximumRefreshMilliseconds = 8000;
-            int heartbeat = 0;
-            using (var heartbeatTimer = new Timer { Interval = 50 })
+            for (int round = 1; round <= rounds; round++)
             {
-                heartbeatTimer.Tick += (s, e) => heartbeat++;
-                heartbeatTimer.Start();
-
-                for (int round = 1; round <= rounds; round++)
+                await VerifySoakRefreshAsync("Apps", appsTab, () => RefreshAppsAsync(false, true),
+                    () => !refreshingApps && appRefreshButton.Enabled, maximumRefreshMilliseconds, round);
+                await VerifySoakRefreshAsync("Processes", processTab, () => RefreshProcessesAsync(true),
+                    () => !refreshingProcesses && refreshButton.Enabled, maximumRefreshMilliseconds, round);
+                await VerifySoakRefreshAsync("Network", networkTab, () => RefreshNetworkAsync(true),
+                    () => !refreshingNetwork && networkRefreshButton.Enabled, maximumRefreshMilliseconds, round);
+                await VerifySoakRefreshAsync("History", historyTab, () => RefreshHistoryLiveAsync(),
+                    () => !loadingHistory && !refreshingHistory && reloadHistoryButton.Enabled && clearHistoryButton.Enabled,
+                    maximumRefreshMilliseconds, round);
+                await VerifySoakRefreshAsync("Memory", memoryTab, () =>
                 {
-                    await VerifySoakRefreshAsync("Apps", appsTab, () => RefreshAppsAsync(false, true),
-                        () => !refreshingApps && appRefreshButton.Enabled, heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
-                    await VerifySoakRefreshAsync("Processes", processTab, () => RefreshProcessesAsync(true),
-                        () => !refreshingProcesses && refreshButton.Enabled, heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
-                    await VerifySoakRefreshAsync("Network", networkTab, () => RefreshNetworkAsync(true),
-                        () => !refreshingNetwork && networkRefreshButton.Enabled, heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
-                    await VerifySoakRefreshAsync("History", historyTab, () => RefreshHistoryLiveAsync(),
-                        () => !loadingHistory && !refreshingHistory && reloadHistoryButton.Enabled && clearHistoryButton.Enabled,
-                        heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
-                    await VerifySoakRefreshAsync("Memory", memoryTab, () =>
-                    {
-                        if (!RefreshMemoryPage()) throw new InvalidOperationException("Memory refresh returned a failure state.");
-                        return Task.CompletedTask;
-                    }, () => true, heartbeatTimer, () => heartbeat, maximumRefreshMilliseconds, round);
-                }
-
-                heartbeatTimer.Stop();
+                    if (!RefreshMemoryPage()) throw new InvalidOperationException("Memory refresh returned a failure state.");
+                    return Task.CompletedTask;
+                }, () => true, maximumRefreshMilliseconds, round);
             }
 
             if (snapshotCollectionGate.CurrentCount != 1)
@@ -3739,14 +3759,12 @@ namespace BetterTaskManager
         }
 
         private async Task VerifySoakRefreshAsync(string pageName, Control page, Func<Task> refresh, Func<bool> idleState,
-            Timer heartbeatTimer, Func<int> heartbeatValue, int maximumRefreshMilliseconds, int round)
+            int maximumRefreshMilliseconds, int round)
         {
             ShowPage(page);
-            int heartbeatBefore = heartbeatValue();
             var stopwatch = Stopwatch.StartNew();
             await refresh();
             stopwatch.Stop();
-            await Task.Delay(75);
 
             if (stopwatch.ElapsedMilliseconds > maximumRefreshMilliseconds)
             {
@@ -3758,7 +3776,10 @@ namespace BetterTaskManager
                 throw new InvalidOperationException(pageName + " did not return to its idle action state during soak round " +
                     round.ToString(CultureInfo.InvariantCulture) + ".");
             }
-            if (!heartbeatTimer.Enabled || heartbeatValue() <= heartbeatBefore)
+            var messagePumpProbe = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            BeginInvoke(new Action(() => messagePumpProbe.TrySetResult(true)));
+            Task completed = await Task.WhenAny(messagePumpProbe.Task, Task.Delay(1000));
+            if (completed != messagePumpProbe.Task || !messagePumpProbe.Task.Result)
             {
                 throw new InvalidOperationException("The UI message pump did not recover after " + pageName + " soak refresh round " +
                     round.ToString(CultureInfo.InvariantCulture) + ".");
@@ -4121,8 +4142,8 @@ namespace BetterTaskManager
 
             using (var dialog = new SaveFileDialog
             {
-                Title = title,
-                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                Title = UiText.Translate(title),
+                Filter = UiText.Translate("CSV files (*.csv)|*.csv|All files (*.*)|*.*"),
                 DefaultExt = "csv",
                 AddExtension = true,
                 RestoreDirectory = true,
@@ -4457,6 +4478,7 @@ namespace BetterTaskManager
         [STAThread]
         public static void Main(string[] args)
         {
+            ApplyLanguageOverride(args);
             bool firewallHelperRequested = args != null && args.Any(argument =>
                 string.Equals(argument, "--firewall-block", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(argument, "--firewall-unblock", StringComparison.OrdinalIgnoreCase));
@@ -4491,6 +4513,23 @@ namespace BetterTaskManager
             }
 
             Run();
+        }
+
+        internal static void ApplyLanguageOverride(string[] args)
+        {
+            string argument = (args ?? Array.Empty<string>()).FirstOrDefault(value =>
+                value != null && (value.StartsWith("--language=", StringComparison.OrdinalIgnoreCase) ||
+                                  value.StartsWith("--lang=", StringComparison.OrdinalIgnoreCase)));
+            if (string.IsNullOrWhiteSpace(argument)) return;
+            int separator = argument.IndexOf('=');
+            string language = separator < 0 ? "" : argument.Substring(separator + 1).Trim();
+            string cultureName;
+            if (string.Equals(language, "de", StringComparison.OrdinalIgnoreCase) || string.Equals(language, "de-DE", StringComparison.OrdinalIgnoreCase)) cultureName = "de-DE";
+            else if (string.Equals(language, "en", StringComparison.OrdinalIgnoreCase) || string.Equals(language, "en-US", StringComparison.OrdinalIgnoreCase)) cultureName = "en-US";
+            else return;
+            var culture = CultureInfo.GetCultureInfo(cultureName);
+            CultureInfo.CurrentUICulture = culture;
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
         }
 
         internal static bool TryParseFirewallHelperRequest(string[] args, out bool block, out string path)
@@ -4628,6 +4667,14 @@ namespace BetterTaskManager
 
         public static string SelfTest()
         {
+            if (UiText.TranslateToGerman("Apps") != "Anwendungen" ||
+                UiText.TranslateToGerman("Snapshot 12:34    3 processes aggregated    CPU sampling...").IndexOf("Momentaufnahme 12:34", StringComparison.Ordinal) < 0 ||
+                UiText.TranslateToGerman("Snapshot 12:34    3 processes aggregated    CPU sampling...").IndexOf("3 Prozesse zusammengefasst", StringComparison.Ordinal) < 0 ||
+                UiText.TranslateToGerman("Not blocked by BTM") != "Nicht durch BTM blockiert" ||
+                UiText.TranslateToGerman("Remote Port") != "Remoteport")
+            {
+                throw new InvalidOperationException("German localization mapping failed.");
+            }
             CommandResult success = CommandRunner.Run("cmd.exe", "/d", "/c", "echo better-task-manager-self-test");
             if (!success.Succeeded) throw new InvalidOperationException("Command runner success probe failed. " + success.FailureSummary());
             if (success.StandardOutput.IndexOf("better-task-manager-self-test", StringComparison.Ordinal) < 0) throw new InvalidOperationException("Command runner did not capture standard output.");
@@ -4934,9 +4981,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.52" || form.Text != "Better Task Manager v1.1.0-preview.52")
+                if (Application.ProductVersion != "1.1.0-preview.53" || form.Text != "Better Task Manager v1.1.0-preview.53")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.52.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.53.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

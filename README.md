@@ -4,12 +4,12 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.52`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.53`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
 - App-based overview with explicit process count plus same-snapshot summed CPU, private-byte, and working-set values for each executable group. CPU displays `...` until a second snapshot exists, so an unavailable baseline is never mislabeled as measured idle. Cached all-field search, typed sorting, and selection persist across Live refreshes.
-- Unsorted data-grid headers remain clean; the actively sorted column receives one larger blue-white triangle at its right edge, including Local Port and Remote Port.
+- Unsorted data-grid headers remain clean; the actively sorted column receives one larger violet-white triangle at its right edge, including Local Port and Remote Port.
 - Apps renders process/network grouping before the slower firewall-rule scan completes; late firewall results are guarded by snapshot and mutation revision so they cannot overwrite newer data.
 - Apps marks partial native network data in amber so grouped connection counts are never presented as silently complete.
 - Per-PID Process view with user, CPU, private bytes, working set, peak working set, threads, and executable path. The visible-row summary reconciles sampled CPU and memory totals, including partial-sample counts. Search filters the latest snapshot instantly by PID, name, user, or path without recollecting processes on every keystroke.
@@ -51,7 +51,8 @@ The current development build is `1.1.0-preview.52`. The checked-in v1.0 downloa
 - Memory maintenance actions share one non-overlapping busy gate; native standby/system cache work runs off the UI thread and restores privilege-aware controls after success or failure.
 - Bulk working-set Trim separates protected/access-denied processes, processes that exited during the scan, unexpected failures, and intentional System/BTM skips, with privilege-aware guidance.
 - Elevated startup now activates and verifies `SeProfileSingleProcessPrivilege` before enabling the two system-memory actions; elevation and actual action capability are reported separately.
-- Softer blue-slate dark UI with native dark controls and scrollbars.
+- Softer violet-slate dark UI with violet selection/accent states plus native dark controls and scrollbars.
+- Automatic German localization when the Windows display language is German, covering controls, headers, menus, tooltips, dynamic statuses, confirmations, and errors; English remains the fallback. `--language=de` and `--language=en` provide explicit overrides.
 - Connection-change history with live native connection sampling, 30-day retention, duplicate suppression, one-second change granularity, instant all-column filtering, typed timestamp/PID/port sorting, responsive paging, complete filtered export, and a confirmed **Clear History** action for the user-local store.
 - A persisted **Record history** checkbox stops all future connection-history writes without deleting existing rows; live History remains available as a read-only refresh while recording is off.
 - Path-scoped cross-process History locking protects append/load/prune/clear when two app instances overlap, including Restart-as-Admin handoff.
@@ -108,7 +109,7 @@ The longer non-destructive UI soak test repeats Apps, Processes, Network, Histor
 
 ## Continuous Integration
 
-`.github/workflows/windows-ci.yml` runs on Windows for pushes, pull requests, and manual dispatch. It installs the .NET 11 preview channel, restores and builds Release, runs the self-test plus UI smoke and soak modes, publishes the self-contained executable, and uploads it as a 14-day workflow artifact. The workflow becomes active when this branch is pushed to GitHub.
+`.github/workflows/windows-ci.yml` runs on Windows for pushes, pull requests, and manual dispatch. It installs the .NET 11 preview channel, restores and builds Release, runs the self-test plus English/German UI smoke and repeated soak modes, publishes the self-contained executable, and uploads it as a 14-day workflow artifact. The workflow becomes active when this branch is pushed to GitHub.
 
 ## Publish
 
@@ -127,13 +128,13 @@ Run the normal publish command after the old latest window closes to refresh the
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.52-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.53-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.52-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.53-portable-win-x64\BetterTaskManager.exe
 ```
 
 The publish script also refreshes this stable path on every successful build, so testers do not need to locate the newest numbered preview folder:

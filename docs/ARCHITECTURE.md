@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.52 remains a single Windows desktop executable.
+Better Task Manager 1.1.0-preview.53 remains a single Windows desktop executable.
 
 ```text
 WinForms UI
@@ -55,6 +55,8 @@ Unexpected exception reports use a path-derived named mutex across app instances
 Top-level navigation and dense command surfaces use autosized wrapping flow layouts. Each page has its own dark context menu that forwards to the same Button actions as its toolbar; grid right-click first selects the target row, and text inputs retain their normal editing menu. The Apps master/detail split uses percentage sizing, with cards and actions wrapping independently; data grids retain explicit column widths and horizontal scrolling. UI smoke tests shrink the form to its minimum size and assert that visible command controls remain inside their containers.
 
 WinForms bootstraps through generated `ApplicationConfiguration.Initialize()` with `ApplicationHighDpiMode=PerMonitorV2`, then requests native and framework dark modes before constructing forms. Runtime smoke coverage asserts the configured DPI mode so packaged builds cannot silently fall back to implicit system-aware scaling.
+
+Localization selects German automatically from `CurrentUICulture` with English fallback and optional command-line override. Static control/header/menu/tooltip text is translated once after construction; non-input control text changes are localized as dynamic statuses update, while grid formatting localizes display states without mutating cached/export models. Message boxes pass through the same translator, and English/German UI smoke modes verify both paths.
 
 The Windows CI workflow installs the .NET 11 preview channel, restores/builds Release, launches self-test plus watchdog-backed UI smoke and soak modes as waited processes, publishes the single-file win-x64 profile, and uploads the complete portable folder. The soak mode performs three rounds across all five page refresh paths, bounds individual refresh duration, verifies the UI message pump recovers, and checks that gates and controls return to idle. The publish script derives its version from the project and performs guarded exact-child cleanup before staging the executable, README, v1.1 preview release notes, changelog, security/privacy guide, license, and SHA-256 manifest. CI has read-only repository permissions and no destructive or privileged test steps.
 

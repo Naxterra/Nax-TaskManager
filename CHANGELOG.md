@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.52 - Unreleased
+## 1.1.0-preview.53 - Unreleased
 
 ### Added
 
@@ -52,13 +52,14 @@
 - Added concise tester-facing v1.1 preview release notes covering highlights, upgrade/local data, safety/privacy, validation, and known limits.
 - Added a persisted **Record history** privacy control.
 - Added a packaged non-destructive manual test checklist covering every original preview report and the exact evidence expected for each result.
+- Added automatic German localization with English fallback and `--language=de` / `--language=en` overrides, including dynamic status text, grids, section menus, tooltips, dialogs, and common connection states.
 
 ### Changed
 
 - Replaced localized `netstat` text parsing with native Windows IPv4/IPv6 TCP and UDP tables that include owning process IDs.
 - The app now starts without elevation or a console and can directly restart its executable as administrator when needed.
 - Reworked connection history to record new or changed connections instead of duplicating every full snapshot.
-- Replaced the near-black palette with a softer blue-slate theme and enabled the supported WinForms dark color mode for native controls and scrollbars.
+- Replaced the near-black/blue palette with a softer violet-slate theme and enabled the supported WinForms dark color mode for native controls and scrollbars.
 - Replaced the misleading generic `Allowed` firewall label with rule-specific `BTM Blocked` and `Not blocked by BTM` states and an exact outbound-rule explanation.
 - Clarified app aggregation with a process-count column, precise Private Bytes/Working Set names, shared-page overlap guidance, summed-memory labels, and snapshot timestamps on all live views.
 - Process search now filters the latest complete snapshot in memory by PID, name, user, or path; only manual/Live refresh performs a new Windows process collection.
@@ -159,7 +160,7 @@
 - Moved Apps firewall status into its own aligned row so it no longer wraps beneath the action buttons with an extra left offset.
 - Fixed the Apps search field being stretched to the full row height, which placed its text against the upper edge; it now retains its native edit height and is vertically centered.
 - Removed WinForms glyph-overhang padding from Apps headings/status text and trim display names before rendering, eliminating the apparent leading spaces before names such as `svchost`.
-- Replaced the small low-contrast native sort glyph with one larger blue-white triangle drawn at the right edge of only the active sort column, including Remote Port.
+- Replaced the small low-contrast native sort glyph with one larger violet-white triangle drawn at the right edge of only the active sort column, including Remote Port.
 - Removed the noisy neutral arrow prefix from every unsorted header and restored compact single-line header labels.
 - Widened Peak Working Set so its full header remains visible without clipping.
 - Removed the duplicated per-process Trim action; working-set Trim remains under Memory with categorized results.
