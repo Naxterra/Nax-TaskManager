@@ -12,7 +12,7 @@ $testAppName = "Better Task Manager Installer Test"
 $testInstallerBaseName = "BetterTaskManager-v$version-installer-test-win-x64"
 $InstallerPath = Join-Path $root "artifacts\$testInstallerBaseName.exe"
 & (Join-Path $PSScriptRoot "build-installer.ps1") -AppIdValue $testAppId -AppNameValue $testAppName `
-    -InstallerBaseNameOverride $testInstallerBaseName -SkipReleaseChecksums
+    -InstallerBaseNameOverride $testInstallerBaseName -DisableCloseApplications -SkipReleaseChecksums
 if (-not (Test-Path -LiteralPath $InstallerPath)) { throw "Installer not found: $InstallerPath" }
 $sourceIconPath = Join-Path $root "src\BetterTaskManager\assets\BetterTaskManager.ico"
 if (-not (Test-Path -LiteralPath $sourceIconPath)) { throw "Source icon not found: $sourceIconPath" }

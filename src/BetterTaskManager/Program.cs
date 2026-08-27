@@ -416,6 +416,7 @@ namespace BetterTaskManager
         private readonly bool isAdmin;
         private readonly bool hasSystemMemoryPrivilege;
         private readonly int systemMemoryPrivilegeError;
+        private readonly System.Drawing.Icon applicationIcon;
         private readonly DataGridView appGrid;
         private readonly DataGridView appConnectionsGrid;
         private readonly Button appRefreshButton;
@@ -557,6 +558,13 @@ namespace BetterTaskManager
             Font = new Font("Segoe UI", 9);
             BackColor = Theme.Window;
             ForeColor = Theme.Text;
+            ShowIcon = true;
+            System.Drawing.Icon loadedApplicationIcon = null;
+            try { loadedApplicationIcon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); }
+            catch (ArgumentException) { }
+            catch (System.ComponentModel.Win32Exception) { }
+            applicationIcon = loadedApplicationIcon;
+            if (applicationIcon != null) Icon = applicationIcon;
 
             isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
             hasSystemMemoryPrivilege = NativeMethods.TryEnablePrivilege("SeProfileSingleProcessPrivilege", out systemMemoryPrivilegeError);
@@ -1118,6 +1126,11 @@ namespace BetterTaskManager
             {
                 shortcutToolTip.Dispose();
                 foreach (ContextMenuStrip menu in sectionContextMenus) menu.Dispose();
+                if (applicationIcon != null)
+                {
+                    Icon = null;
+                    applicationIcon.Dispose();
+                }
             };
             Resize += (s, e) =>
             {
@@ -3381,6 +3394,10 @@ namespace BetterTaskManager
             if (Application.HighDpiMode != HighDpiMode.PerMonitorV2)
             {
                 throw new InvalidOperationException("WinForms did not start in PerMonitorV2 high-DPI mode.");
+            }
+            if (!ShowIcon || applicationIcon == null || !ReferenceEquals(Icon, applicationIcon))
+            {
+                throw new InvalidOperationException("Main window title-bar icon is not bound to the executable icon.");
             }
             if (Theme.Window != Color.FromArgb(27, 22, 41) || Theme.Accent != Color.FromArgb(139, 92, 246) ||
                 Theme.AccentHover != Color.FromArgb(167, 139, 250) || Theme.AccentSelected != Color.FromArgb(109, 75, 171))

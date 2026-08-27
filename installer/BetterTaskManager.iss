@@ -22,6 +22,9 @@
 #ifndef AppNameValue
   #define AppNameValue "Better Task Manager"
 #endif
+#ifndef CloseApplicationsValue
+  #define CloseApplicationsValue "yes"
+#endif
 
 #define AppName AppNameValue
 #define AppPublisher "Naxterra"
@@ -58,7 +61,7 @@ SolidCompression=yes
 WizardStyle=modern dynamic
 SetupLogging=yes
 SetupIconFile={#IconPath}
-CloseApplications=yes
+CloseApplications={#CloseApplicationsValue}
 CloseApplicationsFilter={#AppExeName}
 RestartApplications=no
 UninstallDisplayIcon={app}\{#AppExeName}

@@ -65,6 +65,7 @@
 - Replaced the near-black/blue palette with a softer violet-slate theme and enabled the supported WinForms dark color mode for native controls and scrollbars.
 - Removed the setup wizard's raw Markdown release-notes page; release notes remain installed as a document instead of interrupting installation flow.
 - Increased the process-level UI test watchdog for self-contained cold starts while retaining the strict eight-second ceiling on every individual page refresh.
+- Bound the WinForms main-window icon explicitly to the embedded executable icon so the title bar, taskbar, shortcuts, Setup, and uninstall entry all use the same artwork.
 - Replaced the misleading generic `Allowed` firewall label with rule-specific `BTM Blocked` and `Not blocked by BTM` states and an exact outbound-rule explanation.
 - Clarified app aggregation with a process-count column, precise Private Bytes/Working Set names, shared-page overlap guidance, summed-memory labels, and snapshot timestamps on all live views.
 - Process search now filters the latest complete snapshot in memory by PID, name, user, or path; only manual/Live refresh performs a new Windows process collection.

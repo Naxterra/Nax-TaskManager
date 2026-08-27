@@ -4,6 +4,7 @@ param(
     [string]$AppIdValue = "{{9B62E509-9DBE-4C73-88EC-DF93F70835A1}",
     [string]$AppNameValue = "Better Task Manager",
     [string]$InstallerBaseNameOverride,
+    [switch]$DisableCloseApplications,
     [switch]$SkipReleaseChecksums
 )
 
@@ -43,6 +44,7 @@ if ($version -match 'preview\.(\d+)$') { $previewNumber = [int]$Matches[1] }
 $numericVersion = "1.1.0.$previewNumber"
 $installerBaseName = if ([string]::IsNullOrWhiteSpace($InstallerBaseNameOverride)) { "BetterTaskManager-v$version-setup-win-x64" } else { $InstallerBaseNameOverride }
 $installerPath = Join-Path $artifacts ($installerBaseName + ".exe")
+$closeApplicationsValue = if ($DisableCloseApplications) { "no" } else { "yes" }
 
 $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
 $startInfo.FileName = $IsccPath
@@ -60,6 +62,7 @@ foreach ($argument in @(
     "/DIconPath=$iconPath",
     "/DAppIdValue=$AppIdValue",
     "/DAppNameValue=$AppNameValue",
+    "/DCloseApplicationsValue=$closeApplicationsValue",
     $installerScript
 )) {
     [void]$startInfo.ArgumentList.Add($argument)
