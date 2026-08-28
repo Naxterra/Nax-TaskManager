@@ -2,6 +2,7 @@
 param(
     [string]$IsccPath,
     [string]$AppIdValue = "{{9B62E509-9DBE-4C73-88EC-DF93F70835A1}",
+    [string]$UninstallRegistryId = "{9B62E509-9DBE-4C73-88EC-DF93F70835A1}",
     [string]$AppNameValue = "Better Task Manager",
     [string]$InstallerBaseNameOverride,
     [switch]$DisableCloseApplications,
@@ -61,6 +62,7 @@ foreach ($argument in @(
     "/DInstallerBaseName=$installerBaseName",
     "/DIconPath=$iconPath",
     "/DAppIdValue=$AppIdValue",
+    "/DUninstallRegistryId=$UninstallRegistryId",
     "/DAppNameValue=$AppNameValue",
     "/DCloseApplicationsValue=$closeApplicationsValue",
     $installerScript

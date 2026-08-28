@@ -25,15 +25,18 @@ An exit code of `0` means three complete cross-page rounds stayed within the per
 1. Run the setup executable and confirm current-user mode is the default; optionally verify the all-users choice requests elevation.
 2. Confirm the selected Programs directory, Start Menu shortcut, optional desktop shortcut, and Add/Remove Programs entry are created.
 3. Confirm Setup, the installed executable, title bar, Start Menu/optional desktop shortcuts, taskbar window, and uninstall entry all show the same violet performance-chart icon rather than the generic WinForms icon.
-4. Run the same or a newer installer again and confirm it upgrades/repairs the existing installation rather than creating a second uninstall entry.
-5. Launch the installed executable and confirm the preview version, violet theme, German/English localization, Live monitoring, and page-specific actions match the portable build.
-6. Uninstall and confirm program files/shortcuts are removed while `%LOCALAPPDATA%\BetterTaskManager` user settings, history, exports, and crash logs remain.
+4. Run the same or a newer installer again. Confirm Setup reports that it is removing the existing installation, waits for that uninstaller to finish, and only then installs the new version.
+5. Confirm Apps & Features contains exactly one new Better Task Manager entry and the install folder contains only `unins000.exe`, not an incremented uninstaller from an in-place overwrite.
+6. Launch the installed executable and confirm the preview version, violet theme, German/English localization, Live monitoring, and page-specific actions match the portable build.
+7. Uninstall and confirm program files/shortcuts are removed while `%LOCALAPPDATA%\BetterTaskManager` user settings, history, exports, and crash logs remain.
 
 The automated equivalent is:
 
 ```powershell
 .\scripts\test-installer.ps1
 ```
+
+The automated test uses a separate test-only App ID and installation directory. It proves the registered previous uninstaller ran successfully before reinstalling, verifies the fresh `unins000.exe`, then checks application behavior and final cleanup without touching the real Better Task Manager installation.
 
 ## Live monitoring
 

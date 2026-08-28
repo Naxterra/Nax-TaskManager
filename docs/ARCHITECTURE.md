@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.55 remains a single Windows desktop executable distributed as both a portable package and an optional installer.
+Better Task Manager 1.1.0-preview.56 remains a single Windows desktop executable distributed as both a portable package and an optional installer.
 
 ```text
 WinForms UI
@@ -60,7 +60,7 @@ WinForms bootstraps through generated `ApplicationConfiguration.Initialize()` wi
 
 Localization selects German automatically from `CurrentUICulture` with English fallback and optional command-line override. Static control/header/menu/tooltip text is translated once after construction; non-input control text changes are localized as dynamic statuses update, while grid formatting localizes display states without mutating cached/export models. Message boxes pass through the same translator, and English/German UI smoke modes verify both paths.
 
-The installer uses a fixed Inno Setup App ID so later versions replace the installed program in place rather than creating parallel uninstall entries. It defaults to non-administrative current-user mode, permits an explicit all-users override, installs the exact portable payload, registers Start Menu/optional desktop shortcuts and uninstall metadata, and deliberately leaves user-local runtime data outside the installation directory. CI tests first install plus repair/upgrade, installed executable tests, and uninstall in an isolated directory.
+The installer uses a fixed Inno Setup App ID to locate the registered uninstall entry in current-user or 32/64-bit all-users scope. Before file installation, it launches that exact uninstaller silently, waits for its exit and self-deletion, verifies the registration is gone, and aborts rather than overlaying a dirty installation if removal fails. It then installs the exact portable payload and creates one fresh `unins000.exe`. User-local runtime data stays outside the installation directory and is deliberately preserved. CI proves first install, uninstall-before-reinstall log evidence, clean uninstaller numbering, installed executable tests, and final uninstall in an isolated test identity.
 
 One deterministic generator produces a PNG-backed multi-resolution ICO (16 through 256 pixels). The project embeds it as `ApplicationIcon`, and Inno Setup uses the same source for Setup; shortcuts and uninstall metadata resolve the installed executable's icon so every Windows surface shares one identity.
 

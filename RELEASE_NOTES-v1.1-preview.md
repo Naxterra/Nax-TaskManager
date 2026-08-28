@@ -25,7 +25,7 @@ This preview is a substantial update to the checked-in v1.0 release. It remains 
 - Firewall, Process mutation, Memory maintenance, snapshot collection, and History persistence have explicit non-overlapping gates and stale-result safeguards.
 - Force Kill/Trim validate process start time, reject PID reuse, and protect Better Task Manager's own process.
 - Portable packages include documentation, security/privacy guidance, license, and an executable SHA-256 manifest. Windows CI mirrors restore, build, self-test, UI smoke, and publish steps after the branch is pushed.
-- A proper English/German Windows installer supports current-user or all-users installation, Start Menu and optional desktop shortcuts, in-place upgrades, Add/Remove Programs uninstall, and dynamic light/dark wizard styling.
+- A proper English/German Windows installer supports current-user or all-users installation, Start Menu and optional desktop shortcuts, Add/Remove Programs uninstall, and dynamic light/dark wizard styling. When upgrading, Setup removes the registered existing installation completely before installing the new version while preserving user-local data.
 - A custom violet performance-chart icon is embedded at multiple resolutions for consistent Setup, shortcut, taskbar, and application identity.
 
 ## Upgrade and Local Data

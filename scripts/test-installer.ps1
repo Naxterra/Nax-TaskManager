@@ -12,7 +12,8 @@ $testAppName = "Better Task Manager Installer Test"
 $testInstallerBaseName = "BetterTaskManager-v$version-installer-test-win-x64"
 $InstallerPath = Join-Path $root "artifacts\$testInstallerBaseName.exe"
 & (Join-Path $PSScriptRoot "build-installer.ps1") -AppIdValue $testAppId -AppNameValue $testAppName `
-    -InstallerBaseNameOverride $testInstallerBaseName -DisableCloseApplications -SkipReleaseChecksums
+    -UninstallRegistryId $testRegistryAppId -InstallerBaseNameOverride $testInstallerBaseName `
+    -DisableCloseApplications -SkipReleaseChecksums
 if (-not (Test-Path -LiteralPath $InstallerPath)) { throw "Installer not found: $InstallerPath" }
 $sourceIconPath = Join-Path $root "src\BetterTaskManager\assets\BetterTaskManager.ico"
 if (-not (Test-Path -LiteralPath $sourceIconPath)) { throw "Source icon not found: $sourceIconPath" }
@@ -60,6 +61,14 @@ function Invoke-WaitedProcess([string]$FileName, [string[]]$Arguments) {
     return $process.ExitCode
 }
 
+function Get-RegisteredUninstaller([string]$RegistryPath) {
+    $metadata = Get-ItemProperty -LiteralPath $RegistryPath
+    $command = [string]$metadata.UninstallString
+    if ($command -match '^"([^"]+)"') { return $Matches[1] }
+    if ($command -match '^(\S+)') { return $Matches[1] }
+    throw "UninstallString is missing or invalid at $RegistryPath"
+}
+
 $testRoot = Join-Path $root "artifacts\installer-test"
 $installDirectory = Join-Path $testRoot $testAppName
 $logPath = Join-Path $testRoot "install.log"
@@ -71,8 +80,7 @@ if (-not $testRootFull.StartsWith($artifactsFull, [System.StringComparison]::Ord
     throw "Refusing to use an unverified installer test directory: $testRootFull"
 }
 if (Test-Path -LiteralPath $uninstallRegistryPath) {
-    $staleMetadata = Get-ItemProperty -LiteralPath $uninstallRegistryPath
-    $staleUninstaller = Join-Path $staleMetadata.InstallLocation "unins000.exe"
+    $staleUninstaller = Get-RegisteredUninstaller $uninstallRegistryPath
     if (Test-Path -LiteralPath $staleUninstaller) {
         $staleExit = Invoke-WaitedProcess $staleUninstaller @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART")
         if ($staleExit -ne 0) { throw "Stale test installation cleanup failed with exit code $staleExit." }
@@ -85,6 +93,7 @@ $installArguments = @(
     "/VERYSILENT",
     "/SUPPRESSMSGBOXES",
     "/NORESTART",
+    "/CLOSEAPPLICATIONS",
     "/CURRENTUSER",
     "/DIR=$installDirectory",
     "/LOG=$logPath"
@@ -93,7 +102,7 @@ $firstInstallExit = Invoke-WaitedProcess $InstallerPath $installArguments
 if ($firstInstallExit -ne 0) { throw "Installer failed with exit code $firstInstallExit. See $logPath" }
 
 $installedExe = Join-Path $installDirectory "BetterTaskManager.exe"
-$uninstaller = Join-Path $installDirectory "unins000.exe"
+$uninstaller = Get-RegisteredUninstaller $uninstallRegistryPath
 $startMenuGroup = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)) $testAppName
 $startMenuShortcut = Join-Path $startMenuGroup ($testAppName + ".lnk")
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)) ($testAppName + ".lnk")
@@ -114,10 +123,34 @@ $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($startMenuShortcut)
 if ($shortcut.TargetPath.TrimEnd('\') -ne $installedExe.TrimEnd('\')) { throw "Start Menu shortcut target is incorrect: $($shortcut.TargetPath)" }
 
+$runningTestApp = $null
+$otherRunningApp = @(Get-CimInstance Win32_Process -Filter "Name = 'BetterTaskManager.exe'" | Where-Object {
+    $_.ExecutablePath -and $_.ExecutablePath -ne $installedExe
+})
+if ($otherRunningApp.Count -eq 0) {
+    $runningTestApp = Start-Process -FilePath $installedExe -PassThru
+    if (-not $runningTestApp.WaitForInputIdle(15000)) { throw "Installed app did not become input-idle for the running-upgrade test." }
+}
+else {
+    Write-Warning "Skipping the running-app close check because another Better Task Manager instance is already open."
+}
+
 $secondInstallExit = Invoke-WaitedProcess $InstallerPath $installArguments
-if ($secondInstallExit -ne 0) { throw "Installer upgrade/repair pass failed with exit code $secondInstallExit." }
+if ($secondInstallExit -ne 0) { throw "Installer uninstall-before-reinstall pass failed with exit code $secondInstallExit." }
+if ($null -ne $runningTestApp -and -not $runningTestApp.WaitForExit(5000)) {
+    throw "The previous installed app remained running during uninstall-before-reinstall."
+}
+$upgradeLog = Get-Content -LiteralPath $logPath -Raw
+if ($upgradeLog -notmatch "Existing installation detected" -or
+    $upgradeLog -notmatch "Previous installation removed successfully before installing the new version") {
+    throw "Upgrade did not run and complete the previous uninstaller before reinstalling."
+}
 if ((Get-ChildItem -LiteralPath $installDirectory -Filter "unins*.exe" -File).Count -ne 1) {
     throw "Upgrade/repair created multiple uninstallers instead of reusing the stable AppId."
+}
+$uninstaller = Get-RegisteredUninstaller $uninstallRegistryPath
+if ((Split-Path $uninstaller -Leaf) -ne "unins000.exe" -or -not (Test-Path -LiteralPath $uninstaller)) {
+    throw "The previous uninstaller was not fully removed before the new version was installed: $uninstaller"
 }
 
 $selfTestExit = Invoke-WaitedProcess $installedExe @("--self-test", "--language=en")
@@ -131,4 +164,4 @@ if (Test-Path -LiteralPath $installedExe) { throw "Installed executable remained
 if (Test-Path -LiteralPath $startMenuShortcut) { throw "Start Menu shortcut remained after uninstall: $startMenuShortcut" }
 if (Test-Path -LiteralPath $uninstallRegistryPath) { throw "Uninstall registration remained after uninstall: $uninstallRegistryPath" }
 
-Write-Host "Installer verification passed: install metadata/shortcuts, repair/upgrade, app tests, and uninstall cleanup."
+Write-Host "Installer verification passed: install metadata/shortcuts, uninstall-before-reinstall, app tests, and final cleanup."

@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.55 - 2026-08-28
+## 1.1.0-preview.56 - 2026-08-28
 
 ### Added
 
@@ -86,6 +86,7 @@
 - Restored column widths are clamped to 40–1200 pixels, and closing while minimized preserves the last non-minimized maximized state correctly.
 - The Apps master pane now uses a DPI-aware clamped width: it remains usable at the minimum window size, follows normal resizing, and stops expanding on ultrawide windows so the detail pane receives excess width.
 - **Restart as Admin** now waits for the unelevated owner to exit before the elevated replacement claims the single-instance lock.
+- Installer upgrades now execute and wait for the registered previous uninstaller before copying the new version instead of overwriting the old installation in place.
 - Replaced duplicated legacy WinForms startup calls with generated `ApplicationConfiguration.Initialize()` bootstrap while preserving native and supported dark-mode initialization.
 - Apps export writes snapshot time, firewall, process count, CPU and sampled-process count, connections, Private Bytes, Working Set, user, and executable path using invariant numeric values.
 - Process export records CPU availability explicitly; Network export preserves native endpoint fields and normalized connection state. All four views now share one asynchronous dialog/write workflow.
@@ -115,6 +116,7 @@
 
 ### Fixed
 
+- Prevented installer upgrades from leaving prior-version files or incremented `unins001.exe` metadata by waiting for uninstaller self-cleanup before reinstalling.
 - Fixed the percentage-based Apps pane growing to roughly 860–1200 pixels on 2389–3336 pixel windows and pushing useful detail content unnecessarily far right.
 - Added the missing History navigation entry so saved connection snapshots can be viewed from the app.
 - Firewall and force-kill actions now report Windows command failures and timeouts instead of presenting them as successful.
