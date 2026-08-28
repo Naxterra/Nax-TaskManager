@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.54`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.55`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -27,7 +27,7 @@ The current development build is `1.1.0-preview.54`. The checked-in v1.0 downloa
 - Automatic Live refresh failures stay inline and change the global status to red **Live error** instead of opening recurring modal dialogs. A successful later tick restores green **Live**; explicit manual refresh failures still show a dialog.
 - Unexpected exceptions write contextual, cross-process-safe crash reports capped at 1 MiB with one rotated previous log.
 - Window size, maximized state, selected refresh interval, and user-resized Apps/Processes/Network/History columns are saved atomically in `%LOCALAPPDATA%\BetterTaskManager\settings.json`. Restored dimensions and column widths are clamped safely; Live itself always starts paused.
-- Global navigation, Apps cards/actions, and Process/Network/History command bars autosize and wrap at narrow window widths instead of clipping controls. The Apps split uses proportional columns while data tables retain horizontal scrolling.
+- Global navigation, Apps cards/actions, and Process/Network/History command bars autosize and wrap at narrow window widths instead of clipping controls. The Apps master pane scales at small/normal sizes but is DPI-aware and capped on ultrawide windows so the detail view receives the extra space; data tables retain horizontal scrolling.
 - Explicit WinForms `PerMonitorV2` DPI awareness with generated application bootstrap, allowing forms, child controls, common controls, and dialogs to rescale when moved between monitors with different scaling.
 - Global keyboard shortcuts with tooltip discovery: **F5** refreshes the active view, **Ctrl+F** focuses its filter, **Escape** clears it, **Ctrl+E** exports it, and **Ctrl+L** toggles Live monitoring.
 - **Ctrl+1** through **Ctrl+5** navigate Apps, Processes, Network, History, and Memory; **Page Up/Page Down** browse History result pages.
@@ -40,6 +40,7 @@ The current development build is `1.1.0-preview.54`. The checked-in v1.0 downloa
 - One cross-view firewall mutation gate keeps Apps and Network rule actions non-overlapping and selection/refresh aware.
 - **Not blocked by BTM** means no Better Task Manager outbound block rule exists for that executable; other Windows Firewall policies may still block it.
 - Global Standard/Administrator status with **Restart as Admin** available from every page; system-memory controls remain disabled until elevation, while firewall buttons request approval when used.
+- One instance runs per signed-in Windows user/session. Launching the app again restores and activates the existing window; **Restart as Admin** performs a guarded handoff to the elevated replacement.
 - Memory cleanup tools:
   - Live physical load, used/available RAM, system cache, and system commit/limit dashboard.
   - Native System CPU usage derived from Windows idle/kernel/user time deltas, with an explicit first-sample state.
@@ -128,13 +129,13 @@ Run the normal publish command after the old latest window closes to refresh the
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.54-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.55-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.54-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.55-portable-win-x64\BetterTaskManager.exe
 ```
 
 The publish script also refreshes this stable path on every successful build, so testers do not need to locate the newest numbered preview folder:
@@ -162,8 +163,8 @@ Build the installer after publishing the portable package:
 The build script bootstraps the pinned official Inno Setup compiler when necessary and creates:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.54-setup-win-x64.exe
-artifacts\SHA256SUMS-v1.1.0-preview.54.txt
+artifacts\BetterTaskManager-v1.1.0-preview.55-setup-win-x64.exe
+artifacts\SHA256SUMS-v1.1.0-preview.55.txt
 ```
 
 The installer:

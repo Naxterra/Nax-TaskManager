@@ -5,6 +5,8 @@ This preview is a substantial update to the checked-in v1.0 release. It remains 
 ## Highlights
 
 - Responsive violet-slate dark interface with native dark controls, dark scrollbars, PerMonitorV2 scaling, narrow-window wrapping, saved window/column preferences, and global keyboard shortcuts.
+- Apps master/detail sizing now keeps the master list usable at small widths while capping it on ultrawide windows so detail content expands naturally.
+- Only one app instance runs per signed-in Windows user/session; a second launch restores the existing window, while **Restart as Admin** safely hands ownership to the elevated replacement.
 - German UI localization follows the Windows display language automatically and covers static/dynamic UI text, menus, tooltips, dialogs, headers, and common states; English remains available via `--language=en`.
 - Apps, Processes, Network, History, and Memory all support manual or selectable 1/2/5/15-second Live refresh where applicable.
 - Grouped Apps and per-PID Processes use explicit same-snapshot CPU, Private Bytes, and Working Set semantics with reconciliation counts and unavailable-CPU sampling states.

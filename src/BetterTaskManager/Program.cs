@@ -482,6 +482,7 @@ namespace BetterTaskManager
         private readonly PercentageTrendControl memoryLoadTrend;
         private readonly Panel pageHost;
         private readonly FlowLayoutPanel navBar;
+        private readonly TableLayoutPanel appShell;
         private readonly FlowLayoutPanel appMetricCards;
         private readonly FlowLayoutPanel appActions;
         private readonly FlowLayoutPanel processToolbar;
@@ -637,10 +638,11 @@ namespace BetterTaskManager
             historyNavButton.Click += async (s, e) => await NavigateToPageAsync(historyTab);
             memoryNavButton.Click += async (s, e) => await NavigateToPageAsync(memoryTab);
 
-            var appShell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 1, ColumnCount = 2, Margin = new Padding(0), Padding = new Padding(0) };
-            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36));
-            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64));
+            appShell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 1, ColumnCount = 2, Margin = new Padding(0), Padding = new Padding(0) };
+            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 560));
+            appShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             appsTab.Controls.Add(appShell);
+            appsTab.Resize += (s, e) => UpdateAppsSplitWidth();
 
             var appLeft = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Padding = new Padding(14), Margin = new Padding(0) };
             appLeft.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
@@ -1118,6 +1120,7 @@ namespace BetterTaskManager
                 ApplyNativeDarkTheme(this);
                 ApplyPrivilegeState();
                 if (appSettings.Maximized) WindowState = FormWindowState.Maximized;
+                UpdateAppsSplitWidth();
                 ShowPage(appsTab);
                 if (!skipInitialRefresh) await RefreshAppsAsync(true);
             };
@@ -1146,6 +1149,7 @@ namespace BetterTaskManager
             ApplyDarkTheme(this);
             ApplyPrivilegeState();
             UpdateMemoryTrendWidth();
+            UpdateAppsSplitWidth();
             ShowPage(appsTab);
             ShowSelectedApp();
             UpdateExecutablePathActions();
@@ -1257,6 +1261,18 @@ namespace BetterTaskManager
         {
             int availableWidth = Math.Max(520, memoryTab.ClientSize.Width - memoryPanel.Padding.Horizontal - 8);
             memoryTrendPanel.Width = availableWidth;
+        }
+
+        private void UpdateAppsSplitWidth()
+        {
+            if (appShell == null || appShell.ColumnStyles.Count < 2) return;
+            int paneWidth = AppsMasterPaneWidth(Math.Max(1, appsTab.ClientSize.Width), DeviceDpi <= 0 ? 96 : DeviceDpi);
+            if (Math.Abs(appShell.ColumnStyles[0].Width - paneWidth) < 0.5f) return;
+            appShell.ColumnStyles[0].SizeType = SizeType.Absolute;
+            appShell.ColumnStyles[0].Width = paneWidth;
+            appShell.ColumnStyles[1].SizeType = SizeType.Percent;
+            appShell.ColumnStyles[1].Width = 100;
+            appShell.PerformLayout();
         }
 
         internal static GlobalShortcutCommand GetGlobalShortcutCommand(Keys keyData, string pageName)
@@ -1504,6 +1520,19 @@ namespace BetterTaskManager
             int safeMaximum = Math.Max(safeMinimum, maximum);
             int candidate = value > 0 ? value : fallback;
             return Math.Max(safeMinimum, Math.Min(candidate, safeMaximum));
+        }
+
+        internal static int AppsMasterPaneWidth(int totalWidth, int deviceDpi)
+        {
+            double scale = Math.Max(1, deviceDpi) / 96d;
+            int minimumMaster = (int)Math.Round(420d * scale);
+            int maximumMaster = (int)Math.Round(620d * scale);
+            int minimumDetail = (int)Math.Round(520d * scale);
+            int available = Math.Max(1, totalWidth);
+            int upperBound = Math.Min(maximumMaster, Math.Max(1, available - minimumDetail));
+            int lowerBound = Math.Min(minimumMaster, upperBound);
+            int desired = (int)Math.Round(available * 0.36d);
+            return Math.Max(lowerBound, Math.Min(desired, upperBound));
         }
 
         internal static string SnapshotLabel(DateTime snapshot)
@@ -3813,8 +3842,15 @@ namespace BetterTaskManager
 
             ShowPage(appsTab);
             PerformLayout();
+            UpdateAppsSplitWidth();
             appMetricCards.PerformLayout();
             appActions.PerformLayout();
+            int expectedMasterWidth = AppsMasterPaneWidth(Math.Max(1, appsTab.ClientSize.Width), DeviceDpi <= 0 ? 96 : DeviceDpi);
+            int actualMasterWidth = appShell.GetColumnWidths()[0];
+            if (Math.Abs(actualMasterWidth - expectedMasterWidth) > 1)
+            {
+                throw new InvalidOperationException("Apps master pane did not apply its clamped responsive width.");
+            }
             if (!VisibleFlowChildrenFit(appMetricCards) || !VisibleFlowChildrenFit(appActions))
             {
                 throw new InvalidOperationException("Apps cards or actions clipped controls at minimum window width.");
@@ -3916,6 +3952,8 @@ namespace BetterTaskManager
                     Verb = "runas",
                     UseShellExecute = true
                 };
+                psi.ArgumentList.Add("--wait-for-instance");
+                psi.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
                 if (Process.Start(psi) != null) Close();
             }
             catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
@@ -4529,7 +4567,40 @@ namespace BetterTaskManager
                 return;
             }
 
-            Run();
+            int previousProcessId;
+            if (TryParseWaitForInstance(args, out previousProcessId)) WaitForPriorInstance(previousProcessId, 15000);
+            using (var coordinator = new SingleInstanceCoordinator())
+            {
+                if (!coordinator.IsPrimary)
+                {
+                    coordinator.SignalExistingInstance();
+                    return;
+                }
+                Run(coordinator);
+            }
+        }
+
+        internal static bool TryParseWaitForInstance(string[] args, out int processId)
+        {
+            processId = 0;
+            if (args == null) return false;
+            for (int index = 0; index + 1 < args.Length; index++)
+            {
+                if (!string.Equals(args[index], "--wait-for-instance", StringComparison.OrdinalIgnoreCase)) continue;
+                return int.TryParse(args[index + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out processId) && processId > 0;
+            }
+            return false;
+        }
+
+        private static void WaitForPriorInstance(int processId, int timeoutMilliseconds)
+        {
+            if (processId <= 0 || processId == Environment.ProcessId) return;
+            try
+            {
+                using (Process process = Process.GetProcessById(processId)) process.WaitForExit(Math.Max(0, timeoutMilliseconds));
+            }
+            catch (ArgumentException) { }
+            catch (InvalidOperationException) { }
         }
 
         internal static void ApplyLanguageOverride(string[] args)
@@ -4621,7 +4692,7 @@ namespace BetterTaskManager
             }
         }
 
-        public static void Run()
+        internal static void Run(SingleInstanceCoordinator coordinator = null)
         {
             ConfigureApplicationVisuals();
             Application.ThreadException += (s, e) =>
@@ -4635,7 +4706,11 @@ namespace BetterTaskManager
                 if (ex != null) WriteCrashLog(ex);
                 MessageBox.Show(ex == null ? "Unknown error" : ex.Message + "\n\nA crash log was written to %LOCALAPPDATA%\\BetterTaskManager\\crash.log", "Better Task Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             };
-            Application.Run(new MainForm());
+            using (var form = new MainForm())
+            {
+                if (coordinator != null) coordinator.Attach(form);
+                Application.Run(form);
+            }
         }
 
         private static void ConfigureApplicationVisuals()
@@ -4960,6 +5035,42 @@ namespace BetterTaskManager
             {
                 throw new InvalidOperationException("Window dimension clamping failed.");
             }
+            if (MainForm.AppsMasterPaneWidth(1000, 96) != 420 ||
+                MainForm.AppsMasterPaneWidth(1560, 96) != 562 ||
+                MainForm.AppsMasterPaneWidth(2389, 96) != 620 ||
+                MainForm.AppsMasterPaneWidth(3336, 96) != 620 ||
+                MainForm.AppsMasterPaneWidth(2000, 192) != 840)
+            {
+                throw new InvalidOperationException("Apps master-pane sizing policy failed for minimum, normal, ultrawide, or high-DPI layouts.");
+            }
+            int waitingProcessId;
+            if (!TryParseWaitForInstance(new[] { "--wait-for-instance", "4242" }, out waitingProcessId) || waitingProcessId != 4242 ||
+                TryParseWaitForInstance(new[] { "--wait-for-instance", "invalid" }, out waitingProcessId) ||
+                TryParseWaitForInstance(new[] { "--wait-for-instance", "0" }, out waitingProcessId))
+            {
+                throw new InvalidOperationException("Single-instance elevation handoff parsing failed.");
+            }
+            string instanceKey = SingleInstanceCoordinator.InstanceKey("S-1-5-21-test", 1);
+            if (instanceKey != SingleInstanceCoordinator.InstanceKey("S-1-5-21-test", 1) ||
+                instanceKey == SingleInstanceCoordinator.InstanceKey("S-1-5-21-test", 2) ||
+                instanceKey == SingleInstanceCoordinator.InstanceKey("S-1-5-21-other", 1))
+            {
+                throw new InvalidOperationException("Single-instance user/session scoping failed.");
+            }
+            string singleInstanceTestKey = "SelfTest-" + Guid.NewGuid().ToString("N");
+            using (var primaryInstance = new SingleInstanceCoordinator(singleInstanceTestKey))
+            {
+                if (!primaryInstance.IsPrimary) throw new InvalidOperationException("Single-instance primary ownership failed.");
+                bool duplicateBecamePrimary = Task.Run(() =>
+                {
+                    using (var duplicateInstance = new SingleInstanceCoordinator(singleInstanceTestKey))
+                    {
+                        if (!duplicateInstance.IsPrimary) duplicateInstance.SignalExistingInstance();
+                        return duplicateInstance.IsPrimary;
+                    }
+                }).GetAwaiter().GetResult();
+                if (duplicateBecamePrimary) throw new InvalidOperationException("A duplicate app instance acquired the primary mutex.");
+            }
             if (MainForm.ClampColumnWidth(10) != 40 || MainForm.ClampColumnWidth(5000) != 1200 ||
                 !MainForm.ShouldPersistMaximized(FormWindowState.Minimized, FormWindowState.Maximized) ||
                 MainForm.ShouldPersistMaximized(FormWindowState.Minimized, FormWindowState.Normal))
@@ -4998,9 +5109,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.54" || form.Text != "Better Task Manager v1.1.0-preview.54")
+                if (Application.ProductVersion != "1.1.0-preview.55" || form.Text != "Better Task Manager v1.1.0-preview.55")
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.54.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.55.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

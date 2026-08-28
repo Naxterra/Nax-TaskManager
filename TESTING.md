@@ -9,6 +9,8 @@ Use `artifacts\BetterTaskManager-latest-portable-win-x64\BetterTaskManager.exe`.
 3. Switch repeatedly through Apps, Processes, Network, History, and Memory while pressing **Refresh** where available.
 4. Type and clear filters while a page is populated. The window should remain movable and responsive; Live failures should appear inline rather than as recurring dialogs.
 5. Right-click a non-editing area or data table on every page. Confirm the menu mirrors that page's own actions, right-clicking a grid row selects that row, and search boxes retain their normal editing menu.
+6. Resize Apps from the minimum width through a normal window to an ultrawide/maximized window. The master list should remain usable but stop growing at roughly 620 logical pixels; additional width should expand the detail pane rather than creating a huge empty master pane.
+7. With the app open, launch the same shortcut or executable again. The second process should exit and the existing window should restore/activate; only one `BetterTaskManager.exe` UI process should remain.
 
 For an automated non-destructive repetition of the same refresh paths, close the interactive window and run:
 
@@ -69,8 +71,9 @@ The automated equivalent is:
 
 1. In Standard mode, open Memory and confirm **Clear Standby Cache** and **Release System Cache** are disabled with an explanation that elevation and `SeProfileSingleProcessPrivilege` are required.
 2. Choose **Restart as Admin** and approve the Windows elevation prompt yourself.
-3. Confirm the header distinguishes **memory privilege ready** from **memory privilege unavailable**. The two system-memory buttons should be enabled only in the ready state.
-4. It is not necessary to execute either cleanup action to validate capability detection.
+3. Confirm the Standard-mode window closes and exactly one Administrator-mode window replaces it; no second window should remain hidden or visible.
+4. Confirm the header distinguishes **memory privilege ready** from **memory privilege unavailable**. The two system-memory buttons should be enabled only in the ready state.
+5. It is not necessary to execute either cleanup action to validate capability detection.
 
 ## Firewall wording and elevation
 

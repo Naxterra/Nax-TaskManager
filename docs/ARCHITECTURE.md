@@ -2,7 +2,7 @@
 
 ## Current Desktop Shape
 
-Better Task Manager 1.1.0-preview.54 remains a single Windows desktop executable distributed as both a portable package and an optional installer.
+Better Task Manager 1.1.0-preview.55 remains a single Windows desktop executable distributed as both a portable package and an optional installer.
 
 ```text
 WinForms UI
@@ -46,13 +46,15 @@ System-memory list commands require `SeProfileSingleProcessPrivilege`, not merel
 
 The desktop starts unelevated. Firewall mutation launches the same console-free executable as a narrow `runas` helper with an exact block/unblock verb and path, then reports its exit code to the still-running main window. System-level memory actions continue to require a full elevated session because their token privilege and controls are session-wide.
 
+Normal UI startup is guarded by a `Local\` named mutex scoped to the current Windows user SID and interactive session. A duplicate process signals an AutoReset activation event and exits; the owner restores and foregrounds its main form. Self-test, UI-test, and narrow firewall-helper modes bypass the UI lock. **Restart as Admin** passes the old process ID to the elevated child, which waits for the unelevated owner to exit before acquiring the same lock, preventing either overlapping windows or a lost elevation handoff.
+
 Apps and Network firewall controls share one mutation gate and one action-state calculation. Eligibility combines selected executable path, current refresh, active mutation, and rule state where known. Commands run off the UI thread or through the waited just-in-time elevated helper, update the shared path-keyed rule cache, and restore both pages in `finally`.
 
 Non-destructive UI preferences are stored as atomic JSON under `%LOCALAPPDATA%\BetterTaskManager`. The app restores a screen-clamped window size, maximized state, refresh interval, and clamped widths for fixed/virtual data columns. The last non-minimized state preserves maximization when closing from the taskbar. Live enabled state is excluded so launching the app never begins background sampling unexpectedly.
 
 Unexpected exception reports use a path-derived named mutex across app instances. Before append, the writer rotates `crash.log` to `crash.previous.log` when the new entry would exceed 1 MiB; oversized single entries are bounded and marked. Reports include version/runtime/OS/bitness/DPI context, while logging failures remain non-fatal.
 
-Top-level navigation and dense command surfaces use autosized wrapping flow layouts. Each page has its own dark context menu that forwards to the same Button actions as its toolbar; grid right-click first selects the target row, and text inputs retain their normal editing menu. The Apps master/detail split uses percentage sizing, with cards and actions wrapping independently; data grids retain explicit column widths and horizontal scrolling. UI smoke tests shrink the form to its minimum size and assert that visible command controls remain inside their containers.
+Top-level navigation and dense command surfaces use autosized wrapping flow layouts. Each page has its own dark context menu that forwards to the same Button actions as its toolbar; grid right-click first selects the target row, and text inputs retain their normal editing menu. The Apps master pane targets 36% at normal width but clamps to 420–620 logical pixels after DPI scaling while preserving at least 520 logical pixels for detail; cards/actions wrap independently and grids retain horizontal scrolling. UI tests cover minimum, normal, ultrawide, and high-DPI sizing policies.
 
 WinForms bootstraps through generated `ApplicationConfiguration.Initialize()` with `ApplicationHighDpiMode=PerMonitorV2`, then requests native and framework dark modes before constructing forms. Runtime smoke coverage asserts the configured DPI mode so packaged builds cannot silently fall back to implicit system-aware scaling.
 

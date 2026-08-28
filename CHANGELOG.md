@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-preview.54 - Unreleased
+## 1.1.0-preview.55 - 2026-08-28
 
 ### Added
 
@@ -56,6 +56,7 @@
 - Added an upgrade-safe English/German Inno Setup installer with current-user/all-users modes, Start Menu and optional desktop shortcuts, Add/Remove Programs uninstall, dynamic light/dark wizard styling, and preserved user-local data.
 - Added pinned installer-tool bootstrap, deterministic installer/checksum build, isolated silent install/repair/app-test/uninstall verification, and installer artifacts in Windows CI.
 - Added a custom multi-resolution violet performance icon embedded in the application, setup executable, uninstall entry, Start Menu shortcut, desktop shortcut, and taskbar window.
+- Added a per-user/session single-instance coordinator that restores the existing window when the app is launched again.
 
 ### Changed
 
@@ -83,7 +84,8 @@
 - System CPU participates in Memory Live monitoring, uses the same first-sample marker, and follows the existing green/warning/danger thresholds.
 - Restored window dimensions are clamped to the current primary working area; Live enabled state is intentionally not persisted and always starts paused.
 - Restored column widths are clamped to 40–1200 pixels, and closing while minimized preserves the last non-minimized maximized state correctly.
-- The Apps master/detail split is now proportional; metric cards and actions wrap as the detail pane narrows while tables remain scrollable.
+- The Apps master pane now uses a DPI-aware clamped width: it remains usable at the minimum window size, follows normal resizing, and stops expanding on ultrawide windows so the detail pane receives excess width.
+- **Restart as Admin** now waits for the unelevated owner to exit before the elevated replacement claims the single-instance lock.
 - Replaced duplicated legacy WinForms startup calls with generated `ApplicationConfiguration.Initialize()` bootstrap while preserving native and supported dark-mode initialization.
 - Apps export writes snapshot time, firewall, process count, CPU and sampled-process count, connections, Private Bytes, Working Set, user, and executable path using invariant numeric values.
 - Process export records CPU availability explicitly; Network export preserves native endpoint fields and normalized connection state. All four views now share one asynchronous dialog/write workflow.
@@ -113,6 +115,7 @@
 
 ### Fixed
 
+- Fixed the percentage-based Apps pane growing to roughly 860–1200 pixels on 2389–3336 pixel windows and pushing useful detail content unnecessarily far right.
 - Added the missing History navigation entry so saved connection snapshots can be viewed from the app.
 - Firewall and force-kill actions now report Windows command failures and timeouts instead of presenting them as successful.
 - External command arguments are passed without manual quoting, including executable paths containing spaces.

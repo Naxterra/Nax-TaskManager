@@ -31,14 +31,14 @@ Use `-SkipLatest` to stage only the numbered folder and ZIP while a tester is ru
 The self-contained single-file Windows x64 preview is placed in both a versioned folder and a stable latest-build folder:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.54-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.55-portable-win-x64
 artifacts\BetterTaskManager-latest-portable-win-x64
 ```
 
 The publish script also creates both ZIP packages automatically:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.54-portable-win-x64.zip
+artifacts\BetterTaskManager-v1.1.0-preview.55-portable-win-x64.zip
 artifacts\BetterTaskManager-latest-portable-win-x64.zip
 ```
 
@@ -49,7 +49,7 @@ Build and verify the normal Windows installer with:
 .\scripts\test-installer.ps1
 ```
 
-This produces `artifacts\BetterTaskManager-v1.1.0-preview.54-setup-win-x64.exe` and `artifacts\SHA256SUMS-v1.1.0-preview.54.txt`. CI uploads the installer, portable folder/ZIP, and release checksum manifest together.
+This produces `artifacts\BetterTaskManager-v1.1.0-preview.55-setup-win-x64.exe` and `artifacts\SHA256SUMS-v1.1.0-preview.55.txt`. CI uploads the installer, portable folder/ZIP, and release checksum manifest together.
 
 Do not create or push a stable tag until the preview has been approved and the version, changelog date, release notes, and packaged artifact all agree.
 
