@@ -4559,6 +4559,11 @@ namespace BetterTaskManager
             }
 
             bool runUiSoak = args != null && args.Any(a => string.Equals(a, "--ui-soak-test", StringComparison.OrdinalIgnoreCase));
+            if (args != null && args.Any(a => string.Equals(a, "--installer-upgrade-test-host", StringComparison.OrdinalIgnoreCase)))
+            {
+                RunInstallerUpgradeTestHost();
+                return;
+            }
             if (runUiSoak || (args != null && args.Any(a =>
                 string.Equals(a, "--ui-smoke-test", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(a, "--history-ui-smoke-test", StringComparison.OrdinalIgnoreCase))))
@@ -4689,6 +4694,33 @@ namespace BetterTaskManager
             finally
             {
                 try { if (Directory.Exists(temporaryFolder)) Directory.Delete(temporaryFolder, true); } catch { }
+            }
+        }
+
+        private static void RunInstallerUpgradeTestHost()
+        {
+            ConfigureApplicationVisuals();
+            int completed = 0;
+            string temporaryFolder = Path.Combine(Path.GetTempPath(), "BetterTaskManager-InstallerUpgradeTest-" + Guid.NewGuid().ToString("N"));
+            using (var form = new MainForm(true,
+                Path.Combine(temporaryFolder, "network-history.csv"),
+                Path.Combine(temporaryFolder, "settings.json")))
+            {
+                Task.Run(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(60));
+                    if (System.Threading.Interlocked.CompareExchange(ref completed, 1, 0) == 0) Environment.Exit(2);
+                });
+                try
+                {
+                    Application.Run(form);
+                    System.Threading.Interlocked.Exchange(ref completed, 1);
+                    Environment.ExitCode = 0;
+                }
+                finally
+                {
+                    try { if (Directory.Exists(temporaryFolder)) Directory.Delete(temporaryFolder, true); } catch { }
+                }
             }
         }
 

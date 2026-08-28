@@ -128,7 +128,7 @@ $otherRunningApp = @(Get-CimInstance Win32_Process -Filter "Name = 'BetterTaskMa
     $_.ExecutablePath -and $_.ExecutablePath -ne $installedExe
 })
 if ($otherRunningApp.Count -eq 0) {
-    $runningTestApp = Start-Process -FilePath $installedExe -PassThru
+    $runningTestApp = Start-Process -FilePath $installedExe -ArgumentList "--installer-upgrade-test-host" -PassThru
     if (-not $runningTestApp.WaitForInputIdle(15000)) { throw "Installed app did not become input-idle for the running-upgrade test." }
 }
 else {
