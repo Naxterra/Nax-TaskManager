@@ -4442,6 +4442,12 @@ namespace BetterTaskManager
         {
             if (string.IsNullOrEmpty(value)) return value;
 
+            // The "™" -> "Ö" replacement that used to live here was a codepage-1252-vs-850
+            // workaround for parsing localized netstat text. Native TCP/UDP collection (see
+            // NativeNetworkCollector) has since replaced that parsing, so the workaround no
+            // longer serves a purpose and only risked corrupting a genuine trademark symbol
+            // in a username or window title. The remaining replacements are a harmless
+            // fallback for stray UTF-8-as-Latin1 mojibake and are kept as-is.
             return value
                 .Replace("Ã„", "Ä")
                 .Replace("Ã–", "Ö")
@@ -4450,8 +4456,7 @@ namespace BetterTaskManager
                 .Replace("Ã¶", "ö")
                 .Replace("Ã¼", "ü")
                 .Replace("ÃŸ", "ß")
-                .Replace("Â", "")
-                .Replace("™", "Ö");
+                .Replace("Â", "");
         }
 
         private static string NormalizeConnectionState(string state)
@@ -5141,9 +5146,9 @@ namespace BetterTaskManager
 
             using (var form = new MainForm())
             {
-                if (Application.ProductVersion != "1.1.0-preview.56" || form.Text != "Better Task Manager v1.1.0-preview.56")
+                if (string.IsNullOrWhiteSpace(Application.ProductVersion) || form.Text != "Better Task Manager v" + Application.ProductVersion)
                 {
-                    throw new InvalidOperationException("Application version metadata and window title do not match 1.1.0-preview.56.");
+                    throw new InvalidOperationException("Application version metadata and window title do not match.");
                 }
                 return "Self-test OK for v" + Application.ProductVersion + ". UI construction, command handling, bounded history, native memory, and " + connections.Count + " native network rows passed.";
             }

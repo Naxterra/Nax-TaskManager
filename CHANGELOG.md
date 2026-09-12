@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0-preview.57 - 2026-09-13
+
+### Fixed
+
+- Removed a leftover display-text replacement that unconditionally turned every "™" character into "Ö". It was a workaround for parsing localized `netstat` output that predates the native TCP/UDP collector, and could corrupt a genuine trademark symbol appearing in a username or window title.
+
 ## 1.1.0-preview.56 - 2026-08-28
 
 ### Added

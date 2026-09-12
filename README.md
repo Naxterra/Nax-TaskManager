@@ -4,7 +4,7 @@ Better Task Manager is a Windows desktop tool for admins who want a more practic
 
 The app is written in C#/.NET WinForms. It starts normally and can restart itself with administrator rights when firewall or system-memory actions require elevation.
 
-The current development build is `1.1.0-preview.56`. The checked-in v1.0 download remains the last stable release.
+The current development build is `1.1.0-preview.57`. The checked-in v1.0 download remains the last stable release.
 
 ## Current Features
 
@@ -129,13 +129,13 @@ Run the normal publish command after the old latest window closes to refresh the
 The self-contained, single-file Windows x64 preview will be placed in:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.56-portable-win-x64
+artifacts\BetterTaskManager-v1.1.0-preview.57-portable-win-x64
 ```
 
 Run:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.56-portable-win-x64\BetterTaskManager.exe
+artifacts\BetterTaskManager-v1.1.0-preview.57-portable-win-x64\BetterTaskManager.exe
 ```
 
 The publish script also refreshes this stable path on every successful build, so testers do not need to locate the newest numbered preview folder:
@@ -163,8 +163,8 @@ Build the installer after publishing the portable package:
 The build script bootstraps the pinned official Inno Setup compiler when necessary and creates:
 
 ```text
-artifacts\BetterTaskManager-v1.1.0-preview.56-setup-win-x64.exe
-artifacts\SHA256SUMS-v1.1.0-preview.56.txt
+artifacts\BetterTaskManager-v1.1.0-preview.57-setup-win-x64.exe
+artifacts\SHA256SUMS-v1.1.0-preview.57.txt
 ```
 
 The installer:
