@@ -2,6 +2,11 @@
 
 This preview is a substantial update to the checked-in v1.0 release. It remains a portable, self-contained Windows x64 application and does not require a separate .NET installation.
 
+## What's New in preview.57
+
+- Removed a leftover display-text replacement that unconditionally turned every "™" character into "Ö". It was a workaround for parsing localized `netstat` output that predates the native TCP/UDP collector, and could corrupt a genuine trademark symbol appearing in a username or window title.
+- Fixed the built-in `--self-test` hard-coding the expected application version/window title as a literal string, which caused it to fail on every version bump. It now checks internal consistency against `Application.ProductVersion` instead.
+
 ## Highlights
 
 - Responsive violet-slate dark interface with native dark controls, dark scrollbars, PerMonitorV2 scaling, narrow-window wrapping, saved window/column preferences, and global keyboard shortcuts.
