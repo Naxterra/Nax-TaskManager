@@ -65,6 +65,29 @@
                 </Grid>
             </Border>
 
+            <TextBlock Text="History" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
+            <Border Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="16" RowSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <FontIcon Glyph="&#xE81C;" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Record in the background" />
+                        <TextBlock x:Name="HistoryStatusText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="HistoryToggle" Grid.Column="2" MinWidth="0" VerticalAlignment="Center" OnContent="On" OffContent="Off" Toggled="HistoryToggle_Toggled" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"
+                               Text="A Windows service records which apps connect to which hosts and how much data they send and receive, for 30 days. The history stays on this PC in C:\ProgramData\BetterTaskManager. Every user account on this PC can read it; only administrators can change it. Turning recording off keeps the history already recorded." />
+                </Grid>
+            </Border>
+
             <TextBlock Text="About" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="4">

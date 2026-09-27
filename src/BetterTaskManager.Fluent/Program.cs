@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using BetterTaskManager.Core.Firewall;
+using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 
@@ -25,6 +26,13 @@ public static class Program
             if (!FirewallRules.IsElevated) return 5;
             CommandResult result = FirewallRules.Apply(args[1], args[0] == FirewallBlockArgument);
             return result.Succeeded ? 0 : (result.ExitCode == 0 ? 1 : result.ExitCode);
+        }
+
+        // Elevated helper mode: install or remove the background history service and exit.
+        if (args.Length == 2 && (args[0] == HistoryServiceSetup.InstallArgument || args[0] == HistoryServiceSetup.UninstallArgument))
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            return HistoryServiceSetup.RunHelper(args[0], args[1]);
         }
 
         WaitForPreviousInstance(args);

@@ -37,6 +37,27 @@
     <Content Include="Assets\AppIcon.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The background history service ships in a HistoryService folder next to the app; Settings installs it from there. -->
+  <Target Name="BundleHistoryService" AfterTargets="Build">
+    <MSBuild Projects="..\BetterTaskManager.HistoryService\BetterTaskManager.HistoryService.csproj" Targets="Build" Properties="Configuration=$(Configuration)">
+      <Output TaskParameter="TargetOutputs" ItemName="HistoryServiceAssembly" />
+    </MSBuild>
+    <PropertyGroup>
+      <HistoryServiceOutput>@(HistoryServiceAssembly->'%(RootDir)%(Directory)')</HistoryServiceOutput>
+    </PropertyGroup>
+    <ItemGroup>
+      <HistoryServiceFiles Include="$(HistoryServiceOutput)**\*" Exclude="$(HistoryServiceOutput)**\*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(HistoryServiceFiles)" DestinationFiles="@(HistoryServiceFiles->'$(OutDir)HistoryService\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="BundleHistoryServiceToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <PublishedHistoryServiceFiles Include="$(OutDir)HistoryService\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PublishedHistoryServiceFiles)" DestinationFiles="@(PublishedHistoryServiceFiles->'$(PublishDir)HistoryService\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
   <Target Name="CopyGeneratedXamlToPublish" AfterTargets="Publish">
     <ItemGroup>
       <GeneratedXamlResources Include="$(TargetDir)*.xbf" />

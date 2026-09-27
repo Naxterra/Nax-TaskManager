@@ -67,6 +67,9 @@ public sealed class MonitorEngine : IDisposable
         loop ??= Task.Run(RunAsync);
     }
 
+    /// <summary>Known host name for a remote address; unknown addresses are resolved in the background.</summary>
+    public HostName? ResolveHost(string address) => hostNames.Resolve(address);
+
     public void RequestRefresh()
     {
         if (wake.CurrentCount == 0) wake.Release();
@@ -191,7 +194,7 @@ public sealed class MonitorEngine : IDisposable
         {
             if (connectionCounts.TryGetValue(process.Pid, out int count)) process.ConnectionCount = count;
         }
-        ApplyThroughput(processes, connections, elapsedSeconds);
+        List<FlowSample> flows = ApplyThroughput(processes, connections, elapsedSeconds);
         foreach (ConnectionSample connection in connections)
         {
             if (connection.Protocol != "TCP" || connection.RemoteAddress.Length == 0) continue;
@@ -227,6 +230,7 @@ public sealed class MonitorEngine : IDisposable
             Timestamp = DateTime.Now,
             Processes = processes,
             Connections = connections,
+            Flows = flows,
             NetworkIssues = network.Issues,
             System = system,
             CollectionTime = stopwatch.Elapsed
@@ -268,11 +272,25 @@ public sealed class MonitorEngine : IDisposable
     }
 
     /// <summary>Turns the bytes counted by the ETW trace since the last snapshot into per-process and per-socket rates.</summary>
-    private void ApplyThroughput(List<ProcessSample> processes, List<ConnectionSample> connections, double elapsedSeconds)
+    private List<FlowSample> ApplyThroughput(List<ProcessSample> processes, List<ConnectionSample> connections, double elapsedSeconds)
     {
-        if (!bandwidth.IsRunning) return;
+        var flows = new List<FlowSample>();
+        if (!bandwidth.IsRunning) return flows;
         var (byProcess, bySocket) = bandwidth.Drain();
-        if (elapsedSeconds <= 0) return;
+        foreach (var (socket, counts) in bySocket)
+        {
+            flows.Add(new FlowSample
+            {
+                Pid = socket.Pid,
+                Protocol = socket.Tcp ? "TCP" : "UDP",
+                LocalPort = socket.LocalPort,
+                RemoteAddress = socket.RemoteAddress.ToString(),
+                RemotePort = socket.RemotePort,
+                Received = counts.Received,
+                Sent = counts.Sent
+            });
+        }
+        if (elapsedSeconds <= 0) return flows;
 
         foreach (ProcessSample process in processes)
         {
@@ -323,6 +341,7 @@ public sealed class MonitorEngine : IDisposable
             connection.ReceiveBytesPerSecond = counts.Received / elapsedSeconds;
             connection.SendBytesPerSecond = counts.Sent / elapsedSeconds;
         }
+        return flows;
     }
 
     private (double Percent, bool Sampled) SampleSystemCpu()

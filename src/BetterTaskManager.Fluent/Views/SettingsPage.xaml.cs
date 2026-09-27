@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
+using BetterTaskManager.Core.History;
+using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -24,7 +26,38 @@ public sealed partial class SettingsPage : Page
 
         string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
         VersionText.Text = "Better Task Manager " + version.Split('+')[0];
+        ShowHistoryState();
         loading = false;
+    }
+
+    private void ShowHistoryState()
+    {
+        HistoryServiceState state = HistoryServiceControl.QueryState();
+        HistoryToggle.IsOn = state != HistoryServiceState.NotInstalled;
+        HistoryStatusText.Text = state switch
+        {
+            HistoryServiceState.Running => "On. Recording while Windows runs, even with this window closed.",
+            HistoryServiceState.NotInstalled => App.Monitor.IsElevated ? "Off." : "Off. Turning it on asks for administrator approval once.",
+            HistoryServiceState.Starting => "Starting…",
+            _ => "Installed, but the service is not running."
+        };
+    }
+
+    private async void HistoryToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (loading) return;
+        bool enable = HistoryToggle.IsOn;
+        HistoryToggle.IsEnabled = false;
+        HistoryStatusText.Text = enable ? "Turning on…" : "Turning off…";
+        string? error = await HistoryServiceSetup.SetEnabledAsync(enable, App.Monitor.IsElevated);
+        HistoryToggle.IsEnabled = true;
+        loading = true;
+        ShowHistoryState();
+        loading = false;
+        if (error is not null)
+        {
+            await new ContentDialog { XamlRoot = XamlRoot, Title = enable ? "Background recording not turned on" : "Background recording not turned off", Content = error, CloseButtonText = "OK" }.ShowAsync();
+        }
     }
 
     private static void Select(ComboBox box, string tag, int fallback)

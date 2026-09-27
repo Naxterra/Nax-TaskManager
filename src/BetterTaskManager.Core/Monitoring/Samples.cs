@@ -53,6 +53,21 @@ public sealed class ConnectionSample
 }
 
 /// <summary>
+/// Bytes one socket moved during the last interval, from the kernel trace (administrator only). Unlike the UDP
+/// table, UDP flows keep their remote side here, so QUIC/HTTP3 traffic can be attributed to a host.
+/// </summary>
+public sealed class FlowSample
+{
+    public required int Pid { get; init; }
+    public required string Protocol { get; init; }
+    public required int LocalPort { get; init; }
+    public required string RemoteAddress { get; init; }
+    public required int RemotePort { get; init; }
+    public long Received { get; init; }
+    public long Sent { get; init; }
+}
+
+/// <summary>
 /// Physical memory split so the parts add up to Task Manager's "In use" figure.
 /// </summary>
 public sealed class MemoryBreakdown
@@ -98,6 +113,8 @@ public sealed class MonitorSnapshot
     public required DateTime Timestamp { get; init; }
     public required IReadOnlyList<ProcessSample> Processes { get; init; }
     public required IReadOnlyList<ConnectionSample> Connections { get; init; }
+    /// <summary>Per-socket traffic since the previous snapshot; empty without administrator rights.</summary>
+    public IReadOnlyList<FlowSample> Flows { get; init; } = [];
     public required IReadOnlyList<string> NetworkIssues { get; init; }
     public required SystemSample System { get; init; }
     public TimeSpan CollectionTime { get; init; }
