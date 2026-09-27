@@ -1,0 +1,60 @@
+using System.Diagnostics;
+using System.Reflection;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+
+namespace BetterTaskManager.Fluent.Views;
+
+public sealed partial class SettingsPage : Page
+{
+    private bool loading = true;
+
+    public SettingsPage()
+    {
+        InitializeComponent();
+        Select(IntervalBox, App.Settings.RefreshIntervalMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture), 1);
+        Select(ThemeBox, App.Settings.Theme, 0);
+
+        bool elevated = App.Monitor.IsElevated;
+        ElevationTitle.Text = elevated ? "Running as administrator" : "Running as standard user";
+        ElevationText.Text = elevated
+            ? "All processes show their path, publisher and icon, and firewall changes need no extra prompt."
+            : "Paths, publishers and icons of system processes are hidden, and each firewall change asks for administrator approval.";
+        ElevateButton.Visibility = elevated ? Visibility.Collapsed : Visibility.Visible;
+
+        string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
+        VersionText.Text = "Better Task Manager " + version.Split('+')[0];
+        loading = false;
+    }
+
+    private static void Select(ComboBox box, string tag, int fallback)
+    {
+        box.SelectedIndex = fallback;
+        for (int index = 0; index < box.Items.Count; index++)
+        {
+            if (box.Items[index] is ComboBoxItem { Tag: string itemTag } && itemTag == tag) box.SelectedIndex = index;
+        }
+    }
+
+    private void IntervalBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (loading || IntervalBox.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
+        App.Monitor.Interval = TimeSpan.FromMilliseconds(int.Parse(tag, System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    private void ThemeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (loading || ThemeBox.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
+        App.Settings.Theme = tag;
+        App.Window.ApplyTheme(tag);
+    }
+
+    private void Elevate_Click(object sender, RoutedEventArgs e) => App.RestartElevated();
+
+    private void DataFolder_Click(object sender, RoutedEventArgs e)
+    {
+        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
+        Directory.CreateDirectory(folder);
+        Process.Start(new ProcessStartInfo("explorer.exe", folder) { UseShellExecute = true });
+    }
+}

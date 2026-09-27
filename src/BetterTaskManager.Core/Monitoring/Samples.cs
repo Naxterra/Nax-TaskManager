@@ -1,0 +1,89 @@
+namespace BetterTaskManager.Core.Monitoring;
+
+public sealed class ProcessSample
+{
+    public required int Pid { get; init; }
+    public required int ParentPid { get; init; }
+    public required string ImageName { get; init; }
+    public required long CreateTime { get; init; }
+    public required string Path { get; init; }
+    public required string Description { get; init; }
+    public required string Company { get; init; }
+    public double CpuPercent { get; init; }
+    public bool CpuSampled { get; init; }
+    public long PrivateWorkingSet { get; init; }
+    public long WorkingSet { get; init; }
+    public long CommitCharge { get; init; }
+    public double IoBytesPerSecond { get; init; }
+    public int Threads { get; init; }
+    public int Handles { get; init; }
+    public int SessionId { get; init; }
+    public string? WindowTitle { get; init; }
+    /// <summary>Display names of hosted Windows services (svchost and other service processes).</summary>
+    public IReadOnlyList<string>? Services { get; init; }
+    public int ConnectionCount { get; set; }
+
+    /// <summary>Stable identity across refreshes: PIDs are reused, creation times are not.</summary>
+    public (int Pid, long CreateTime) Key => (Pid, CreateTime);
+
+    public string DisplayName => !string.IsNullOrWhiteSpace(Description) ? Description : System.IO.Path.GetFileNameWithoutExtension(ImageName);
+}
+
+public sealed class ConnectionSample
+{
+    public required int Pid { get; init; }
+    public required string Protocol { get; init; }
+    public required string LocalAddress { get; init; }
+    public required int LocalPort { get; init; }
+    public required string RemoteAddress { get; init; }
+    public required int RemotePort { get; init; }
+    public required string State { get; init; }
+}
+
+/// <summary>
+/// Physical memory split so the parts add up to Task Manager's "In use" figure.
+/// </summary>
+public sealed class MemoryBreakdown
+{
+    public long Total { get; init; }
+    public long Available { get; init; }
+    public long InUse { get; init; }
+    public long Modified { get; init; }
+    public long Standby { get; init; }
+    public long Free { get; init; }
+    public long ProcessPrivate { get; init; }
+    public long KernelPools { get; init; }
+    public long FileCache { get; init; }
+    public long Drivers { get; init; }
+    /// <summary>In-use memory not attributed to the categories above: shared images, page tables, driver-locked pages.</summary>
+    public long Unattributed => Math.Max(0, InUse - ProcessPrivate - KernelPools - FileCache - Drivers);
+    public long CommitTotal { get; init; }
+    public long CommitLimit { get; init; }
+    public bool Detailed { get; init; }
+    public double LoadPercent => Total == 0 ? 0 : InUse * 100d / Total;
+}
+
+public sealed class SystemSample
+{
+    public double CpuPercent { get; init; }
+    public bool CpuSampled { get; init; }
+    public required MemoryBreakdown Memory { get; init; }
+    public double NetworkReceiveBytesPerSecond { get; init; }
+    public double NetworkSendBytesPerSecond { get; init; }
+    public bool NetworkSampled { get; init; }
+    public double IoBytesPerSecond { get; init; }
+    public int ProcessCount { get; init; }
+    public int ThreadCount { get; init; }
+    public int HandleCount { get; init; }
+    public TimeSpan Uptime { get; init; }
+}
+
+public sealed class MonitorSnapshot
+{
+    public required DateTime Timestamp { get; init; }
+    public required IReadOnlyList<ProcessSample> Processes { get; init; }
+    public required IReadOnlyList<ConnectionSample> Connections { get; init; }
+    public required IReadOnlyList<string> NetworkIssues { get; init; }
+    public required SystemSample System { get; init; }
+    public TimeSpan CollectionTime { get; init; }
+}

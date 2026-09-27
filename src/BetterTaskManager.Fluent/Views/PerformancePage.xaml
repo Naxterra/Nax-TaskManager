@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="BetterTaskManager.Fluent.Views.PerformancePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:BetterTaskManager.Fluent.Controls"
+    NavigationCacheMode="Required">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="20,8,20,24" Spacing="12">
+            <StackPanel>
+                <TextBlock Text="Performance" Style="{StaticResource PageTitleStyle}" />
+                <TextBlock x:Name="SummaryText" Style="{StaticResource MutedTextStyle}" />
+            </StackPanel>
+
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8">
+                        <Grid>
+                            <TextBlock Text="CPU" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock x:Name="CpuValue" HorizontalAlignment="Right" Style="{StaticResource SubtitleTextBlockStyle}" />
+                        </Grid>
+                        <controls:TrendChart x:Name="CpuChart" Height="120" Stroke="{ThemeResource ChartCpuBrush}" />
+                        <TextBlock x:Name="CpuDetail" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8">
+                        <Grid>
+                            <TextBlock Text="Memory" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock x:Name="MemoryValue" HorizontalAlignment="Right" Style="{StaticResource SubtitleTextBlockStyle}" />
+                        </Grid>
+                        <controls:TrendChart x:Name="MemoryChart" Height="120" Stroke="{ThemeResource ChartMemoryBrush}" />
+                        <TextBlock x:Name="MemoryDetail" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8">
+                        <Grid>
+                            <TextBlock Text="Network" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock x:Name="NetworkValue" HorizontalAlignment="Right" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                        </Grid>
+                        <controls:TrendChart x:Name="NetworkChart" Height="120" Stroke="{ThemeResource ChartReceiveBrush}" SecondStroke="{ThemeResource ChartSendBrush}" />
+                        <TextBlock x:Name="NetworkDetail" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock Text="Where your memory goes" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock
+                                Style="{StaticResource MutedTextStyle}"
+                                TextWrapping="Wrap"
+                                Text="The per-app Memory column only counts memory private to each process. The rest of &quot;In use&quot; belongs to Windows itself, drivers and memory that several processes share." />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="MemoryBar" Height="28" CornerRadius="4" />
+
+                    <Grid ColumnSpacing="32" RowSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel x:Name="InUseLegend" Spacing="10" />
+                        <StackPanel x:Name="AvailableLegend" Grid.Column="1" Spacing="10" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

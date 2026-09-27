@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="BetterTaskManager.Fluent.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <Color x:Key="HeatColor">#FFB84D</Color>
+                    <SolidColorBrush x:Key="MemoryAppsBrush" Color="#60CDFF" />
+                    <SolidColorBrush x:Key="MemoryKernelBrush" Color="#B38CFF" />
+                    <SolidColorBrush x:Key="MemoryCacheBrush" Color="#2DE0B0" />
+                    <SolidColorBrush x:Key="MemoryDriversBrush" Color="#FF99A4" />
+                    <SolidColorBrush x:Key="MemoryOtherBrush" Color="#FFC263" />
+                    <SolidColorBrush x:Key="MemoryModifiedBrush" Color="#E86A6A" />
+                    <SolidColorBrush x:Key="MemoryStandbyBrush" Color="#5A6B80" />
+                    <SolidColorBrush x:Key="MemoryFreeBrush" Color="#2A3240" />
+                    <SolidColorBrush x:Key="ChartCpuBrush" Color="#60CDFF" />
+                    <SolidColorBrush x:Key="ChartMemoryBrush" Color="#B38CFF" />
+                    <SolidColorBrush x:Key="ChartReceiveBrush" Color="#2DE0B0" />
+                    <SolidColorBrush x:Key="ChartSendBrush" Color="#FFC263" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="HeatColor">#F2A000</Color>
+                    <SolidColorBrush x:Key="MemoryAppsBrush" Color="#0067C0" />
+                    <SolidColorBrush x:Key="MemoryKernelBrush" Color="#6C3DC1" />
+                    <SolidColorBrush x:Key="MemoryCacheBrush" Color="#007B62" />
+                    <SolidColorBrush x:Key="MemoryDriversBrush" Color="#C4314B" />
+                    <SolidColorBrush x:Key="MemoryOtherBrush" Color="#9A5A00" />
+                    <SolidColorBrush x:Key="MemoryModifiedBrush" Color="#D13438" />
+                    <SolidColorBrush x:Key="MemoryStandbyBrush" Color="#A9B8C8" />
+                    <SolidColorBrush x:Key="MemoryFreeBrush" Color="#E3E8EF" />
+                    <SolidColorBrush x:Key="ChartCpuBrush" Color="#0067C0" />
+                    <SolidColorBrush x:Key="ChartMemoryBrush" Color="#6C3DC1" />
+                    <SolidColorBrush x:Key="ChartReceiveBrush" Color="#007B62" />
+                    <SolidColorBrush x:Key="ChartSendBrush" Color="#9A5A00" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <Style x:Key="CardStyle" TargetType="Border">
+                <Setter Property="Padding" Value="16" />
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+            </Style>
+
+            <Style x:Key="PageTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource SubtitleTextBlockStyle}">
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <Style x:Key="MutedTextStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+
+            <!-- Column header: a flat button, like Task Manager's, with the total on top and the caption below. -->
+            <Style x:Key="ColumnHeaderButtonStyle" TargetType="Button">
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Padding" Value="8,4" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="VerticalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Bottom" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+
+            <Style x:Key="ColumnSplitterStyle" TargetType="Thumb">
+                <Setter Property="Width" Value="7" />
+                <Setter Property="Margin" Value="-3,6" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Thumb">
+                            <Grid Background="Transparent">
+                                <Border Width="1" HorizontalAlignment="Center" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Compact list rows without the default reorder/entrance animations: rows update every second. -->
+            <Style x:Key="TableRowStyle" TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Margin" Value="0" />
+                <Setter Property="MinHeight" Value="34" />
+                <Setter Property="Height" Value="34" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
