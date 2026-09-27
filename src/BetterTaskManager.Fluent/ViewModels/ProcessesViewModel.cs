@@ -46,9 +46,11 @@ public sealed class ProcessesViewModel : ObservableObject
         IoHeader = Format.Rate(system.IoBytesPerSecond);
         NetworkHeader = Format.Count(snapshot.Connections.Count);
         bool bandwidth = system.PerProcessNetworkAvailable;
-        BandwidthHeader = bandwidth ? Format.Mbps(snapshot.Processes.Sum(process => process.NetworkBytesPerSecond)) : "Admin";
+        BandwidthHeader = bandwidth ? Format.Mbps(snapshot.Processes.Sum(process => process.NetworkBytesPerSecond))
+            : monitor.IsElevated ? "Paused" : "Admin";
         BandwidthTooltip = bandwidth
             ? "Current send + receive per app, measured from the kernel's TCP/IP events (loopback excluded)"
+            : monitor.IsElevated ? system.PerProcessNetworkStatus
             : system.PerProcessNetworkStatus + " Use Restart as administrator.";
 
         List<ProcessRowData> rows = ProcessTree.Build(snapshot.Processes, monitor.SearchText, SortColumn, SortDescending, expanded);

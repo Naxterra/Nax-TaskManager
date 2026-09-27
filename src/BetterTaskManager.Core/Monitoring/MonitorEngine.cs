@@ -18,8 +18,8 @@ public sealed class MonitorEngine : IDisposable
     private readonly Dictionary<string, (string Description, string Company)> fileInfo = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(int, long), CpuMark> previousMarks = new();
     private readonly MemoryCounters memoryCounters = new();
-    private readonly BandwidthMonitor bandwidth = new();
-    private readonly HostNameResolver hostNames = new();
+    private readonly BandwidthMonitor bandwidth;
+    private readonly HostNameResolver hostNames;
     private readonly Dictionary<(int, long), ByteCounts> networkTotals = new();
     private readonly CancellationTokenSource shutdown = new();
     private readonly SemaphoreSlim wake = new(0);
@@ -32,6 +32,16 @@ public sealed class MonitorEngine : IDisposable
     private long servicesReadAt;
     private Task? loop;
     private volatile bool paused;
+
+    /// <param name="sessionPrefix">
+    /// Prefix for the machine-wide ETW session names. A test harness must use its own prefix: reusing the app's
+    /// names stops the app's trace sessions.
+    /// </param>
+    public MonitorEngine(string sessionPrefix = "BetterTaskManager")
+    {
+        bandwidth = new BandwidthMonitor(sessionPrefix + "-Network");
+        hostNames = new HostNameResolver(sessionPrefix + "-Dns");
+    }
 
     public event Action<MonitorSnapshot>? SnapshotReady;
     public event Action<Exception>? CollectionFailed;
@@ -100,6 +110,7 @@ public sealed class MonitorEngine : IDisposable
         previousTimestamp = now;
 
         // Flush first; the counts are drained after the rest of the collection, giving the trace thread time to catch up.
+        bandwidth.EnsureRunning();
         bandwidth.Flush();
         List<RawProcess> raw = NtProcessReader.Read();
         Dictionary<int, string> windowTitles = VisibleWindows.ReadTitlesByProcess();

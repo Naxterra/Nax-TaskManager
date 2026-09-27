@@ -27,7 +27,7 @@ public readonly record struct HostName(string Name, HostNameSource Source);
 /// </summary>
 public sealed class HostNameResolver : IDisposable
 {
-    public const string DnsSessionName = "BetterTaskManager-Dns";
+    public const string DefaultSessionName = "BetterTaskManager-Dns";
     private const int DnsQueryCompletedEvent = 3008;
     private static readonly TimeSpan CachePollInterval = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan FailedLookupRetry = TimeSpan.FromMinutes(10);
@@ -38,15 +38,19 @@ public sealed class HostNameResolver : IDisposable
     private readonly HashSet<IPAddress> pendingReverse = new();
     private readonly SemaphoreSlim reverseSlots = new(4);
     private readonly CancellationTokenSource shutdown = new();
+    private readonly string sessionName;
     private TraceEventSession? dnsSession;
     private Task? cacheLoop;
+
+    /// <param name="sessionName">Machine-wide ETW session name; tests must pass their own (see <see cref="BandwidthMonitor"/>).</param>
+    public HostNameResolver(string sessionName = DefaultSessionName) => this.sessionName = sessionName;
 
     public bool LiveDnsEvents { get; private set; }
 
     public void Start()
     {
-        cacheLoop ??= Task.Run(PollCacheAsync);
         TryStartDnsTrace();
+        cacheLoop ??= Task.Run(PollCacheAsync);
     }
 
     /// <summary>Returns a known name, or null and schedules a background reverse lookup.</summary>
@@ -69,6 +73,8 @@ public sealed class HostNameResolver : IDisposable
     {
         while (!shutdown.IsCancellationRequested)
         {
+            // The live DNS trace can be stopped from outside; bring it back on the next poll.
+            if (!LiveDnsEvents) TryStartDnsTrace();
             try
             {
                 ReadDnsCache();
@@ -109,18 +115,20 @@ public sealed class HostNameResolver : IDisposable
 
     private void TryStartDnsTrace()
     {
-        if (TraceEventSession.IsElevated() != true) return;
+        if (shutdown.IsCancellationRequested || TraceEventSession.IsElevated() != true) return;
         try
         {
-            dnsSession = new TraceEventSession(DnsSessionName) { StopOnDispose = true };
+            dnsSession?.Dispose();
+            dnsSession = new TraceEventSession(sessionName) { StopOnDispose = true };
             var parser = new RegisteredTraceEventParser(dnsSession.Source);
             parser.All += OnDnsEvent;
             dnsSession.EnableProvider("Microsoft-Windows-DNS-Client");
+            TraceEventSession started = dnsSession;
             var pump = new Thread(() =>
             {
                 try
                 {
-                    dnsSession.Source.Process();
+                    started.Source.Process();
                 }
                 catch (Exception)
                 {

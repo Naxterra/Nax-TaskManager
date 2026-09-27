@@ -22,13 +22,23 @@ public struct ByteCounts
 /// </summary>
 public sealed class BandwidthMonitor : IDisposable
 {
-    public const string SessionName = "BetterTaskManager-Network";
+    public const string DefaultSessionName = "BetterTaskManager-Network";
+    private static readonly TimeSpan RestartDelay = TimeSpan.FromSeconds(10);
 
     private readonly object gate = new();
+    private readonly string sessionName;
     private Dictionary<int, ByteCounts> byProcess = new();
     private Dictionary<SocketKey, ByteCounts> bySocket = new();
     private TraceEventSession? session;
     private Thread? pump;
+    private volatile bool disposed;
+    private DateTime lastAttempt;
+
+    /// <param name="sessionName">
+    /// ETW session names are machine-wide and opening one replaces any session with the same name, so a second
+    /// program using the same name silently stops this one. Tests must pass their own name.
+    /// </param>
+    public BandwidthMonitor(string sessionName = DefaultSessionName) => this.sessionName = sessionName;
 
     public bool IsRunning { get; private set; }
     public string Status { get; private set; } = "Not started";
@@ -36,6 +46,7 @@ public sealed class BandwidthMonitor : IDisposable
     public bool TryStart()
     {
         if (IsRunning) return true;
+        lastAttempt = DateTime.UtcNow;
         if (TraceEventSession.IsElevated() != true)
         {
             Status = "Per-app network speed needs administrator rights.";
@@ -45,7 +56,8 @@ public sealed class BandwidthMonitor : IDisposable
         try
         {
             // Reusing the fixed name replaces a session left behind by a crashed instance.
-            session = new TraceEventSession(SessionName) { StopOnDispose = true };
+            session?.Dispose();
+            session = new TraceEventSession(sessionName) { StopOnDispose = true };
             session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
 
             KernelTraceEventParser kernel = session.Source.Kernel;
@@ -58,11 +70,13 @@ public sealed class BandwidthMonitor : IDisposable
             kernel.UdpIpSendIPV6 += data => Add(data.ProcessID, false, false, data.size, data.sport, data.daddr, data.dport);
             kernel.UdpIpRecvIPV6 += data => Add(data.ProcessID, false, true, data.size, data.sport, data.daddr, data.dport);
 
+            TraceEventSession started = session;
             pump = new Thread(() =>
             {
                 try
                 {
-                    session.Source.Process();
+                    started.Source.Process();
+                    Status = "The network trace was stopped by another program; restarting.";
                 }
                 catch (Exception ex)
                 {
@@ -84,6 +98,13 @@ public sealed class BandwidthMonitor : IDisposable
             session = null;
             return false;
         }
+    }
+
+    /// <summary>Restarts the trace after it was stopped from outside, at most once per <see cref="RestartDelay"/>.</summary>
+    public void EnsureRunning()
+    {
+        if (IsRunning || disposed || DateTime.UtcNow - lastAttempt < RestartDelay) return;
+        TryStart();
     }
 
     private void Add(int pid, bool tcp, bool received, int size, int localPort, IPAddress remote, int remotePort)
@@ -126,7 +147,7 @@ public sealed class BandwidthMonitor : IDisposable
             System.Runtime.InteropServices.Marshal.WriteInt32(properties, 0, PropertiesSize + 2 * NameBytes); // Wnode.BufferSize
             System.Runtime.InteropServices.Marshal.WriteInt32(properties, 112, PropertiesSize + NameBytes);   // LogFileNameOffset
             System.Runtime.InteropServices.Marshal.WriteInt32(properties, 116, PropertiesSize);               // LoggerNameOffset
-            ControlTrace(0, SessionName, properties, EventTraceControlFlush);
+            ControlTrace(0, sessionName, properties, EventTraceControlFlush);
         }
         finally
         {
@@ -153,6 +174,7 @@ public sealed class BandwidthMonitor : IDisposable
 
     public void Dispose()
     {
+        disposed = true;
         IsRunning = false;
         session?.Dispose();
         session = null;
