@@ -67,8 +67,8 @@
                     Margin="16,8,16,0"
                     IsClosable="True"
                     Severity="Informational"
-                    Title="Limited details"
-                    Message="System processes hide their path, publisher and icon from standard users.">
+                    Title="Limited mode"
+                    Message="Per-app network speed and system process details need administrator rights.">
                     <InfoBar.ActionButton>
                         <Button Content="Restart as administrator" Click="RestartElevated_Click" />
                     </InfoBar.ActionButton>

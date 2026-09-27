@@ -22,6 +22,7 @@ public sealed record ProcessRowData(
     bool CpuSampled,
     long Memory,
     double Io,
+    double NetworkRate,
     int Connections,
     bool Expandable,
     bool Expanded,
@@ -34,7 +35,9 @@ public static class ProcessTree
     public const string SortMemory = "Memory";
     public const string SortIo = "Io";
     public const string SortNetwork = "Network";
+    public const string SortBandwidth = "Bandwidth";
     public const string SortPublisher = "Publisher";
+    public const string SortPath = "Path";
 
     private sealed class Group
     {
@@ -46,6 +49,7 @@ public static class ProcessTree
         public bool CpuSampled;
         public long Memory;
         public double Io;
+        public double NetworkRate;
         public int Connections;
     }
 
@@ -73,6 +77,7 @@ public static class ProcessTree
                 group.CpuSampled |= member.CpuSampled;
                 group.Memory += member.PrivateWorkingSet;
                 group.Io += member.IoBytesPerSecond;
+                group.NetworkRate += member.NetworkBytesPerSecond;
                 group.Connections += member.ConnectionCount;
             }
 
@@ -99,7 +104,7 @@ public static class ProcessTree
         var list = items.ToList();
         if (list.Count == 0) return;
         rows.Add(new ProcessRowData(RowKind.Section, "section:" + title, $"{title} ({list.Count})", "", "", "",
-            Array.Empty<(int, long)>(), 0, false, 0, 0, 0, false, false, false));
+            Array.Empty<(int, long)>(), 0, false, 0, 0, 0, 0, false, false, false));
 
         foreach (var (group, children, forceExpand) in SortGroups(list, sortColumn, descending))
         {
@@ -110,7 +115,7 @@ public static class ProcessTree
                 expandable ? $"({group.Members.Count})" : "",
                 first.Path, first.Company,
                 group.Members.Select(member => member.Key).ToList(),
-                group.Cpu, group.CpuSampled, group.Memory, group.Io, group.Connections,
+                group.Cpu, group.CpuSampled, group.Memory, group.Io, group.NetworkRate, group.Connections,
                 expandable, expanded, group.IsApp));
 
             if (!expanded) continue;
@@ -118,7 +123,7 @@ public static class ProcessTree
             {
                 rows.Add(new ProcessRowData(RowKind.Child, $"{group.Key}|{child.Pid}|{child.CreateTime}", ChildName(child),
                     "PID " + child.Pid, child.Path, child.Company, new[] { child.Key },
-                    child.CpuPercent, child.CpuSampled, child.PrivateWorkingSet, child.IoBytesPerSecond, child.ConnectionCount,
+                    child.CpuPercent, child.CpuSampled, child.PrivateWorkingSet, child.IoBytesPerSecond, child.NetworkBytesPerSecond, child.ConnectionCount,
                     false, false, group.IsApp));
             }
         }
@@ -133,7 +138,9 @@ public static class ProcessTree
             SortMemory => item => item.Group.Memory,
             SortIo => item => item.Group.Io,
             SortNetwork => item => item.Group.Connections,
+            SortBandwidth => item => item.Group.NetworkRate,
             SortPublisher => item => item.Group.Members[0].Company,
+            SortPath => item => item.Group.Members[0].Path,
             _ => item => item.Group.Name
         };
         return Order(items, key, descending, item => item.Group.Name);
@@ -147,6 +154,7 @@ public static class ProcessTree
             SortMemory => child => child.PrivateWorkingSet,
             SortIo => child => child.IoBytesPerSecond,
             SortNetwork => child => child.ConnectionCount,
+            SortBandwidth => child => child.NetworkBytesPerSecond,
             _ => child => ChildName(child)
         };
         return Order(children, key, descending, ChildName);

@@ -8,7 +8,7 @@ public sealed class ProcessesViewModel : ObservableObject
     private readonly MonitorHost monitor;
     private readonly AppSettings settings;
     private readonly HashSet<string> expanded = new(StringComparer.OrdinalIgnoreCase);
-    private string cpuHeader = "", memoryHeader = "", ioHeader = "", networkHeader = "";
+    private string cpuHeader = "", memoryHeader = "", ioHeader = "", networkHeader = "", bandwidthHeader = "", bandwidthTooltip = "";
 
     public ProcessesViewModel(MonitorHost monitor, AppSettings settings)
     {
@@ -16,14 +16,14 @@ public sealed class ProcessesViewModel : ObservableObject
         this.settings = settings;
         Layout = new ColumnLayout("Processes.", new Dictionary<string, double>
         {
-            ["Name"] = 380, ["Cpu"] = 92, ["Memory"] = 112, ["Io"] = 96, ["Network"] = 104, ["Publisher"] = 220
+            ["Name"] = 360, ["Cpu"] = 88, ["Memory"] = 108, ["Io"] = 96, ["Bandwidth"] = 104, ["Network"] = 104, ["Publisher"] = 200
         }, settings.ColumnWidths);
         ProcessSlot.SharedLayout = Layout;
-        Rows = new SlotCollection<ProcessSlot, (ProcessRowData, long, Func<string, bool>)>(ProcessSlot.Load);
+        Rows = new SlotCollection<ProcessSlot, (ProcessRowData, ProcessRowContext)>(ProcessSlot.Load);
     }
 
     public ColumnLayout Layout { get; }
-    public SlotCollection<ProcessSlot, (ProcessRowData, long, Func<string, bool>)> Rows { get; }
+    public SlotCollection<ProcessSlot, (ProcessRowData, ProcessRowContext)> Rows { get; }
 
     public string SortColumn => settings.ProcessSortColumn;
     public bool SortDescending => settings.ProcessSortDescending;
@@ -32,6 +32,8 @@ public sealed class ProcessesViewModel : ObservableObject
     public string MemoryHeader { get => memoryHeader; private set => Set(ref memoryHeader, value); }
     public string IoHeader { get => ioHeader; private set => Set(ref ioHeader, value); }
     public string NetworkHeader { get => networkHeader; private set => Set(ref networkHeader, value); }
+    public string BandwidthHeader { get => bandwidthHeader; private set => Set(ref bandwidthHeader, value); }
+    public string BandwidthTooltip { get => bandwidthTooltip; private set => Set(ref bandwidthTooltip, value); }
 
     public void Refresh()
     {
@@ -43,11 +45,15 @@ public sealed class ProcessesViewModel : ObservableObject
         MemoryHeader = Format.WholePercent(system.Memory.LoadPercent);
         IoHeader = Format.Rate(system.IoBytesPerSecond);
         NetworkHeader = Format.Count(snapshot.Connections.Count);
+        bool bandwidth = system.PerProcessNetworkAvailable;
+        BandwidthHeader = bandwidth ? Format.Mbps(snapshot.Processes.Sum(process => process.NetworkBytesPerSecond)) : "Admin";
+        BandwidthTooltip = bandwidth
+            ? "Current send + receive per app, measured from the kernel's TCP/IP events (loopback excluded)"
+            : system.PerProcessNetworkStatus + " Use Restart as administrator.";
 
         List<ProcessRowData> rows = ProcessTree.Build(snapshot.Processes, monitor.SearchText, SortColumn, SortDescending, expanded);
-        long total = system.Memory.Total;
-        Func<string, bool> isBlocked = monitor.IsBlocked;
-        Rows.Apply(rows.Select(row => (row, total, isBlocked)).ToList());
+        var context = new ProcessRowContext(system.Memory.Total, bandwidth, monitor.IsBlocked);
+        Rows.Apply(rows.Select(row => (row, context)).ToList());
     }
 
     public void Sort(string column)
@@ -60,7 +66,7 @@ public sealed class ProcessesViewModel : ObservableObject
         {
             settings.ProcessSortColumn = column;
             // Names read naturally A→Z; resource columns are most useful largest-first.
-            settings.ProcessSortDescending = column is not (ProcessTree.SortName or ProcessTree.SortPublisher);
+            settings.ProcessSortDescending = column is not (ProcessTree.SortName or ProcessTree.SortPublisher or ProcessTree.SortPath);
         }
         Raise(nameof(SortColumn));
         Refresh();

@@ -18,8 +18,8 @@ public sealed partial class SettingsPage : Page
         bool elevated = App.Monitor.IsElevated;
         ElevationTitle.Text = elevated ? "Running as administrator" : "Running as standard user";
         ElevationText.Text = elevated
-            ? "All processes show their path, publisher and icon, and firewall changes need no extra prompt."
-            : "Paths, publishers and icons of system processes are hidden, and each firewall change asks for administrator approval.";
+            ? "All processes show their path, publisher and icon, per-app network speed is measured, and firewall changes need no extra prompt."
+            : "Per-app network speed is unavailable, system processes hide their path, publisher and icon, and each firewall change asks for administrator approval.";
         ElevateButton.Visibility = elevated ? Visibility.Collapsed : Visibility.Visible;
 
         string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";

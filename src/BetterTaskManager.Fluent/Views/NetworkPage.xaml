@@ -43,16 +43,19 @@
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Local, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Remote, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.State, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.Layout.Speed, Mode=OneWay}" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock Text="App / protocol" Margin="44,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <TextBlock Grid.Column="1" Text="Local address" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <TextBlock Grid.Column="2" Text="Remote address" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <TextBlock Grid.Column="3" Text="State" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock Grid.Column="4" Text="Speed (down / up)" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <Thumb Tag="Name" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
             <Thumb Tag="Local" Grid.Column="1" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
             <Thumb Tag="Remote" Grid.Column="2" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
             <Thumb Tag="State" Grid.Column="3" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
+            <Thumb Tag="Speed" Grid.Column="4" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
         </Grid>
 
         <ListView
@@ -75,6 +78,7 @@
                             <ColumnDefinition Width="{x:Bind Layout.Local, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.Remote, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.State, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.Speed, Mode=OneWay}" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid Margin="{x:Bind Indent, Mode=OneWay}">
@@ -108,6 +112,7 @@
                         <TextBlock Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Local, Mode=OneWay}" />
                         <TextBlock Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Remote, Mode=OneWay}" IsTextSelectionEnabled="False" />
                         <TextBlock Grid.Column="3" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind State, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Grid.Column="4" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Speed, Mode=OneWay}" />
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

@@ -5,14 +5,17 @@ using Microsoft.UI.Xaml.Media;
 namespace BetterTaskManager.Fluent.ViewModels;
 
 /// <summary>A reusable row of the Processes table. <see cref="Load"/> only raises changes for values that moved.</summary>
+/// <summary>Values shared by every row of one refresh.</summary>
+public sealed record ProcessRowContext(long TotalMemory, bool BandwidthAvailable, Func<string, bool> IsBlocked);
+
 public sealed class ProcessSlot : ObservableObject
 {
     private static readonly Thickness ChildIndent = new(40, 0, 0, 0);
     private static readonly Thickness NoIndent = new(0);
 
-    private string name = "", detail = "", cpuText = "", memoryText = "", ioText = "", networkText = "", publisher = "", path = "";
+    private string name = "", detail = "", cpuText = "", memoryText = "", ioText = "", networkText = "", bandwidthText = "", publisher = "", path = "";
     private ImageSource? icon;
-    private Brush cpuHeat = Heat.Level(0), memoryHeat = Heat.Level(0), ioHeat = Heat.Level(0), networkHeat = Heat.Level(0);
+    private Brush cpuHeat = Heat.Level(0), memoryHeat = Heat.Level(0), ioHeat = Heat.Level(0), networkHeat = Heat.Level(0), bandwidthHeat = Heat.Level(0);
     private Visibility sectionVisibility = Visibility.Collapsed, rowVisibility = Visibility.Visible, chevronVisibility = Visibility.Collapsed;
     private double chevronAngle;
     private Thickness indent;
@@ -33,6 +36,8 @@ public sealed class ProcessSlot : ObservableObject
     public string MemoryText { get => memoryText; private set => Set(ref memoryText, value); }
     public string IoText { get => ioText; private set => Set(ref ioText, value); }
     public string NetworkText { get => networkText; private set => Set(ref networkText, value); }
+    public string BandwidthText { get => bandwidthText; private set => Set(ref bandwidthText, value); }
+    public Brush BandwidthHeat { get => bandwidthHeat; private set => Set(ref bandwidthHeat, value); }
     public Brush CpuHeat { get => cpuHeat; private set => Set(ref cpuHeat, value); }
     public Brush MemoryHeat { get => memoryHeat; private set => Set(ref memoryHeat, value); }
     public Brush IoHeat { get => ioHeat; private set => Set(ref ioHeat, value); }
@@ -45,9 +50,10 @@ public sealed class ProcessSlot : ObservableObject
     public bool Blocked { get => blocked; private set { if (Set(ref blocked, value)) Raise(nameof(BlockedVisibility)); } }
     public Visibility BlockedVisibility => blocked ? Visibility.Visible : Visibility.Collapsed;
 
-    public static void Load(ProcessSlot slot, (ProcessRowData Row, long TotalMemory, Func<string, bool> IsBlocked) input)
+    public static void Load(ProcessSlot slot, (ProcessRowData Row, ProcessRowContext Context) input)
     {
         ProcessRowData row = input.Row;
+        ProcessRowContext context = input.Context;
         slot.Data = row;
         bool section = row.Kind == RowKind.Section;
         slot.SectionVisibility = section ? Visibility.Visible : Visibility.Collapsed;
@@ -55,9 +61,9 @@ public sealed class ProcessSlot : ObservableObject
         slot.Name = row.Name;
         if (section)
         {
-            slot.Detail = slot.CpuText = slot.MemoryText = slot.IoText = slot.NetworkText = slot.Publisher = slot.Path = "";
+            slot.Detail = slot.CpuText = slot.MemoryText = slot.IoText = slot.NetworkText = slot.BandwidthText = slot.Publisher = slot.Path = "";
             slot.ChevronVisibility = Visibility.Collapsed;
-            slot.CpuHeat = slot.MemoryHeat = slot.IoHeat = slot.NetworkHeat = Heat.Level(0);
+            slot.CpuHeat = slot.MemoryHeat = slot.IoHeat = slot.NetworkHeat = slot.BandwidthHeat = Heat.Level(0);
             slot.Blocked = false;
             return;
         }
@@ -74,10 +80,12 @@ public sealed class ProcessSlot : ObservableObject
         slot.IoText = Format.Rate(row.Io);
         slot.NetworkText = row.Connections == 0 ? "–" : Format.Count(row.Connections);
         slot.CpuHeat = Heat.Level(Heat.Scale(row.Cpu, 0.5, 2, 5, 12, 25, 50));
-        double memoryShare = input.TotalMemory == 0 ? 0 : row.Memory * 100d / input.TotalMemory;
+        slot.BandwidthText = context.BandwidthAvailable ? Format.Mbps(row.NetworkRate) : "–";
+        slot.BandwidthHeat = Heat.Level(context.BandwidthAvailable ? Heat.Scale(row.NetworkRate * 8 / 1_000_000, 0.1, 0.5, 2, 10, 50, 200) : 0);
+        double memoryShare = context.TotalMemory == 0 ? 0 : row.Memory * 100d / context.TotalMemory;
         slot.MemoryHeat = Heat.Level(Heat.Scale(memoryShare, 0.2, 0.5, 1, 2, 4, 8));
         slot.IoHeat = Heat.Level(Heat.Scale(row.Io / 1048576d, 0.1, 1, 5, 20, 50, 100));
         slot.NetworkHeat = Heat.Level(Heat.Scale(row.Connections, 1, 5, 15, 30, 60, 120));
-        slot.Blocked = row.Kind == RowKind.Group && input.IsBlocked(row.Path);
+        slot.Blocked = row.Kind == RowKind.Group && context.IsBlocked(row.Path);
     }
 }

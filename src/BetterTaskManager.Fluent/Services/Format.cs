@@ -14,6 +14,14 @@ internal static class Format
             : megabytes.ToString("0.0", Culture) + " MB";
     }
 
+    /// <summary>Data volume with a unit that fits: KB, MB or GB.</summary>
+    public static string Bytes(long bytes)
+    {
+        if (bytes < 1024 * 1024) return (bytes / 1024d).ToString("0", Culture) + " KB";
+        if (bytes < 1024L * 1024 * 1024) return (bytes / 1048576d).ToString("0.0", Culture) + " MB";
+        return (bytes / 1073741824d).ToString("0.00", Culture) + " GB";
+    }
+
     public static string Gigabytes(long bytes) => (bytes / 1073741824d).ToString("0.0", Culture) + " GB";
 
     public static string Percent(double value) => value.ToString("0.0", Culture) + "%";
@@ -21,6 +29,9 @@ internal static class Format
     public static string WholePercent(double value) => Math.Round(value).ToString("0", Culture) + "%";
 
     public static string Rate(double bytesPerSecond) => (bytesPerSecond / 1048576d).ToString("0.0", Culture) + " MB/s";
+
+    /// <summary>Task Manager style: always Mbit/s with one decimal, so the column lines up.</summary>
+    public static string Mbps(double bytesPerSecond) => (bytesPerSecond * 8 / 1_000_000).ToString("0.0", Culture) + " Mbit/s";
 
     public static string NetworkRate(double bytesPerSecond)
     {

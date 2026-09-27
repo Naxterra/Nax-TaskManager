@@ -22,6 +22,12 @@ public sealed class ProcessSample
     /// <summary>Display names of hosted Windows services (svchost and other service processes).</summary>
     public IReadOnlyList<string>? Services { get; init; }
     public int ConnectionCount { get; set; }
+    public double NetworkReceiveBytesPerSecond { get; set; }
+    public double NetworkSendBytesPerSecond { get; set; }
+    /// <summary>Bytes received/sent since Better Task Manager started watching this process.</summary>
+    public long NetworkReceivedTotal { get; set; }
+    public long NetworkSentTotal { get; set; }
+    public double NetworkBytesPerSecond => NetworkReceiveBytesPerSecond + NetworkSendBytesPerSecond;
 
     /// <summary>Stable identity across refreshes: PIDs are reused, creation times are not.</summary>
     public (int Pid, long CreateTime) Key => (Pid, CreateTime);
@@ -38,6 +44,8 @@ public sealed class ConnectionSample
     public required string RemoteAddress { get; init; }
     public required int RemotePort { get; init; }
     public required string State { get; init; }
+    public double ReceiveBytesPerSecond { get; set; }
+    public double SendBytesPerSecond { get; set; }
 }
 
 /// <summary>
@@ -71,6 +79,9 @@ public sealed class SystemSample
     public double NetworkReceiveBytesPerSecond { get; init; }
     public double NetworkSendBytesPerSecond { get; init; }
     public bool NetworkSampled { get; init; }
+    /// <summary>True when per-process network throughput is being measured (needs administrator rights).</summary>
+    public bool PerProcessNetworkAvailable { get; init; }
+    public string PerProcessNetworkStatus { get; init; } = "";
     public double IoBytesPerSecond { get; init; }
     public int ProcessCount { get; init; }
     public int ThreadCount { get; init; }

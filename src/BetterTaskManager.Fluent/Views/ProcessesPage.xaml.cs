@@ -130,7 +130,8 @@ public sealed partial class ProcessesPage : Page
         var indicators = new Dictionary<string, FontIcon>
         {
             [ProcessTree.SortName] = SortName, [ProcessTree.SortCpu] = SortCpu, [ProcessTree.SortMemory] = SortMemory,
-            [ProcessTree.SortIo] = SortIo, [ProcessTree.SortNetwork] = SortNetwork, [ProcessTree.SortPublisher] = SortPublisher
+            [ProcessTree.SortIo] = SortIo, [ProcessTree.SortBandwidth] = SortBandwidth, [ProcessTree.SortNetwork] = SortNetwork, [ProcessTree.SortPublisher] = SortPublisher,
+            [ProcessTree.SortPath] = SortPath
         };
         foreach (var (column, icon) in indicators)
         {

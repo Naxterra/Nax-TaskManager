@@ -18,6 +18,8 @@ public sealed class MonitorEngine : IDisposable
     private readonly Dictionary<string, (string Description, string Company)> fileInfo = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(int, long), CpuMark> previousMarks = new();
     private readonly MemoryCounters memoryCounters = new();
+    private readonly BandwidthMonitor bandwidth = new();
+    private readonly Dictionary<(int, long), ByteCounts> networkTotals = new();
     private readonly CancellationTokenSource shutdown = new();
     private readonly SemaphoreSlim wake = new(0);
     private Dictionary<string, (long Received, long Sent)> previousAdapters = new();
@@ -49,6 +51,7 @@ public sealed class MonitorEngine : IDisposable
 
     public void Start()
     {
+        bandwidth.TryStart();
         loop ??= Task.Run(RunAsync);
     }
 
@@ -94,6 +97,8 @@ public sealed class MonitorEngine : IDisposable
         double elapsedSeconds = previousTimestamp == 0 ? 0 : Stopwatch.GetElapsedTime(previousTimestamp, now).TotalSeconds;
         previousTimestamp = now;
 
+        // Flush first; the counts are drained after the rest of the collection, giving the trace thread time to catch up.
+        bandwidth.Flush();
         List<RawProcess> raw = NtProcessReader.Read();
         Dictionary<int, string> windowTitles = VisibleWindows.ReadTitlesByProcess();
         if (servicesReadAt == 0 || Stopwatch.GetElapsedTime(servicesReadAt).TotalSeconds >= 10)
@@ -155,6 +160,7 @@ public sealed class MonitorEngine : IDisposable
 
         foreach (var stale in previousMarks.Keys.Where(key => !liveKeys.Contains(key)).ToList()) previousMarks.Remove(stale);
         foreach (var stale in identities.Keys.Where(key => !liveKeys.Contains(key)).ToList()) identities.Remove(stale);
+        foreach (var stale in networkTotals.Keys.Where(key => !liveKeys.Contains(key)).ToList()) networkTotals.Remove(stale);
 
         NativeNetworkSnapshot network = NativeNetworkCollector.GetSnapshot();
         var connections = network.Connections.Select(connection => new ConnectionSample
@@ -172,6 +178,7 @@ public sealed class MonitorEngine : IDisposable
         {
             if (connectionCounts.TryGetValue(process.Pid, out int count)) process.ConnectionCount = count;
         }
+        ApplyThroughput(processes, connections, elapsedSeconds);
 
         (double cpuPercent, bool cpuSampled) = SampleSystemCpu();
         (double receive, double send, bool networkSampled) = SampleAdapters(elapsedSeconds);
@@ -184,6 +191,8 @@ public sealed class MonitorEngine : IDisposable
             NetworkReceiveBytesPerSecond = receive,
             NetworkSendBytesPerSecond = send,
             NetworkSampled = networkSampled,
+            PerProcessNetworkAvailable = bandwidth.IsRunning,
+            PerProcessNetworkStatus = bandwidth.Status,
             IoBytesPerSecond = totalIo,
             ProcessCount = processes.Count,
             ThreadCount = threads,
@@ -234,6 +243,64 @@ public sealed class MonitorEngine : IDisposable
         var identity = new Identity(path, description, company);
         identities[key] = identity;
         return identity;
+    }
+
+    /// <summary>Turns the bytes counted by the ETW trace since the last snapshot into per-process and per-socket rates.</summary>
+    private void ApplyThroughput(List<ProcessSample> processes, List<ConnectionSample> connections, double elapsedSeconds)
+    {
+        if (!bandwidth.IsRunning) return;
+        var (byProcess, bySocket) = bandwidth.Drain();
+        if (elapsedSeconds <= 0) return;
+
+        foreach (ProcessSample process in processes)
+        {
+            var key = (process.Pid, process.CreateTime);
+            networkTotals.TryGetValue(key, out ByteCounts total);
+            if (byProcess.TryGetValue(process.Pid, out ByteCounts counts))
+            {
+                process.NetworkReceiveBytesPerSecond = counts.Received / elapsedSeconds;
+                process.NetworkSendBytesPerSecond = counts.Sent / elapsedSeconds;
+                total.Received += counts.Received;
+                total.Sent += counts.Sent;
+                networkTotals[key] = total;
+            }
+            process.NetworkReceivedTotal = total.Received;
+            process.NetworkSentTotal = total.Sent;
+        }
+
+        // TCP rows match one socket exactly; the UDP table has no remote side, so UDP rows get the sum per local port.
+        var tcp = new Dictionary<(int, int, string, int), ByteCounts>();
+        var udp = new Dictionary<(int, int), ByteCounts>();
+        foreach (var (socket, counts) in bySocket)
+        {
+            if (socket.Tcp)
+            {
+                var key = (socket.Pid, socket.LocalPort, socket.RemoteAddress.ToString(), socket.RemotePort);
+                tcp.TryGetValue(key, out ByteCounts sum);
+                sum.Received += counts.Received;
+                sum.Sent += counts.Sent;
+                tcp[key] = sum;
+            }
+            else
+            {
+                var key = (socket.Pid, socket.LocalPort);
+                udp.TryGetValue(key, out ByteCounts sum);
+                sum.Received += counts.Received;
+                sum.Sent += counts.Sent;
+                udp[key] = sum;
+            }
+        }
+
+        foreach (ConnectionSample connection in connections)
+        {
+            ByteCounts counts;
+            bool found = connection.Protocol == "TCP"
+                ? tcp.TryGetValue((connection.Pid, connection.LocalPort, connection.RemoteAddress, connection.RemotePort), out counts)
+                : udp.Remove((connection.Pid, connection.LocalPort), out counts); // first socket on the port gets it, so nothing is shown twice
+            if (!found) continue;
+            connection.ReceiveBytesPerSecond = counts.Received / elapsedSeconds;
+            connection.SendBytesPerSecond = counts.Sent / elapsedSeconds;
+        }
     }
 
     private (double Percent, bool Sampled) SampleSystemCpu()
@@ -317,6 +384,7 @@ public sealed class MonitorEngine : IDisposable
         shutdown.Cancel();
         try { loop?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
         memoryCounters.Dispose();
+        bandwidth.Dispose();
         shutdown.Dispose();
         wake.Dispose();
     }

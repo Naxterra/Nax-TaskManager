@@ -16,13 +16,14 @@ public sealed record NetworkRowData(
     string Remote,
     string State,
     string Summary,
+    string Speed,
     bool Expandable,
     bool Expanded);
 
 public sealed class NetworkSlot : ObservableObject
 {
     private static readonly Thickness ChildIndent = new(40, 0, 0, 0);
-    private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "";
+    private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", speed = "";
     private ImageSource? icon;
     private Visibility chevronVisibility, iconVisibility, blockedVisibility = Visibility.Collapsed;
     private double chevronAngle;
@@ -41,6 +42,7 @@ public sealed class NetworkSlot : ObservableObject
     public string State { get => state; private set => Set(ref state, value); }
     public string Path { get => path; private set => Set(ref path, value); }
     public string Summary { get => summary; private set => Set(ref summary, value); }
+    public string Speed { get => speed; private set => Set(ref speed, value); }
     public ImageSource? Icon { get => icon; private set => Set(ref icon, value); }
     public Visibility ChevronVisibility { get => chevronVisibility; private set => Set(ref chevronVisibility, value); }
     public Visibility IconVisibility { get => iconVisibility; private set => Set(ref iconVisibility, value); }
@@ -61,6 +63,7 @@ public sealed class NetworkSlot : ObservableObject
         slot.State = row.State;
         slot.Path = row.Path;
         slot.Summary = row.Summary;
+        slot.Speed = row.Speed;
         slot.Indent = group ? default : ChildIndent;
         slot.IconVisibility = group ? Visibility.Visible : Visibility.Collapsed;
         slot.Icon = group ? IconCache.Get(row.Path) : null;
@@ -85,7 +88,7 @@ public sealed class NetworkViewModel
         this.monitor = monitor;
         Layout = new ColumnLayout("Network.", new Dictionary<string, double>
         {
-            ["Name"] = 340, ["Local"] = 280, ["Remote"] = 300, ["State"] = 120
+            ["Name"] = 320, ["Local"] = 260, ["Remote"] = 280, ["State"] = 110, ["Speed"] = 190
         }, settings.ColumnWidths);
         NetworkSlot.SharedLayout = Layout;
         Rows = new SlotCollection<NetworkSlot, (NetworkRowData, Func<string, bool>)>(NetworkSlot.Load);
@@ -101,6 +104,17 @@ public sealed class NetworkViewModel
         if (monitor.Latest is not { } snapshot) return;
         var processes = snapshot.Processes.ToDictionary(process => process.Pid);
         string query = monitor.SearchText.Trim();
+        bool measured = snapshot.System.PerProcessNetworkAvailable;
+
+        // Throughput and totals per app group, from every process in the group (not only those with open sockets).
+        var traffic = new Dictionary<string, (double Down, double Up, long Received, long Sent)>(StringComparer.OrdinalIgnoreCase);
+        foreach (ProcessSample process in snapshot.Processes)
+        {
+            string key = ProcessTree.GroupKey(process);
+            traffic.TryGetValue(key, out var sum);
+            traffic[key] = (sum.Down + process.NetworkReceiveBytesPerSecond, sum.Up + process.NetworkSendBytesPerSecond,
+                sum.Received + process.NetworkReceivedTotal, sum.Sent + process.NetworkSentTotal);
+        }
 
         var groups = snapshot.Connections
             .Where(connection => !EstablishedOnly || (connection.Protocol == "TCP" && connection.State is not ("Listening" or "Time Wait")))
@@ -120,7 +134,8 @@ public sealed class NetworkViewModel
                 group.Path.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                 group.Connections.Any(connection => Endpoint(connection.RemoteAddress, connection.RemotePort).Contains(query, StringComparison.OrdinalIgnoreCase) ||
                     connection.Pid.ToString(CultureInfo.InvariantCulture) == query))
-            .OrderByDescending(group => group.Connections.Count(connection => connection.State == "Established"))
+            .OrderByDescending(group => traffic.TryGetValue(group.Key, out var rate) ? rate.Down + rate.Up : 0)
+            .ThenByDescending(group => group.Connections.Count(connection => connection.State == "Established"))
             .ThenByDescending(group => group.Connections.Count)
             .ThenBy(group => group.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -132,12 +147,16 @@ public sealed class NetworkViewModel
             int established = group.Connections.Count(connection => connection.State == "Established");
             int listening = group.Connections.Count(connection => connection.State == "Listening");
             bool isExpanded = expanded.Contains(group.Key) || (query.Length > 0 && group.Connections.Count <= 50);
+            traffic.TryGetValue(group.Key, out var usage);
             string summary = $"{established} established · {listening} listening · {group.Connections.Count - established - listening} other";
-            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", summary, true, isExpanded));
+            if (measured && usage.Received + usage.Sent > 0) summary += $" · {Format.Bytes(usage.Received)} down, {Format.Bytes(usage.Sent)} up";
+            string speed = measured ? Speed(usage.Down, usage.Up) : "";
+            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", summary, speed, true, isExpanded));
             if (!isExpanded) continue;
 
             foreach (ConnectionSample connection in group.Connections
-                         .OrderBy(connection => connection.State == "Established" ? 0 : connection.State == "Listening" ? 2 : 1)
+                         .OrderByDescending(connection => connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond)
+                         .ThenBy(connection => connection.State == "Established" ? 0 : connection.State == "Listening" ? 2 : 1)
                          .ThenBy(connection => connection.RemoteAddress, StringComparer.Ordinal))
             {
                 // Several sockets can share one endpoint (e.g. mDNS on UDP 5353); keep row keys unique.
@@ -148,13 +167,19 @@ public sealed class NetworkViewModel
                     connection.Protocol, "PID " + connection.Pid, group.Path,
                     Endpoint(connection.LocalAddress, connection.LocalPort),
                     connection.Protocol == "UDP" ? "*" : Endpoint(connection.RemoteAddress, connection.RemotePort),
-                    connection.State, "", false, false));
+                    connection.State, "",
+                    measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
+                        ? Speed(connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond) : "",
+                    false, false));
             }
         }
 
         int totalEstablished = snapshot.Connections.Count(connection => connection.State == "Established");
+        string throughput = measured
+            ? $" · all apps ↓ {Format.NetworkRate(snapshot.Processes.Sum(p => p.NetworkReceiveBytesPerSecond))} ↑ {Format.NetworkRate(snapshot.Processes.Sum(p => p.NetworkSendBytesPerSecond))}"
+            : " · per-app speed needs administrator rights";
         Summary = $"{Format.Count(snapshot.Connections.Count)} connections · {Format.Count(totalEstablished)} established · " +
-            $"{groups.Count} apps shown" + (snapshot.NetworkIssues.Count > 0 ? " · some network tables could not be read" : "");
+            $"{groups.Count} apps shown" + throughput + (snapshot.NetworkIssues.Count > 0 ? " · some network tables could not be read" : "");
         Func<string, bool> isBlocked = monitor.IsBlocked;
         Rows.Apply(rows.Select(row => (row, isBlocked)).ToList());
     }
@@ -164,6 +189,10 @@ public sealed class NetworkViewModel
         if (!expanded.Remove(key)) expanded.Add(key);
         Refresh();
     }
+
+    /// <summary>Blank when idle so active apps stand out.</summary>
+    private static string Speed(double down, double up) =>
+        down + up < 1 ? "" : $"↓ {Format.NetworkRate(down)}   ↑ {Format.NetworkRate(up)}";
 
     private static string Endpoint(string address, int port) =>
         address.Contains(':') ? $"[{address}]:{port}" : $"{address}:{port}";
