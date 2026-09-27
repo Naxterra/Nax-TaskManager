@@ -46,6 +46,10 @@ public sealed class ConnectionSample
     public required string State { get; init; }
     public double ReceiveBytesPerSecond { get; set; }
     public double SendBytesPerSecond { get; set; }
+    /// <summary>Host name for the remote address, when known.</summary>
+    public string? RemoteHost { get; set; }
+    /// <summary>True when <see cref="RemoteHost"/> came from reverse DNS rather than the app's own lookup.</summary>
+    public bool RemoteHostIsReverse { get; set; }
 }
 
 /// <summary>

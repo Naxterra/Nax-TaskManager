@@ -19,6 +19,7 @@ public sealed class MonitorEngine : IDisposable
     private readonly Dictionary<(int, long), CpuMark> previousMarks = new();
     private readonly MemoryCounters memoryCounters = new();
     private readonly BandwidthMonitor bandwidth = new();
+    private readonly HostNameResolver hostNames = new();
     private readonly Dictionary<(int, long), ByteCounts> networkTotals = new();
     private readonly CancellationTokenSource shutdown = new();
     private readonly SemaphoreSlim wake = new(0);
@@ -52,6 +53,7 @@ public sealed class MonitorEngine : IDisposable
     public void Start()
     {
         bandwidth.TryStart();
+        hostNames.Start();
         loop ??= Task.Run(RunAsync);
     }
 
@@ -179,6 +181,15 @@ public sealed class MonitorEngine : IDisposable
             if (connectionCounts.TryGetValue(process.Pid, out int count)) process.ConnectionCount = count;
         }
         ApplyThroughput(processes, connections, elapsedSeconds);
+        foreach (ConnectionSample connection in connections)
+        {
+            if (connection.Protocol != "TCP" || connection.RemoteAddress.Length == 0) continue;
+            if (hostNames.Resolve(connection.RemoteAddress) is { } host)
+            {
+                connection.RemoteHost = host.Name;
+                connection.RemoteHostIsReverse = host.Source == HostNameSource.Reverse;
+            }
+        }
 
         (double cpuPercent, bool cpuSampled) = SampleSystemCpu();
         (double receive, double send, bool networkSampled) = SampleAdapters(elapsedSeconds);
@@ -385,6 +396,7 @@ public sealed class MonitorEngine : IDisposable
         try { loop?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
         memoryCounters.Dispose();
         bandwidth.Dispose();
+        hostNames.Dispose();
         shutdown.Dispose();
         wake.Dispose();
     }

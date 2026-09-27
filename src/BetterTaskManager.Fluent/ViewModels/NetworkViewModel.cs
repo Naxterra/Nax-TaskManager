@@ -17,13 +17,14 @@ public sealed record NetworkRowData(
     string State,
     string Summary,
     string Speed,
+    string RemoteDetail,
     bool Expandable,
     bool Expanded);
 
 public sealed class NetworkSlot : ObservableObject
 {
     private static readonly Thickness ChildIndent = new(40, 0, 0, 0);
-    private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", speed = "";
+    private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", speed = "", remoteDetail = "";
     private ImageSource? icon;
     private Visibility chevronVisibility, iconVisibility, blockedVisibility = Visibility.Collapsed;
     private double chevronAngle;
@@ -43,6 +44,8 @@ public sealed class NetworkSlot : ObservableObject
     public string Path { get => path; private set => Set(ref path, value); }
     public string Summary { get => summary; private set => Set(ref summary, value); }
     public string Speed { get => speed; private set => Set(ref speed, value); }
+    /// <summary>Numeric endpoint and name source, shown as the remote column's tooltip.</summary>
+    public string RemoteDetail { get => remoteDetail; private set => Set(ref remoteDetail, value); }
     public ImageSource? Icon { get => icon; private set => Set(ref icon, value); }
     public Visibility ChevronVisibility { get => chevronVisibility; private set => Set(ref chevronVisibility, value); }
     public Visibility IconVisibility { get => iconVisibility; private set => Set(ref iconVisibility, value); }
@@ -64,6 +67,7 @@ public sealed class NetworkSlot : ObservableObject
         slot.Path = row.Path;
         slot.Summary = row.Summary;
         slot.Speed = row.Speed;
+        slot.RemoteDetail = row.RemoteDetail;
         slot.Indent = group ? default : ChildIndent;
         slot.IconVisibility = group ? Visibility.Visible : Visibility.Collapsed;
         slot.Icon = group ? IconCache.Get(row.Path) : null;
@@ -133,6 +137,7 @@ public sealed class NetworkViewModel
             .Where(group => query.Length == 0 || group.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                 group.Path.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                 group.Connections.Any(connection => Endpoint(connection.RemoteAddress, connection.RemotePort).Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    (connection.RemoteHost?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     connection.Pid.ToString(CultureInfo.InvariantCulture) == query))
             .OrderByDescending(group => traffic.TryGetValue(group.Key, out var rate) ? rate.Down + rate.Up : 0)
             .ThenByDescending(group => group.Connections.Count(connection => connection.State == "Established"))
@@ -151,7 +156,7 @@ public sealed class NetworkViewModel
             string summary = $"{established} established · {listening} listening · {group.Connections.Count - established - listening} other";
             if (measured && usage.Received + usage.Sent > 0) summary += $" · {Format.Bytes(usage.Received)} down, {Format.Bytes(usage.Sent)} up";
             string speed = measured ? Speed(usage.Down, usage.Up) : "";
-            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", summary, speed, true, isExpanded));
+            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", summary, speed, "", true, isExpanded));
             if (!isExpanded) continue;
 
             foreach (ConnectionSample connection in group.Connections
@@ -166,10 +171,12 @@ public sealed class NetworkViewModel
                     occurrence == 1 ? key : key + "#" + occurrence,
                     connection.Protocol, "PID " + connection.Pid, group.Path,
                     Endpoint(connection.LocalAddress, connection.LocalPort),
-                    connection.Protocol == "UDP" ? "*" : Endpoint(connection.RemoteAddress, connection.RemotePort),
+                    connection.Protocol == "UDP" ? "*"
+                        : connection.RemoteHost is { } host ? $"{host}:{connection.RemotePort}" : Endpoint(connection.RemoteAddress, connection.RemotePort),
                     connection.State, "",
                     measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
                         ? Speed(connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond) : "",
+                    RemoteDetail(connection),
                     false, false));
             }
         }
@@ -188,6 +195,16 @@ public sealed class NetworkViewModel
     {
         if (!expanded.Remove(key)) expanded.Add(key);
         Refresh();
+    }
+
+    private static string RemoteDetail(ConnectionSample connection)
+    {
+        if (connection.Protocol == "UDP") return "UDP sockets have no fixed remote side";
+        string endpoint = Endpoint(connection.RemoteAddress, connection.RemotePort);
+        if (connection.RemoteHost is null) return endpoint;
+        return connection.RemoteHostIsReverse
+            ? $"{endpoint}\nName from reverse DNS; may be the hosting provider rather than the service"
+            : $"{endpoint}\nName the app looked up";
     }
 
     /// <summary>Blank when idle so active apps stand out.</summary>
