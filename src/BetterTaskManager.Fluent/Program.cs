@@ -116,7 +116,7 @@ public static class Program
 
     private static void ActivateExistingWindow()
     {
-        string name = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? "BetterTaskManager.Fluent");
+        string name = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? "BetterTaskManager");
         foreach (Process process in Process.GetProcessesByName(name))
         {
             using (process)

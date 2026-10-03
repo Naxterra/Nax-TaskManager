@@ -100,6 +100,11 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchApplication}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
 
+[UninstallRun]
+; The background history service runs from Program Files as LocalSystem; remove it with the app (one UAC prompt).
+; Skipped for silent uninstalls, which is how a newer setup removes this version during an upgrade.
+Filename: "{app}\{#AppExeName}"; Parameters: "--uninstall-history-service ""{%TEMP}\BetterTaskManager-uninstall-service.txt"""; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; Verb: "runas"; Check: ShouldRemoveHistoryService; RunOnceId: "RemoveHistoryService"
+
 [Code]
 const
   UninstallRegistryKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#UninstallRegistryId}_is1';
@@ -182,6 +187,11 @@ begin
     Sleep(100);
   end;
   Result := not FileExists(Uninstaller);
+end;
+
+function ShouldRemoveHistoryService(): Boolean;
+begin
+  Result := (not UninstallSilent()) and RegKeyExists(HKLM64, 'SYSTEM\CurrentControlSet\Services\BetterTaskManagerHistory');
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;

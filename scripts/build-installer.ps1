@@ -12,9 +12,9 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
-$project = Join-Path $root "src\BetterTaskManager\BetterTaskManager.csproj"
+$project = Join-Path $root "src\BetterTaskManager.Fluent\BetterTaskManager.Fluent.csproj"
 $installerScript = Join-Path $root "installer\BetterTaskManager.iss"
-$iconPath = Join-Path $root "src\BetterTaskManager\assets\BetterTaskManager.ico"
+$iconPath = Join-Path $root "src\BetterTaskManager.Fluent\Assets\AppIcon.ico"
 $artifacts = Join-Path $root "artifacts"
 [xml]$projectXml = Get-Content -LiteralPath $project
 $version = [string]$projectXml.Project.PropertyGroup.Version
@@ -24,7 +24,7 @@ $sourceFolderName = "BetterTaskManager-v$version-portable-win-x64"
 $sourceFolder = Join-Path $artifacts $sourceFolderName
 $sourceExecutable = Join-Path $sourceFolder "BetterTaskManager.exe"
 if (-not (Test-Path -LiteralPath $sourceExecutable)) {
-    throw "Publish the portable package before building the installer: $sourceExecutable"
+    throw "Publish the portable package (scripts\publish-fluent.ps1) before building the installer: $sourceExecutable"
 }
 if (-not (Test-Path -LiteralPath $iconPath)) { throw "Application icon not found: $iconPath" }
 
@@ -40,9 +40,9 @@ if ([string]::IsNullOrWhiteSpace($IsccPath)) {
 }
 if (-not (Test-Path -LiteralPath $IsccPath)) { throw "Inno Setup compiler not found: $IsccPath" }
 
-$previewNumber = 0
-if ($version -match 'preview\.(\d+)$') { $previewNumber = [int]$Matches[1] }
-$numericVersion = "1.1.0.$previewNumber"
+# 2.0.0-alpha.3 -> 2.0.0.3; a release without a pre-release number gets .0.
+if ($version -notmatch '^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z]+\.(\d+))?') { throw "Unsupported version format: $version" }
+$numericVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).$(if ($Matches[4]) { $Matches[4] } else { 0 })"
 $installerBaseName = if ([string]::IsNullOrWhiteSpace($InstallerBaseNameOverride)) { "BetterTaskManager-v$version-setup-win-x64" } else { $InstallerBaseNameOverride }
 $installerPath = Join-Path $artifacts ($installerBaseName + ".exe")
 $closeApplicationsValue = if ($DisableCloseApplications) { "no" } else { "yes" }
