@@ -293,4 +293,43 @@ Answer: {0}</value></data>
   <data name="ProcessesPage_26.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Efficiency mode</value></data>
   <data name="ProcessesPage_27.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Suspended</value></data>
   <data name="ProcessesPage_28.Label" xml:space="preserve"><value>Efficiency mode</value></data>
+  <data name="MainWindow_8.Content" xml:space="preserve"><value>Details</value></data>
+  <data name="MainWindow_8.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Details (Ctrl+5)</value></data>
+  <data name="DetailsPage_1.Text" xml:space="preserve"><value>Details</value></data>
+  <data name="DetailsPage_2.Label" xml:space="preserve"><value>End task</value></data>
+  <data name="DetailsPage_3.Label" xml:space="preserve"><value>Set priority</value></data>
+  <data name="DetailsPage_4.Label" xml:space="preserve"><value>Pause</value></data>
+  <data name="DetailsPage_5.Label" xml:space="preserve"><value>End process tree</value></data>
+  <data name="DetailsPage_6.Label" xml:space="preserve"><value>Efficiency mode</value></data>
+  <data name="DetailsPage_7.Label" xml:space="preserve"><value>Open file location</value></data>
+  <data name="DetailsPage_8.Label" xml:space="preserve"><value>Properties</value></data>
+  <data name="DetailsPage_9.Label" xml:space="preserve"><value>Copy path</value></data>
+  <data name="DetailsPage_10.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Name</value></data>
+  <data name="DetailsPage_11.Text" xml:space="preserve"><value>Name</value></data>
+  <data name="DetailsPage_12.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by PID</value></data>
+  <data name="DetailsPage_13.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Status</value></data>
+  <data name="DetailsPage_14.Text" xml:space="preserve"><value>Status</value></data>
+  <data name="DetailsPage_15.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by User name</value></data>
+  <data name="DetailsPage_16.Text" xml:space="preserve"><value>User name</value></data>
+  <data name="DetailsPage_17.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by CPU</value></data>
+  <data name="DetailsPage_18.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Memory</value></data>
+  <data name="DetailsPage_19.Text" xml:space="preserve"><value>Memory</value></data>
+  <data name="DetailsPage_20.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Priority</value></data>
+  <data name="DetailsPage_21.Text" xml:space="preserve"><value>Priority</value></data>
+  <data name="DetailsPage_22.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Description</value></data>
+  <data name="DetailsPage_23.Text" xml:space="preserve"><value>Description</value></data>
+  <data name="Details_Summary" xml:space="preserve"><value>{0} processes · {1} in efficiency mode · {2} suspended</value></data>
+  <data name="Details_SetPriority" xml:space="preserve"><value>Set priority</value></data>
+  <data name="Details_PriorityTitle" xml:space="preserve"><value>Change the priority of "{0}"?</value></data>
+  <data name="Details_PriorityText" xml:space="preserve"><value>Changing the priority of some processes can make them or Windows unstable.</value></data>
+  <data name="Details_PriorityButton" xml:space="preserve"><value>Change priority</value></data>
+  <data name="Details_PriorityFailed" xml:space="preserve"><value>Priority not changed for "{0}"</value></data>
+  <data name="Priority_Realtime" xml:space="preserve"><value>Realtime</value></data>
+  <data name="Priority_High" xml:space="preserve"><value>High</value></data>
+  <data name="Priority_AboveNormal" xml:space="preserve"><value>Above normal</value></data>
+  <data name="Priority_Normal" xml:space="preserve"><value>Normal</value></data>
+  <data name="Priority_BelowNormal" xml:space="preserve"><value>Below normal</value></data>
+  <data name="Priority_Idle" xml:space="preserve"><value>Low</value></data>
+  <data name="ProcState_Running" xml:space="preserve"><value>Running</value></data>
+  <data name="ProcState_Suspended" xml:space="preserve"><value>Suspended</value></data>
 </root>

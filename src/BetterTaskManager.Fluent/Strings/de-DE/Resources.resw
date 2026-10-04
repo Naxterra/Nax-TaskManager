@@ -293,4 +293,43 @@ Antwort: {0}</value></data>
   <data name="ProcessesPage_26.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Effizienzmodus</value></data>
   <data name="ProcessesPage_27.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Angehalten</value></data>
   <data name="ProcessesPage_28.Label" xml:space="preserve"><value>Effizienzmodus</value></data>
+  <data name="MainWindow_8.Content" xml:space="preserve"><value>Details</value></data>
+  <data name="MainWindow_8.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Details (Strg+5)</value></data>
+  <data name="DetailsPage_1.Text" xml:space="preserve"><value>Details</value></data>
+  <data name="DetailsPage_2.Label" xml:space="preserve"><value>Task beenden</value></data>
+  <data name="DetailsPage_3.Label" xml:space="preserve"><value>Priorität festlegen</value></data>
+  <data name="DetailsPage_4.Label" xml:space="preserve"><value>Anhalten</value></data>
+  <data name="DetailsPage_5.Label" xml:space="preserve"><value>Prozessstruktur beenden</value></data>
+  <data name="DetailsPage_6.Label" xml:space="preserve"><value>Effizienzmodus</value></data>
+  <data name="DetailsPage_7.Label" xml:space="preserve"><value>Dateipfad öffnen</value></data>
+  <data name="DetailsPage_8.Label" xml:space="preserve"><value>Eigenschaften</value></data>
+  <data name="DetailsPage_9.Label" xml:space="preserve"><value>Pfad kopieren</value></data>
+  <data name="DetailsPage_10.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Name sortieren</value></data>
+  <data name="DetailsPage_11.Text" xml:space="preserve"><value>Name</value></data>
+  <data name="DetailsPage_12.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach PID sortieren</value></data>
+  <data name="DetailsPage_13.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Status sortieren</value></data>
+  <data name="DetailsPage_14.Text" xml:space="preserve"><value>Status</value></data>
+  <data name="DetailsPage_15.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Benutzername sortieren</value></data>
+  <data name="DetailsPage_16.Text" xml:space="preserve"><value>Benutzername</value></data>
+  <data name="DetailsPage_17.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach CPU sortieren</value></data>
+  <data name="DetailsPage_18.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Arbeitsspeicher sortieren</value></data>
+  <data name="DetailsPage_19.Text" xml:space="preserve"><value>Arbeitsspeicher</value></data>
+  <data name="DetailsPage_20.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Priorität sortieren</value></data>
+  <data name="DetailsPage_21.Text" xml:space="preserve"><value>Priorität</value></data>
+  <data name="DetailsPage_22.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Beschreibung sortieren</value></data>
+  <data name="DetailsPage_23.Text" xml:space="preserve"><value>Beschreibung</value></data>
+  <data name="Details_Summary" xml:space="preserve"><value>{0} Prozesse · {1} im Effizienzmodus · {2} angehalten</value></data>
+  <data name="Details_SetPriority" xml:space="preserve"><value>Priorität festlegen</value></data>
+  <data name="Details_PriorityTitle" xml:space="preserve"><value>Priorität von „{0}“ ändern?</value></data>
+  <data name="Details_PriorityText" xml:space="preserve"><value>Das Ändern der Priorität bestimmter Prozesse kann sie oder Windows instabil machen.</value></data>
+  <data name="Details_PriorityButton" xml:space="preserve"><value>Priorität ändern</value></data>
+  <data name="Details_PriorityFailed" xml:space="preserve"><value>Priorität für „{0}“ nicht geändert</value></data>
+  <data name="Priority_Realtime" xml:space="preserve"><value>Echtzeit</value></data>
+  <data name="Priority_High" xml:space="preserve"><value>Hoch</value></data>
+  <data name="Priority_AboveNormal" xml:space="preserve"><value>Höher als normal</value></data>
+  <data name="Priority_Normal" xml:space="preserve"><value>Normal</value></data>
+  <data name="Priority_BelowNormal" xml:space="preserve"><value>Niedriger als normal</value></data>
+  <data name="Priority_Idle" xml:space="preserve"><value>Niedrig</value></data>
+  <data name="ProcState_Running" xml:space="preserve"><value>Wird ausgeführt</value></data>
+  <data name="ProcState_Suspended" xml:space="preserve"><value>Angehalten</value></data>
 </root>

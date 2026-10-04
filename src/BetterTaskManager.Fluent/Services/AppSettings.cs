@@ -22,6 +22,8 @@ public sealed class AppSettings
     /// <summary>Network page: by app name by default, so rows do not move while traffic changes.</summary>
     public string NetworkSortColumn { get; set; } = "Name";
     public bool NetworkSortDescending { get; set; }
+    public string DetailsSortColumn { get; set; } = "Name";
+    public bool DetailsSortDescending { get; set; }
     public Dictionary<string, double> ColumnWidths { get; set; } = new();
     public int WindowWidth { get; set; } = 1280;
     public int WindowHeight { get; set; } = 820;

@@ -81,6 +81,10 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength Speed => this["Speed"];
     public GridLength Data => this["Data"];
     public GridLength Scope => this["Scope"];
+    public GridLength Pid => this["Pid"];
+    public GridLength Status => this["Status"];
+    public GridLength User => this["User"];
+    public GridLength Priority => this["Priority"];
 
     public void Resize(string column, double delta)
     {
