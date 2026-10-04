@@ -43,6 +43,13 @@ public sealed partial class MainWindow : Window
         };
 
         ElevationBar.IsOpen = !App.Monitor.IsElevated;
+        string limitedMessage = ElevationBar.Message;
+        App.Monitor.Updated += snapshot =>
+        {
+            ElevationBar.Message = snapshot.System.PerProcessNetworkFromService
+                ? "System process details need administrator rights. Per-app network speed comes from the History service."
+                : limitedMessage;
+        };
         ApplyTheme(App.Settings.Theme);
         WindowRoot.ActualThemeChanged += (_, _) => UpdateCaptionButtons();
         UpdateCaptionButtons();

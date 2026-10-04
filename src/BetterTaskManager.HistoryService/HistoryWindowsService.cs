@@ -20,7 +20,7 @@ public sealed class HistoryWindowsService : ServiceBase
     protected override void OnStart(string[] args)
     {
         SecureDataFolder(HistoryStore.DataFolder);
-        worker = new HistoryWorker(HistoryStore.DefaultPath, "NaxTaskManager-History", Log);
+        worker = new HistoryWorker(HistoryStore.DefaultPath, "NaxTaskManager-History", Log, publishFeed: true);
         worker.Start();
         Log("Service started");
     }

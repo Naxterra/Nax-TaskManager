@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.NetworkInformation;
+using BetterTaskManager.Core.Feed;
 using BetterTaskManager.Core.Native;
 using BetterTaskManager.Core.Network;
 
@@ -20,6 +21,7 @@ public sealed class MonitorEngine : IDisposable
     private readonly MemoryCounters memoryCounters = new();
     private readonly BandwidthMonitor bandwidth;
     private readonly HostNameResolver hostNames;
+    private NetworkFeedClient? feed;
     private readonly Dictionary<(int, long), ByteCounts> networkTotals = new();
     private readonly CancellationTokenSource shutdown = new();
     private readonly SemaphoreSlim wake = new(0);
@@ -59,6 +61,16 @@ public sealed class MonitorEngine : IDisposable
     }
 
     public MonitorSnapshot? Latest { get; private set; }
+
+    /// <summary>
+    /// Fall back to the history service's measurements whenever this process cannot run the kernel network trace
+    /// itself (no administrator rights). Call before <see cref="Start"/>.
+    /// </summary>
+    public void UseServiceFeed()
+    {
+        feed ??= new NetworkFeedClient();
+        feed.Start();
+    }
 
     public void Start()
     {
@@ -195,6 +207,7 @@ public sealed class MonitorEngine : IDisposable
             if (connectionCounts.TryGetValue(process.Pid, out int count)) process.ConnectionCount = count;
         }
         List<FlowSample> flows = ApplyThroughput(processes, connections, elapsedSeconds);
+        bool fromService = !bandwidth.IsRunning && feed?.Current is { } feedMessage && ApplyFeed(processes, connections, feedMessage);
         foreach (ConnectionSample connection in connections)
         {
             if (connection.Protocol != "TCP" || connection.RemoteAddress.Length == 0) continue;
@@ -216,8 +229,9 @@ public sealed class MonitorEngine : IDisposable
             NetworkReceiveBytesPerSecond = receive,
             NetworkSendBytesPerSecond = send,
             NetworkSampled = networkSampled,
-            PerProcessNetworkAvailable = bandwidth.IsRunning,
-            PerProcessNetworkStatus = bandwidth.Status,
+            PerProcessNetworkAvailable = bandwidth.IsRunning || fromService,
+            PerProcessNetworkFromService = fromService,
+            PerProcessNetworkStatus = fromService ? "Measured by the Nax-TaskManager History service" : bandwidth.Status,
             IoBytesPerSecond = totalIo,
             ProcessCount = processes.Count,
             ThreadCount = threads,
@@ -344,6 +358,53 @@ public sealed class MonitorEngine : IDisposable
         return flows;
     }
 
+    /// <summary>
+    /// Applies the history service's rates and totals. Processes match on (PID, creation time); TCP rows on the
+    /// 5-tuple; UDP rows get the per-port sum on the first matching row, as with the local trace.
+    /// </summary>
+    private static bool ApplyFeed(List<ProcessSample> processes, List<ConnectionSample> connections, NetworkFeedMessage message)
+    {
+        var byProcess = new Dictionary<(int, long), ProcessTraffic>();
+        foreach (ProcessTraffic traffic in message.Processes) byProcess[(traffic.Pid, traffic.CreateTime)] = traffic;
+        foreach (ProcessSample process in processes)
+        {
+            if (!byProcess.TryGetValue((process.Pid, process.CreateTime), out ProcessTraffic traffic)) continue;
+            process.NetworkReceiveBytesPerSecond = traffic.ReceivePerSecond;
+            process.NetworkSendBytesPerSecond = traffic.SendPerSecond;
+            process.NetworkReceivedTotal = traffic.ReceivedTotal;
+            process.NetworkSentTotal = traffic.SentTotal;
+        }
+
+        var tcp = new Dictionary<(int, int, string, int), (double Down, double Up)>();
+        var udp = new Dictionary<(int, int), (double Down, double Up)>();
+        foreach (SocketTraffic socket in message.Sockets)
+        {
+            if (socket.Protocol == "TCP")
+            {
+                var key = (socket.Pid, socket.LocalPort, socket.RemoteAddress, socket.RemotePort);
+                tcp.TryGetValue(key, out var sum);
+                tcp[key] = (sum.Down + socket.ReceivePerSecond, sum.Up + socket.SendPerSecond);
+            }
+            else
+            {
+                var key = (socket.Pid, socket.LocalPort);
+                udp.TryGetValue(key, out var sum);
+                udp[key] = (sum.Down + socket.ReceivePerSecond, sum.Up + socket.SendPerSecond);
+            }
+        }
+        foreach (ConnectionSample connection in connections)
+        {
+            (double Down, double Up) rate;
+            bool found = connection.Protocol == "TCP"
+                ? tcp.TryGetValue((connection.Pid, connection.LocalPort, connection.RemoteAddress, connection.RemotePort), out rate)
+                : udp.Remove((connection.Pid, connection.LocalPort), out rate);
+            if (!found) continue;
+            connection.ReceiveBytesPerSecond = rate.Down;
+            connection.SendBytesPerSecond = rate.Up;
+        }
+        return true;
+    }
+
     private (double Percent, bool Sampled) SampleSystemCpu()
     {
         if (!Win32.GetSystemTimes(out long idle, out long kernel, out long user)) return (0, false);
@@ -427,6 +488,7 @@ public sealed class MonitorEngine : IDisposable
         memoryCounters.Dispose();
         bandwidth.Dispose();
         hostNames.Dispose();
+        feed?.Dispose();
         shutdown.Dispose();
         wake.Dispose();
     }

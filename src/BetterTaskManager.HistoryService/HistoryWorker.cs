@@ -1,3 +1,4 @@
+using BetterTaskManager.Core.Feed;
 using BetterTaskManager.Core.History;
 using BetterTaskManager.Core.Monitoring;
 
@@ -9,13 +10,16 @@ public sealed class HistoryWorker : IDisposable
     private readonly HistoryStore store;
     private readonly MonitorEngine engine;
     private readonly HistoryRecorder recorder;
+    private readonly NetworkFeedServer? feed;
     private readonly Action<string> log;
     private readonly object gate = new();
     private DateTime lastError;
     private bool disposed, reportedTraffic;
 
-    public HistoryWorker(string databasePath, string sessionPrefix, Action<string> log)
+    /// <param name="publishFeed">Serve live traffic to non-elevated app windows (the real service; off for console tests).</param>
+    public HistoryWorker(string databasePath, string sessionPrefix, Action<string> log, bool publishFeed = false)
     {
+        if (publishFeed) feed = new NetworkFeedServer(log);
         this.log = log;
         store = HistoryStore.OpenForWriting(databasePath);
         engine = new MonitorEngine(sessionPrefix) { Interval = TimeSpan.FromSeconds(2) };
@@ -24,7 +28,11 @@ public sealed class HistoryWorker : IDisposable
         engine.CollectionFailed += OnError;
     }
 
-    public void Start() => engine.Start();
+    public void Start()
+    {
+        feed?.Start();
+        engine.Start();
+    }
 
     private void OnSnapshot(MonitorSnapshot snapshot)
     {
@@ -38,6 +46,12 @@ public sealed class HistoryWorker : IDisposable
             }
             recorder.Record(snapshot);
         }
+        if (feed is not null)
+        {
+            feed.Publish(NetworkFeedMessage.From(snapshot));
+            // Match the app's refresh while someone is watching; otherwise save work.
+            engine.Interval = feed.ReaderCount > 0 ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(2);
+        }
     }
 
     private void OnError(Exception ex)
@@ -50,6 +64,7 @@ public sealed class HistoryWorker : IDisposable
 
     public void Dispose()
     {
+        feed?.Dispose();
         engine.Dispose();
         lock (gate)
         {

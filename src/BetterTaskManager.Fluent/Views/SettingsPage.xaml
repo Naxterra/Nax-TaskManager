@@ -84,7 +84,7 @@
                     </StackPanel>
                     <ToggleSwitch x:Name="HistoryToggle" Grid.Column="2" MinWidth="0" VerticalAlignment="Center" OnContent="On" OffContent="Off" Toggled="HistoryToggle_Toggled" />
                     <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"
-                               Text="A Windows service records which apps connect to which hosts and how much data they send and receive, for 30 days. The history stays on this PC in C:\ProgramData\NaxTaskManager. Every user account on this PC can read it; only administrators can change it. Turning recording off keeps the history already recorded." />
+                               Text="A Windows service records which apps connect to which hosts and how much data they send and receive, for 30 days. While it runs, the app also shows per-app network speed without administrator rights. The history stays on this PC in C:\ProgramData\NaxTaskManager. Every user account on this PC can read it; only administrators can change it. Turning recording off keeps the history already recorded." />
                 </Grid>
             </Border>
 

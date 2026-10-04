@@ -32,7 +32,7 @@
 #define AppName AppNameValue
 #define AppPublisher "Naxterra"
 #define AppExeName "NaxTaskManager.exe"
-#define AppUrl "https://github.com/Naxterra/Better-Task-Manager"
+#define AppUrl "https://github.com/Naxterra/Nax-TaskManager"
 
 [Setup]
 AppId={#AppIdValue}

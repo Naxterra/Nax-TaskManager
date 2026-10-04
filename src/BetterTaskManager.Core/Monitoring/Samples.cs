@@ -101,6 +101,8 @@ public sealed class SystemSample
     /// <summary>True when per-process network throughput is being measured (needs administrator rights).</summary>
     public bool PerProcessNetworkAvailable { get; init; }
     public string PerProcessNetworkStatus { get; init; } = "";
+    /// <summary>True when the per-process figures come from the history service rather than this process's own trace.</summary>
+    public bool PerProcessNetworkFromService { get; init; }
     public double IoBytesPerSecond { get; init; }
     public int ProcessCount { get; init; }
     public int ThreadCount { get; init; }

@@ -27,6 +27,7 @@ public sealed class MonitorHost : IDisposable
         engine.Interval = TimeSpan.FromMilliseconds(Math.Clamp(settings.RefreshIntervalMilliseconds, 250, 10000));
         engine.SnapshotReady += OnSnapshotReady;
         IsElevated = FirewallRules.IsElevated;
+        if (!IsElevated) engine.UseServiceFeed();
     }
 
     /// <summary>Raised on the UI thread with the newest snapshot.</summary>

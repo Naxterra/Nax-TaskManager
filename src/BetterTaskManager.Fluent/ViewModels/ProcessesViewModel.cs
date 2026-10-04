@@ -49,7 +49,9 @@ public sealed class ProcessesViewModel : ObservableObject
         BandwidthHeader = bandwidth ? Format.Mbps(snapshot.Processes.Sum(process => process.NetworkBytesPerSecond))
             : monitor.IsElevated ? "Paused" : "Admin";
         BandwidthTooltip = bandwidth
-            ? "Current send + receive per app, measured from the kernel's TCP/IP events (loopback excluded)"
+            ? system.PerProcessNetworkFromService
+                ? "Current send + receive per app, measured by the Nax-TaskManager History service (loopback excluded)"
+                : "Current send + receive per app, measured from the kernel's TCP/IP events (loopback excluded)"
             : monitor.IsElevated ? system.PerProcessNetworkStatus
             : system.PerProcessNetworkStatus + " Use Restart as administrator.";
 

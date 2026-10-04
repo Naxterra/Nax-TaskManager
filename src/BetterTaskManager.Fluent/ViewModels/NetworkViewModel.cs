@@ -211,9 +211,9 @@ public sealed class NetworkViewModel : ObservableObject
         int totalEstablished = snapshot.Connections.Count(connection => connection.State == "Established");
         string throughput = measured
             ? $" · all apps ↓ {Format.NetworkRate(snapshot.Processes.Sum(p => p.NetworkReceiveBytesPerSecond))} ↑ {Format.NetworkRate(snapshot.Processes.Sum(p => p.NetworkSendBytesPerSecond))}"
-            : " · per-app speed needs administrator rights";
+            : " · per-app speed needs administrator rights or the History service";
         Summary = $"{Format.Count(snapshot.Connections.Count)} connections · {Format.Count(totalEstablished)} established · " +
-            $"{groups.Count} apps shown" + throughput + (snapshot.NetworkIssues.Count > 0 ? " · some network tables could not be read" : "");
+            $"{groups.Count} apps shown" + throughput + (snapshot.System.PerProcessNetworkFromService ? " · measured by the History service" : "") + (snapshot.NetworkIssues.Count > 0 ? " · some network tables could not be read" : "");
         Func<string, bool> isBlocked = monitor.IsBlocked;
         Rows.Apply(rows.Select(row => (row, isBlocked)).ToList());
     }
