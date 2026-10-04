@@ -4,18 +4,18 @@ param()
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
-[xml]$projectXml = Get-Content -LiteralPath (Join-Path $root "src\BetterTaskManager\BetterTaskManager.csproj")
+[xml]$projectXml = Get-Content -LiteralPath (Join-Path $root "src\BetterTaskManager.Fluent\BetterTaskManager.Fluent.csproj")
 $version = [string]$projectXml.Project.PropertyGroup.Version
 $testAppId = "{{7A0B9BC3-3768-472D-819D-8C977CDA49DA}"
 $testRegistryAppId = "{7A0B9BC3-3768-472D-819D-8C977CDA49DA}"
-$testAppName = "Better Task Manager Installer Test"
-$testInstallerBaseName = "BetterTaskManager-v$version-installer-test-win-x64"
+$testAppName = "Nax-TaskManager Installer Test"
+$testInstallerBaseName = "NaxTaskManager-v$version-installer-test-win-x64"
 $InstallerPath = Join-Path $root "artifacts\$testInstallerBaseName.exe"
 & (Join-Path $PSScriptRoot "build-installer.ps1") -AppIdValue $testAppId -AppNameValue $testAppName `
     -UninstallRegistryId $testRegistryAppId -InstallerBaseNameOverride $testInstallerBaseName `
     -DisableCloseApplications -SkipReleaseChecksums
 if (-not (Test-Path -LiteralPath $InstallerPath)) { throw "Installer not found: $InstallerPath" }
-$sourceIconPath = Join-Path $root "src\BetterTaskManager\assets\BetterTaskManager.ico"
+$sourceIconPath = Join-Path $root "src\BetterTaskManager.Fluent\Assets\AppIcon.ico"
 if (-not (Test-Path -LiteralPath $sourceIconPath)) { throw "Source icon not found: $sourceIconPath" }
 
 Add-Type -AssemblyName System.Drawing.Common
@@ -43,7 +43,7 @@ function Get-IconPixelHash([string]$Path, [bool]$ExtractAssociated) {
 }
 
 $expectedIconHash = Get-IconPixelHash $sourceIconPath $false
-$productionInstallerPath = Join-Path $root "artifacts\BetterTaskManager-v$version-setup-win-x64.exe"
+$productionInstallerPath = Join-Path $root "artifacts\NaxTaskManager-v$version-setup-win-x64.exe"
 if (-not (Test-Path -LiteralPath $productionInstallerPath)) { throw "Production installer not found: $productionInstallerPath" }
 $productionInstallerIconHash = Get-IconPixelHash $productionInstallerPath $true
 if ($productionInstallerIconHash -ne $expectedIconHash) { throw "Production installer icon does not match the application icon." }
@@ -101,12 +101,13 @@ $installArguments = @(
 $firstInstallExit = Invoke-WaitedProcess $InstallerPath $installArguments
 if ($firstInstallExit -ne 0) { throw "Installer failed with exit code $firstInstallExit. See $logPath" }
 
-$installedExe = Join-Path $installDirectory "BetterTaskManager.exe"
+$installedExe = Join-Path $installDirectory "NaxTaskManager.exe"
 $uninstaller = Get-RegisteredUninstaller $uninstallRegistryPath
 $startMenuGroup = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)) $testAppName
 $startMenuShortcut = Join-Path $startMenuGroup ($testAppName + ".lnk")
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)) ($testAppName + ".lnk")
-foreach ($required in @($installedExe, $uninstaller, (Join-Path $installDirectory "README.md"), (Join-Path $installDirectory "TESTING.md"))) {
+foreach ($required in @($installedExe, $uninstaller, (Join-Path $installDirectory "README.md"), (Join-Path $installDirectory "LICENSE"),
+    (Join-Path $installDirectory "HistoryService\NaxTaskManager.HistoryService.exe"))) {
     if (-not (Test-Path -LiteralPath $required)) { throw "Installed file missing: $required" }
 }
 if (-not (Test-Path -LiteralPath $startMenuShortcut)) { throw "Start Menu shortcut missing: $startMenuShortcut" }
@@ -123,17 +124,27 @@ $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($startMenuShortcut)
 if ($shortcut.TargetPath.TrimEnd('\') -ne $installedExe.TrimEnd('\')) { throw "Start Menu shortcut target is incorrect: $($shortcut.TargetPath)" }
 
-$runningTestApp = $null
-$otherRunningApp = @(Get-CimInstance Win32_Process -Filter "Name = 'BetterTaskManager.exe'" | Where-Object {
-    $_.ExecutablePath -and $_.ExecutablePath -ne $installedExe
-})
-if ($otherRunningApp.Count -eq 0) {
-    $runningTestApp = Start-Process -FilePath $installedExe -ArgumentList "--installer-upgrade-test-host" -PassThru
-    if (-not $runningTestApp.WaitForInputIdle(15000)) { throw "Installed app did not become input-idle for the running-upgrade test." }
+# Starts the installed app and waits for its window. Returns $null when another copy is open: the app is single
+# instance, so a second launch would only hand over to that copy.
+function Start-InstalledApp {
+    $other = @(Get-CimInstance Win32_Process -Filter "Name = 'NaxTaskManager.exe'" | Where-Object { $_.ExecutablePath -ne $installedExe })
+    if ($other.Count -gt 0) {
+        Write-Warning "Skipping app launch checks because another Nax-TaskManager instance is already open."
+        return $null
+    }
+    $app = Start-Process -FilePath $installedExe -ArgumentList @("--page", "Processes") -PassThru
+    for ($i = 0; $i -lt 60 -and $app.MainWindowHandle -eq [IntPtr]::Zero; $i++) {
+        if ($app.HasExited) { throw "Installed app exited during startup with code $($app.ExitCode)." }
+        Start-Sleep -Milliseconds 500
+        $app.Refresh()
+    }
+    if ($app.MainWindowHandle -eq [IntPtr]::Zero) { throw "Installed app did not show its window within 30 seconds." }
+    return $app
 }
-else {
-    Write-Warning "Skipping the running-app close check because another Better Task Manager instance is already open."
-}
+
+$crashLog = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) "NaxTaskManager\crash.log"
+$crashLogLength = if (Test-Path -LiteralPath $crashLog) { (Get-Item -LiteralPath $crashLog).Length } else { 0 }
+$runningTestApp = Start-InstalledApp
 
 $secondInstallExit = Invoke-WaitedProcess $InstallerPath $installArguments
 if ($secondInstallExit -ne 0) { throw "Installer uninstall-before-reinstall pass failed with exit code $secondInstallExit." }
@@ -153,10 +164,16 @@ if ((Split-Path $uninstaller -Leaf) -ne "unins000.exe" -or -not (Test-Path -Lite
     throw "The previous uninstaller was not fully removed before the new version was installed: $uninstaller"
 }
 
-$selfTestExit = Invoke-WaitedProcess $installedExe @("--self-test", "--language=en")
-if ($selfTestExit -ne 0) { throw "Installed executable self-test failed with exit code $selfTestExit." }
-$uiTestExit = Invoke-WaitedProcess $installedExe @("--ui-smoke-test", "--language=de")
-if ($uiTestExit -ne 0) { throw "Installed executable German UI smoke test failed with exit code $uiTestExit." }
+# Smoke test of the reinstalled app: it must start, keep running with live refreshes for a while, and log no crash.
+$smokeApp = Start-InstalledApp
+if ($null -ne $smokeApp) {
+    Start-Sleep -Seconds 10
+    if ($smokeApp.HasExited) { throw "Installed app exited during the smoke test with code $($smokeApp.ExitCode)." }
+    [void]$smokeApp.CloseMainWindow()
+    if (-not $smokeApp.WaitForExit(15000)) { $smokeApp.Kill(); throw "Installed app did not close within 15 seconds." }
+}
+$newCrashLogLength = if (Test-Path -LiteralPath $crashLog) { (Get-Item -LiteralPath $crashLog).Length } else { 0 }
+if ($newCrashLogLength -gt $crashLogLength) { throw "The app wrote to its crash log during the installer test:`n$(Get-Content -LiteralPath $crashLog -Tail 30 | Out-String)" }
 
 $uninstallExit = Invoke-WaitedProcess $uninstaller @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART")
 if ($uninstallExit -ne 0) { throw "Uninstaller failed with exit code $uninstallExit." }
@@ -164,4 +181,4 @@ if (Test-Path -LiteralPath $installedExe) { throw "Installed executable remained
 if (Test-Path -LiteralPath $startMenuShortcut) { throw "Start Menu shortcut remained after uninstall: $startMenuShortcut" }
 if (Test-Path -LiteralPath $uninstallRegistryPath) { throw "Uninstall registration remained after uninstall: $uninstallRegistryPath" }
 
-Write-Host "Installer verification passed: install metadata/shortcuts, uninstall-before-reinstall, app tests, and final cleanup."
+Write-Host "Installer verification passed: install metadata/shortcuts, uninstall-before-reinstall, app smoke test, and final cleanup."

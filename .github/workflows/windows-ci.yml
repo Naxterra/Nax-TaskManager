@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build-test-publish:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Check out repository
@@ -35,37 +35,37 @@ jobs:
         shell: pwsh
         run: dotnet build .\BetterTaskManager.slnx -c Release --no-restore --nologo
 
-      - name: Run non-destructive self-test
+      # The classic WinForms app (src/BetterTaskManager) is still in the solution until it is retired; keep its own tests.
+      - name: Classic app self-test
         shell: pwsh
         run: |
           $exe = Resolve-Path '.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe'
           $process = Start-Process -FilePath $exe.Path -ArgumentList '--self-test' -PassThru -Wait
           if ($process.ExitCode -ne 0) { exit $process.ExitCode }
 
-      - name: Run watchdog-backed UI smoke test
+      - name: Classic app UI smoke test
         shell: pwsh
         run: |
           $exe = Resolve-Path '.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe'
           $process = Start-Process -FilePath $exe.Path -ArgumentList '--ui-smoke-test' -PassThru -Wait
           if ($process.ExitCode -ne 0) { exit $process.ExitCode }
 
-      - name: Run German localization UI smoke test
+      - name: Publish Nax-TaskManager portable package
+        shell: pwsh
+        run: .\scripts\publish-fluent.ps1
+
+      - name: History service console run
         shell: pwsh
         run: |
-          $exe = Resolve-Path '.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe'
-          $process = Start-Process -FilePath $exe.Path -ArgumentList @('--ui-smoke-test', '--language=de') -PassThru -Wait
-          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
-
-      - name: Run repeated live-refresh UI soak test
-        shell: pwsh
-        run: |
-          $exe = Resolve-Path '.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe'
-          $process = Start-Process -FilePath $exe.Path -ArgumentList '--ui-soak-test' -PassThru -Wait
-          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
-
-      - name: Publish self-contained portable executable
-        shell: pwsh
-        run: .\scripts\publish-v1.ps1
+          # The runner is elevated, so this exercises the kernel network trace and the SQLite store for real.
+          $service = Resolve-Path '.\artifacts\NaxTaskManager-v*-portable-win-x64\HistoryService\NaxTaskManager.HistoryService.exe'
+          $db = Join-Path $env:RUNNER_TEMP 'history-ci.db'
+          $process = Start-Process -FilePath $service.Path -ArgumentList @('--console', '--db', $db, '--seconds', '15') -PassThru -NoNewWindow
+          Invoke-WebRequest -Uri 'https://github.com' -UseBasicParsing | Out-Null
+          $process.WaitForExit()
+          if ($process.ExitCode -ne 0) { throw "History service console run failed with exit code $($process.ExitCode)" }
+          if (-not (Test-Path $db) -or (Get-Item $db).Length -eq 0) { throw "History service did not create its database" }
+          Write-Host "History database written: $((Get-Item $db).Length) bytes"
 
       - name: Build Windows installer
         shell: pwsh
@@ -78,11 +78,11 @@ jobs:
       - name: Upload portable package and installer
         uses: actions/upload-artifact@v7
         with:
-          name: BetterTaskManager-win-x64
+          name: NaxTaskManager-win-x64
           path: |
-            artifacts/BetterTaskManager-v*-portable-win-x64/
-            artifacts/BetterTaskManager-v*-portable-win-x64.zip
-            artifacts/BetterTaskManager-v*-setup-win-x64.exe
+            artifacts/NaxTaskManager-v*-portable-win-x64/
+            artifacts/NaxTaskManager-v*-portable-win-x64.zip
+            artifacts/NaxTaskManager-v*-setup-win-x64.exe
             artifacts/SHA256SUMS-v*.txt
           if-no-files-found: error
           retention-days: 14
