@@ -58,9 +58,10 @@ jobs:
         shell: pwsh
         run: |
           # The runner is elevated, so this exercises the kernel network trace and the SQLite store for real.
-          $service = Resolve-Path '.\artifacts\NaxTaskManager-v*-portable-win-x64\HistoryService\NaxTaskManager.HistoryService.exe'
+          $portable = Get-ChildItem .\artifacts -Directory -Filter 'NaxTaskManager-v*-portable-win-x64' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          $service = Join-Path $portable.FullName 'HistoryService\NaxTaskManager.HistoryService.exe'
           $db = Join-Path $env:RUNNER_TEMP 'history-ci.db'
-          $process = Start-Process -FilePath $service.Path -ArgumentList @('--console', '--db', $db, '--seconds', '15') -PassThru -NoNewWindow
+          $process = Start-Process -FilePath $service -ArgumentList @('--console', '--db', $db, '--seconds', '15') -PassThru -NoNewWindow
           Invoke-WebRequest -Uri 'https://github.com' -UseBasicParsing | Out-Null
           $process.WaitForExit()
           if ($process.ExitCode -ne 0) { throw "History service console run failed with exit code $($process.ExitCode)" }
