@@ -34,6 +34,10 @@ public sealed class HostNameResolver : IDisposable
 
     private readonly object gate = new();
     private readonly Dictionary<IPAddress, HostName> names = new();
+    // What each process itself looked up (DNS-Client events carry the requesting PID). Two apps reaching the same
+    // CDN address usually asked for different names; like Portmaster, prefer the connecting app's own lookup.
+    private readonly Dictionary<int, Dictionary<IPAddress, (string Name, DateTime At)>> byProcess = new();
+    private static readonly TimeSpan ProcessNameLifetime = TimeSpan.FromHours(12);
     private readonly Dictionary<IPAddress, DateTime> failedReverse = new();
     private readonly HashSet<IPAddress> pendingReverse = new();
     private readonly SemaphoreSlim reverseSlots = new(4);
@@ -46,6 +50,26 @@ public sealed class HostNameResolver : IDisposable
     public HostNameResolver(string sessionName = DefaultSessionName) => this.sessionName = sessionName;
 
     public bool LiveDnsEvents { get; private set; }
+
+    /// <summary>A process's DNS query was answered (live DNS events only): PID, queried name, answer addresses.</summary>
+    public event Action<int, string, IReadOnlyList<IPAddress>>? QueryAnswered;
+
+    /// <summary>The name <paramref name="pid"/> itself looked up for the address, else any known name.</summary>
+    public HostName? Resolve(string address, int pid)
+    {
+        if (pid > 0 && IPAddress.TryParse(address, out IPAddress? ip))
+        {
+            ip = Normalize(ip);
+            lock (gate)
+            {
+                if (byProcess.TryGetValue(pid, out var own) && own.TryGetValue(ip, out var entry) && DateTime.UtcNow - entry.At < ProcessNameLifetime)
+                {
+                    return new HostName(entry.Name, HostNameSource.Lookup);
+                }
+            }
+        }
+        return Resolve(address);
+    }
 
     public void Start()
     {
@@ -151,13 +175,33 @@ public sealed class HostNameResolver : IDisposable
     {
         if ((int)data.ID != DnsQueryCompletedEvent) return;
         if (data.PayloadByName("QueryName") is not string name || name.Length == 0) return;
-        if (data.PayloadByName("QueryResults") is not string results) return;
+        string results = data.PayloadByName("QueryResults") as string ?? "";
+        int pid = data.ProcessID;
 
         // QueryResults looks like "type:  5 alias.example.net;::ffff:1.2.3.4;1.2.3.4;"
+        var answers = new List<IPAddress>();
         foreach (string part in results.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            if (IPAddress.TryParse(part, out IPAddress? ip)) Remember(ip, name, HostNameSource.Lookup);
+            if (!IPAddress.TryParse(part, out IPAddress? ip)) continue;
+            ip = Normalize(ip);
+            if (!answers.Contains(ip)) answers.Add(ip);
+            Remember(ip, name, HostNameSource.Lookup);
         }
+        if (pid > 4 && answers.Count > 0)
+        {
+            DateTime now = DateTime.UtcNow;
+            lock (gate)
+            {
+                if (!byProcess.TryGetValue(pid, out var own)) byProcess[pid] = own = new Dictionary<IPAddress, (string, DateTime)>();
+                foreach (IPAddress ip in answers) own[ip] = (name.TrimEnd('.'), now);
+                // PIDs get reused; forget processes that have not looked anything up for a long time.
+                if (byProcess.Count > 2000)
+                {
+                    foreach (int stale in byProcess.Where(pair => pair.Value.Values.All(entry => now - entry.At > ProcessNameLifetime)).Select(pair => pair.Key).ToList()) byProcess.Remove(stale);
+                }
+            }
+        }
+        if (pid > 4) QueryAnswered?.Invoke(pid, name.TrimEnd('.'), answers);
     }
 
     private async Task ReverseLookupAsync(IPAddress ip)

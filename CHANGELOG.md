@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.0-alpha.5 - 2026-10-04
+
+Network work modelled on how Portmaster handles apps, connections and DNS:
+- **Per-app host names**: a connection is named after what that app itself looked up (Windows DNS-Client events carry the requesting process), falling back to any known name.
+- **DNS lookups in History**: one row per app and name with the answers (needs the History service).
+- **App identity**: Store apps by package (not their versioned folder), per-user services without their random suffix, single-service programs by service name, PID 4 as "Operating System". History moves older rows to the new keys.
+- **Short-lived processes** (CLI tools, updaters) keep their name in History via the service's process trace instead of "Exited process".
+- **Scope and direction**: connections show This PC / LAN / Internet / Multicast and whether they are incoming; History records both.
+- **VPN tunnels** (WireGuard, OpenVPN, Tailscale, WARP… tunnel services) are marked and left out of all-apps totals, because they carry the other apps' traffic a second time.
+- Speeds fed by the History service are averaged over 3 s (they jumped between neighbouring one-second windows).
+- The History page offers **Update** when the installed History service is older than the app.
+- "1024 KB" shows as "1.0 MB".
+
 ## 2.0.0-alpha.4 - 2026-10-04
 
 - **Block network now really blocks**, also while a third-party firewall (for example Bitdefender) manages the firewall: blocks are Windows Filtering Platform filters instead of Windows Firewall rules, which such firewalls switch off. Older rules are still recognised and removed on allow.

@@ -82,6 +82,16 @@ public sealed class MonitorEngine : IDisposable
     /// <summary>A process the kernel trace saw start (elevated only), also shortly after it exited.</summary>
     public bool TryGetTracedProcess(int pid, out BandwidthMonitor.TracedProcess process) => bandwidth.TryGetProcess(pid, out process);
 
+    /// <summary>DNS queries answered for a process (live DNS events, elevated only); raised on a trace thread.</summary>
+    public event Action<int, string, IReadOnlyList<System.Net.IPAddress>>? DnsQueryAnswered
+    {
+        add => hostNames.QueryAnswered += value;
+        remove => hostNames.QueryAnswered -= value;
+    }
+
+    /// <summary>The name the process itself looked up for the address, else any known name.</summary>
+    public HostName? ResolveHost(string address, int pid) => hostNames.Resolve(address, pid);
+
     /// <summary>Known host name for a remote address; unknown addresses are resolved in the background.</summary>
     public HostName? ResolveHost(string address) => hostNames.Resolve(address);
 
@@ -222,7 +232,7 @@ public sealed class MonitorEngine : IDisposable
         foreach (ConnectionSample connection in connections)
         {
             if (connection.Protocol != "TCP" || connection.RemoteAddress.Length == 0) continue;
-            if (hostNames.Resolve(connection.RemoteAddress) is { } host)
+            if (hostNames.Resolve(connection.RemoteAddress, connection.Pid) is { } host)
             {
                 connection.RemoteHost = host.Name;
                 connection.RemoteHostIsReverse = host.Source == HostNameSource.Reverse;

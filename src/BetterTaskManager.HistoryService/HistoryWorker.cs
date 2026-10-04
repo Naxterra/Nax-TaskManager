@@ -24,6 +24,7 @@ public sealed class HistoryWorker : IDisposable
         store = HistoryStore.OpenForWriting(databasePath);
         engine = new MonitorEngine(sessionPrefix) { Interval = TimeSpan.FromSeconds(2) };
         recorder = new HistoryRecorder(store, engine.ResolveHost, engine.TryGetTracedProcess);
+        engine.DnsQueryAnswered += recorder.RecordDnsQuery;
         engine.SnapshotReady += OnSnapshot;
         engine.CollectionFailed += OnError;
     }

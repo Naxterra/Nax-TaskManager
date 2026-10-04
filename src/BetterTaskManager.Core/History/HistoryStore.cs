@@ -266,7 +266,7 @@ public sealed class HistoryStore : IDisposable
         {
             command.CommandText = """
                 SELECT app_key, max(app_name), max(app_path), count(*)
-                FROM connections WHERE last_seen >= $since GROUP BY app_key
+                FROM connections WHERE last_seen >= $since AND protocol <> 'DNS' GROUP BY app_key
                 """;
             command.Parameters.AddWithValue("$since", ToUnixMs(fromLocalDay.Date.ToUniversalTime()));
             using SqliteDataReader reader = command.ExecuteReader();

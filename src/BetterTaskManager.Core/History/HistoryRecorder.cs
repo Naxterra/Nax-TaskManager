@@ -77,7 +77,8 @@ public sealed class HistoryRecorder : IDisposable
     private readonly record struct FlowKey(int Pid, long CreateTime, string Protocol, int LocalPort, string RemoteAddress, int RemotePort);
 
     private readonly HistoryStore store;
-    private readonly Func<string, HostName?> resolveHost;
+    private readonly Func<string, int, HostName?> resolveHost;
+    private readonly System.Collections.Concurrent.ConcurrentQueue<(int Pid, string Name, IReadOnlyList<IPAddress> Answers, DateTime At)> dnsQueries = new();
     private readonly TracedProcessLookup? tracedProcess;
     private readonly Dictionary<FlowKey, TrackedConnection> live = new();
     private readonly Dictionary<(string Day, string AppKey), UsageDelta> usage = new();
@@ -87,7 +88,7 @@ public sealed class HistoryRecorder : IDisposable
 
     public delegate bool TracedProcessLookup(int pid, out BandwidthMonitor.TracedProcess process);
 
-    public HistoryRecorder(HistoryStore store, Func<string, HostName?> resolveHost, TracedProcessLookup? tracedProcess = null)
+    public HistoryRecorder(HistoryStore store, Func<string, int, HostName?> resolveHost, TracedProcessLookup? tracedProcess = null)
     {
         this.store = store;
         this.resolveHost = resolveHost;
@@ -131,6 +132,7 @@ public sealed class HistoryRecorder : IDisposable
         }
 
         var active = new HashSet<FlowKey>();
+        RecordDnsQueries(active, now);
         foreach (FlowSample flow in snapshot.Flows)
         {
             if (flow.Pid <= 0 || !IsRemote(flow.RemoteAddress) || flow.Received + flow.Sent == 0) continue;
@@ -146,7 +148,7 @@ public sealed class HistoryRecorder : IDisposable
             tracked.BytesOut += flow.Sent;
             tracked.Changed = true;
             if (tracked.State.Length == 0) tracked.State = flow.Protocol == "UDP" ? "UDP" : "Closed";
-            if (tracked.RemoteHost is null && resolveHost(flow.RemoteAddress) is { } host) SetHost(tracked, host.Name, host.Source == HostNameSource.Reverse);
+            if (tracked.RemoteHost is null && resolveHost(flow.RemoteAddress, flow.Pid) is { } host) SetHost(tracked, host.Name, host.Source == HostNameSource.Reverse);
 
             var usageKey = (today, app.Key);
             if (!usage.TryGetValue(usageKey, out UsageDelta? delta)) usage[usageKey] = delta = new UsageDelta { App = app };
@@ -171,6 +173,33 @@ public sealed class HistoryRecorder : IDisposable
         }
 
         if (now - lastFlush >= FlushInterval) Flush(now);
+    }
+
+    /// <summary>Queues a DNS query answered for a process; safe to call from any thread.</summary>
+    public void RecordDnsQuery(int pid, string name, IReadOnlyList<IPAddress> answers) =>
+        dnsQueries.Enqueue((pid, name, answers, DateTime.UtcNow));
+
+    /// <summary>
+    /// Logs which app looked up which name, like Portmaster's DNS entries: one row per app and name, kept open
+    /// (and updated) while the app keeps asking, closed after a minute without queries.
+    /// </summary>
+    private void RecordDnsQueries(HashSet<FlowKey> active, DateTime now)
+    {
+        while (dnsQueries.TryDequeue(out var query))
+        {
+            AppIdentity app = Identify(query.Pid);
+            var key = new FlowKey(query.Pid, app.CreateTime, "DNS", 0, query.Name.ToLowerInvariant(), 0);
+            TrackedConnection tracked = Track(key, app, now);
+            active.Add(key);
+            string answer = string.Join(", ", query.Answers.Take(4));
+            if (tracked.RemoteHost != query.Name || tracked.LocalAddress != answer)
+            {
+                tracked.RemoteHost = query.Name;
+                tracked.LocalAddress = answer; // the answers; DNS rows have no local endpoint worth showing
+                tracked.State = query.Answers.Count > 0 ? "Answered" : "No answer";
+                tracked.Changed = true;
+            }
+        }
     }
 
     private TrackedConnection Track(FlowKey key, AppIdentity app, DateTime now)

@@ -172,6 +172,12 @@ public sealed class HistoryViewModel
             : record.RemoteHostIsReverse ? $"{endpoint}\nName from reverse DNS; may be the hosting provider rather than the service"
             : $"{endpoint}\nName the app looked up";
 
+        if (record.Protocol == "DNS")
+        {
+            string answers = record.LocalAddress.Length > 0 ? record.LocalAddress : "no addresses";
+            return new ConnectionLogRow(record.Id, time, timeDetail, record.AppName, record.AppPath, record.RemoteHost ?? record.RemoteAddress,
+                $"DNS lookup by the app\nAnswer: {answers}", "DNS lookup", "–");
+        }
         string protocol = record.Protocol == "UDP" ? "UDP" : $"TCP · {record.State}";
         if (record.Scope.Length > 0) protocol += " · " + record.Scope + (record.Inbound ? " · in" : "");
         string data = record.BytesIn + record.BytesOut > 0 ? Split(record.BytesIn, record.BytesOut) : "–";
