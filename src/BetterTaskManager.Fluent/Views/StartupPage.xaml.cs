@@ -60,7 +60,7 @@ public sealed partial class StartupPage : Page
     private void UpdateCommands()
     {
         StartupApp? app = Selected;
-        ToggleButton.IsEnabled = app is not null;
+        ToggleButton.IsEnabled = app is { Locked: false };
         ToggleButton.Label = app is { Enabled: false } ? Loc.Get("Startup_Enable") : Loc.Get("Startup_Disable");
         ToggleIcon.Glyph = app is { Enabled: false } ? "" : "";
         bool hasPath = app is not null && app.ExecutablePath.Length > 0;
@@ -92,7 +92,7 @@ public sealed partial class StartupPage : Page
 
     private void RowList_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if (Selected is { } app) _ = SetEnabledAsync(app, !app.Enabled);
+        if (Selected is { Locked: false } app) _ = SetEnabledAsync(app, !app.Enabled);
     }
 
     private void RowList_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
@@ -106,7 +106,7 @@ public sealed partial class StartupPage : Page
 
         var menu = new MenuFlyout();
         menu.Items.Add(MenuItem(app.Enabled ? Loc.Get("Startup_Disable") : Loc.Get("Startup_Enable"), app.Enabled ? "" : "",
-            (_, _) => _ = SetEnabledAsync(app, !app.Enabled)));
+            (_, _) => _ = SetEnabledAsync(app, !app.Enabled), !app.Locked));
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(MenuItem(Loc.Get("Menu_OpenLocation"), "", (_, _) => ProcessActions.OpenFileLocation(app.ExecutablePath), hasPath));
         menu.Items.Add(MenuItem(Loc.Get("Proc_Properties"), "", (_, _) => ProcessActions.ShowProperties(app.ExecutablePath), hasPath));
@@ -156,7 +156,7 @@ public sealed partial class StartupPage : Page
         {
             try
             {
-                await Task.Run(() => StartupApps.SetEnabled(app.Source, app.Name, enabled));
+                await Task.Run(() => StartupApps.SetEnabled(app, enabled));
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
             {

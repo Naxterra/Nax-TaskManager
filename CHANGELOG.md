@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.0-alpha.9 - 2026-10-05
+
+- Startup apps now include **Store and packaged apps** (1Password, Terminal, WhatsApp, Spotify, Xbox…) with the same on/off state as Task Manager, and can turn them on and off. Entries set by policy cannot be changed.
+- Shortcuts that only store an environment-variable target (for example 0install's DeepL auto-start) resolve to their program.
+- The summary shows the last BIOS time, like Task Manager.
+
 ## 2.0.0-alpha.8 - 2026-10-05
 
 - **Efficiency mode**, as in Task Manager (EcoQoS plus low priority): toggle it from the Processes or Details overflow or context menu. A leaf marks processes in efficiency mode, a pause icon suspended ones. Not offered for Windows' critical processes.

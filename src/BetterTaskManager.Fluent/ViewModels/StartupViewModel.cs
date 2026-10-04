@@ -14,6 +14,7 @@ public sealed class StartupViewModel : ObservableObject
     public const string SortScope = "Scope";
 
     private List<StartupApp> apps = new();
+    private TimeSpan? biosTime;
     private string summary = "";
 
     public StartupViewModel(AppSettings settings)
@@ -34,6 +35,7 @@ public sealed class StartupViewModel : ObservableObject
     public async Task LoadAsync(string search)
     {
         apps = await Task.Run(StartupApps.Read);
+        biosTime = StartupApps.LastBiosTime();
         Apply(search);
     }
 
@@ -57,7 +59,8 @@ public sealed class StartupViewModel : ObservableObject
 
         Rows.Clear();
         foreach (StartupApp app in ordered) Rows.Add(new StartupRow(app));
-        Summary = Loc.F("Startup_Summary", apps.Count(app => app.Enabled), apps.Count(app => !app.Enabled));
+        Summary = Loc.F("Startup_Summary", apps.Count(app => app.Enabled), apps.Count(app => !app.Enabled)) +
+            (biosTime is { } bios ? Loc.F("Startup_BiosTime", bios.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.CurrentCulture)) : "");
     }
 
     public void Sort(string column, string search)
@@ -77,6 +80,7 @@ public sealed class StartupRow
         // Null, not empty: an empty tooltip would still pop up as a blank box.
         StatusDetail = app.DisabledAt is { } at ? Loc.F("Startup_DisabledAt", at.ToString("g")) : null;
         Scope = app.AllUsers ? Loc.Get("Startup_AllUsers") : Loc.Get("Startup_CurrentUser");
+        if (app.Locked) Status += Loc.Get("Startup_ByPolicy");
         Icon = IconCache.Get(app.ExecutablePath);
     }
 

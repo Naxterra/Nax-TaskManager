@@ -359,4 +359,6 @@ Answer: {0}</value></data>
   <data name="Startup_Disable" xml:space="preserve"><value>Disable</value></data>
   <data name="Startup_CopyCommand" xml:space="preserve"><value>Copy command</value></data>
   <data name="Startup_NotChanged" xml:space="preserve"><value>"{0}" not changed</value></data>
+  <data name="Startup_BiosTime" xml:space="preserve"><value> · last BIOS time {0} s</value></data>
+  <data name="Startup_ByPolicy" xml:space="preserve"><value> (policy)</value></data>
 </root>

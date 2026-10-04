@@ -12,7 +12,9 @@ public enum StartupSource
     MachineRun,
     MachineRun32,
     UserFolder,
-    MachineFolder
+    MachineFolder,
+    /// <summary>Startup task of a Store or packaged desktop app (per user).</summary>
+    Package
 }
 
 public sealed record StartupApp(
@@ -29,7 +31,11 @@ public sealed record StartupApp(
     DateTime? DisabledAt)
 {
     public bool AllUsers => Source is StartupSource.MachineRun or StartupSource.MachineRun32 or StartupSource.MachineFolder;
-    public string Key => $"{Source}|{Name}";
+    /// <summary>Package family name for <see cref="StartupSource.Package"/> entries.</summary>
+    public string PackageFamily { get; init; } = "";
+    /// <summary>Set by an administrator or group policy; cannot be changed here.</summary>
+    public bool Locked { get; init; }
+    public string Key => $"{Source}|{PackageFamily}|{Name}";
 }
 
 /// <summary>
@@ -49,7 +55,21 @@ public static class StartupApps
         ReadRun(result, RegistryHive.LocalMachine, RegistryView.Registry32, StartupSource.MachineRun32);
         ReadFolder(result, Environment.GetFolderPath(Environment.SpecialFolder.Startup), StartupSource.UserFolder);
         ReadFolder(result, Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), StartupSource.MachineFolder);
+        result.AddRange(PackageStartupTasks.Read());
         return result;
+    }
+
+    public static void SetEnabled(StartupApp app, bool enabled)
+    {
+        if (app.Source == StartupSource.Package) PackageStartupTasks.SetEnabled(app.PackageFamily, app.Name, enabled);
+        else SetEnabled(app.Source, app.Name, enabled);
+    }
+
+    /// <summary>Firmware (POST) time of the last boot, which Task Manager shows as "Last BIOS time".</summary>
+    public static TimeSpan? LastBiosTime()
+    {
+        using RegistryKey? key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power");
+        return key?.GetValue("FwPOSTTime") is int milliseconds && milliseconds > 0 ? TimeSpan.FromMilliseconds(milliseconds) : null;
     }
 
     /// <summary>Sets Windows' StartupApproved flag. Entries for all users need administrator rights.</summary>
@@ -165,6 +185,8 @@ public static class StartupApps
 /// <summary>Reads a .lnk file's target and arguments through the shell's own IShellLink.</summary>
 internal static class ShellLinks
 {
+    private const uint SlgpRawPath = 0x4;
+
     public static bool TryResolve(string linkPath, out string target, out string arguments)
     {
         target = arguments = "";
@@ -174,6 +196,11 @@ internal static class ShellLinks
             ((IPersistFile)link).Load(linkPath, 0);
             var buffer = new StringBuilder(1024);
             link.GetPath(buffer, buffer.Capacity, IntPtr.Zero, 0);
+            if (buffer.Length == 0)
+            {
+                // Shortcuts that only carry an environment-variable target (0install, some installers) need the raw path.
+                link.GetPath(buffer, buffer.Capacity, IntPtr.Zero, SlgpRawPath);
+            }
             target = Environment.ExpandEnvironmentVariables(buffer.ToString());
             buffer.Clear();
             link.GetArguments(buffer, buffer.Capacity);
