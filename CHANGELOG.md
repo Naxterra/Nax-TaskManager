@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-alpha.12 - 2026-10-05
+
+- **Details search no longer floods.** It stopped matching the owner account, so a term that is part of your Windows user name (for example "nax" inside "Naxterra") no longer matches every process. It now matches the process name, description and PID.
+- **PIDs on the Processes page.** A single-process app shows its PID next to the name without expanding; multi-process apps still show the count and reveal each PID when expanded.
+
 ## 2.0.0-alpha.11 - 2026-10-05
 
 - **Free up memory in one click.** The "Free up memory" button now runs every available step at once (trim app memory, and with administrator rights also the standby cache and all working sets). The dropdown arrow still offers the three steps individually.

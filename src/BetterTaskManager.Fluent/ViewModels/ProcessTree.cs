@@ -114,8 +114,9 @@ public static class ProcessTree
             ProcessSample first = group.Members[0];
             bool expandable = group.Members.Count > 1;
             bool expanded = expandable && (forceExpand || expandedKeys.Contains(group.Key));
+            // Single-process apps show their PID directly; multi-process apps show the count and reveal each PID when expanded.
             rows.Add(new ProcessRowData(RowKind.Group, group.Key, group.Name,
-                expandable ? $"({group.Members.Count})" : "",
+                expandable ? $"({group.Members.Count})" : "PID " + first.Pid,
                 first.Path, first.Company,
                 group.Members.Select(member => member.Key).ToList(),
                 group.Cpu, group.CpuSampled, group.Memory, group.Io, group.NetworkRate, group.Connections,

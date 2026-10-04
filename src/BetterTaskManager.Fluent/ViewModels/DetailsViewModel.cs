@@ -99,11 +99,12 @@ public sealed class DetailsViewModel : ObservableObject
         _ => 0
     };
 
+    // Match name, description and PID, but not the owner: on a single-user PC every row shares one account name,
+    // so matching it floods the results (for example "nax" would match the owner "Naxterra" on every process).
     private static bool Matches(ProcessSample process, string query) =>
         query.Length == 0 ||
         process.ImageName.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
         process.Description.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
-        process.UserName.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
         process.Pid.ToString(CultureInfo.InvariantCulture) == query;
 }
 
