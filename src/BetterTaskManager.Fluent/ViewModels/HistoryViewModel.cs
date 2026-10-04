@@ -88,6 +88,8 @@ public sealed class HistoryViewModel
     public SlotCollection<ConnectionLogSlot, ConnectionLogRow> Connections { get; } = new(ConnectionLogSlot.Load);
 
     public HistoryRange Range { get; set; } = HistoryRange.Today;
+    /// <summary>DNS lookups are frequent; the log hides them unless asked.</summary>
+    public bool IncludeDns { get; set; }
     /// <summary>Null shows all apps.</summary>
     public string? AppKey { get; set; }
     public HistoryServiceState ServiceState { get; private set; }
@@ -101,6 +103,7 @@ public sealed class HistoryViewModel
     {
         HistoryRange range = Range;
         string? appKey = AppKey;
+        bool includeDns = IncludeDns;
         DateTime fromDay = DateTime.Today.AddDays(range switch { HistoryRange.Week => -6, HistoryRange.Month => -29, _ => 0 });
         ServiceState = HistoryServiceControl.QueryState();
 
@@ -112,7 +115,7 @@ public sealed class HistoryViewModel
                 if (store is null) return new LoadResult([], [], null, null);
                 return new LoadResult(
                     store.ReadAppUsage(fromDay),
-                    store.ReadConnections(fromDay.ToUniversalTime(), appKey, search, ConnectionLimit),
+                    store.ReadConnections(fromDay.ToUniversalTime(), appKey, search, ConnectionLimit, includeDns),
                     store.ReadLastWrite(),
                     null);
             }
@@ -142,7 +145,7 @@ public sealed class HistoryViewModel
         List<AppUsage> counted = result.Apps.Where(app => !app.Tunnel).ToList();
         var apps = new List<AppUsageRow>(result.Apps.Count + 1);
         if (result.Apps.Count > 0) apps.Add(
-            new AppUsageRow("", "All apps", "", $"{Format.Count(result.Apps.Sum(app => app.Connections))} connections" + (counted.Count < result.Apps.Count ? " · VPN tunnels not counted" : ""),
+            new AppUsageRow("", "All apps", "", $"{Format.Count(result.Apps.Sum(app => app.Connections))} connections" + (counted.Count < result.Apps.Count ? " · VPN excluded" : ""),
                 Format.Bytes(counted.Sum(app => app.Total)), Split(counted.Sum(app => app.BytesIn), counted.Sum(app => app.BytesOut)), 0));
         foreach (AppUsage app in result.Apps)
         {

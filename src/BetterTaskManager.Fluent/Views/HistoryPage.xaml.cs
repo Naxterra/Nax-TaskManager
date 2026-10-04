@@ -151,6 +151,12 @@ public sealed partial class HistoryPage : Page
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => _ = LoadAsync();
 
+    private void DnsToggle_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.IncludeDns = DnsToggle.IsChecked == true;
+        _ = LoadAsync();
+    }
+
     private void AppList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (restoringSelection || AppList.SelectedItem is not AppUsageSlot slot) return;

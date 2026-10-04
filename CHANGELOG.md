@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-alpha.6 - 2026-10-04
+
+- History: DNS lookups are hidden unless **DNS lookups** is switched on (they are frequent and buried the connection log).
+- History: wider protocol column so scope and state fit; shorter note on the All apps row.
+
 ## 2.0.0-alpha.5 - 2026-10-04
 
 Network work modelled on how Portmaster handles apps, connections and DNS:

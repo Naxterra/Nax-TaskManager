@@ -284,7 +284,7 @@ public sealed class HistoryStore : IDisposable
     }
 
     /// <summary>Most recent connections first, optionally for one app and/or matching a search text.</summary>
-    public List<ConnectionRecord> ReadConnections(DateTime sinceUtc, string? appKey, string? search, int limit)
+    public List<ConnectionRecord> ReadConnections(DateTime sinceUtc, string? appKey, string? search, int limit, bool includeDns = true)
     {
         using SqliteCommand command = connection.CreateCommand();
         var sql = new System.Text.StringBuilder("""
@@ -295,6 +295,7 @@ public sealed class HistoryStore : IDisposable
         sql.Append(HasColumn("connections", "scope") ? " scope, inbound" : " '' AS scope, 0 AS inbound");
         sql.Append(" FROM connections WHERE last_seen >= $since");
         command.Parameters.AddWithValue("$since", ToUnixMs(sinceUtc));
+        if (!includeDns) sql.Append(" AND protocol <> 'DNS'");
         if (!string.IsNullOrEmpty(appKey))
         {
             sql.Append(" AND app_key = $key");

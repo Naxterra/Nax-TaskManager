@@ -24,6 +24,12 @@
                 <TextBlock x:Name="SummaryText" Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <ToggleButton x:Name="DnsToggle" Click="DnsToggle_Click" ToolTipService.ToolTip="Show which names each app looked up (recorded by the History service)">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE774;" FontSize="14" />
+                        <TextBlock Text="DNS lookups" />
+                    </StackPanel>
+                </ToggleButton>
                 <ComboBox x:Name="RangeBox" MinWidth="150" SelectedIndex="0" SelectionChanged="RangeBox_SelectionChanged">
                     <ComboBoxItem Content="Today" />
                     <ComboBoxItem Content="Last 7 days" />
@@ -114,7 +120,7 @@
                         <ColumnDefinition Width="140" />
                         <ColumnDefinition Width="220" />
                         <ColumnDefinition Width="*" MinWidth="160" />
-                        <ColumnDefinition Width="130" />
+                        <ColumnDefinition Width="220" />
                         <ColumnDefinition Width="170" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Started" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -140,7 +146,7 @@
                                     <ColumnDefinition Width="140" />
                                     <ColumnDefinition Width="220" />
                                     <ColumnDefinition Width="*" MinWidth="160" />
-                                    <ColumnDefinition Width="130" />
+                                    <ColumnDefinition Width="220" />
                                     <ColumnDefinition Width="170" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Time, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind TimeDetail, Mode=OneWay}"
