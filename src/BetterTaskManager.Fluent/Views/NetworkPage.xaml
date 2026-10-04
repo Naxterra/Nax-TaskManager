@@ -20,21 +20,21 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Network" Style="{StaticResource PageTitleStyle}" />
+                <TextBlock x:Uid="NetworkPage_1" Text="Network" Style="{StaticResource PageTitleStyle}" />
                 <TextBlock x:Name="SummaryText" Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
             <CommandBar Grid.Column="2" DefaultLabelPosition="Right" Background="Transparent" VerticalAlignment="Center">
-                <AppBarToggleButton x:Name="EstablishedOnlyButton" Label="Active connections only" Click="EstablishedOnly_Click">
+                <AppBarToggleButton x:Uid="NetworkPage_2" x:Name="EstablishedOnlyButton" Label="Active connections only" Click="EstablishedOnly_Click">
                     <AppBarToggleButton.Icon>
                         <FontIcon Glyph="&#xE71C;" />
                     </AppBarToggleButton.Icon>
                 </AppBarToggleButton>
-                <AppBarButton x:Name="FirewallButton" Label="Block network" IsEnabled="False" Click="Firewall_Click">
+                <AppBarButton x:Uid="NetworkPage_3" x:Name="FirewallButton" Label="Block network" IsEnabled="False" Click="Firewall_Click">
                     <AppBarButton.Icon>
                         <FontIcon x:Name="FirewallIcon" Glyph="&#xE785;" />
                     </AppBarButton.Icon>
                 </AppBarButton>
-                <AppBarToggleButton x:Name="PauseButton" Label="Pause" Click="Pause_Click">
+                <AppBarToggleButton x:Uid="NetworkPage_4" x:Name="PauseButton" Label="Pause" Click="Pause_Click">
                     <AppBarToggleButton.Icon>
                         <FontIcon Glyph="&#xE769;" />
                     </AppBarToggleButton.Icon>
@@ -53,36 +53,36 @@
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Speed, Mode=OneWay}" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
+            <Button x:Uid="NetworkPage_5" Grid.Column="0" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="36,0,0,0">
-                    <TextBlock Text="App / protocol" />
+                    <TextBlock x:Uid="NetworkPage_6" Text="App / protocol" />
                     <FontIcon x:Name="SortName" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
                 </StackPanel>
             </Button>
-            <TextBlock Grid.Column="1" Text="Local address" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <Button Grid.Column="2" Tag="Remote" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Remote host" Click="Header_Click">
+            <TextBlock x:Uid="NetworkPage_7" Grid.Column="1" Text="Local address" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button x:Uid="NetworkPage_8" Grid.Column="2" Tag="Remote" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Remote host" Click="Header_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
-                    <TextBlock Text="Remote host" />
+                    <TextBlock x:Uid="NetworkPage_9" Text="Remote host" />
                     <FontIcon x:Name="SortRemote" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
                 </StackPanel>
             </Button>
-            <TextBlock Grid.Column="3" Text="Scope" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock x:Uid="NetworkPage_10" Grid.Column="3" Text="Scope" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <Thumb Tag="Scope" Grid.Column="3" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
-            <Button Grid.Column="4" Tag="State" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by State" Click="Header_Click">
+            <Button x:Uid="NetworkPage_11" Grid.Column="4" Tag="State" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by State" Click="Header_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
-                    <TextBlock Text="State" />
+                    <TextBlock x:Uid="NetworkPage_12" Text="State" />
                     <FontIcon x:Name="SortState" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
                 </StackPanel>
             </Button>
-            <Button Grid.Column="5" Tag="Data" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Data" Click="Header_Click">
+            <Button x:Uid="NetworkPage_13" Grid.Column="5" Tag="Data" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Data" Click="Header_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
-                    <TextBlock Text="Data (down / up)" />
+                    <TextBlock x:Uid="NetworkPage_14" Text="Data (down / up)" />
                     <FontIcon x:Name="SortData" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
                 </StackPanel>
             </Button>
-            <Button Grid.Column="6" Tag="Speed" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Speed" Click="Header_Click">
+            <Button x:Uid="NetworkPage_15" Grid.Column="6" Tag="Speed" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Speed" Click="Header_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
-                    <TextBlock Text="Speed (down / up)" />
+                    <TextBlock x:Uid="NetworkPage_16" Text="Speed (down / up)" />
                     <FontIcon x:Name="SortSpeed" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
                 </StackPanel>
             </Button>
@@ -126,7 +126,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <Button Width="28" Height="28" AutomationProperties.Name="Expand or collapse" Padding="0" Background="Transparent" BorderThickness="0"
+                            <Button x:Uid="NetworkPage_17" Width="28" Height="28" AutomationProperties.Name="Expand or collapse" Padding="0" Background="Transparent" BorderThickness="0"
                                     Visibility="{x:Bind ChevronVisibility, Mode=OneWay}" Click="Chevron_Click">
                                 <FontIcon Glyph="&#xE76C;" FontSize="10" RenderTransformOrigin="0.5,0.5">
                                     <FontIcon.RenderTransform>
@@ -142,13 +142,13 @@
                             <Border Grid.Column="3" Margin="0,0,8,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="4"
                                     Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
                                     Visibility="{x:Bind BlockedVisibility, Mode=OneWay}">
-                                <TextBlock Text="Blocked" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                <TextBlock x:Uid="NetworkPage_18" Text="Blocked" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                             </Border>
-                            <Border Grid.Column="3" Margin="0,0,8,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="4"
+                            <Border x:Uid="NetworkPage_19" Grid.Column="3" Margin="0,0,8,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="4"
                                     Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}"
                                     Visibility="{x:Bind TunnelVisibility, Mode=OneWay}"
                                     ToolTipService.ToolTip="VPN tunnel: carries other apps' traffic in encrypted form, so it is left out of the all-apps total.">
-                                <TextBlock Text="VPN tunnel" FontSize="11" Foreground="{ThemeResource SystemFillColorAttentionBrush}" />
+                                <TextBlock x:Uid="NetworkPage_20" Text="VPN tunnel" FontSize="11" Foreground="{ThemeResource SystemFillColorAttentionBrush}" />
                             </Border>
                         </Grid>
                         <TextBlock Grid.Column="1" Grid.ColumnSpan="4" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"

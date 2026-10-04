@@ -21,11 +21,11 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Processes" Style="{StaticResource PageTitleStyle}" />
+                <TextBlock x:Uid="ProcessesPage_1" Text="Processes" Style="{StaticResource PageTitleStyle}" />
                 <TextBlock x:Name="SummaryText" Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
             <CommandBar Grid.Column="2" DefaultLabelPosition="Right" Background="Transparent" IsDynamicOverflowEnabled="True" VerticalAlignment="Center">
-                <AppBarButton x:Name="EndTaskButton" Label="End task" IsEnabled="False" Click="EndTask_Click">
+                <AppBarButton x:Uid="ProcessesPage_2" x:Name="EndTaskButton" Label="End task" IsEnabled="False" Click="EndTask_Click">
                     <AppBarButton.Icon>
                         <FontIcon Glyph="&#xE711;" />
                     </AppBarButton.Icon>
@@ -33,33 +33,33 @@
                         <KeyboardAccelerator Key="Delete" />
                     </AppBarButton.KeyboardAccelerators>
                 </AppBarButton>
-                <AppBarButton x:Name="OpenLocationButton" Label="Open file location" IsEnabled="False" Click="OpenLocation_Click">
+                <AppBarButton x:Uid="ProcessesPage_3" x:Name="OpenLocationButton" Label="Open file location" IsEnabled="False" Click="OpenLocation_Click">
                     <AppBarButton.Icon>
                         <FontIcon Glyph="&#xE838;" />
                     </AppBarButton.Icon>
                 </AppBarButton>
-                <AppBarButton x:Name="FirewallButton" Label="Block network" IsEnabled="False" Click="Firewall_Click">
+                <AppBarButton x:Uid="ProcessesPage_4" x:Name="FirewallButton" Label="Block network" IsEnabled="False" Click="Firewall_Click">
                     <AppBarButton.Icon>
                         <FontIcon x:Name="FirewallIcon" Glyph="&#xE785;" />
                     </AppBarButton.Icon>
                 </AppBarButton>
-                <AppBarToggleButton x:Name="PauseButton" Label="Pause" Click="Pause_Click">
+                <AppBarToggleButton x:Uid="ProcessesPage_5" x:Name="PauseButton" Label="Pause" Click="Pause_Click">
                     <AppBarToggleButton.Icon>
                         <FontIcon Glyph="&#xE769;" />
                     </AppBarToggleButton.Icon>
                 </AppBarToggleButton>
                 <CommandBar.SecondaryCommands>
-                    <AppBarButton x:Name="EndTreeButton" Label="End process tree" IsEnabled="False" Click="EndTree_Click">
+                    <AppBarButton x:Uid="ProcessesPage_6" x:Name="EndTreeButton" Label="End process tree" IsEnabled="False" Click="EndTree_Click">
                         <AppBarButton.Icon>
                             <FontIcon Glyph="&#xE71A;" />
                         </AppBarButton.Icon>
                     </AppBarButton>
-                    <AppBarButton x:Name="PropertiesButton" Label="Properties" IsEnabled="False" Click="Properties_Click">
+                    <AppBarButton x:Uid="ProcessesPage_7" x:Name="PropertiesButton" Label="Properties" IsEnabled="False" Click="Properties_Click">
                         <AppBarButton.Icon>
                             <FontIcon Glyph="&#xE946;" />
                         </AppBarButton.Icon>
                     </AppBarButton>
-                    <AppBarButton x:Name="CopyPathButton" Label="Copy path" IsEnabled="False" Click="CopyPath_Click">
+                    <AppBarButton x:Uid="ProcessesPage_8" x:Name="CopyPathButton" Label="Copy path" IsEnabled="False" Click="CopyPath_Click">
                         <AppBarButton.Icon>
                             <FontIcon Glyph="&#xE8C8;" />
                         </AppBarButton.Icon>
@@ -81,13 +81,13 @@
                 <ColumnDefinition Width="*" MinWidth="120" />
             </Grid.ColumnDefinitions>
 
-            <Button Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
+            <Button x:Uid="ProcessesPage_9" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
                 <Grid>
-                    <TextBlock Text="Name" VerticalAlignment="Bottom" Margin="36,0,0,0" />
+                    <TextBlock x:Uid="ProcessesPage_10" Text="Name" VerticalAlignment="Bottom" Margin="36,0,0,0" />
                     <FontIcon x:Name="SortName" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button Grid.Column="1" Tag="Cpu" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by CPU" Click="Header_Click">
+            <Button x:Uid="ProcessesPage_11" Grid.Column="1" Tag="Cpu" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by CPU" Click="Header_Click">
                 <Grid>
                     <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom">
                         <TextBlock Text="{x:Bind ViewModel.CpuHeader, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
@@ -96,51 +96,51 @@
                     <FontIcon x:Name="SortCpu" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button Grid.Column="2" Tag="Memory" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Memory" Click="Header_Click">
+            <Button x:Uid="ProcessesPage_12" Grid.Column="2" Tag="Memory" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Memory" Click="Header_Click">
                 <Grid>
                     <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom">
                         <TextBlock Text="{x:Bind ViewModel.MemoryHeader, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                        <TextBlock Text="Memory" HorizontalAlignment="Right" />
+                        <TextBlock x:Uid="ProcessesPage_13" Text="Memory" HorizontalAlignment="Right" />
                     </StackPanel>
                     <FontIcon x:Name="SortMemory" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button Grid.Column="3" Tag="Io" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Disk / I/O" Click="Header_Click" ToolTipService.ToolTip="File and device I/O (read + write + other) per second">
+            <Button x:Uid="ProcessesPage_14" Grid.Column="3" Tag="Io" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Disk / I/O" Click="Header_Click" ToolTipService.ToolTip="File and device I/O (read + write + other) per second">
                 <Grid>
                     <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom">
                         <TextBlock Text="{x:Bind ViewModel.IoHeader, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                        <TextBlock Text="Disk / I/O" HorizontalAlignment="Right" />
+                        <TextBlock x:Uid="ProcessesPage_15" Text="Disk / I/O" HorizontalAlignment="Right" />
                     </StackPanel>
                     <FontIcon x:Name="SortIo" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button Grid.Column="4" Tag="Bandwidth" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Network speed" Click="Header_Click" ToolTipService.ToolTip="{x:Bind ViewModel.BandwidthTooltip, Mode=OneWay}">
+            <Button x:Uid="ProcessesPage_16" Grid.Column="4" Tag="Bandwidth" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Network speed" Click="Header_Click" ToolTipService.ToolTip="{x:Bind ViewModel.BandwidthTooltip, Mode=OneWay}">
                 <Grid>
                     <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom">
                         <TextBlock Text="{x:Bind ViewModel.BandwidthHeader, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                        <TextBlock Text="Network" HorizontalAlignment="Right" />
+                        <TextBlock x:Uid="ProcessesPage_17" Text="Network" HorizontalAlignment="Right" />
                     </StackPanel>
                     <FontIcon x:Name="SortBandwidth" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button Grid.Column="5" Tag="Network" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Connections" Click="Header_Click" ToolTipService.ToolTip="Open TCP/UDP connections and listeners">
+            <Button x:Uid="ProcessesPage_18" Grid.Column="5" Tag="Network" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Connections" Click="Header_Click" ToolTipService.ToolTip="Open TCP/UDP connections and listeners">
                 <Grid>
                     <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom">
                         <TextBlock Text="{x:Bind ViewModel.NetworkHeader, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                        <TextBlock Text="Connections" HorizontalAlignment="Right" />
+                        <TextBlock x:Uid="ProcessesPage_19" Text="Connections" HorizontalAlignment="Right" />
                     </StackPanel>
                     <FontIcon x:Name="SortNetwork" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button Grid.Column="6" Tag="Publisher" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Publisher" Click="Header_Click">
+            <Button x:Uid="ProcessesPage_20" Grid.Column="6" Tag="Publisher" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Publisher" Click="Header_Click">
                 <Grid>
-                    <TextBlock Text="Publisher" VerticalAlignment="Bottom" Margin="8,0,0,0" />
+                    <TextBlock x:Uid="ProcessesPage_21" Text="Publisher" VerticalAlignment="Bottom" Margin="8,0,0,0" />
                     <FontIcon x:Name="SortPublisher" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button Grid.Column="7" Tag="Path" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Path" Click="Header_Click">
+            <Button x:Uid="ProcessesPage_22" Grid.Column="7" Tag="Path" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Path" Click="Header_Click">
                 <Grid>
-                    <TextBlock Text="Path" VerticalAlignment="Bottom" Margin="8,0,0,0" />
+                    <TextBlock x:Uid="ProcessesPage_23" Text="Path" VerticalAlignment="Bottom" Margin="8,0,0,0" />
                     <FontIcon x:Name="SortPath" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
@@ -214,7 +214,7 @@
                                     <Run Text="{x:Bind Name, Mode=OneWay}" />
                                     <Run Text="{x:Bind Detail, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </TextBlock>
-                                <Border
+                                <Border x:Uid="ProcessesPage_24"
                                     Grid.Column="3"
                                     Margin="0,0,8,0"
                                     Padding="6,1"
@@ -222,8 +222,8 @@
                                     CornerRadius="4"
                                     Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
                                     Visibility="{x:Bind BlockedVisibility, Mode=OneWay}"
-                                    ToolTipService.ToolTip="Outbound network access is blocked by a Nax-TaskManager firewall rule">
-                                    <TextBlock Text="Blocked" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                    ToolTipService.ToolTip="Outbound network access is blocked by Nax-TaskManager">
+                                    <TextBlock x:Uid="ProcessesPage_25" Text="Blocked" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                 </Border>
                             </Grid>
 

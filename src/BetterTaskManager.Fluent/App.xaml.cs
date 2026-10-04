@@ -48,12 +48,19 @@ public partial class App : Application
     }
 
     /// <summary>Starts an elevated copy that waits for this one to exit, then closes this window.</summary>
-    public static bool RestartElevated()
+    public static bool RestartElevated() => Restart(elevated: true);
+
+    /// <summary>
+    /// Starts a new copy (same elevation, or elevated on request) that waits until this one has closed and saved
+    /// its settings, then closes this window.
+    /// </summary>
+    public static bool Restart(bool elevated = false)
     {
         string? executable = Environment.ProcessPath;
         if (string.IsNullOrWhiteSpace(executable)) return false;
 
-        var startInfo = new ProcessStartInfo(executable) { UseShellExecute = true, Verb = "runas" };
+        var startInfo = new ProcessStartInfo(executable) { UseShellExecute = true };
+        if (elevated) startInfo.Verb = "runas";
         startInfo.ArgumentList.Add(Program.WaitForProcessArgument);
         startInfo.ArgumentList.Add(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
         try

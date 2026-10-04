@@ -45,6 +45,9 @@ public static class Program
         try
         {
             WinRT.ComWrappersSupport.InitializeComWrappers();
+            // The language must be chosen before XAML loads any resource; --lang overrides the setting for tests.
+            int langIndex = Array.IndexOf(args, "--lang");
+            Loc.ApplyLanguage(langIndex >= 0 && langIndex + 1 < args.Length ? args[langIndex + 1] : AppSettings.Load().Language);
             Application.Start(_ =>
             {
                 var context = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());

@@ -6,7 +6,7 @@
 
     <ScrollViewer>
         <StackPanel Padding="20,8,20,24" Spacing="6" MaxWidth="900" HorizontalAlignment="Left">
-            <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" Margin="0,0,0,10" />
+            <TextBlock x:Uid="SettingsPage_1" Text="Settings" Style="{StaticResource PageTitleStyle}" Margin="0,0,0,10" />
 
             <Border Style="{StaticResource CardStyle}">
                 <Grid ColumnSpacing="16">
@@ -17,14 +17,14 @@
                     </Grid.ColumnDefinitions>
                     <FontIcon Glyph="&#xE895;" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1">
-                        <TextBlock Text="Update speed" />
-                        <TextBlock Text="How often processes, memory and connections are refreshed." Style="{StaticResource MutedTextStyle}" />
+                        <TextBlock x:Uid="SettingsPage_2" Text="Update speed" />
+                        <TextBlock x:Uid="SettingsPage_3" Text="How often processes, memory and connections are refreshed." Style="{StaticResource MutedTextStyle}" />
                     </StackPanel>
                     <ComboBox x:Name="IntervalBox" Grid.Column="2" MinWidth="160" VerticalAlignment="Center" SelectionChanged="IntervalBox_SelectionChanged">
-                        <ComboBoxItem Content="High (0.5 s)" Tag="500" />
-                        <ComboBoxItem Content="Normal (1 s)" Tag="1000" />
-                        <ComboBoxItem Content="Low (2 s)" Tag="2000" />
-                        <ComboBoxItem Content="Very low (5 s)" Tag="5000" />
+                        <ComboBoxItem x:Uid="SettingsPage_4" Content="High (0.5 s)" Tag="500" />
+                        <ComboBoxItem x:Uid="SettingsPage_5" Content="Normal (1 s)" Tag="1000" />
+                        <ComboBoxItem x:Uid="SettingsPage_6" Content="Low (2 s)" Tag="2000" />
+                        <ComboBoxItem x:Uid="SettingsPage_7" Content="Very low (5 s)" Tag="5000" />
                     </ComboBox>
                 </Grid>
             </Border>
@@ -38,13 +38,34 @@
                     </Grid.ColumnDefinitions>
                     <FontIcon Glyph="&#xE790;" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1">
-                        <TextBlock Text="App theme" />
-                        <TextBlock Text="Follow Windows or force light or dark." Style="{StaticResource MutedTextStyle}" />
+                        <TextBlock x:Uid="SettingsPage_8" Text="App theme" />
+                        <TextBlock x:Uid="SettingsPage_9" Text="Follow Windows or force light or dark." Style="{StaticResource MutedTextStyle}" />
                     </StackPanel>
                     <ComboBox x:Name="ThemeBox" Grid.Column="2" MinWidth="160" VerticalAlignment="Center" SelectionChanged="ThemeBox_SelectionChanged">
-                        <ComboBoxItem Content="Use system setting" Tag="System" />
-                        <ComboBoxItem Content="Light" Tag="Light" />
-                        <ComboBoxItem Content="Dark" Tag="Dark" />
+                        <ComboBoxItem x:Uid="SettingsPage_10" Content="Use system setting" Tag="System" />
+                        <ComboBoxItem x:Uid="SettingsPage_11" Content="Light" Tag="Light" />
+                        <ComboBoxItem x:Uid="SettingsPage_12" Content="Dark" Tag="Dark" />
+                    </ComboBox>
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <FontIcon Glyph="&#xF2B7;" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock x:Uid="SettingsPage_13" Text="Language" />
+                        <TextBlock x:Uid="SettingsPage_14" Text="Takes effect when the app starts again. Process names, window titles and paths are never translated." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                        <HyperlinkButton x:Uid="SettingsPage_15" x:Name="RestartForLanguage" Content="Restart now" Padding="0" Visibility="Collapsed" Click="RestartForLanguage_Click" />
+                    </StackPanel>
+                    <ComboBox x:Name="LanguageBox" Grid.Column="2" MinWidth="160" VerticalAlignment="Center" SelectionChanged="LanguageBox_SelectionChanged">
+                        <ComboBoxItem x:Uid="SettingsPage_16" Content="Use system setting" Tag="System" />
+                        <ComboBoxItem x:Uid="SettingsPage_17" Content="English" Tag="en-US" />
+                        <ComboBoxItem x:Uid="SettingsPage_18" Content="Deutsch" Tag="de-DE" />
                     </ComboBox>
                 </Grid>
             </Border>
@@ -61,11 +82,11 @@
                         <TextBlock x:Name="ElevationTitle" />
                         <TextBlock x:Name="ElevationText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <Button x:Name="ElevateButton" Grid.Column="2" Content="Restart as administrator" VerticalAlignment="Center" Click="Elevate_Click" />
+                    <Button x:Uid="SettingsPage_19" x:Name="ElevateButton" Grid.Column="2" Content="Restart as administrator" VerticalAlignment="Center" Click="Elevate_Click" />
                 </Grid>
             </Border>
 
-            <TextBlock Text="History" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
+            <TextBlock x:Uid="SettingsPage_20" Text="History" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
             <Border Style="{StaticResource CardStyle}">
                 <Grid ColumnSpacing="16" RowSpacing="8">
                     <Grid.ColumnDefinitions>
@@ -79,22 +100,22 @@
                     </Grid.RowDefinitions>
                     <FontIcon Glyph="&#xE81C;" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1">
-                        <TextBlock Text="Record in the background" />
+                        <TextBlock x:Uid="SettingsPage_21" Text="Record in the background" />
                         <TextBlock x:Name="HistoryStatusText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <ToggleSwitch x:Name="HistoryToggle" Grid.Column="2" MinWidth="0" VerticalAlignment="Center" OnContent="On" OffContent="Off" Toggled="HistoryToggle_Toggled" />
-                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"
+                    <ToggleSwitch x:Uid="SettingsPage_22" x:Name="HistoryToggle" Grid.Column="2" MinWidth="0" VerticalAlignment="Center" OnContent="On" OffContent="Off" Toggled="HistoryToggle_Toggled" />
+                    <TextBlock x:Uid="SettingsPage_23" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"
                                Text="A Windows service records which apps connect to which hosts and how much data they send and receive, for 30 days. While it runs, the app also shows per-app network speed without administrator rights. The history stays on this PC in C:\ProgramData\NaxTaskManager. Every user account on this PC can read it; only administrators can change it. Turning recording off keeps the history already recorded." />
                 </Grid>
             </Border>
 
-            <TextBlock Text="About" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
+            <TextBlock x:Uid="SettingsPage_24" Text="About" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="4">
                     <TextBlock x:Name="VersionText" />
-                    <TextBlock Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"
-                               Text="Memory figures come from the same private working-set counters Task Manager uses. Firewall rules are Windows Firewall outbound rules named &quot;Nax-TaskManager Block …&quot;; rules from Better Task Manager are still recognised." />
-                    <HyperlinkButton x:Name="DataFolderLink" Content="Open settings folder" Padding="0" Click="DataFolder_Click" />
+                    <TextBlock x:Uid="SettingsPage_25" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"
+                               Text="Memory figures come from the same private working-set counters Task Manager uses. Block network adds Windows Filtering Platform filters, which also work while another firewall (for example Bitdefender) manages Windows Firewall." />
+                    <HyperlinkButton x:Uid="SettingsPage_26" x:Name="DataFolderLink" Content="Open settings folder" Padding="0" Click="DataFolder_Click" />
                 </StackPanel>
             </Border>
         </StackPanel>

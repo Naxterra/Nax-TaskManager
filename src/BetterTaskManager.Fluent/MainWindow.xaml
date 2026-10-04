@@ -19,7 +19,7 @@
                 <ImageIconSource ImageSource="Assets/AppIcon.ico" />
             </TitleBar.IconSource>
             <TitleBar.Content>
-                <AutoSuggestBox
+                <AutoSuggestBox x:Uid="MainWindow_1"
                     x:Name="SearchBox"
                     MinWidth="320"
                     MaxWidth="520"
@@ -40,22 +40,22 @@
             IsSettingsVisible="True"
             SelectionChanged="Navigation_SelectionChanged">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Processes" Tag="Processes" ToolTipService.ToolTip="Processes (Ctrl+1)">
+                <NavigationViewItem x:Uid="MainWindow_2" Content="Processes" Tag="Processes" ToolTipService.ToolTip="Processes (Ctrl+1)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9F5;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Performance" Tag="Performance" ToolTipService.ToolTip="Performance (Ctrl+2)">
+                <NavigationViewItem x:Uid="MainWindow_3" Content="Performance" Tag="Performance" ToolTipService.ToolTip="Performance (Ctrl+2)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9D9;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Network" Tag="Network" ToolTipService.ToolTip="Network (Ctrl+3)">
+                <NavigationViewItem x:Uid="MainWindow_4" Content="Network" Tag="Network" ToolTipService.ToolTip="Network (Ctrl+3)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE968;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="History" Tag="History" ToolTipService.ToolTip="History (Ctrl+4)">
+                <NavigationViewItem x:Uid="MainWindow_5" Content="History" Tag="History" ToolTipService.ToolTip="History (Ctrl+4)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE81C;" />
                     </NavigationViewItem.Icon>
@@ -67,7 +67,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <InfoBar
+                <InfoBar x:Uid="MainWindow_6"
                     x:Name="ElevationBar"
                     Margin="16,8,16,0"
                     IsClosable="True"
@@ -75,7 +75,7 @@
                     Title="Limited mode"
                     Message="Per-app network speed and system process details need administrator rights.">
                     <InfoBar.ActionButton>
-                        <Button Content="Restart as administrator" Click="RestartElevated_Click" />
+                        <Button x:Uid="MainWindow_7" Content="Restart as administrator" Click="RestartElevated_Click" />
                     </InfoBar.ActionButton>
                 </InfoBar>
                 <Frame x:Name="ContentFrame" Grid.Row="1" />

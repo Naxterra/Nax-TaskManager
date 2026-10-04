@@ -9,7 +9,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Padding="20,8,20,24" Spacing="12">
             <StackPanel>
-                <TextBlock Text="Performance" Style="{StaticResource PageTitleStyle}" />
+                <TextBlock x:Uid="PerformancePage_1" Text="Performance" Style="{StaticResource PageTitleStyle}" />
                 <TextBlock x:Name="SummaryText" Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
 
@@ -34,7 +34,7 @@
                 <Border Grid.Column="1" Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="8">
                         <Grid>
-                            <TextBlock Text="Memory" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock x:Uid="PerformancePage_2" Text="Memory" Style="{StaticResource BodyStrongTextBlockStyle}" />
                             <TextBlock x:Name="MemoryValue" HorizontalAlignment="Right" Style="{StaticResource SubtitleTextBlockStyle}" />
                         </Grid>
                         <controls:TrendChart x:Name="MemoryChart" Height="120" Stroke="{ThemeResource ChartMemoryBrush}" />
@@ -45,7 +45,7 @@
                 <Border Grid.Column="2" Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="8">
                         <Grid>
-                            <TextBlock Text="Network" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock x:Uid="PerformancePage_3" Text="Network" Style="{StaticResource BodyStrongTextBlockStyle}" />
                             <TextBlock x:Name="NetworkValue" HorizontalAlignment="Right" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
                         </Grid>
                         <controls:TrendChart x:Name="NetworkChart" Height="120" Stroke="{ThemeResource ChartReceiveBrush}" SecondStroke="{ThemeResource ChartSendBrush}" />
@@ -62,30 +62,30 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="Where your memory goes" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                            <TextBlock
+                            <TextBlock x:Uid="PerformancePage_4" Text="Where your memory goes" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock x:Uid="PerformancePage_5"
                                 Style="{StaticResource MutedTextStyle}"
                                 TextWrapping="Wrap"
                                 Text="The per-app Memory column only counts memory private to each process. The rest of &quot;In use&quot; belongs to Windows itself, drivers and memory that several processes share." />
                         </StackPanel>
-                        <DropDownButton x:Name="CleanupButton" Grid.Column="1" VerticalAlignment="Top" AutomationProperties.Name="Free up memory">
+                        <DropDownButton x:Uid="PerformancePage_6" x:Name="CleanupButton" Grid.Column="1" VerticalAlignment="Top" AutomationProperties.Name="Free up memory">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xE74D;" FontSize="14" />
-                                <TextBlock Text="Free up memory" />
+                                <TextBlock x:Uid="PerformancePage_7" Text="Free up memory" />
                             </StackPanel>
                             <DropDownButton.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                    <MenuFlyoutItem Text="Trim app memory" Tag="Trim" Click="Cleanup_Click">
+                                    <MenuFlyoutItem x:Uid="PerformancePage_8" Text="Trim app memory" Tag="Trim" Click="Cleanup_Click">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE9F5;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Name="StandbyItem" Text="Clear standby cache" Tag="Standby" Click="Cleanup_Click">
+                                    <MenuFlyoutItem x:Uid="PerformancePage_9" x:Name="StandbyItem" Text="Clear standby cache" Tag="Standby" Click="Cleanup_Click">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE81E;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Name="SystemItem" Text="Empty all working sets" Tag="System" Click="Cleanup_Click">
+                                    <MenuFlyoutItem x:Uid="PerformancePage_10" x:Name="SystemItem" Text="Empty all working sets" Tag="System" Click="Cleanup_Click">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE7EF;" />
                                         </MenuFlyoutItem.Icon>

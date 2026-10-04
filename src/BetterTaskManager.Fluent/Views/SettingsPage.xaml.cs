@@ -16,6 +16,7 @@ public sealed partial class SettingsPage : Page
         InitializeComponent();
         Select(IntervalBox, App.Settings.RefreshIntervalMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture), 1);
         Select(ThemeBox, App.Settings.Theme, 0);
+        Select(LanguageBox, App.Settings.Language, 0);
 
         bool elevated = App.Monitor.IsElevated;
         ElevationTitle.Text = elevated ? "Running as administrator" : "Running as standard user";
@@ -76,6 +77,15 @@ public sealed partial class SettingsPage : Page
         if (loading || IntervalBox.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
         App.Monitor.Interval = TimeSpan.FromMilliseconds(int.Parse(tag, System.Globalization.CultureInfo.InvariantCulture));
     }
+
+    private void LanguageBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (loading || LanguageBox.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
+        App.Settings.Language = tag;
+        RestartForLanguage.Visibility = Visibility.Visible;
+    }
+
+    private void RestartForLanguage_Click(object sender, RoutedEventArgs e) => App.Restart();
 
     private void ThemeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

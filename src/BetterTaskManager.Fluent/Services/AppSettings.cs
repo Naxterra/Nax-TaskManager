@@ -15,6 +15,8 @@ public sealed class AppSettings
     public int RefreshIntervalMilliseconds { get; set; } = 1000;
     /// <summary>"System", "Light" or "Dark".</summary>
     public string Theme { get; set; } = "System";
+    /// <summary>"System" (Windows display language), "en-US" or "de-DE". Takes effect on the next start.</summary>
+    public string Language { get; set; } = "System";
     public string ProcessSortColumn { get; set; } = "Memory";
     public bool ProcessSortDescending { get; set; } = true;
     /// <summary>Network page: by app name by default, so rows do not move while traffic changes.</summary>

@@ -1,0 +1,552 @@
+[
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_1.PlaceholderText",
+  "en": "Search by name, publisher or PID"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_2.Content",
+  "en": "Processes"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_2.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "Processes (Ctrl+1)"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_3.Content",
+  "en": "Performance"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_3.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "Performance (Ctrl+2)"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_4.Content",
+  "en": "Network"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_4.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "Network (Ctrl+3)"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_5.Content",
+  "en": "History"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_5.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "History (Ctrl+4)"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_6.Title",
+  "en": "Limited mode"
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_6.Message",
+  "en": "Per-app network speed and system process details need administrator rights."
+ },
+ {
+  "file": "MainWindow.xaml",
+  "key": "MainWindow_7.Content",
+  "en": "Restart as administrator"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_1.Text",
+  "en": "History"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_2.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "Show which names each app looked up (recorded by the History service)"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_3.Text",
+  "en": "DNS lookups"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_4.Content",
+  "en": "Today"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_5.Content",
+  "en": "Last 7 days"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_6.Content",
+  "en": "Last 30 days"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_7.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "Refresh"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_8.Text",
+  "en": "App"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_9.Text",
+  "en": "Data used"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_10.Text",
+  "en": "Started"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_11.Text",
+  "en": "App"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_12.Text",
+  "en": "Remote host"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_13.Text",
+  "en": "Protocol"
+ },
+ {
+  "file": "Views\\HistoryPage.xaml",
+  "key": "HistoryPage_14.Text",
+  "en": "Data"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_1.Text",
+  "en": "Network"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_2.Label",
+  "en": "Active connections only"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_3.Label",
+  "en": "Block network"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_4.Label",
+  "en": "Pause"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_5.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Name"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_6.Text",
+  "en": "App / protocol"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_7.Text",
+  "en": "Local address"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_8.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Remote host"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_9.Text",
+  "en": "Remote host"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_10.Text",
+  "en": "Scope"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_11.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by State"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_12.Text",
+  "en": "State"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_13.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Data"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_14.Text",
+  "en": "Data (down / up)"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_15.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Speed"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_16.Text",
+  "en": "Speed (down / up)"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_17.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Expand or collapse"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_18.Text",
+  "en": "Blocked"
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_19.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "VPN tunnel: carries other apps' traffic in encrypted form, so it is left out of the all-apps total."
+ },
+ {
+  "file": "Views\\NetworkPage.xaml",
+  "key": "NetworkPage_20.Text",
+  "en": "VPN tunnel"
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_1.Text",
+  "en": "Performance"
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_2.Text",
+  "en": "Memory"
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_3.Text",
+  "en": "Network"
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_4.Text",
+  "en": "Where your memory goes"
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_5.Text",
+  "en": "The per-app Memory column only counts memory private to each process. The rest of \"In use\" belongs to Windows itself, drivers and memory that several processes share."
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_6.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Free up memory"
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_7.Text",
+  "en": "Free up memory"
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_8.Text",
+  "en": "Trim app memory"
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_9.Text",
+  "en": "Clear standby cache"
+ },
+ {
+  "file": "Views\\PerformancePage.xaml",
+  "key": "PerformancePage_10.Text",
+  "en": "Empty all working sets"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_1.Text",
+  "en": "Processes"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_2.Label",
+  "en": "End task"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_3.Label",
+  "en": "Open file location"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_4.Label",
+  "en": "Block network"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_5.Label",
+  "en": "Pause"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_6.Label",
+  "en": "End process tree"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_7.Label",
+  "en": "Properties"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_8.Label",
+  "en": "Copy path"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_9.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Name"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_10.Text",
+  "en": "Name"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_11.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by CPU"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_12.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Memory"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_13.Text",
+  "en": "Memory"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_14.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "File and device I/O (read + write + other) per second"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_14.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Disk / I/O"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_15.Text",
+  "en": "Disk / I/O"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_16.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Network speed"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_17.Text",
+  "en": "Network"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_18.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "Open TCP/UDP connections and listeners"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_18.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Connections"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_19.Text",
+  "en": "Connections"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_20.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Publisher"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_21.Text",
+  "en": "Publisher"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_22.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name",
+  "en": "Sort by Path"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_23.Text",
+  "en": "Path"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_24.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip",
+  "en": "Outbound network access is blocked by Nax-TaskManager"
+ },
+ {
+  "file": "Views\\ProcessesPage.xaml",
+  "key": "ProcessesPage_25.Text",
+  "en": "Blocked"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_1.Text",
+  "en": "Settings"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_2.Text",
+  "en": "Update speed"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_3.Text",
+  "en": "How often processes, memory and connections are refreshed."
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_4.Content",
+  "en": "High (0.5 s)"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_5.Content",
+  "en": "Normal (1 s)"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_6.Content",
+  "en": "Low (2 s)"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_7.Content",
+  "en": "Very low (5 s)"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_8.Text",
+  "en": "App theme"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_9.Text",
+  "en": "Follow Windows or force light or dark."
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_10.Content",
+  "en": "Use system setting"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_11.Content",
+  "en": "Light"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_12.Content",
+  "en": "Dark"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_13.Text",
+  "en": "Language"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_14.Text",
+  "en": "Takes effect when the app starts again. Process names, window titles and paths are never translated."
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_15.Content",
+  "en": "Restart now"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_16.Content",
+  "en": "Use system setting"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_17.Content",
+  "en": "English"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_18.Content",
+  "en": "Deutsch"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_19.Content",
+  "en": "Restart as administrator"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_20.Text",
+  "en": "History"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_21.Text",
+  "en": "Record in the background"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_22.OnContent",
+  "en": "On"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_22.OffContent",
+  "en": "Off"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_23.Text",
+  "en": "A Windows service records which apps connect to which hosts and how much data they send and receive, for 30 days. While it runs, the app also shows per-app network speed without administrator rights. The history stays on this PC in C:\\ProgramData\\NaxTaskManager. Every user account on this PC can read it; only administrators can change it. Turning recording off keeps the history already recorded."
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_24.Text",
+  "en": "About"
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_25.Text",
+  "en": "Memory figures come from the same private working-set counters Task Manager uses. Block network adds Windows Filtering Platform filters, which also work while another firewall (for example Bitdefender) manages Windows Firewall."
+ },
+ {
+  "file": "Views\\SettingsPage.xaml",
+  "key": "SettingsPage_26.Content",
+  "en": "Open settings folder"
+ }
+]
