@@ -19,10 +19,10 @@ public sealed partial class SettingsPage : Page
         Select(LanguageBox, App.Settings.Language, 0);
 
         bool elevated = App.Monitor.IsElevated;
-        ElevationTitle.Text = elevated ? "Running as administrator" : "Running as standard user";
+        ElevationTitle.Text = elevated ? Loc.Get("Settings_Elevated") : Loc.Get("Settings_Standard");
         ElevationText.Text = elevated
-            ? "All processes show their path, publisher and icon, per-app network speed is measured, and firewall changes need no extra prompt."
-            : "Per-app network speed is unavailable, system processes hide their path, publisher and icon, and each firewall change asks for administrator approval.";
+            ? Loc.Get("Settings_ElevatedText")
+            : Loc.Get("Settings_StandardText");
         ElevateButton.Visibility = elevated ? Visibility.Collapsed : Visibility.Visible;
 
         string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
@@ -38,11 +38,11 @@ public sealed partial class SettingsPage : Page
         HistoryStatusText.Text = state switch
         {
             HistoryServiceState.Running when HistoryServiceControl.NeedsUpdate(HistoryServiceSetup.BundledFolder) =>
-                "On, but the service is older than this app. Use Update on the History page.",
-            HistoryServiceState.Running => "On. Recording while Windows runs, even with this window closed.",
-            HistoryServiceState.NotInstalled => App.Monitor.IsElevated ? "Off." : "Off. Turning it on asks for administrator approval once.",
-            HistoryServiceState.Starting => "Starting…",
-            _ => "Installed, but the service is not running."
+                Loc.Get("Settings_HistoryOld"),
+            HistoryServiceState.Running => Loc.Get("Settings_HistoryOn"),
+            HistoryServiceState.NotInstalled => App.Monitor.IsElevated ? Loc.Get("Settings_HistoryOff") : Loc.Get("Settings_HistoryOffUac"),
+            HistoryServiceState.Starting => Loc.Get("Settings_HistoryStarting"),
+            _ => Loc.Get("Settings_HistoryNotRunning")
         };
     }
 
@@ -51,7 +51,7 @@ public sealed partial class SettingsPage : Page
         if (loading) return;
         bool enable = HistoryToggle.IsOn;
         HistoryToggle.IsEnabled = false;
-        HistoryStatusText.Text = enable ? "Turning on…" : "Turning off…";
+        HistoryStatusText.Text = enable ? Loc.Get("Settings_TurningOn") : Loc.Get("Settings_TurningOff");
         string? error = await HistoryServiceSetup.SetEnabledAsync(enable, App.Monitor.IsElevated);
         HistoryToggle.IsEnabled = true;
         loading = true;
@@ -59,7 +59,7 @@ public sealed partial class SettingsPage : Page
         loading = false;
         if (error is not null)
         {
-            await new ContentDialog { XamlRoot = XamlRoot, Title = enable ? "Background recording not turned on" : "Background recording not turned off", Content = error, CloseButtonText = "OK" }.ShowAsync();
+            await new ContentDialog { XamlRoot = XamlRoot, Title = enable ? Loc.Get("Service_NotTurnedOn") : Loc.Get("Service_NotTurnedOff"), Content = error, CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();
         }
     }
 

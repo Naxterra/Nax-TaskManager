@@ -120,7 +120,7 @@
                         <ColumnDefinition Width="140" />
                         <ColumnDefinition Width="220" />
                         <ColumnDefinition Width="*" MinWidth="160" />
-                        <ColumnDefinition Width="220" />
+                        <ColumnDefinition Width="260" />
                         <ColumnDefinition Width="170" />
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Uid="HistoryPage_10" Text="Started" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -146,7 +146,7 @@
                                     <ColumnDefinition Width="140" />
                                     <ColumnDefinition Width="220" />
                                     <ColumnDefinition Width="*" MinWidth="160" />
-                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="260" />
                                     <ColumnDefinition Width="170" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Time, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind TimeDetail, Mode=OneWay}"

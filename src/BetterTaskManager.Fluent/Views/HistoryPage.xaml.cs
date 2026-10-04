@@ -65,9 +65,9 @@ public sealed partial class HistoryPage : Page
         ConnectionSummaryText.Text = ViewModel.ConnectionSummary;
         bool empty = ViewModel.Connections.Count == 0;
         EmptyText.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
-        EmptyText.Text = !ViewModel.HasData ? "Nothing has been recorded yet."
-            : App.Monitor.SearchText.Trim().Length > 0 ? "No connections match the search."
-            : "No connections in this period.";
+        EmptyText.Text = !ViewModel.HasData ? Loc.Get("History_EmptyNothing")
+            : App.Monitor.SearchText.Trim().Length > 0 ? Loc.Get("History_EmptySearch")
+            : Loc.Get("History_EmptyPeriod");
         RestoreAppSelection();
         UpdateServiceBar();
     }
@@ -103,9 +103,13 @@ public sealed partial class HistoryPage : Page
             case HistoryServiceState.Running when HistoryServiceControl.NeedsUpdate(HistoryServiceSetup.BundledFolder):
                 ServiceBar.IsOpen = true;
                 ServiceBar.Severity = InfoBarSeverity.Informational;
-                ServiceBar.Title = "Update the History service";
-                ServiceBar.Message = $"The running service is {Short(HistoryServiceControl.VersionIn(HistoryServiceControl.InstallFolder))}; this app brings {Short(HistoryServiceControl.VersionIn(HistoryServiceSetup.BundledFolder))}. Recording continues during the update.";
-                ServiceButton.Content = "Update";
+                ServiceBar.Title = Loc.Get("Service_UpdateTitle");
+                string? installed = HistoryServiceControl.VersionIn(HistoryServiceControl.InstallFolder);
+                string? bundled = HistoryServiceControl.VersionIn(HistoryServiceSetup.BundledFolder);
+                // Same version number from another commit (development builds): show the commit too.
+                bool sameNumber = Short(installed) == Short(bundled);
+                ServiceBar.Message = Loc.F("Service_UpdateMessage", sameNumber ? WithCommit(installed) : Short(installed), sameNumber ? WithCommit(bundled) : Short(bundled));
+                ServiceButton.Content = Loc.Get("Service_Update");
                 break;
             case HistoryServiceState.Running:
                 ServiceBar.IsOpen = false;
@@ -113,21 +117,25 @@ public sealed partial class HistoryPage : Page
             case HistoryServiceState.NotInstalled:
                 ServiceBar.IsOpen = true;
                 ServiceBar.Severity = InfoBarSeverity.Informational;
-                ServiceBar.Title = "Background recording is off";
-                ServiceBar.Message = "A small Windows service can record which apps connect where and how much data they use, even while this window is closed. History is kept for 30 days.";
-                ServiceButton.Content = "Turn on";
+                ServiceBar.Title = Loc.Get("History_Off");
+                ServiceBar.Message = Loc.Get("Service_OffMessage");
+                ServiceButton.Content = Loc.Get("Service_TurnOn");
                 break;
             default:
                 ServiceBar.IsOpen = true;
                 ServiceBar.Severity = InfoBarSeverity.Warning;
-                ServiceBar.Title = "The history service is not running";
-                ServiceBar.Message = "Nothing is recorded until it runs again.";
-                ServiceButton.Content = "Start";
+                ServiceBar.Title = Loc.Get("History_ServiceStopped");
+                ServiceBar.Message = Loc.Get("Service_StoppedMessage");
+                ServiceButton.Content = Loc.Get("Service_Start");
                 break;
         }
     }
 
-    private static string Short(string? version) => version?.Split('+')[0] ?? "unknown";
+    private static string Short(string? version) => version?.Split('+')[0] ?? Loc.Get("Common_Unknown");
+
+    /// <summary>"2.0.0-alpha.6 (fa7c9e9)" from "2.0.0-alpha.6+fa7c9e9…".</summary>
+    private static string WithCommit(string? version) =>
+        version?.Split('+') is [string number, string commit] ? $"{number} ({commit[..Math.Min(7, commit.Length)]})" : Short(version);
 
     private async void ServiceButton_Click(object sender, RoutedEventArgs e)
     {
@@ -137,7 +145,7 @@ public sealed partial class HistoryPage : Page
         busy = false;
         if (error is not null)
         {
-            await new ContentDialog { XamlRoot = XamlRoot, Title = "Background recording not turned on", Content = error, CloseButtonText = "OK" }.ShowAsync();
+            await new ContentDialog { XamlRoot = XamlRoot, Title = Loc.Get("Service_NotTurnedOn"), Content = error, CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();
         }
         await LoadAsync();
     }
@@ -173,10 +181,10 @@ public sealed partial class HistoryPage : Page
         if ((source.DataContext as ConnectionLogSlot ?? (source as ListViewItem)?.Content as ConnectionLogSlot) is not { } slot) return;
         ConnectionList.SelectedItem = slot;
         var menu = new MenuFlyout();
-        var copy = new MenuFlyoutItem { Text = "Copy remote host", Icon = new FontIcon { Glyph = "" } };
+        var copy = new MenuFlyoutItem { Text = Loc.Get("Menu_CopyRemoteHost"), Icon = new FontIcon { Glyph = "" } };
         copy.Click += (_, _) => ProcessActions.CopyText(slot.Remote);
         menu.Items.Add(copy);
-        var location = new MenuFlyoutItem { Text = "Open file location", Icon = new FontIcon { Glyph = "" }, IsEnabled = slot.Path.Length > 0 };
+        var location = new MenuFlyoutItem { Text = Loc.Get("Menu_OpenLocation"), Icon = new FontIcon { Glyph = "" }, IsEnabled = slot.Path.Length > 0 };
         location.Click += (_, _) => ProcessActions.OpenFileLocation(slot.Path);
         menu.Items.Add(location);
         if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);

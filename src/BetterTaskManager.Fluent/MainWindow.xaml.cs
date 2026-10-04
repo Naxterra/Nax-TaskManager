@@ -1,3 +1,4 @@
+using BetterTaskManager.Fluent.Services;
 using BetterTaskManager.Fluent.Views;
 using Microsoft.UI;
 using Microsoft.UI.Input;
@@ -47,7 +48,7 @@ public sealed partial class MainWindow : Window
         App.Monitor.Updated += snapshot =>
         {
             ElevationBar.Message = snapshot.System.PerProcessNetworkFromService
-                ? "System process details need administrator rights. Per-app network speed comes from the History service."
+                ? Loc.Get("Limited_FeedMessage")
                 : limitedMessage;
         };
         ApplyTheme(App.Settings.Theme);

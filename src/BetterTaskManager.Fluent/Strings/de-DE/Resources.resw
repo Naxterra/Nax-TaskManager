@@ -4,6 +4,287 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="SpikeTitle.Text" xml:space="preserve"><value>Verlauf DE</value></data>
-  <data name="Spike" xml:space="preserve"><value>Verlauf DE</value></data>
+  <data name="MainWindow_1.PlaceholderText" xml:space="preserve"><value>Nach Name, Herausgeber oder PID suchen</value></data>
+  <data name="MainWindow_2.Content" xml:space="preserve"><value>Prozesse</value></data>
+  <data name="MainWindow_2.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Prozesse (Strg+1)</value></data>
+  <data name="MainWindow_3.Content" xml:space="preserve"><value>Leistung</value></data>
+  <data name="MainWindow_3.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Leistung (Strg+2)</value></data>
+  <data name="MainWindow_4.Content" xml:space="preserve"><value>Netzwerk</value></data>
+  <data name="MainWindow_4.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Netzwerk (Strg+3)</value></data>
+  <data name="MainWindow_5.Content" xml:space="preserve"><value>Verlauf</value></data>
+  <data name="MainWindow_5.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Verlauf (Strg+4)</value></data>
+  <data name="MainWindow_6.Title" xml:space="preserve"><value>Eingeschränkter Modus</value></data>
+  <data name="MainWindow_6.Message" xml:space="preserve"><value>Netzwerkgeschwindigkeit pro App und Details zu Systemprozessen erfordern Administratorrechte.</value></data>
+  <data name="MainWindow_7.Content" xml:space="preserve"><value>Als Administrator neu starten</value></data>
+  <data name="HistoryPage_1.Text" xml:space="preserve"><value>Verlauf</value></data>
+  <data name="HistoryPage_2.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Zeigt, welche Namen jede App abgefragt hat (vom Verlaufsdienst aufgezeichnet)</value></data>
+  <data name="HistoryPage_3.Text" xml:space="preserve"><value>DNS-Abfragen</value></data>
+  <data name="HistoryPage_4.Content" xml:space="preserve"><value>Heute</value></data>
+  <data name="HistoryPage_5.Content" xml:space="preserve"><value>Letzte 7 Tage</value></data>
+  <data name="HistoryPage_6.Content" xml:space="preserve"><value>Letzte 30 Tage</value></data>
+  <data name="HistoryPage_7.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Aktualisieren</value></data>
+  <data name="HistoryPage_8.Text" xml:space="preserve"><value>App</value></data>
+  <data name="HistoryPage_9.Text" xml:space="preserve"><value>Datenmenge</value></data>
+  <data name="HistoryPage_10.Text" xml:space="preserve"><value>Begonnen</value></data>
+  <data name="HistoryPage_11.Text" xml:space="preserve"><value>App</value></data>
+  <data name="HistoryPage_12.Text" xml:space="preserve"><value>Remotehost</value></data>
+  <data name="HistoryPage_13.Text" xml:space="preserve"><value>Protokoll</value></data>
+  <data name="HistoryPage_14.Text" xml:space="preserve"><value>Daten</value></data>
+  <data name="NetworkPage_1.Text" xml:space="preserve"><value>Netzwerk</value></data>
+  <data name="NetworkPage_2.Label" xml:space="preserve"><value>Nur aktive Verbindungen</value></data>
+  <data name="NetworkPage_3.Label" xml:space="preserve"><value>Netzwerk sperren</value></data>
+  <data name="NetworkPage_4.Label" xml:space="preserve"><value>Anhalten</value></data>
+  <data name="NetworkPage_5.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Name sortieren</value></data>
+  <data name="NetworkPage_6.Text" xml:space="preserve"><value>App / Protokoll</value></data>
+  <data name="NetworkPage_7.Text" xml:space="preserve"><value>Lokale Adresse</value></data>
+  <data name="NetworkPage_8.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Remotehost sortieren</value></data>
+  <data name="NetworkPage_9.Text" xml:space="preserve"><value>Remotehost</value></data>
+  <data name="NetworkPage_10.Text" xml:space="preserve"><value>Bereich</value></data>
+  <data name="NetworkPage_11.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Status sortieren</value></data>
+  <data name="NetworkPage_12.Text" xml:space="preserve"><value>Status</value></data>
+  <data name="NetworkPage_13.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Daten sortieren</value></data>
+  <data name="NetworkPage_14.Text" xml:space="preserve"><value>Daten (ab / auf)</value></data>
+  <data name="NetworkPage_15.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Geschwindigkeit sortieren</value></data>
+  <data name="NetworkPage_16.Text" xml:space="preserve"><value>Geschwindigkeit (ab / auf)</value></data>
+  <data name="NetworkPage_17.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Auf- oder zuklappen</value></data>
+  <data name="NetworkPage_18.Text" xml:space="preserve"><value>Gesperrt</value></data>
+  <data name="NetworkPage_19.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>VPN-Tunnel: transportiert den Datenverkehr anderer Apps verschlüsselt und wird daher nicht in die Summe aller Apps eingerechnet.</value></data>
+  <data name="NetworkPage_20.Text" xml:space="preserve"><value>VPN-Tunnel</value></data>
+  <data name="PerformancePage_1.Text" xml:space="preserve"><value>Leistung</value></data>
+  <data name="PerformancePage_2.Text" xml:space="preserve"><value>Arbeitsspeicher</value></data>
+  <data name="PerformancePage_3.Text" xml:space="preserve"><value>Netzwerk</value></data>
+  <data name="PerformancePage_4.Text" xml:space="preserve"><value>Wohin Ihr Arbeitsspeicher geht</value></data>
+  <data name="PerformancePage_5.Text" xml:space="preserve"><value>Die Arbeitsspeicher-Spalte pro App zählt nur den Speicher, der jedem Prozess allein gehört. Der Rest von „In Verwendung“ gehört Windows selbst, Treibern und Speicher, den mehrere Prozesse gemeinsam nutzen.</value></data>
+  <data name="PerformancePage_6.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Arbeitsspeicher freigeben</value></data>
+  <data name="PerformancePage_7.Text" xml:space="preserve"><value>Arbeitsspeicher freigeben</value></data>
+  <data name="PerformancePage_8.Text" xml:space="preserve"><value>App-Arbeitsspeicher trimmen</value></data>
+  <data name="PerformancePage_9.Text" xml:space="preserve"><value>Standby-Cache leeren</value></data>
+  <data name="PerformancePage_10.Text" xml:space="preserve"><value>Alle Arbeitssätze leeren</value></data>
+  <data name="ProcessesPage_1.Text" xml:space="preserve"><value>Prozesse</value></data>
+  <data name="ProcessesPage_2.Label" xml:space="preserve"><value>Task beenden</value></data>
+  <data name="ProcessesPage_3.Label" xml:space="preserve"><value>Dateipfad öffnen</value></data>
+  <data name="ProcessesPage_4.Label" xml:space="preserve"><value>Netzwerk sperren</value></data>
+  <data name="ProcessesPage_5.Label" xml:space="preserve"><value>Anhalten</value></data>
+  <data name="ProcessesPage_6.Label" xml:space="preserve"><value>Prozessstruktur beenden</value></data>
+  <data name="ProcessesPage_7.Label" xml:space="preserve"><value>Eigenschaften</value></data>
+  <data name="ProcessesPage_8.Label" xml:space="preserve"><value>Pfad kopieren</value></data>
+  <data name="ProcessesPage_9.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Name sortieren</value></data>
+  <data name="ProcessesPage_10.Text" xml:space="preserve"><value>Name</value></data>
+  <data name="ProcessesPage_11.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach CPU sortieren</value></data>
+  <data name="ProcessesPage_12.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Arbeitsspeicher sortieren</value></data>
+  <data name="ProcessesPage_13.Text" xml:space="preserve"><value>Arbeitsspeicher</value></data>
+  <data name="ProcessesPage_14.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Datei- und Geräte-E/A (Lesen + Schreiben + Sonstiges) pro Sekunde</value></data>
+  <data name="ProcessesPage_14.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Datenträger / E/A sortieren</value></data>
+  <data name="ProcessesPage_15.Text" xml:space="preserve"><value>Datenträger / E/A</value></data>
+  <data name="ProcessesPage_16.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Netzwerkgeschwindigkeit sortieren</value></data>
+  <data name="ProcessesPage_17.Text" xml:space="preserve"><value>Netzwerk</value></data>
+  <data name="ProcessesPage_18.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Offene TCP/UDP-Verbindungen und Listener</value></data>
+  <data name="ProcessesPage_18.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Verbindungen sortieren</value></data>
+  <data name="ProcessesPage_19.Text" xml:space="preserve"><value>Verbindungen</value></data>
+  <data name="ProcessesPage_20.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Herausgeber sortieren</value></data>
+  <data name="ProcessesPage_21.Text" xml:space="preserve"><value>Herausgeber</value></data>
+  <data name="ProcessesPage_22.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Pfad sortieren</value></data>
+  <data name="ProcessesPage_23.Text" xml:space="preserve"><value>Pfad</value></data>
+  <data name="ProcessesPage_24.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Ausgehender Netzwerkzugriff ist durch Nax-TaskManager gesperrt</value></data>
+  <data name="ProcessesPage_25.Text" xml:space="preserve"><value>Gesperrt</value></data>
+  <data name="SettingsPage_1.Text" xml:space="preserve"><value>Einstellungen</value></data>
+  <data name="SettingsPage_2.Text" xml:space="preserve"><value>Aktualisierungsgeschwindigkeit</value></data>
+  <data name="SettingsPage_3.Text" xml:space="preserve"><value>Wie oft Prozesse, Arbeitsspeicher und Verbindungen aktualisiert werden.</value></data>
+  <data name="SettingsPage_4.Content" xml:space="preserve"><value>Hoch (0,5 s)</value></data>
+  <data name="SettingsPage_5.Content" xml:space="preserve"><value>Normal (1 s)</value></data>
+  <data name="SettingsPage_6.Content" xml:space="preserve"><value>Niedrig (2 s)</value></data>
+  <data name="SettingsPage_7.Content" xml:space="preserve"><value>Sehr niedrig (5 s)</value></data>
+  <data name="SettingsPage_8.Text" xml:space="preserve"><value>App-Design</value></data>
+  <data name="SettingsPage_9.Text" xml:space="preserve"><value>Windows folgen oder hell bzw. dunkel erzwingen.</value></data>
+  <data name="SettingsPage_10.Content" xml:space="preserve"><value>Systemeinstellung verwenden</value></data>
+  <data name="SettingsPage_11.Content" xml:space="preserve"><value>Hell</value></data>
+  <data name="SettingsPage_12.Content" xml:space="preserve"><value>Dunkel</value></data>
+  <data name="SettingsPage_13.Text" xml:space="preserve"><value>Sprache</value></data>
+  <data name="SettingsPage_14.Text" xml:space="preserve"><value>Wirkt beim nächsten Start der App. Prozessnamen, Fenstertitel und Pfade werden nie übersetzt.</value></data>
+  <data name="SettingsPage_15.Content" xml:space="preserve"><value>Jetzt neu starten</value></data>
+  <data name="SettingsPage_16.Content" xml:space="preserve"><value>Systemeinstellung verwenden</value></data>
+  <data name="SettingsPage_17.Content" xml:space="preserve"><value>English</value></data>
+  <data name="SettingsPage_18.Content" xml:space="preserve"><value>Deutsch</value></data>
+  <data name="SettingsPage_19.Content" xml:space="preserve"><value>Als Administrator neu starten</value></data>
+  <data name="SettingsPage_20.Text" xml:space="preserve"><value>Verlauf</value></data>
+  <data name="SettingsPage_21.Text" xml:space="preserve"><value>Im Hintergrund aufzeichnen</value></data>
+  <data name="SettingsPage_22.OnContent" xml:space="preserve"><value>Ein</value></data>
+  <data name="SettingsPage_22.OffContent" xml:space="preserve"><value>Aus</value></data>
+  <data name="SettingsPage_23.Text" xml:space="preserve"><value>Ein Windows-Dienst zeichnet 30 Tage lang auf, welche Apps sich mit welchen Hosts verbinden und wie viele Daten sie senden und empfangen. Solange er läuft, zeigt die App die Netzwerkgeschwindigkeit pro App auch ohne Administratorrechte. Der Verlauf bleibt auf diesem PC unter C:\ProgramData\NaxTaskManager. Jedes Benutzerkonto auf diesem PC kann ihn lesen; nur Administratoren können ihn ändern. Beim Ausschalten bleibt der bisherige Verlauf erhalten.</value></data>
+  <data name="SettingsPage_24.Text" xml:space="preserve"><value>Info</value></data>
+  <data name="SettingsPage_25.Text" xml:space="preserve"><value>Die Arbeitsspeicherwerte stammen aus denselben Zählern für private Arbeitssätze wie im Task-Manager. „Netzwerk sperren“ setzt Filter der Windows-Filterplattform, die auch wirken, wenn eine andere Firewall (z. B. Bitdefender) die Windows-Firewall verwaltet.</value></data>
+  <data name="SettingsPage_26.Content" xml:space="preserve"><value>Einstellungsordner öffnen</value></data>
+  <data name="Limited_FeedMessage" xml:space="preserve"><value>Details zu Systemprozessen erfordern Administratorrechte. Die Netzwerkgeschwindigkeit pro App liefert der Verlaufsdienst.</value></data>
+  <data name="Common_ExitCode" xml:space="preserve"><value>Exitcode {0}.</value></data>
+  <data name="Common_OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Abbrechen</value></data>
+  <data name="Common_Unknown" xml:space="preserve"><value>unbekannt</value></data>
+  <data name="Common_Connections" xml:space="preserve"><value>{0} Verbindungen</value></data>
+  <data name="Common_OneConnection" xml:space="preserve"><value>1 Verbindung</value></data>
+  <data name="Uac_CancelledNothing" xml:space="preserve"><value>Die Administratorfreigabe wurde abgebrochen. Es wurde nichts geändert.</value></data>
+  <data name="Uac_CancelledFirewall" xml:space="preserve"><value>Die Administratorfreigabe wurde abgebrochen. Der Netzwerkzugriff wurde nicht geändert.</value></data>
+  <data name="Firewall_Failed" xml:space="preserve"><value>Sperren oder Zulassen ist fehlgeschlagen (Code {0}).</value></data>
+  <data name="Firewall_AllowShort" xml:space="preserve"><value>Netzwerk zulassen</value></data>
+  <data name="Firewall_BlockShort" xml:space="preserve"><value>Netzwerk sperren</value></data>
+  <data name="Firewall_Allow" xml:space="preserve"><value>Netzwerkzugriff zulassen</value></data>
+  <data name="Firewall_Block" xml:space="preserve"><value>Netzwerkzugriff sperren</value></data>
+  <data name="Firewall_ConfirmTitle" xml:space="preserve"><value>Netzwerkzugriff sperren?</value></data>
+  <data name="Firewall_ConfirmText" xml:space="preserve"><value>Sperrt alle ausgehenden Verbindungen dieses Programms, auch wenn eine andere Firewall die Windows-Firewall verwaltet:
+{0}</value></data>
+  <data name="Firewall_BlockButton" xml:space="preserve"><value>Sperren</value></data>
+  <data name="Firewall_NotChanged" xml:space="preserve"><value>Netzwerkzugriff nicht geändert</value></data>
+  <data name="History_ReadError" xml:space="preserve"><value>Der Verlauf konnte nicht gelesen werden: {0}</value></data>
+  <data name="History_RecordingSaved" xml:space="preserve"><value>Zeichnet im Hintergrund auf · zuletzt gespeichert {0}</value></data>
+  <data name="History_Recording" xml:space="preserve"><value>Zeichnet im Hintergrund auf</value></data>
+  <data name="History_OffWithData" xml:space="preserve"><value>Hintergrundaufzeichnung ist aus · zeigt früheren Verlauf</value></data>
+  <data name="History_Off" xml:space="preserve"><value>Hintergrundaufzeichnung ist aus</value></data>
+  <data name="History_ServiceStopped" xml:space="preserve"><value>Der Verlaufsdienst läuft nicht</value></data>
+  <data name="History_AllApps" xml:space="preserve"><value>Alle Apps</value></data>
+  <data name="History_VpnExcluded" xml:space="preserve"><value> · ohne VPN</value></data>
+  <data name="History_TunnelNotInTotal" xml:space="preserve"><value> · VPN, nicht gezählt</value></data>
+  <data name="History_LatestConnections" xml:space="preserve"><value>Neueste {0} Verbindungen</value></data>
+  <data name="History_TimeDetail" xml:space="preserve"><value>Zuerst gesehen {0}
+Zuletzt gesehen {1}
+Dauer {2}</value></data>
+  <data name="History_EmptyNothing" xml:space="preserve"><value>Es wurde noch nichts aufgezeichnet.</value></data>
+  <data name="History_EmptySearch" xml:space="preserve"><value>Keine Verbindungen passen zur Suche.</value></data>
+  <data name="History_EmptyPeriod" xml:space="preserve"><value>Keine Verbindungen in diesem Zeitraum.</value></data>
+  <data name="Remote_Reverse" xml:space="preserve"><value>{0}
+Name aus Reverse-DNS; kann der Hosting-Anbieter statt des Dienstes sein</value></data>
+  <data name="Remote_Lookup" xml:space="preserve"><value>{0}
+Name, den die App abgefragt hat</value></data>
+  <data name="Remote_UdpNone" xml:space="preserve"><value>UDP-Sockets haben keine feste Gegenstelle</value></data>
+  <data name="Dns_NoAddresses" xml:space="preserve"><value>keine Adressen</value></data>
+  <data name="Dns_Detail" xml:space="preserve"><value>DNS-Abfrage der App
+Antwort: {0}</value></data>
+  <data name="Dns_Lookup" xml:space="preserve"><value>DNS-Abfrage</value></data>
+  <data name="Scope_Inbound" xml:space="preserve"><value> · eingehend</value></data>
+  <data name="Scope_ThisPc" xml:space="preserve"><value>Dieser PC</value></data>
+  <data name="Scope_Internet" xml:space="preserve"><value>Internet</value></data>
+  <data name="Scope_Lan" xml:space="preserve"><value>LAN</value></data>
+  <data name="Scope_Multicast" xml:space="preserve"><value>Multicast</value></data>
+  <data name="Scope_LinkLocal" xml:space="preserve"><value>Link-lokal</value></data>
+  <data name="State_Established" xml:space="preserve"><value>Hergestellt</value></data>
+  <data name="State_Listening" xml:space="preserve"><value>Abhörend</value></data>
+  <data name="State_TimeWait" xml:space="preserve"><value>Wartend</value></data>
+  <data name="State_CloseWait" xml:space="preserve"><value>Schließen wartend</value></data>
+  <data name="State_Closed" xml:space="preserve"><value>Geschlossen</value></data>
+  <data name="State_Closing" xml:space="preserve"><value>Schließend</value></data>
+  <data name="State_SynSent" xml:space="preserve"><value>SYN gesendet</value></data>
+  <data name="State_SynReceived" xml:space="preserve"><value>SYN empfangen</value></data>
+  <data name="State_FinWait1" xml:space="preserve"><value>FIN-Warten 1</value></data>
+  <data name="State_FinWait2" xml:space="preserve"><value>FIN-Warten 2</value></data>
+  <data name="State_LastAck" xml:space="preserve"><value>Letzte Bestätigung</value></data>
+  <data name="State_DeleteTcb" xml:space="preserve"><value>TCB löschen</value></data>
+  <data name="State_Answered" xml:space="preserve"><value>Beantwortet</value></data>
+  <data name="State_NoAnswer" xml:space="preserve"><value>Keine Antwort</value></data>
+  <data name="Name_OperatingSystem" xml:space="preserve"><value>Betriebssystem</value></data>
+  <data name="Name_ServiceHost" xml:space="preserve"><value>Diensthost: </value></data>
+  <data name="Name_ExitedPrefix" xml:space="preserve"><value>Beendeter Prozess (PID </value></data>
+  <data name="Network_Closing" xml:space="preserve"><value>Schließende Verbindungen (kein Besitzerprozess)</value></data>
+  <data name="Network_GroupSummary" xml:space="preserve"><value>{0} hergestellt · {1} abhörend · {2} andere</value></data>
+  <data name="Network_AllApps" xml:space="preserve"><value> · alle Apps ↓ {0} ↑ {1}</value></data>
+  <data name="Network_VpnNotCounted" xml:space="preserve"><value> (ohne VPN-Tunnel)</value></data>
+  <data name="Network_NeedsAdmin" xml:space="preserve"><value> · Geschwindigkeit pro App braucht Administratorrechte oder den Verlaufsdienst</value></data>
+  <data name="Network_Summary" xml:space="preserve"><value>{0} Verbindungen · {1} hergestellt · {2} Apps angezeigt</value></data>
+  <data name="Network_FromService" xml:space="preserve"><value> · gemessen vom Verlaufsdienst</value></data>
+  <data name="Network_TablesFailed" xml:space="preserve"><value> · einige Netzwerktabellen konnten nicht gelesen werden</value></data>
+  <data name="Header_Paused" xml:space="preserve"><value>Pausiert</value></data>
+  <data name="Header_Admin" xml:space="preserve"><value>Admin</value></data>
+  <data name="Bandwidth_TooltipService" xml:space="preserve"><value>Aktuelles Senden + Empfangen pro App, gemessen vom Nax-TaskManager-Verlaufsdienst (ohne Loopback)</value></data>
+  <data name="Bandwidth_TooltipKernel" xml:space="preserve"><value>Aktuelles Senden + Empfangen pro App, gemessen aus den TCP/IP-Ereignissen des Kernels (ohne Loopback)</value></data>
+  <data name="Bandwidth_UseRestart" xml:space="preserve"><value> Verwenden Sie „Als Administrator neu starten“.</value></data>
+  <data name="Status_NeedsAdmin" xml:space="preserve"><value>Die Netzwerkgeschwindigkeit pro App erfordert Administratorrechte.</value></data>
+  <data name="Status_Restarting" xml:space="preserve"><value>Die Netzwerkaufzeichnung wurde von einem anderen Programm beendet; sie wird neu gestartet.</value></data>
+  <data name="Status_FromService" xml:space="preserve"><value>Gemessen vom Nax-TaskManager-Verlaufsdienst</value></data>
+  <data name="Status_Running" xml:space="preserve"><value>Läuft</value></data>
+  <data name="Status_NotStarted" xml:space="preserve"><value>Nicht gestartet</value></data>
+  <data name="Status_StartFailed" xml:space="preserve"><value>Die Netzwerkaufzeichnung konnte nicht gestartet werden: {0}</value></data>
+  <data name="Status_Stopped" xml:space="preserve"><value>Netzwerkaufzeichnung beendet: {0}</value></data>
+  <data name="Section_Apps" xml:space="preserve"><value>Apps</value></data>
+  <data name="Section_Background" xml:space="preserve"><value>Hintergrundprozesse</value></data>
+  <data name="Service_UpdateTitle" xml:space="preserve"><value>Verlaufsdienst aktualisieren</value></data>
+  <data name="Service_UpdateMessage" xml:space="preserve"><value>Der laufende Dienst ist {0}; diese App bringt {1} mit. Die Aufzeichnung läuft während der Aktualisierung weiter.</value></data>
+  <data name="Service_Update" xml:space="preserve"><value>Aktualisieren</value></data>
+  <data name="Service_OffMessage" xml:space="preserve"><value>Ein kleiner Windows-Dienst kann aufzeichnen, welche Apps sich wohin verbinden und wie viele Daten sie nutzen – auch während dieses Fenster geschlossen ist. Der Verlauf wird 30 Tage aufbewahrt.</value></data>
+  <data name="Service_TurnOn" xml:space="preserve"><value>Einschalten</value></data>
+  <data name="Service_StoppedMessage" xml:space="preserve"><value>Bis er wieder läuft, wird nichts aufgezeichnet.</value></data>
+  <data name="Service_Start" xml:space="preserve"><value>Starten</value></data>
+  <data name="Service_NotTurnedOn" xml:space="preserve"><value>Hintergrundaufzeichnung nicht eingeschaltet</value></data>
+  <data name="Service_NotTurnedOff" xml:space="preserve"><value>Hintergrundaufzeichnung nicht ausgeschaltet</value></data>
+  <data name="Menu_CopyRemoteHost" xml:space="preserve"><value>Remotehost kopieren</value></data>
+  <data name="Menu_CopyRemoteAddress" xml:space="preserve"><value>Remoteadresse kopieren</value></data>
+  <data name="Menu_OpenLocation" xml:space="preserve"><value>Dateipfad öffnen</value></data>
+  <data name="Mem_Apps" xml:space="preserve"><value>Apps und Prozesse</value></data>
+  <data name="Mem_AppsDesc" xml:space="preserve"><value>Speicher, der jedem Prozess allein gehört. Die Arbeitsspeicher-Spalte des Task-Managers ergibt zusammen diesen Wert.</value></data>
+  <data name="Mem_Kernel" xml:space="preserve"><value>Windows-Kernel</value></data>
+  <data name="Mem_KernelDesc" xml:space="preserve"><value>Datenstrukturen von Kernel und Treibern im RAM (ausgelagerter Pool im RAM plus nicht ausgelagerter Pool).</value></data>
+  <data name="Mem_Cache" xml:space="preserve"><value>Genutzter Dateicache</value></data>
+  <data name="Mem_CacheDesc" xml:space="preserve"><value>Dateidaten, die Windows gerade zum Lesen und Schreiben eingeblendet hat.</value></data>
+  <data name="Mem_Drivers" xml:space="preserve"><value>Treibercode</value></data>
+  <data name="Mem_DriversDesc" xml:space="preserve"><value>Geladener Code von Kernelmodustreibern.</value></data>
+  <data name="Mem_Shared" xml:space="preserve"><value>Gemeinsam genutzt und Sonstiges</value></data>
+  <data name="Mem_SharedDesc" xml:space="preserve"><value>Gemeinsam genutzter Programmcode und eingeblendete Dateien (einmal gezählt), Seitentabellen und Speicher, den Treiber direkt sperren, z. B. GPU- und VM-Treiber. Sysinternals RAMMap kann das weiter aufschlüsseln.</value></data>
+  <data name="Mem_Modified" xml:space="preserve"><value>Geändert</value></data>
+  <data name="Mem_ModifiedDesc" xml:space="preserve"><value>Geänderte Daten, die noch auf den Datenträger geschrieben werden. Danach wieder verfügbar.</value></data>
+  <data name="Mem_Standby" xml:space="preserve"><value>Standby-Cache</value></data>
+  <data name="Mem_StandbyDesc" xml:space="preserve"><value>Kürzlich genutzte Daten, die zur Beschleunigung vorgehalten werden. Windows gibt sie sofort an Apps weiter, daher zählen sie als verfügbar.</value></data>
+  <data name="Mem_Free" xml:space="preserve"><value>Frei</value></data>
+  <data name="Mem_FreeDesc" xml:space="preserve"><value>Ungenutzter Speicher.</value></data>
+  <data name="Mem_InUse" xml:space="preserve"><value>In Verwendung</value></data>
+  <data name="Mem_NotInUse" xml:space="preserve"><value>Nicht in Verwendung</value></data>
+  <data name="Mem_InUseTotal" xml:space="preserve"><value>In Verwendung · {0}</value></data>
+  <data name="Mem_NotInUseTotal" xml:space="preserve"><value>Nicht in Verwendung · {0}</value></data>
+  <data name="Cleanup_NeedsAdmin" xml:space="preserve"><value> (Administrator erforderlich)</value></data>
+  <data name="Cleanup_TrimTitle" xml:space="preserve"><value>App-Arbeitsspeicher trimmen?</value></data>
+  <data name="Cleanup_TrimText" xml:space="preserve"><value>Bittet jede App, die dieses Konto erreichen kann, nicht aktiv genutzten Speicher zurückzugeben. Nax-TaskManager selbst wird ausgelassen. „In Verwendung“ sinkt, aber die Seiten wandern nur in die Standby- oder Geändert-Liste, und Apps lesen sie bei Bedarf wieder ein, wodurch sie kurz langsamer werden können.</value></data>
+  <data name="Cleanup_TrimButton" xml:space="preserve"><value>Trimmen</value></data>
+  <data name="Cleanup_StandbyTitle" xml:space="preserve"><value>Standby-Cache leeren?</value></data>
+  <data name="Cleanup_StandbyText" xml:space="preserve"><value>Verwirft kürzlich genutzte Datei- und Programmdaten, die Windows zur Beschleunigung im RAM hält. Der freie Speicher steigt, aber die nächsten Starts und Dateizugriffe kommen wieder vom Datenträger. Standby-Speicher zählt bereits als verfügbar, daher hilft das selten einer App, der Speicher fehlt.</value></data>
+  <data name="Cleanup_StandbyButton" xml:space="preserve"><value>Leeren</value></data>
+  <data name="Cleanup_SystemTitle" xml:space="preserve"><value>Alle Arbeitssätze leeren?</value></data>
+  <data name="Cleanup_SystemText" xml:space="preserve"><value>Trimmt alle Prozesse auf einmal, einschließlich Windows-Diensten und des System-Arbeitssatzes des Kernels. Rechnen Sie mit einigen Sekunden Ruckeln, während alles wieder eingelesen wird.</value></data>
+  <data name="Cleanup_SystemButton" xml:space="preserve"><value>Leeren</value></data>
+  <data name="Cleanup_Note" xml:space="preserve"><value>Windows nutzt freien RAM absichtlich als Cache. Dies sind Werkzeuge zur Fehlerbehebung, keine regelmäßige Optimierung.</value></data>
+  <data name="Cleanup_ProtectedRefused" xml:space="preserve"><value> {0} geschützte Prozesse haben abgelehnt.</value></data>
+  <data name="Cleanup_NeedAdminCount" xml:space="preserve"><value> {0} Prozesse erfordern Administratorrechte.</value></data>
+  <data name="Cleanup_Trimmed" xml:space="preserve"><value>{0} Prozesse getrimmt.</value></data>
+  <data name="Cleanup_StandbyDone" xml:space="preserve"><value>Standby-Cache geleert.</value></data>
+  <data name="Cleanup_SystemDone" xml:space="preserve"><value>Alle Arbeitssätze geleert.</value></data>
+  <data name="Cleanup_Delta" xml:space="preserve"><value> In Verwendung {0} → {1}, Standby {2} → {3}, frei {4} → {5}.</value></data>
+  <data name="Cleanup_Done" xml:space="preserve"><value>Erledigt</value></data>
+  <data name="Cleanup_NotDone" xml:space="preserve"><value>Nicht erledigt</value></data>
+  <data name="Cleanup_PrivilegeNotGranted" xml:space="preserve"><value>Windows hat diesem Prozess das Recht „Einzelnen Prozess profilieren“ nicht erteilt. Dafür sind Administratorrechte nötig.</value></data>
+  <data name="Cleanup_PrivilegeError" xml:space="preserve"><value>Das Recht „Einzelnen Prozess profilieren“ konnte nicht aktiviert werden (Fehler {0}).</value></data>
+  <data name="Cleanup_PrivilegeNotHeld" xml:space="preserve"><value>Windows hat abgelehnt: Das nötige Recht fehlt. Dafür sind Administratorrechte nötig.</value></data>
+  <data name="Cleanup_AccessDenied" xml:space="preserve"><value>Windows hat die Anfrage abgelehnt (Zugriff verweigert).</value></data>
+  <data name="Cleanup_Status" xml:space="preserve"><value>Windows meldete den Status 0x{0:X8}.</value></data>
+  <data name="Perf_Updated" xml:space="preserve"><value>Aktualisiert {0} · erfasst in {1} ms</value></data>
+  <data name="Perf_CpuDetail" xml:space="preserve"><value>{0} Prozesse · {1} Threads · {2} Handles · {3} logische Prozessoren · Betriebszeit {4}</value></data>
+  <data name="Perf_MemoryDetail" xml:space="preserve"><value>Verfügbar {0} · Im Cache {1} · Zugesichert {2} / {3}</value></data>
+  <data name="Perf_NetworkDetail" xml:space="preserve"><value>Skala {0} · {1} offene Verbindungen · Empfangen (grün) und Senden (gelb), alle aktiven Adapter</value></data>
+  <data name="Proc_Summary" xml:space="preserve"><value>{0} Prozesse · {1} Threads · {2} Handles · Betriebszeit {3}</value></data>
+  <data name="Proc_EndTask" xml:space="preserve"><value>Task beenden</value></data>
+  <data name="Proc_EndTree" xml:space="preserve"><value>Prozessstruktur beenden</value></data>
+  <data name="Proc_Properties" xml:space="preserve"><value>Eigenschaften</value></data>
+  <data name="Proc_CopyPath" xml:space="preserve"><value>Pfad kopieren</value></data>
+  <data name="Proc_CriticalTitle" xml:space="preserve"><value>Kritischen Systemprozess beenden?</value></data>
+  <data name="Proc_CriticalText" xml:space="preserve"><value>Windows kennzeichnet „{0}“ als kritisch. Wird er beendet, stürzt Windows sofort ab oder startet neu, und ungespeicherte Arbeit geht verloren.</value></data>
+  <data name="Proc_EndAnyway" xml:space="preserve"><value>Trotzdem beenden</value></data>
+  <data name="Proc_TreeTitle" xml:space="preserve"><value>„{0}“ und alles, was es gestartet hat, beenden?</value></data>
+  <data name="Proc_TreeText" xml:space="preserve"><value>Beim Beenden der Prozessstruktur werden auch alle untergeordneten Prozesse beendet – auch unabhängige Apps, die daraus gestartet wurden.</value></data>
+  <data name="Proc_RestartHint" xml:space="preserve"><value>Als Administrator neu gestartet können mehr Prozesse beendet werden.</value></data>
+  <data name="Proc_CouldNotEnd" xml:space="preserve"><value>„{0}“ konnte nicht beendet werden</value></data>
+  <data name="Settings_Elevated" xml:space="preserve"><value>Läuft als Administrator</value></data>
+  <data name="Settings_Standard" xml:space="preserve"><value>Läuft als Standardbenutzer</value></data>
+  <data name="Settings_ElevatedText" xml:space="preserve"><value>Alle Prozesse zeigen Pfad, Herausgeber und Symbol, die Netzwerkgeschwindigkeit pro App wird gemessen, und Sperren braucht keine zusätzliche Bestätigung.</value></data>
+  <data name="Settings_StandardText" xml:space="preserve"><value>Systemprozesse zeigen keinen Pfad, Herausgeber und kein Symbol, die Netzwerkgeschwindigkeit pro App braucht den Verlaufsdienst, und jedes Sperren oder Zulassen fragt nach Administratorfreigabe.</value></data>
+  <data name="Settings_HistoryOld" xml:space="preserve"><value>Ein, aber der Dienst ist älter als diese App. Auf der Verlaufsseite „Aktualisieren“ wählen.</value></data>
+  <data name="Settings_HistoryOn" xml:space="preserve"><value>Ein. Zeichnet auf, solange Windows läuft – auch bei geschlossenem Fenster.</value></data>
+  <data name="Settings_HistoryOff" xml:space="preserve"><value>Aus.</value></data>
+  <data name="Settings_HistoryOffUac" xml:space="preserve"><value>Aus. Beim Einschalten wird einmal nach Administratorfreigabe gefragt.</value></data>
+  <data name="Settings_HistoryStarting" xml:space="preserve"><value>Startet…</value></data>
+  <data name="Settings_HistoryNotRunning" xml:space="preserve"><value>Installiert, aber der Dienst läuft nicht.</value></data>
+  <data name="Settings_TurningOn" xml:space="preserve"><value>Wird eingeschaltet…</value></data>
+  <data name="Settings_TurningOff" xml:space="preserve"><value>Wird ausgeschaltet…</value></data>
 </root>

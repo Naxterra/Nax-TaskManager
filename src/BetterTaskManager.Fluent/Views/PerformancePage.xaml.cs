@@ -14,14 +14,14 @@ public sealed partial class PerformancePage : Page
 
     private static readonly Segment[] Segments =
     [
-        new("Apps and processes", "Memory private to each process. Task Manager's per-app Memory column adds up to this.", "MemoryAppsBrush", m => m.ProcessPrivate, true),
-        new("Windows kernel", "Kernel and driver data structures held in RAM (paged pool in RAM plus non-paged pool).", "MemoryKernelBrush", m => m.KernelPools, true),
-        new("File cache in use", "File data Windows currently has mapped for reading and writing.", "MemoryCacheBrush", m => m.FileCache, true),
-        new("Driver code", "Loaded kernel-mode driver code.", "MemoryDriversBrush", m => m.Drivers, true),
-        new("Shared and other", "Shared program code and mapped files (counted once), page tables, and memory drivers lock directly, for example GPU and VM drivers. Sysinternals RAMMap can split this further.", "MemoryOtherBrush", m => m.Unattributed, true),
-        new("Modified", "Changed data waiting to be written to disk. Becomes available afterwards.", "MemoryModifiedBrush", m => m.Modified, false),
-        new("Standby cache", "Recently used data kept for speed. Windows hands it to apps immediately, so it counts as available.", "MemoryStandbyBrush", m => m.Standby, false),
-        new("Free", "Unused memory.", "MemoryFreeBrush", m => m.Free, false)
+        new(Loc.Get("Mem_Apps"), Loc.Get("Mem_AppsDesc"), "MemoryAppsBrush", m => m.ProcessPrivate, true),
+        new(Loc.Get("Mem_Kernel"), Loc.Get("Mem_KernelDesc"), "MemoryKernelBrush", m => m.KernelPools, true),
+        new(Loc.Get("Mem_Cache"), Loc.Get("Mem_CacheDesc"), "MemoryCacheBrush", m => m.FileCache, true),
+        new(Loc.Get("Mem_Drivers"), Loc.Get("Mem_DriversDesc"), "MemoryDriversBrush", m => m.Drivers, true),
+        new(Loc.Get("Mem_Shared"), Loc.Get("Mem_SharedDesc"), "MemoryOtherBrush", m => m.Unattributed, true),
+        new(Loc.Get("Mem_Modified"), Loc.Get("Mem_ModifiedDesc"), "MemoryModifiedBrush", m => m.Modified, false),
+        new(Loc.Get("Mem_Standby"), Loc.Get("Mem_StandbyDesc"), "MemoryStandbyBrush", m => m.Standby, false),
+        new(Loc.Get("Mem_Free"), Loc.Get("Mem_FreeDesc"), "MemoryFreeBrush", m => m.Free, false)
     ];
 
     private readonly List<(Segment Segment, TextBlock Value, ColumnDefinition Column)> parts = new();
@@ -35,7 +35,7 @@ public sealed partial class PerformancePage : Page
             foreach (MenuFlyoutItem item in new[] { StandbyItem, SystemItem })
             {
                 item.IsEnabled = false;
-                item.Text += " (needs administrator)";
+                item.Text += Loc.Get("Cleanup_NeedsAdmin");
             }
         }
     }
@@ -44,17 +44,9 @@ public sealed partial class PerformancePage : Page
 
     private static readonly Dictionary<string, CleanupAction> CleanupActions = new()
     {
-        ["Trim"] = new("Trim app memory?",
-            "Asks every app this account can reach to give back the memory it is not actively using. Nax-TaskManager itself is skipped. " +
-            "\"In use\" drops, but the pages only move to the standby or modified list, and apps read them back in as they need them, which can make them briefly slower.",
-            "Trim"),
-        ["Standby"] = new("Clear the standby cache?",
-            "Discards recently used file and program data that Windows keeps in RAM for speed. Free memory goes up, but the next launches and file reads come from disk again. " +
-            "Standby memory already counts as available, so this rarely helps an app that is short of memory.",
-            "Clear"),
-        ["System"] = new("Empty all working sets?",
-            "Trims every process at once, including Windows services and the kernel's system working set. Expect stutter for a few seconds while everything pages back in.",
-            "Empty")
+        ["Trim"] = new(Loc.Get("Cleanup_TrimTitle"), Loc.Get("Cleanup_TrimText"), Loc.Get("Cleanup_TrimButton")),
+        ["Standby"] = new(Loc.Get("Cleanup_StandbyTitle"), Loc.Get("Cleanup_StandbyText"), Loc.Get("Cleanup_StandbyButton")),
+        ["System"] = new(Loc.Get("Cleanup_SystemTitle"), Loc.Get("Cleanup_SystemText"), Loc.Get("Cleanup_SystemButton"))
     };
 
     private async void Cleanup_Click(object sender, RoutedEventArgs e)
@@ -66,11 +58,11 @@ public sealed partial class PerformancePage : Page
             Title = action.Title,
             Content = new TextBlock
             {
-                Text = action.Explanation + "\n\nWindows uses spare RAM as cache on purpose. These are troubleshooting tools, not routine optimisation.",
+                Text = action.Explanation + "\n\n" + Loc.Get("Cleanup_Note"),
                 TextWrapping = TextWrapping.Wrap
             },
             PrimaryButtonText = action.Button,
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.Get("Common_Cancel"),
             DefaultButton = ContentDialogButton.Close
         };
         if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
@@ -83,12 +75,12 @@ public sealed partial class PerformancePage : Page
             {
                 TrimResult trim = MemoryCleanup.TrimAllWorkingSets(Environment.ProcessId);
                 string refused = trim.Denied == 0 ? "" : App.Monitor.IsElevated
-                    ? $" {trim.Denied} protected processes refused."
-                    : $" {trim.Denied} processes need administrator rights.";
-                return (true, $"Trimmed {Format.Count(trim.Trimmed)} processes.{refused}");
+                    ? Loc.F("Cleanup_ProtectedRefused", trim.Denied)
+                    : Loc.F("Cleanup_NeedAdminCount", trim.Denied);
+                return (true, Loc.F("Cleanup_Trimmed", Format.Count(trim.Trimmed)) + refused);
             }),
-            "Standby" => ToTuple(await Task.Run(MemoryCleanup.PurgeStandbyList)),
-            _ => ToTuple(await Task.Run(MemoryCleanup.EmptySystemWorkingSets))
+            "Standby" => ToTuple(await Task.Run(MemoryCleanup.PurgeStandbyList), "Cleanup_StandbyDone"),
+            _ => ToTuple(await Task.Run(MemoryCleanup.EmptySystemWorkingSets), "Cleanup_SystemDone")
         };
 
         // Let the monitor take a fresh sample so the effect is measured, not guessed.
@@ -97,17 +89,17 @@ public sealed partial class PerformancePage : Page
         MemoryBreakdown? after = App.Monitor.Latest?.System.Memory;
         if (succeeded && before is not null && after is not null)
         {
-            message += $" In use {Format.Gigabytes(before.InUse)} → {Format.Gigabytes(after.InUse)}, " +
-                $"standby {Format.Gigabytes(before.Standby)} → {Format.Gigabytes(after.Standby)}, " +
-                $"free {Format.Gigabytes(before.Free)} → {Format.Gigabytes(after.Free)}.";
+            message += Loc.F("Cleanup_Delta", Format.Gigabytes(before.InUse), Format.Gigabytes(after.InUse),
+                Format.Gigabytes(before.Standby), Format.Gigabytes(after.Standby),
+                Format.Gigabytes(before.Free), Format.Gigabytes(after.Free));
         }
         CleanupBar.Severity = succeeded ? InfoBarSeverity.Success : InfoBarSeverity.Error;
-        CleanupBar.Title = succeeded ? "Done" : "Not done";
+        CleanupBar.Title = succeeded ? Loc.Get("Cleanup_Done") : Loc.Get("Cleanup_NotDone");
         CleanupBar.Message = message;
         CleanupBar.IsOpen = true;
         CleanupButton.IsEnabled = true;
 
-        static (bool, string) ToTuple(CleanupResult result) => (result.Succeeded, result.Message);
+        static (bool, string) ToTuple(CleanupResult result, string doneKey) => (result.Succeeded, result.Succeeded ? Loc.Get(doneKey) : Loc.CleanupFailure(result));
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -150,8 +142,8 @@ public sealed partial class PerformancePage : Page
             parts.Add((segment, value, column));
         }
 
-        InUseLegend.Children.Insert(0, new TextBlock { Text = "In use", Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"], Name = "InUseHeader" });
-        AvailableLegend.Children.Insert(0, new TextBlock { Text = "Not in use", Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"], Name = "AvailableHeader" });
+        InUseLegend.Children.Insert(0, new TextBlock { Text = Loc.Get("Mem_InUse"), Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"], Name = "InUseHeader" });
+        AvailableLegend.Children.Insert(0, new TextBlock { Text = Loc.Get("Mem_NotInUse"), Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"], Name = "AvailableHeader" });
     }
 
     private void OnUpdated(MonitorSnapshot snapshot)
@@ -160,25 +152,24 @@ public sealed partial class PerformancePage : Page
         MemoryBreakdown memory = system.Memory;
         MonitorHost monitor = App.Monitor;
 
-        SummaryText.Text = $"Updated {snapshot.Timestamp:T} · collected in {snapshot.CollectionTime.TotalMilliseconds:0} ms";
+        SummaryText.Text = Loc.F("Perf_Updated", snapshot.Timestamp.ToString("T"), snapshot.CollectionTime.TotalMilliseconds.ToString("0"));
 
         CpuValue.Text = system.CpuSampled ? Format.WholePercent(system.CpuPercent) : "…";
         CpuChart.Update(monitor.CpuHistory, 100);
-        CpuDetail.Text = $"{Format.Count(system.ProcessCount)} processes · {Format.Count(system.ThreadCount)} threads · " +
-            $"{Format.Count(system.HandleCount)} handles · {Environment.ProcessorCount} logical processors · up {Format.Duration(system.Uptime)}";
+        CpuDetail.Text = Loc.F("Perf_CpuDetail", Format.Count(system.ProcessCount), Format.Count(system.ThreadCount),
+            Format.Count(system.HandleCount), Environment.ProcessorCount, Format.Duration(system.Uptime));
 
         MemoryValue.Text = $"{Format.Gigabytes(memory.InUse)} / {Format.Gigabytes(memory.Total)} ({Format.WholePercent(memory.LoadPercent)})";
         MemoryChart.Update(monitor.MemoryHistory, 100);
-        MemoryDetail.Text = $"Available {Format.Gigabytes(memory.Available)} · Cached {Format.Gigabytes(memory.Standby + memory.Modified)} · " +
-            $"Committed {Format.Gigabytes(memory.CommitTotal)} / {Format.Gigabytes(memory.CommitLimit)}";
+        MemoryDetail.Text = Loc.F("Perf_MemoryDetail", Format.Gigabytes(memory.Available), Format.Gigabytes(memory.Standby + memory.Modified),
+            Format.Gigabytes(memory.CommitTotal), Format.Gigabytes(memory.CommitLimit));
 
         NetworkValue.Text = system.NetworkSampled
             ? $"↓ {Format.NetworkRate(system.NetworkReceiveBytesPerSecond)}   ↑ {Format.NetworkRate(system.NetworkSendBytesPerSecond)}"
             : "…";
         double networkMax = Math.Max(Math.Max(monitor.ReceiveHistory.Max(), monitor.SendHistory.Max()) * 1.15, 125_000);
         NetworkChart.Update(monitor.ReceiveHistory, networkMax, monitor.SendHistory);
-        NetworkDetail.Text = $"Scale {Format.NetworkRate(networkMax)} · {Format.Count(snapshot.Connections.Count)} open connections · " +
-            "receive (green) and send (amber), all active adapters";
+        NetworkDetail.Text = Loc.F("Perf_NetworkDetail", Format.NetworkRate(networkMax), Format.Count(snapshot.Connections.Count));
 
         foreach (var (segment, value, column) in parts)
         {
@@ -186,10 +177,10 @@ public sealed partial class PerformancePage : Page
             value.Text = Format.Gigabytes(bytes);
             column.Width = new GridLength(Math.Max(0, bytes), GridUnitType.Star);
         }
-        if (InUseLegend.Children[0] is TextBlock inUseHeader) inUseHeader.Text = $"In use · {Format.Gigabytes(memory.InUse)}";
+        if (InUseLegend.Children[0] is TextBlock inUseHeader) inUseHeader.Text = Loc.F("Mem_InUseTotal", Format.Gigabytes(memory.InUse));
         if (AvailableLegend.Children[0] is TextBlock availableHeader)
         {
-            availableHeader.Text = $"Not in use · {Format.Gigabytes(memory.Modified + memory.Standby + memory.Free)}";
+            availableHeader.Text = Loc.F("Mem_NotInUseTotal", Format.Gigabytes(memory.Modified + memory.Standby + memory.Free));
         }
     }
 }

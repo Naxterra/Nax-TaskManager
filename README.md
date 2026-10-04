@@ -10,7 +10,7 @@ Built with WinUI 3 (Fluent design) on .NET 11. Formerly *Better Task Manager*.
 - **Memory that reconciles** — the Memory column is the private working set, the same figure Task Manager shows. The Performance page splits "In use" into apps, kernel, file cache, drivers and shared memory so the parts add up, and offers *Free up memory* (trim app memory, clear standby cache, empty all working sets) as troubleshooting tools.
 - **Network** — every connection grouped by app with remote host names (from the Windows DNS cache, live DNS events, or reverse DNS), per-connection speed, total data per app, sorting, search and pause.
 - **History** — an optional background service records connections and traffic per app for 30 days, and lets the app show per-app network speed without administrator rights.
-- Light and dark theme, Mica, keyboard shortcuts (Ctrl+1–4 pages, Ctrl+F search).
+- English and German interface (follows Windows, or chosen in Settings), light and dark theme, Mica, keyboard shortcuts (Ctrl+1–4 pages, Ctrl+F search).
 
 ## Requirements
 

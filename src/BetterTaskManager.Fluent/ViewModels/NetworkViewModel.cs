@@ -168,8 +168,8 @@ public sealed class NetworkViewModel : ObservableObject
                 ConnectionSample first = group.First();
                 processes.TryGetValue(first.Pid, out ProcessSample? owner);
                 string name = owner is null || first.Pid == 0
-                    ? (first.Pid == 0 ? "Closing connections (no owning process)" : "PID " + first.Pid)
-                    : AppIdentityRules.AppName(owner);
+                    ? (first.Pid == 0 ? Loc.Get("Network_Closing") : "PID " + first.Pid)
+                    : Loc.AppName(AppIdentityRules.AppName(owner));
                 return (Key: group.Key, Name: name, Path: owner?.Path ?? "", Connections: group.ToList(), Tunnel: owner is not null && VpnTunnels.IsTunnel(owner));
             })
             .Where(group => query.Length == 0 || group.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
@@ -188,7 +188,7 @@ public sealed class NetworkViewModel : ObservableObject
             int listening = group.Connections.Count(connection => connection.State == "Listening");
             bool isExpanded = expanded.Contains(group.Key) || (query.Length > 0 && group.Connections.Count <= 50);
             traffic.TryGetValue(group.Key, out var usage);
-            string summary = $"{established} established · {listening} listening · {group.Connections.Count - established - listening} other";
+            string summary = Loc.F("Network_GroupSummary", established, listening, group.Connections.Count - established - listening);
             string data = measured && usage.Received + usage.Sent > 0 ? $"↓ {Format.Bytes(usage.Received)}   ↑ {Format.Bytes(usage.Sent)}" : "";
             string speed = measured ? Speed(usage.Down, usage.Up) : "";
             rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", "", summary, data, speed, "", true, group.Tunnel, isExpanded));
@@ -206,7 +206,7 @@ public sealed class NetworkViewModel : ObservableObject
                     connection.Protocol == "UDP" ? "*"
                         : connection.RemoteHost is { } host ? $"{host}:{connection.RemotePort}" : Endpoint(connection.RemoteAddress, connection.RemotePort),
                     ScopeText(connection),
-                    connection.State, "", "",
+                    Loc.State(connection.State), "", "",
                     measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
                         ? Speed(connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond) : "",
                     RemoteDetail(connection),
@@ -217,11 +217,11 @@ public sealed class NetworkViewModel : ObservableObject
         int totalEstablished = snapshot.Connections.Count(connection => connection.State == "Established");
         List<ProcessSample> counted = snapshot.Processes.Where(process => !VpnTunnels.IsTunnel(process)).ToList();
         string throughput = measured
-            ? $" · all apps ↓ {Format.NetworkRate(counted.Sum(p => p.NetworkReceiveBytesPerSecond))} ↑ {Format.NetworkRate(counted.Sum(p => p.NetworkSendBytesPerSecond))}" +
-              (counted.Count < snapshot.Processes.Count ? " (VPN tunnels not counted)" : "")
-            : " · per-app speed needs administrator rights or the History service";
-        Summary = $"{Format.Count(snapshot.Connections.Count)} connections · {Format.Count(totalEstablished)} established · " +
-            $"{groups.Count} apps shown" + throughput + (snapshot.System.PerProcessNetworkFromService ? " · measured by the History service" : "") + (snapshot.NetworkIssues.Count > 0 ? " · some network tables could not be read" : "");
+            ? Loc.F("Network_AllApps", Format.NetworkRate(counted.Sum(p => p.NetworkReceiveBytesPerSecond)), Format.NetworkRate(counted.Sum(p => p.NetworkSendBytesPerSecond))) +
+              (counted.Count < snapshot.Processes.Count ? Loc.Get("Network_VpnNotCounted") : "")
+            : Loc.Get("Network_NeedsAdmin");
+        Summary = Loc.F("Network_Summary", Format.Count(snapshot.Connections.Count), Format.Count(totalEstablished), groups.Count) +
+            throughput + (snapshot.System.PerProcessNetworkFromService ? Loc.Get("Network_FromService") : "") + (snapshot.NetworkIssues.Count > 0 ? Loc.Get("Network_TablesFailed") : "");
         Func<string, bool> isBlocked = monitor.IsBlocked;
         Rows.Apply(rows.Select(row => (row, isBlocked)).ToList());
     }
@@ -279,19 +279,19 @@ public sealed class NetworkViewModel : ObservableObject
     /// <summary>"Internet", "LAN · in"…; blank for listeners and UDP sockets, which have no remote side.</summary>
     private static string ScopeText(ConnectionSample connection)
     {
-        string scope = IpScopes.Label(connection.Scope);
+        string scope = Loc.Scope(IpScopes.Label(connection.Scope));
         if (scope.Length == 0) return "";
-        return connection.Inbound ? scope + " · in" : scope;
+        return connection.Inbound ? scope + Loc.Get("Scope_Inbound") : scope;
     }
 
     private static string RemoteDetail(ConnectionSample connection)
     {
-        if (connection.Protocol == "UDP") return "UDP sockets have no fixed remote side";
+        if (connection.Protocol == "UDP") return Loc.Get("Remote_UdpNone");
         string endpoint = Endpoint(connection.RemoteAddress, connection.RemotePort);
         if (connection.RemoteHost is null) return endpoint;
         return connection.RemoteHostIsReverse
-            ? $"{endpoint}\nName from reverse DNS; may be the hosting provider rather than the service"
-            : $"{endpoint}\nName the app looked up";
+            ? Loc.F("Remote_Reverse", endpoint)
+            : Loc.F("Remote_Lookup", endpoint);
     }
 
     /// <summary>Blank when idle (both directions under 0.5 kbit/s, which would print as 0) so active apps stand out.</summary>

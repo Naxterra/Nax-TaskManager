@@ -5,8 +5,10 @@ namespace BetterTaskManager.Core.Native;
 /// <summary>Outcome of trimming every process's working set.</summary>
 public readonly record struct TrimResult(int Trimmed, int Denied, int Exited, int Failed);
 
-/// <summary>Outcome of a system-wide memory list command.</summary>
-public readonly record struct CleanupResult(bool Succeeded, string Message);
+public enum CleanupFailure { None, PrivilegeNotGranted, PrivilegeError, PrivilegeNotHeld, AccessDenied, Status }
+
+/// <summary>Outcome of a system-wide memory list command. <see cref="Code"/> is the Win32 error or NTSTATUS.</summary>
+public readonly record struct CleanupResult(bool Succeeded, string Message, CleanupFailure Failure = CleanupFailure.None, uint Code = 0);
 
 /// <summary>
 /// The memory cleanup actions of the classic app: trim working sets, purge the standby list and empty the system
@@ -65,9 +67,9 @@ public static class MemoryCleanup
     {
         if (!TryEnablePrivilege("SeProfileSingleProcessPrivilege", out int privilegeError))
         {
-            return new CleanupResult(false, privilegeError == 1300
-                ? "Windows did not grant the \"Profile single process\" privilege to this process. This needs administrator rights."
-                : $"Could not enable the \"Profile single process\" privilege (error {privilegeError}).");
+            return privilegeError == 1300
+                ? new CleanupResult(false, "Windows did not grant the \"Profile single process\" privilege to this process. This needs administrator rights.", CleanupFailure.PrivilegeNotGranted)
+                : new CleanupResult(false, $"Could not enable the \"Profile single process\" privilege (error {privilegeError}).", CleanupFailure.PrivilegeError, (uint)privilegeError);
         }
         TryEnablePrivilege("SeIncreaseQuotaPrivilege", out _);
 
@@ -75,9 +77,9 @@ public static class MemoryCleanup
         return status switch
         {
             0 => new CleanupResult(true, success),
-            StatusPrivilegeNotHeld => new CleanupResult(false, "Windows refused: the required privilege is not held. This needs administrator rights."),
-            StatusAccessDenied => new CleanupResult(false, "Windows refused the request (access denied)."),
-            _ => new CleanupResult(false, $"Windows returned status 0x{status:X8}.")
+            StatusPrivilegeNotHeld => new CleanupResult(false, "Windows refused: the required privilege is not held. This needs administrator rights.", CleanupFailure.PrivilegeNotHeld, status),
+            StatusAccessDenied => new CleanupResult(false, "Windows refused the request (access denied).", CleanupFailure.AccessDenied, status),
+            _ => new CleanupResult(false, $"Windows returned status 0x{status:X8}.", CleanupFailure.Status, status)
         };
     }
 

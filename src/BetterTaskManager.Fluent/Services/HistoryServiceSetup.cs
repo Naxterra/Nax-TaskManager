@@ -59,12 +59,12 @@ internal static class HistoryServiceSetup
             using Process helper = Process.Start(startInfo)!;
             await helper.WaitForExitAsync();
             if (helper.ExitCode == 0) return null;
-            string reason = File.Exists(resultFile) ? await File.ReadAllTextAsync(resultFile) : $"Exit code {helper.ExitCode}.";
+            string reason = File.Exists(resultFile) ? await File.ReadAllTextAsync(resultFile) : Loc.F("Common_ExitCode", helper.ExitCode);
             return reason;
         }
         catch (System.ComponentModel.Win32Exception)
         {
-            return "Administrator approval was cancelled. Nothing was changed.";
+            return Loc.Get("Uac_CancelledNothing");
         }
         finally
         {

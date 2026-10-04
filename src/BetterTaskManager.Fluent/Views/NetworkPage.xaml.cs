@@ -82,7 +82,7 @@ public sealed partial class NetworkPage : Page
         bool hasPath = path.Length > 0;
         bool blocked = hasPath && App.Monitor.IsBlocked(path);
         FirewallButton.IsEnabled = hasPath;
-        FirewallButton.Label = blocked ? "Allow network" : "Block network";
+        FirewallButton.Label = blocked ? Loc.Get("Firewall_AllowShort") : Loc.Get("Firewall_BlockShort");
         FirewallIcon.Glyph = blocked ? "" : "";
     }
 
@@ -145,18 +145,18 @@ public sealed partial class NetworkPage : Page
         var menu = new MenuFlyout();
         var firewall = new MenuFlyoutItem
         {
-            Text = blocked ? "Allow network access" : "Block network access",
+            Text = blocked ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"),
             Icon = new FontIcon { Glyph = blocked ? "" : "" },
             IsEnabled = hasPath
         };
         firewall.Click += (_, _) => _ = ToggleFirewallAsync(slot.Path);
         menu.Items.Add(firewall);
-        var location = new MenuFlyoutItem { Text = "Open file location", Icon = new FontIcon { Glyph = "" }, IsEnabled = hasPath };
+        var location = new MenuFlyoutItem { Text = Loc.Get("Menu_OpenLocation"), Icon = new FontIcon { Glyph = "" }, IsEnabled = hasPath };
         location.Click += (_, _) => ProcessActions.OpenFileLocation(slot.Path);
         menu.Items.Add(location);
         if (slot.Data?.Kind == RowKind.Child)
         {
-            var copy = new MenuFlyoutItem { Text = "Copy remote address", Icon = new FontIcon { Glyph = "" } };
+            var copy = new MenuFlyoutItem { Text = Loc.Get("Menu_CopyRemoteAddress"), Icon = new FontIcon { Glyph = "" } };
             copy.Click += (_, _) => ProcessActions.CopyText(slot.Remote);
             menu.Items.Add(copy);
         }
@@ -178,10 +178,10 @@ public sealed partial class NetworkPage : Page
             var confirm = new ContentDialog
             {
                 XamlRoot = XamlRoot,
-                Title = "Block network access?",
-                Content = new TextBlock { Text = $"Adds a Windows Firewall rule that blocks all outbound connections for:\n{path}", TextWrapping = TextWrapping.Wrap },
-                PrimaryButtonText = "Block",
-                CloseButtonText = "Cancel",
+                Title = Loc.Get("Firewall_ConfirmTitle"),
+                Content = new TextBlock { Text = Loc.F("Firewall_ConfirmText", path), TextWrapping = TextWrapping.Wrap },
+                PrimaryButtonText = Loc.Get("Firewall_BlockButton"),
+                CloseButtonText = Loc.Get("Common_Cancel"),
                 DefaultButton = ContentDialogButton.Close
             };
             if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
@@ -190,7 +190,7 @@ public sealed partial class NetworkPage : Page
         string? error = await App.Monitor.SetBlockedAsync(path, block);
         if (error is not null)
         {
-            await new ContentDialog { XamlRoot = XamlRoot, Title = "Firewall rule not changed", Content = error, CloseButtonText = "OK" }.ShowAsync();
+            await new ContentDialog { XamlRoot = XamlRoot, Title = Loc.Get("Firewall_NotChanged"), Content = error, CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();
         }
         UpdateCommands();
     }

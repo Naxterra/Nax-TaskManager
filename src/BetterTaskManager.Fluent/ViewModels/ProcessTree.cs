@@ -1,3 +1,4 @@
+using BetterTaskManager.Fluent.Services;
 using BetterTaskManager.Core.Monitoring;
 
 namespace BetterTaskManager.Fluent.ViewModels;
@@ -92,8 +93,8 @@ public static class ProcessTree
         }
 
         var rows = new List<ProcessRowData>(visible.Count + 16);
-        AddSection(rows, "Apps", visible.Where(item => item.Group.IsApp), query, sortColumn, descending, expandedKeys);
-        AddSection(rows, "Background processes", visible.Where(item => !item.Group.IsApp), query, sortColumn, descending, expandedKeys);
+        AddSection(rows, Loc.Get("Section_Apps"), visible.Where(item => item.Group.IsApp), query, sortColumn, descending, expandedKeys);
+        AddSection(rows, Loc.Get("Section_Background"), visible.Where(item => !item.Group.IsApp), query, sortColumn, descending, expandedKeys);
         return rows;
     }
 
@@ -184,7 +185,7 @@ public static class ProcessTree
         bool serviceHost = first.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase);
         if (serviceHost && first.Services is { Count: > 0 } services)
         {
-            string name = "Service Host: " + AppIdentityRules.ServiceName(services[0]);
+            string name = Loc.Get("Name_ServiceHost") + AppIdentityRules.ServiceName(services[0]);
             return services.Count > 1 ? $"{name} +{services.Count - 1}" : name;
         }
         return first.DisplayName;

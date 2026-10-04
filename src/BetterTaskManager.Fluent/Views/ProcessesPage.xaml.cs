@@ -53,8 +53,8 @@ public sealed partial class ProcessesPage : Page
     {
         if (App.Monitor.Latest is not { } snapshot) return;
         SystemSample system = snapshot.System;
-        SummaryText.Text = $"{Format.Count(system.ProcessCount)} processes · {Format.Count(system.ThreadCount)} threads · " +
-            $"{Format.Count(system.HandleCount)} handles · up {Format.Duration(system.Uptime)}";
+        SummaryText.Text = Loc.F("Proc_Summary", Format.Count(system.ProcessCount), Format.Count(system.ThreadCount),
+            Format.Count(system.HandleCount), Format.Duration(system.Uptime));
     }
 
     /// <summary>Rows are reused slots, so selection follows the row key rather than the list position.</summary>
@@ -111,7 +111,7 @@ public sealed partial class ProcessesPage : Page
         OpenLocationButton.IsEnabled = PropertiesButton.IsEnabled = CopyPathButton.IsEnabled = hasPath;
         FirewallButton.IsEnabled = hasPath;
         bool blocked = hasPath && App.Monitor.IsBlocked(slot!.Path);
-        FirewallButton.Label = blocked ? "Allow network" : "Block network";
+        FirewallButton.Label = blocked ? Loc.Get("Firewall_AllowShort") : Loc.Get("Firewall_BlockShort");
         FirewallIcon.Glyph = blocked ? "" : "";
     }
 
@@ -172,14 +172,14 @@ public sealed partial class ProcessesPage : Page
         bool hasPath = !string.IsNullOrWhiteSpace(slot.Path);
         bool blocked = hasPath && App.Monitor.IsBlocked(slot.Path);
         var menu = new MenuFlyout();
-        menu.Items.Add(MenuItem("End task", "", (_, _) => _ = EndSelectedAsync(entireTree: false)));
-        menu.Items.Add(MenuItem("End process tree", "", (_, _) => _ = EndSelectedAsync(entireTree: true)));
+        menu.Items.Add(MenuItem(Loc.Get("Proc_EndTask"), "", (_, _) => _ = EndSelectedAsync(entireTree: false)));
+        menu.Items.Add(MenuItem(Loc.Get("Proc_EndTree"), "", (_, _) => _ = EndSelectedAsync(entireTree: true)));
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(MenuItem("Open file location", "", (_, _) => ProcessActions.OpenFileLocation(slot.Path), hasPath));
-        menu.Items.Add(MenuItem("Properties", "", (_, _) => ProcessActions.ShowProperties(slot.Path), hasPath));
-        menu.Items.Add(MenuItem("Copy path", "", (_, _) => ProcessActions.CopyText(slot.Path), hasPath));
+        menu.Items.Add(MenuItem(Loc.Get("Menu_OpenLocation"), "", (_, _) => ProcessActions.OpenFileLocation(slot.Path), hasPath));
+        menu.Items.Add(MenuItem(Loc.Get("Proc_Properties"), "", (_, _) => ProcessActions.ShowProperties(slot.Path), hasPath));
+        menu.Items.Add(MenuItem(Loc.Get("Proc_CopyPath"), "", (_, _) => ProcessActions.CopyText(slot.Path), hasPath));
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(MenuItem(blocked ? "Allow network access" : "Block network access", blocked ? "" : "",
+        menu.Items.Add(MenuItem(blocked ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"), blocked ? "" : "",
             (_, _) => _ = ToggleFirewallAsync(slot.Path), hasPath));
         if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
         else menu.ShowAt(source);
@@ -227,16 +227,16 @@ public sealed partial class ProcessesPage : Page
 
         if (ProcessActions.AnyCritical(processes))
         {
-            bool confirmed = await ConfirmAsync("End a critical system process?",
-                $"Windows marks \"{name}\" as critical. Ending it will crash or restart Windows immediately and unsaved work is lost.",
-                "End it anyway");
+            bool confirmed = await ConfirmAsync(Loc.Get("Proc_CriticalTitle"),
+                Loc.F("Proc_CriticalText", name),
+                Loc.Get("Proc_EndAnyway"));
             if (!confirmed) return;
         }
         else if (entireTree)
         {
-            bool confirmed = await ConfirmAsync($"End \"{name}\" and everything it started?",
-                "Ending the process tree also ends every child process, which can include unrelated apps started from it.",
-                "End process tree");
+            bool confirmed = await ConfirmAsync(Loc.F("Proc_TreeTitle", name),
+                Loc.Get("Proc_TreeText"),
+                Loc.Get("Proc_EndTree"));
             if (!confirmed) return;
         }
 
@@ -244,22 +244,22 @@ public sealed partial class ProcessesPage : Page
         App.Monitor.RequestRefresh();
         if (result.Failures.Count > 0)
         {
-            string hint = App.Monitor.IsElevated ? "" : "\n\nRestarting as administrator allows ending more processes.";
-            await ShowMessageAsync($"Could not end \"{name}\"", string.Join("\n", result.Failures.Take(5)) + hint);
+            string hint = App.Monitor.IsElevated ? "" : "\n\n" + Loc.Get("Proc_RestartHint");
+            await ShowMessageAsync(Loc.F("Proc_CouldNotEnd", name), string.Join("\n", result.Failures.Take(5)) + hint);
         }
     }
 
     private async Task ToggleFirewallAsync(string path)
     {
         bool block = !App.Monitor.IsBlocked(path);
-        if (block && !await ConfirmAsync("Block network access?",
-                $"Adds a Windows Firewall rule that blocks all outbound connections for:\n{path}", "Block"))
+        if (block && !await ConfirmAsync(Loc.Get("Firewall_ConfirmTitle"),
+                Loc.F("Firewall_ConfirmText", path), Loc.Get("Firewall_BlockButton")))
         {
             return;
         }
 
         string? error = await App.Monitor.SetBlockedAsync(path, block);
-        if (error is not null) await ShowMessageAsync("Firewall rule not changed", error);
+        if (error is not null) await ShowMessageAsync(Loc.Get("Firewall_NotChanged"), error);
         UpdateCommands();
     }
 
@@ -271,7 +271,7 @@ public sealed partial class ProcessesPage : Page
             Title = title,
             Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
             PrimaryButtonText = primary,
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.Get("Common_Cancel"),
             DefaultButton = ContentDialogButton.Close
         };
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
@@ -284,7 +284,7 @@ public sealed partial class ProcessesPage : Page
             XamlRoot = XamlRoot,
             Title = title,
             Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
-            CloseButtonText = "OK"
+            CloseButtonText = Loc.Get("Common_OK")
         };
         await dialog.ShowAsync();
     }

@@ -180,9 +180,9 @@ public sealed class MonitorHost : IDisposable
             }
             catch (System.ComponentModel.Win32Exception)
             {
-                return "Administrator approval was cancelled. The firewall was not changed.";
+                return Loc.Get("Uac_CancelledFirewall");
             }
-            if (exitCode != 0) return $"Windows Firewall returned exit code {exitCode}.";
+            if (exitCode != 0) return Loc.F("Firewall_Failed", exitCode);
         }
 
         await RefreshFirewallAsync();

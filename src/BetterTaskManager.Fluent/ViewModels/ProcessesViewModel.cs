@@ -17,7 +17,7 @@ public sealed class ProcessesViewModel : ObservableObject
         this.settings = settings;
         Layout = new ColumnLayout("Processes.", new Dictionary<string, double>
         {
-            ["Name"] = 360, ["Cpu"] = 88, ["Memory"] = 108, ["Io"] = 96, ["Bandwidth"] = 104, ["Network"] = 104, ["Publisher"] = 200
+            ["Name"] = 360, ["Cpu"] = 88, ["Memory"] = 130, ["Io"] = 140, ["Bandwidth"] = 104, ["Network"] = 104, ["Publisher"] = 200
         }, settings.ColumnWidths);
         ProcessSlot.SharedLayout = Layout;
         Rows = new SlotCollection<ProcessSlot, (ProcessRowData, ProcessRowContext)>(ProcessSlot.Load);
@@ -48,13 +48,13 @@ public sealed class ProcessesViewModel : ObservableObject
         NetworkHeader = Format.Count(snapshot.Connections.Count);
         bool bandwidth = system.PerProcessNetworkAvailable;
         BandwidthHeader = bandwidth ? Format.Mbps(snapshot.Processes.Where(process => !VpnTunnels.IsTunnel(process)).Sum(process => process.NetworkBytesPerSecond))
-            : monitor.IsElevated ? "Paused" : "Admin";
+            : monitor.IsElevated ? Loc.Get("Header_Paused") : Loc.Get("Header_Admin");
         BandwidthTooltip = bandwidth
             ? system.PerProcessNetworkFromService
-                ? "Current send + receive per app, measured by the Nax-TaskManager History service (loopback excluded)"
-                : "Current send + receive per app, measured from the kernel's TCP/IP events (loopback excluded)"
-            : monitor.IsElevated ? system.PerProcessNetworkStatus
-            : system.PerProcessNetworkStatus + " Use Restart as administrator.";
+                ? Loc.Get("Bandwidth_TooltipService")
+                : Loc.Get("Bandwidth_TooltipKernel")
+            : monitor.IsElevated ? Loc.NetworkStatus(system.PerProcessNetworkStatus)
+            : Loc.NetworkStatus(system.PerProcessNetworkStatus) + Loc.Get("Bandwidth_UseRestart");
 
         List<ProcessRowData> rows = ProcessTree.Build(snapshot.Processes, monitor.SearchText, SortColumn, SortDescending, expanded);
         var context = new ProcessRowContext(system.Memory.Total, bandwidth, monitor.IsBlocked);

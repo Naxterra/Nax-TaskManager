@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.0-alpha.7 - 2026-10-04
+
+- **German interface.** The app follows the Windows display language; Settings → Language switches between English and Deutsch (applies after a restart). Wording follows the German Task Manager. Process names, window titles, paths and host names are never translated.
+- Processes: wider Memory and Disk / I/O columns so the headers fit.
+- History: wider protocol column; the update prompt shows the commit when both builds carry the same version number.
+
 ## 2.0.0-alpha.6 - 2026-10-04
 
 - History: DNS lookups are hidden unless **DNS lookups** is switched on (they are frequent and buried the connection log).

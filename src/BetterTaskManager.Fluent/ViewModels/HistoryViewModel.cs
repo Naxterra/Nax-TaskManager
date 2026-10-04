@@ -128,16 +128,16 @@ public sealed class HistoryViewModel
         if (result.Error is not null)
         {
             // Keep what is shown; a busy database is retried on the next refresh.
-            Summary = "Could not read the history: " + result.Error;
+            Summary = Loc.F("History_ReadError", result.Error);
             return;
         }
 
         HasData = result.LastWrite is not null;
         Summary = ServiceState switch
         {
-            HistoryServiceState.Running => result.LastWrite is { } last ? $"Recording in the background · last saved {last.ToLocalTime():T}" : "Recording in the background",
-            HistoryServiceState.NotInstalled => HasData ? "Background recording is off · showing earlier history" : "Background recording is off",
-            _ => "The history service is not running"
+            HistoryServiceState.Running => result.LastWrite is { } last ? Loc.F("History_RecordingSaved", last.ToLocalTime().ToString("T")) : Loc.Get("History_Recording"),
+            HistoryServiceState.NotInstalled => HasData ? Loc.Get("History_OffWithData") : Loc.Get("History_Off"),
+            _ => Loc.Get("History_ServiceStopped")
         };
 
         long maxTotal = Math.Max(1, result.Apps.Count > 0 ? result.Apps.Max(app => app.Total) : 1);
@@ -145,12 +145,12 @@ public sealed class HistoryViewModel
         List<AppUsage> counted = result.Apps.Where(app => !app.Tunnel).ToList();
         var apps = new List<AppUsageRow>(result.Apps.Count + 1);
         if (result.Apps.Count > 0) apps.Add(
-            new AppUsageRow("", "All apps", "", $"{Format.Count(result.Apps.Sum(app => app.Connections))} connections" + (counted.Count < result.Apps.Count ? " · VPN excluded" : ""),
+            new AppUsageRow("", Loc.Get("History_AllApps"), "", Loc.F("Common_Connections", Format.Count(result.Apps.Sum(app => app.Connections))) + (counted.Count < result.Apps.Count ? Loc.Get("History_VpnExcluded") : ""),
                 Format.Bytes(counted.Sum(app => app.Total)), Split(counted.Sum(app => app.BytesIn), counted.Sum(app => app.BytesOut)), 0));
         foreach (AppUsage app in result.Apps)
         {
-            apps.Add(new AppUsageRow(app.AppKey, app.AppName, app.AppPath,
-                (app.Connections == 1 ? "1 connection" : $"{Format.Count(app.Connections)} connections") + (app.Tunnel ? " · VPN tunnel, not in total" : ""),
+            apps.Add(new AppUsageRow(app.AppKey, Loc.AppName(app.AppName), app.AppPath,
+                (app.Connections == 1 ? Loc.Get("Common_OneConnection") : Loc.F("Common_Connections", Format.Count(app.Connections))) + (app.Tunnel ? Loc.Get("History_TunnelNotInTotal") : ""),
                 app.Total > 0 ? Format.Bytes(app.Total) : "", app.Total > 0 ? Split(app.BytesIn, app.BytesOut) : "",
                 app.Total / (double)maxTotal));
         }
@@ -158,8 +158,8 @@ public sealed class HistoryViewModel
 
         Connections.Apply(result.Connections.Select(ToRow).ToList());
         ConnectionSummary = result.Connections.Count >= ConnectionLimit
-            ? $"Latest {Format.Count(ConnectionLimit)} connections"
-            : $"{Format.Count(result.Connections.Count)} connections";
+            ? Loc.F("History_LatestConnections", Format.Count(ConnectionLimit))
+            : Loc.F("Common_Connections", Format.Count(result.Connections.Count));
     }
 
     private static ConnectionLogRow ToRow(ConnectionRecord record)
@@ -167,24 +167,24 @@ public sealed class HistoryViewModel
         DateTime first = record.FirstSeen.ToLocalTime();
         DateTime last = record.LastSeen.ToLocalTime();
         string time = first.Date == DateTime.Today ? first.ToString("T", CultureInfo.CurrentCulture) : first.ToString("g", CultureInfo.CurrentCulture);
-        string timeDetail = $"First seen {first:G}\nLast seen {last:G}\nDuration {Format.Duration(last - first)}";
+        string timeDetail = Loc.F("History_TimeDetail", first.ToString("G"), last.ToString("G"), Format.Duration(last - first));
 
         string endpoint = record.RemoteAddress.Contains(':') ? $"[{record.RemoteAddress}]:{record.RemotePort}" : $"{record.RemoteAddress}:{record.RemotePort}";
         string remote = record.RemoteHost is { } host ? $"{host}:{record.RemotePort}" : endpoint;
         string remoteDetail = record.RemoteHost is null ? endpoint
-            : record.RemoteHostIsReverse ? $"{endpoint}\nName from reverse DNS; may be the hosting provider rather than the service"
-            : $"{endpoint}\nName the app looked up";
+            : record.RemoteHostIsReverse ? Loc.F("Remote_Reverse", endpoint)
+            : Loc.F("Remote_Lookup", endpoint);
 
         if (record.Protocol == "DNS")
         {
-            string answers = record.LocalAddress.Length > 0 ? record.LocalAddress : "no addresses";
-            return new ConnectionLogRow(record.Id, time, timeDetail, record.AppName, record.AppPath, record.RemoteHost ?? record.RemoteAddress,
-                $"DNS lookup by the app\nAnswer: {answers}", "DNS lookup", "–");
+            string answers = record.LocalAddress.Length > 0 ? record.LocalAddress : Loc.Get("Dns_NoAddresses");
+            return new ConnectionLogRow(record.Id, time, timeDetail, Loc.AppName(record.AppName), record.AppPath, record.RemoteHost ?? record.RemoteAddress,
+                Loc.F("Dns_Detail", answers), Loc.Get("Dns_Lookup"), "–");
         }
-        string protocol = record.Protocol == "UDP" ? "UDP" : $"TCP · {record.State}";
-        if (record.Scope.Length > 0) protocol += " · " + record.Scope + (record.Inbound ? " · in" : "");
+        string protocol = record.Protocol == "UDP" ? "UDP" : "TCP · " + Loc.State(record.State);
+        if (record.Scope.Length > 0) protocol += " · " + Loc.Scope(record.Scope) + (record.Inbound ? Loc.Get("Scope_Inbound") : "");
         string data = record.BytesIn + record.BytesOut > 0 ? Split(record.BytesIn, record.BytesOut) : "–";
-        return new ConnectionLogRow(record.Id, time, timeDetail, record.AppName, record.AppPath, remote, remoteDetail, protocol, data);
+        return new ConnectionLogRow(record.Id, time, timeDetail, Loc.AppName(record.AppName), record.AppPath, remote, remoteDetail, protocol, data);
     }
 
     private static string Split(long received, long sent) => $"↓ {Format.Bytes(received)}  ↑ {Format.Bytes(sent)}";
