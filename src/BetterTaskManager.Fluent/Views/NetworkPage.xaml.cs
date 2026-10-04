@@ -133,9 +133,11 @@ public sealed partial class NetworkPage : Page
         Refresh();
     }
 
-    private void RowList_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    /// <summary>Right-click, Shift+F10 and the Menu key all arrive here.</summary>
+    private void RowList_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
     {
-        if (e.OriginalSource is not FrameworkElement { DataContext: NetworkSlot slot } source) return;
+        if (e.OriginalSource is not FrameworkElement source) return;
+        if ((source.DataContext as NetworkSlot ?? (source as ListViewItem)?.Content as NetworkSlot) is not { } slot) return;
         RowList.SelectedItem = slot;
         bool hasPath = slot.Path.Length > 0;
         bool blocked = hasPath && App.Monitor.IsBlocked(slot.Path);
@@ -158,7 +160,8 @@ public sealed partial class NetworkPage : Page
             copy.Click += (_, _) => ProcessActions.CopyText(slot.Remote);
             menu.Items.Add(copy);
         }
-        menu.ShowAt(source, e.GetPosition(source));
+        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
+        else menu.ShowAt(source);
         e.Handled = true;
     }
 

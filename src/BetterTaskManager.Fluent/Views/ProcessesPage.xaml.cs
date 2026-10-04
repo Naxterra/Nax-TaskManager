@@ -106,9 +106,9 @@ public sealed partial class ProcessesPage : Page
     private void UpdateCommands()
     {
         ProcessSlot? slot = Selected;
-        EndTaskButton.IsEnabled = slot is not null;
+        EndTaskButton.IsEnabled = EndTreeButton.IsEnabled = slot is not null;
         bool hasPath = slot is not null && !string.IsNullOrWhiteSpace(slot.Path);
-        OpenLocationButton.IsEnabled = hasPath;
+        OpenLocationButton.IsEnabled = PropertiesButton.IsEnabled = CopyPathButton.IsEnabled = hasPath;
         FirewallButton.IsEnabled = hasPath;
         bool blocked = hasPath && App.Monitor.IsBlocked(slot!.Path);
         FirewallButton.Label = blocked ? "Allow network" : "Block network";
@@ -161,9 +161,12 @@ public sealed partial class ProcessesPage : Page
         }
     }
 
-    private void RowList_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    /// <summary>Right-click, Shift+F10 and the Menu key all arrive here, so the menu is reachable without a mouse.</summary>
+    private void RowList_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
     {
-        if (e.OriginalSource is not FrameworkElement { DataContext: ProcessSlot slot } || slot.Data?.Kind == RowKind.Section) return;
+        var source = e.OriginalSource as FrameworkElement;
+        ProcessSlot? slot = source?.DataContext as ProcessSlot ?? (source as ListViewItem)?.Content as ProcessSlot ?? Selected;
+        if (source is null || slot is null || slot.Data?.Kind == RowKind.Section) return;
         RowList.SelectedItem = slot;
 
         bool hasPath = !string.IsNullOrWhiteSpace(slot.Path);
@@ -178,7 +181,8 @@ public sealed partial class ProcessesPage : Page
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(MenuItem(blocked ? "Allow network access" : "Block network access", blocked ? "" : "",
             (_, _) => _ = ToggleFirewallAsync(slot.Path), hasPath));
-        menu.ShowAt((FrameworkElement)e.OriginalSource, e.GetPosition((FrameworkElement)e.OriginalSource));
+        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
+        else menu.ShowAt(source);
         e.Handled = true;
     }
 
@@ -190,6 +194,18 @@ public sealed partial class ProcessesPage : Page
     }
 
     private void EndTask_Click(object sender, RoutedEventArgs e) => _ = EndSelectedAsync(entireTree: false);
+
+    private void EndTree_Click(object sender, RoutedEventArgs e) => _ = EndSelectedAsync(entireTree: true);
+
+    private void Properties_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected is { } slot) ProcessActions.ShowProperties(slot.Path);
+    }
+
+    private void CopyPath_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected is { } slot) ProcessActions.CopyText(slot.Path);
+    }
 
     private void OpenLocation_Click(object sender, RoutedEventArgs e)
     {

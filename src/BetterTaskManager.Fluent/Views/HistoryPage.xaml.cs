@@ -151,9 +151,11 @@ public sealed partial class HistoryPage : Page
         _ = LoadAsync();
     }
 
-    private void ConnectionList_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    /// <summary>Right-click, Shift+F10 and the Menu key all arrive here.</summary>
+    private void ConnectionList_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
     {
-        if (e.OriginalSource is not FrameworkElement { DataContext: ConnectionLogSlot slot } source) return;
+        if (e.OriginalSource is not FrameworkElement source) return;
+        if ((source.DataContext as ConnectionLogSlot ?? (source as ListViewItem)?.Content as ConnectionLogSlot) is not { } slot) return;
         ConnectionList.SelectedItem = slot;
         var menu = new MenuFlyout();
         var copy = new MenuFlyoutItem { Text = "Copy remote host", Icon = new FontIcon { Glyph = "" } };
@@ -162,7 +164,8 @@ public sealed partial class HistoryPage : Page
         var location = new MenuFlyoutItem { Text = "Open file location", Icon = new FontIcon { Glyph = "" }, IsEnabled = slot.Path.Length > 0 };
         location.Click += (_, _) => ProcessActions.OpenFileLocation(slot.Path);
         menu.Items.Add(location);
-        menu.ShowAt(source, e.GetPosition(source));
+        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
+        else menu.ShowAt(source);
         e.Handled = true;
     }
 }

@@ -48,6 +48,23 @@
                         <FontIcon Glyph="&#xE769;" />
                     </AppBarToggleButton.Icon>
                 </AppBarToggleButton>
+                <CommandBar.SecondaryCommands>
+                    <AppBarButton x:Name="EndTreeButton" Label="End process tree" IsEnabled="False" Click="EndTree_Click">
+                        <AppBarButton.Icon>
+                            <FontIcon Glyph="&#xE71A;" />
+                        </AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarButton x:Name="PropertiesButton" Label="Properties" IsEnabled="False" Click="Properties_Click">
+                        <AppBarButton.Icon>
+                            <FontIcon Glyph="&#xE946;" />
+                        </AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarButton x:Name="CopyPathButton" Label="Copy path" IsEnabled="False" Click="CopyPath_Click">
+                        <AppBarButton.Icon>
+                            <FontIcon Glyph="&#xE8C8;" />
+                        </AppBarButton.Icon>
+                    </AppBarButton>
+                </CommandBar.SecondaryCommands>
             </CommandBar>
         </Grid>
 
@@ -145,7 +162,7 @@
             IsItemClickEnabled="False"
             ItemContainerStyle="{StaticResource TableRowStyle}"
             SelectionChanged="RowList_SelectionChanged"
-            RightTapped="RowList_RightTapped"
+            ContextRequested="RowList_ContextRequested"
             DoubleTapped="RowList_DoubleTapped">
             <ListView.ItemContainerTransitions>
                 <TransitionCollection />

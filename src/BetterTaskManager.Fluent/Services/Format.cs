@@ -17,6 +17,7 @@ internal static class Format
     /// <summary>Data volume with a unit that fits: KB, MB or GB.</summary>
     public static string Bytes(long bytes)
     {
+        if (bytes < 1024) return bytes.ToString("0", Culture) + " B";
         if (bytes < 1024 * 1024) return (bytes / 1024d).ToString("0", Culture) + " KB";
         if (bytes < 1024L * 1024 * 1024) return (bytes / 1048576d).ToString("0.0", Culture) + " MB";
         return (bytes / 1073741824d).ToString("0.00", Culture) + " GB";

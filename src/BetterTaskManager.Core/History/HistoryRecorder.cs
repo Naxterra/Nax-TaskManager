@@ -123,7 +123,10 @@ public sealed class HistoryRecorder : IDisposable
         {
             if (flow.Pid <= 0 || !IsRemote(flow.RemoteAddress) || flow.Received + flow.Sent == 0) continue;
             AppIdentity app = Identify(flow.Pid);
-            var key = new FlowKey(flow.Pid, app.CreateTime, flow.Protocol, flow.LocalPort, flow.RemoteAddress, flow.RemotePort);
+            // UDP flows are grouped per app and remote endpoint: a client that opens a new local port per request
+            // (DNS, QUIC) would otherwise produce one row per packet exchange.
+            int localPort = flow.Protocol == "UDP" ? 0 : flow.LocalPort;
+            var key = new FlowKey(flow.Pid, app.CreateTime, flow.Protocol, localPort, flow.RemoteAddress, flow.RemotePort);
             TrackedConnection tracked = Track(key, app, now);
             active.Add(key);
             tracked.BytesIn += flow.Received;

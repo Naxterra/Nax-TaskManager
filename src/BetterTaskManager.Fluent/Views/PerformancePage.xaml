@@ -68,7 +68,7 @@
                                 TextWrapping="Wrap"
                                 Text="The per-app Memory column only counts memory private to each process. The rest of &quot;In use&quot; belongs to Windows itself, drivers and memory that several processes share." />
                         </StackPanel>
-                        <DropDownButton x:Name="CleanupButton" Grid.Column="1" VerticalAlignment="Top">
+                        <DropDownButton x:Name="CleanupButton" Grid.Column="1" VerticalAlignment="Top" AutomationProperties.Name="Free up memory">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xE74D;" FontSize="14" />
                                 <TextBlock Text="Free up memory" />

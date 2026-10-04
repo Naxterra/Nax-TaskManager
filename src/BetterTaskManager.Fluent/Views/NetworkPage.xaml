@@ -98,7 +98,7 @@
             SelectionMode="Single"
             ItemContainerStyle="{StaticResource TableRowStyle}"
             SelectionChanged="RowList_SelectionChanged"
-            RightTapped="RowList_RightTapped"
+            ContextRequested="RowList_ContextRequested"
             DoubleTapped="RowList_DoubleTapped">
             <ListView.ItemContainerTransitions>
                 <TransitionCollection />

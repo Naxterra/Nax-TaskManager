@@ -101,6 +101,7 @@ public sealed class HistoryStore : IDisposable
                 bytes_out INTEGER NOT NULL DEFAULT 0,
                 state TEXT NOT NULL);
             CREATE INDEX IF NOT EXISTS connections_last_seen ON connections(last_seen);
+            CREATE INDEX IF NOT EXISTS connections_first_seen ON connections(first_seen);
             CREATE INDEX IF NOT EXISTS connections_app ON connections(app_key, last_seen);
             CREATE TABLE IF NOT EXISTS app_usage (
                 day TEXT NOT NULL,
@@ -234,7 +235,7 @@ public sealed class HistoryStore : IDisposable
             string escaped = search.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
             command.Parameters.AddWithValue("$q", "%" + escaped + "%");
         }
-        sql.Append(" ORDER BY last_seen DESC LIMIT $limit");
+        sql.Append(" ORDER BY first_seen DESC, id DESC LIMIT $limit");
         command.Parameters.AddWithValue("$limit", limit);
         command.CommandText = sql.ToString();
 

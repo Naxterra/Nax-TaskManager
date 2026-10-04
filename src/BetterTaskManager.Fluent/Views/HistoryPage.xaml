@@ -67,8 +67,13 @@
                     Grid.Row="1"
                     ItemsSource="{x:Bind ViewModel.Apps}"
                     SelectionMode="Single"
-                    ItemContainerStyle="{StaticResource TableRowStyle}"
                     SelectionChanged="AppList_SelectionChanged">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem" BasedOn="{StaticResource TableRowStyle}">
+                            <Setter Property="MinHeight" Value="60" />
+                            <Setter Property="Height" Value="60" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
                     <ListView.ItemContainerTransitions>
                         <TransitionCollection />
                     </ListView.ItemContainerTransitions>
@@ -124,7 +129,7 @@
                     ItemsSource="{x:Bind ViewModel.Connections}"
                     SelectionMode="Single"
                     ItemContainerStyle="{StaticResource TableRowStyle}"
-                    RightTapped="ConnectionList_RightTapped">
+                    ContextRequested="ConnectionList_ContextRequested">
                     <ListView.ItemContainerTransitions>
                         <TransitionCollection />
                     </ListView.ItemContainerTransitions>
