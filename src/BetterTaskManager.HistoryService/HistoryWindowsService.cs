@@ -1,5 +1,3 @@
-using System.Security.AccessControl;
-using System.Security.Principal;
 using System.ServiceProcess;
 using BetterTaskManager.Core.History;
 
@@ -19,7 +17,7 @@ public sealed class HistoryWindowsService : ServiceBase
 
     protected override void OnStart(string[] args)
     {
-        SecureDataFolder(HistoryStore.DataFolder);
+        BetterTaskManager.Core.DataFolder.EnsureSecured();
         worker = new HistoryWorker(HistoryStore.DefaultPath, "NaxTaskManager-History", Log, publishFeed: true);
         worker.Start();
         Log("Service started");
@@ -33,23 +31,6 @@ public sealed class HistoryWindowsService : ServiceBase
     }
 
     protected override void OnShutdown() => OnStop();
-
-    /// <summary>
-    /// ProgramData lets every user create files in subfolders. The history folder gets its own ACL instead: SYSTEM and
-    /// administrators may change it, users may only read, so nobody can plant files the service would open.
-    /// </summary>
-    private static void SecureDataFolder(string folder)
-    {
-        var directory = new DirectoryInfo(folder);
-        directory.Create();
-        var security = new DirectorySecurity();
-        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-        const InheritanceFlags inherit = InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit;
-        security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null), FileSystemRights.FullControl, inherit, PropagationFlags.None, AccessControlType.Allow));
-        security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null), FileSystemRights.FullControl, inherit, PropagationFlags.None, AccessControlType.Allow));
-        security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null), FileSystemRights.ReadAndExecute, inherit, PropagationFlags.None, AccessControlType.Allow));
-        directory.SetAccessControl(security);
-    }
 
     private static void Log(string message)
     {

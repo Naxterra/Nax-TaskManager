@@ -1,9 +1,12 @@
 # Changelog
 
-## 2.0.0-alpha.4 - unreleased
+## 2.0.0-alpha.4 - 2026-10-04
 
-- The classic WinForms app (Better Task Manager 1.x) is retired from the repository; its last release stays available as v1.1.0-preview.57.
-- `main` now carries the WinUI 3 app.
+- **Block network now really blocks**, also while a third-party firewall (for example Bitdefender) manages the firewall: blocks are Windows Filtering Platform filters instead of Windows Firewall rules, which such firewalls switch off. Older rules are still recognised and removed on allow.
+- History: app rows no longer overlap, the log is ordered by start time, and UDP traffic (DNS, QUIC) is one row per app and remote endpoint instead of one per request.
+- Sizes below 1 KB show bytes instead of "0 KB".
+- Context menus open from the keyboard (Shift+F10 / Menu key); End process tree, Properties and Copy path are also in the Processes command bar.
+- The classic WinForms app (Better Task Manager 1.x) is retired from the repository; its last release stays available as v1.1.0-preview.57. `main` now carries the WinUI 3 app.
 
 ## 2.0.0-alpha.3 - 2026-10-04
 

@@ -41,7 +41,7 @@ public sealed class HistoryStore : IDisposable
     private readonly SqliteConnection connection;
     private SqliteCommand? insertConnection, updateConnection, addUsage;
 
-    public static string DataFolder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "NaxTaskManager");
+    public static string DataFolder => BetterTaskManager.Core.DataFolder.Path;
     public static string DefaultPath => Path.Combine(DataFolder, "history.db");
 
     private HistoryStore(SqliteConnection connection) => this.connection = connection;

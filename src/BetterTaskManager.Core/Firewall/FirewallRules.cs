@@ -42,22 +42,34 @@ public static partial class FirewallRules
     {
         CommandResult result = CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=all", "dir=out");
         if (!result.Succeeded) throw new InvalidOperationException(result.FailureSummary());
-        return RuleNamePattern().Matches(result.StandardOutput)
+        HashSet<string> names = RuleNamePattern().Matches(result.StandardOutput)
             .Select(match => RulePrefix + match.Groups[1].Value.ToUpperInvariant())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Blocks made since WFP enforcement are filters, not netsh rules; report them under the same names.
+        foreach (string path in WfpBlocker.ReadBlockedPaths()) names.Add(RuleNameForPath(path));
+        return names;
     }
 
-    /// <summary>Runs netsh directly. The caller must be elevated.</summary>
+    /// <summary>
+    /// Blocks or allows outbound traffic for an executable. Enforcement is a Windows Filtering Platform filter, which
+    /// also works while a third-party firewall has turned Windows Firewall rules off. Windows Firewall rules from
+    /// earlier versions (either name) are removed either way. The caller must be elevated.
+    /// </summary>
     public static CommandResult Apply(string path, bool block)
     {
         if (string.IsNullOrWhiteSpace(path)) return new CommandResult(87, "", "The executable path is empty.", false);
         string rule = RuleNameForPath(path);
-        // Remove both names first: unblocking must also clear a pre-rename rule, and repeated blocks never duplicate.
-        CommandResult removedLegacy = CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + LegacyRuleName(rule));
-        CommandResult removed = CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule);
-        if (!block) return removed.Succeeded ? removed : removedLegacy;
-
-        return CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "add", "rule", "name=" + rule,
-            "dir=out", "program=" + path, "action=block", "profile=any");
+        CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + LegacyRuleName(rule));
+        CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule);
+        try
+        {
+            if (block) WfpBlocker.Block(path);
+            else WfpBlocker.Unblock(path);
+            return new CommandResult(0, "", "", false);
+        }
+        catch (Exception ex) when (ex is WfpException or IOException or UnauthorizedAccessException)
+        {
+            return new CommandResult(ex is WfpException wfp ? (int)wfp.Code : 1, "", ex.Message, false);
+        }
     }
 }
