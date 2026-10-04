@@ -11,6 +11,7 @@ Built with WinUI 3 (Fluent design) on .NET 11. Formerly *Better Task Manager*.
 - **Network** — every connection grouped by app with remote host names (from the Windows DNS cache, live DNS events, or reverse DNS), per-connection speed, total data per app, sorting, search and pause.
 - **Details** — every process with PID, status, user name, priority and efficiency mode; set priority, toggle efficiency mode.
 - **Startup apps** — the Run keys and startup folders with publisher and status; disable or enable them like Task Manager.
+- **Replace Windows Task Manager** — an optional setting so the taskbar menu, Ctrl+Shift+Esc and Ctrl+Alt+Del open Nax-TaskManager; reversible and removed on uninstall.
 - **History** — an optional background service records connections and traffic per app for 30 days, and lets the app show per-app network speed without administrator rights.
 - English and German interface (follows Windows, or chosen in Settings), light and dark theme, Mica, keyboard shortcuts (Ctrl+1–6 pages, Ctrl+F search).
 

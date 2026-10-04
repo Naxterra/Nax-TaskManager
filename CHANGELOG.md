@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.10 - 2026-10-05
+
+- **Replace Windows Task Manager** (Settings, System integration): an optional toggle that makes Nax-TaskManager open when Task Manager is started from the taskbar, Ctrl+Shift+Esc, Ctrl+Alt+Del or the Start menu. It needs administrator approval, shows when another tool already replaces Task Manager and leaves that alone, and is removed when you turn it off or uninstall the app. This uses the same documented mechanism as Sysinternals Process Explorer.
+
 ## 2.0.0-alpha.9 - 2026-10-05
 
 - Startup apps now include **Store and packaged apps** (1Password, Terminal, WhatsApp, Spotify, Xbox…) with the same on/off state as Task Manager, and can turn them on and off. Entries set by policy cannot be changed.
