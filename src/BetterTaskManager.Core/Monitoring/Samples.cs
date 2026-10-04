@@ -28,6 +28,14 @@ public sealed class ProcessSample
     public long NetworkReceivedTotal { get; set; }
     public long NetworkSentTotal { get; set; }
     public double NetworkBytesPerSecond => NetworkReceiveBytesPerSecond + NetworkSendBytesPerSecond;
+    /// <summary>Every thread is suspended (parked Store apps, debugged or frozen processes).</summary>
+    public bool Suspended { get; init; }
+    /// <summary>Account the process runs as; empty when Windows does not tell this caller (another account, not elevated).</summary>
+    public string UserName { get; init; } = "";
+    /// <summary>Priority class; Unknown when the process cannot be opened.</summary>
+    public BetterTaskManager.Core.Native.PriorityClass Priority { get; init; }
+    /// <summary>Efficiency mode (EcoQoS), set by Task Manager, by this app or by the program itself.</summary>
+    public bool Efficiency { get; init; }
 
     /// <summary>Stable identity across refreshes: PIDs are reused, creation times are not.</summary>
     public (int Pid, long CreateTime) Key => (Pid, CreateTime);

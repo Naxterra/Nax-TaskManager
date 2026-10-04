@@ -49,6 +49,28 @@ public static class ProcessActions
         return new EndResult(ended, gone, failures);
     });
 
+    public sealed record ChangeResult(int Changed, List<string> Failures, bool AccessDenied);
+
+    /// <summary>Applies a change to every process of a row; processes that exited in the meantime are skipped.</summary>
+    public static Task<ChangeResult> ChangeAsync(IReadOnlyList<(int Pid, long CreateTime)> processes,
+        Func<int, long, ControlResult> change) => Task.Run(() =>
+    {
+        int changed = 0;
+        bool denied = false;
+        var failures = new List<string>();
+        foreach (var (pid, createTime) in processes)
+        {
+            ControlResult result = change(pid, createTime);
+            if (result.Succeeded) changed++;
+            else if (!result.Gone)
+            {
+                denied |= result.Error == 5;
+                failures.Add($"PID {pid}: {new Win32Exception(result.Error).Message}");
+            }
+        }
+        return new ChangeResult(changed, failures, denied);
+    });
+
     public static void OpenFileLocation(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;

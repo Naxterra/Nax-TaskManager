@@ -19,7 +19,8 @@ public readonly record struct RawProcess(
     int SessionId,
     long ReadBytes,
     long WriteBytes,
-    long OtherBytes);
+    long OtherBytes,
+    bool Suspended);
 
 /// <summary>
 /// Reads every process in a single system call. This is the same source Task Manager uses for its
@@ -49,6 +50,14 @@ public static class NtProcessReader
     private const int OffsetReadTransfer = 232;
     private const int OffsetWriteTransfer = 240;
     private const int OffsetOtherTransfer = 248;
+
+    // The SYSTEM_THREAD_INFORMATION array follows the 256-byte process entry.
+    private const int ProcessEntrySize = 256;
+    private const int ThreadEntrySize = 80;
+    private const int OffsetThreadState = 68;
+    private const int OffsetWaitReason = 72;
+    private const int ThreadStateWaiting = 5;
+    private const int WaitReasonSuspended = 5;
 
     private static int s_bufferSize = 512 * 1024;
 
@@ -115,12 +124,30 @@ public static class NtProcessReader
                 SessionId: Marshal.ReadInt32(entry, OffsetSessionId),
                 ReadBytes: Marshal.ReadInt64(entry, OffsetReadTransfer),
                 WriteBytes: Marshal.ReadInt64(entry, OffsetWriteTransfer),
-                OtherBytes: Marshal.ReadInt64(entry, OffsetOtherTransfer)));
+                OtherBytes: Marshal.ReadInt64(entry, OffsetOtherTransfer),
+                Suspended: pid > 4 && AllThreadsSuspended(entry, offset, size)));
 
             int next = Marshal.ReadInt32(entry, OffsetNextEntry);
             if (next == 0) break;
             offset += next;
         }
         return result;
+    }
+
+    /// <summary>Task Manager's "Suspended": every thread waits with the Suspended reason (typical for parked Store apps).</summary>
+    private static bool AllThreadsSuspended(IntPtr entry, int offset, int size)
+    {
+        int threads = Marshal.ReadInt32(entry, OffsetThreadCount);
+        if (threads <= 0 || offset + ProcessEntrySize + (long)threads * ThreadEntrySize > size) return false;
+        for (int index = 0; index < threads; index++)
+        {
+            int thread = ProcessEntrySize + index * ThreadEntrySize;
+            if (Marshal.ReadInt32(entry, thread + OffsetThreadState) != ThreadStateWaiting ||
+                Marshal.ReadInt32(entry, thread + OffsetWaitReason) != WaitReasonSuspended)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }

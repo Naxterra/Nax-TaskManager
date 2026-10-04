@@ -54,6 +54,11 @@
                             <FontIcon Glyph="&#xE71A;" />
                         </AppBarButton.Icon>
                     </AppBarButton>
+                    <AppBarToggleButton x:Uid="ProcessesPage_28" x:Name="EfficiencyButton" Label="Efficiency mode" IsEnabled="False" Click="Efficiency_Click">
+                        <AppBarToggleButton.Icon>
+                            <PathIcon Data="M15,1 C7,1 2,5 2,11 C2,12.2 2.3,13.2 2.9,14 L1,15.9 L2.1,17 L4,15.1 C4.9,15.7 5.9,16 7,16 C13,16 15,10 15,1 Z" />
+                        </AppBarToggleButton.Icon>
+                    </AppBarToggleButton>
                     <AppBarButton x:Uid="ProcessesPage_7" x:Name="PropertiesButton" Label="Properties" IsEnabled="False" Click="Properties_Click">
                         <AppBarButton.Icon>
                             <FontIcon Glyph="&#xE946;" />
@@ -214,17 +219,32 @@
                                     <Run Text="{x:Bind Name, Mode=OneWay}" />
                                     <Run Text="{x:Bind Detail, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </TextBlock>
-                                <Border x:Uid="ProcessesPage_24"
-                                    Grid.Column="3"
-                                    Margin="0,0,8,0"
-                                    Padding="6,1"
-                                    VerticalAlignment="Center"
-                                    CornerRadius="4"
-                                    Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
-                                    Visibility="{x:Bind BlockedVisibility, Mode=OneWay}"
-                                    ToolTipService.ToolTip="Outbound network access is blocked by Nax-TaskManager">
-                                    <TextBlock x:Uid="ProcessesPage_25" Text="Blocked" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                                </Border>
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <Path x:Uid="ProcessesPage_26"
+                                        Width="14"
+                                        Height="14"
+                                        Stretch="Uniform"
+                                        VerticalAlignment="Center"
+                                        Fill="{ThemeResource SystemFillColorSuccessBrush}"
+                                        Data="M15,1 C7,1 2,5 2,11 C2,12.2 2.3,13.2 2.9,14 L1,15.9 L2.1,17 L4,15.1 C4.9,15.7 5.9,16 7,16 C13,16 15,10 15,1 Z"
+                                        Visibility="{x:Bind EfficiencyVisibility, Mode=OneWay}"
+                                        ToolTipService.ToolTip="Efficiency mode" />
+                                    <FontIcon x:Uid="ProcessesPage_27"
+                                        Glyph="&#xE769;"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Visibility="{x:Bind SuspendedVisibility, Mode=OneWay}"
+                                        ToolTipService.ToolTip="Suspended" />
+                                    <Border x:Uid="ProcessesPage_24"
+                                        Padding="6,1"
+                                        VerticalAlignment="Center"
+                                        CornerRadius="4"
+                                        Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
+                                        Visibility="{x:Bind BlockedVisibility, Mode=OneWay}"
+                                        ToolTipService.ToolTip="Outbound network access is blocked by Nax-TaskManager">
+                                        <TextBlock x:Uid="ProcessesPage_25" Text="Blocked" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                    </Border>
+                                </StackPanel>
                             </Grid>
 
                             <Border Grid.Column="1" Background="{x:Bind CpuHeat, Mode=OneWay}">

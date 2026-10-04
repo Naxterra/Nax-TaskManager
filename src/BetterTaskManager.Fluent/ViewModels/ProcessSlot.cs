@@ -20,6 +20,7 @@ public sealed class ProcessSlot : ObservableObject
     private ImageSource? icon;
     private Brush cpuHeat = Heat.Level(0), memoryHeat = Heat.Level(0), ioHeat = Heat.Level(0), networkHeat = Heat.Level(0), bandwidthHeat = Heat.Level(0);
     private Visibility sectionVisibility = Visibility.Collapsed, rowVisibility = Visibility.Visible, chevronVisibility = Visibility.Collapsed;
+    private Visibility efficiencyVisibility = Visibility.Collapsed, suspendedVisibility = Visibility.Collapsed;
     private double chevronAngle;
     private Thickness indent;
     private bool blocked;
@@ -52,6 +53,8 @@ public sealed class ProcessSlot : ObservableObject
     public Thickness Indent { get => indent; private set => Set(ref indent, value); }
     public bool Blocked { get => blocked; private set { if (Set(ref blocked, value)) Raise(nameof(BlockedVisibility)); } }
     public Visibility BlockedVisibility => blocked ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility EfficiencyVisibility { get => efficiencyVisibility; private set => Set(ref efficiencyVisibility, value); }
+    public Visibility SuspendedVisibility { get => suspendedVisibility; private set => Set(ref suspendedVisibility, value); }
 
     public static void Load(ProcessSlot slot, (ProcessRowData Row, ProcessRowContext Context) input)
     {
@@ -68,6 +71,7 @@ public sealed class ProcessSlot : ObservableObject
             slot.ChevronVisibility = Visibility.Collapsed;
             slot.CpuHeat = slot.MemoryHeat = slot.IoHeat = slot.NetworkHeat = slot.BandwidthHeat = Heat.Level(0);
             slot.Blocked = false;
+            slot.EfficiencyVisibility = slot.SuspendedVisibility = Visibility.Collapsed;
             return;
         }
 
@@ -90,5 +94,7 @@ public sealed class ProcessSlot : ObservableObject
         slot.IoHeat = Heat.Level(Heat.Scale(row.Io / 1048576d, 0.1, 1, 5, 20, 50, 100));
         slot.NetworkHeat = Heat.Level(Heat.Scale(row.Connections, 1, 5, 15, 30, 60, 120));
         slot.Blocked = row.Kind == RowKind.Group && context.IsBlocked(row.Path);
+        slot.EfficiencyVisibility = row.Efficiency ? Visibility.Visible : Visibility.Collapsed;
+        slot.SuspendedVisibility = row.Suspended ? Visibility.Visible : Visibility.Collapsed;
     }
 }

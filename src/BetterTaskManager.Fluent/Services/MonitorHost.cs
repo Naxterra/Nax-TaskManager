@@ -97,6 +97,9 @@ public sealed class MonitorHost : IDisposable
 
     public void RequestRefresh() => engine.RequestRefresh();
 
+    /// <summary>After changing priority or efficiency mode: read them again in the next refresh.</summary>
+    public void InvalidateProcessDetails() => engine.InvalidateProcessDetails();
+
     private void OnSnapshotReady(MonitorSnapshot snapshot)
     {
         Volatile.Write(ref pending, snapshot);

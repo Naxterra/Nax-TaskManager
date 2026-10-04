@@ -27,7 +27,9 @@ public sealed record ProcessRowData(
     int Connections,
     bool Expandable,
     bool Expanded,
-    bool IsApp);
+    bool IsApp,
+    bool Efficiency = false,
+    bool Suspended = false);
 
 public static class ProcessTree
 {
@@ -117,7 +119,8 @@ public static class ProcessTree
                 first.Path, first.Company,
                 group.Members.Select(member => member.Key).ToList(),
                 group.Cpu, group.CpuSampled, group.Memory, group.Io, group.NetworkRate, group.Connections,
-                expandable, expanded, group.IsApp));
+                expandable, expanded, group.IsApp,
+                group.Members.All(member => member.Efficiency), group.Members.All(member => member.Suspended)));
 
             if (!expanded) continue;
             foreach (ProcessSample child in SortChildren(children, sortColumn, descending))
@@ -125,7 +128,7 @@ public static class ProcessTree
                 rows.Add(new ProcessRowData(RowKind.Child, $"{group.Key}|{child.Pid}|{child.CreateTime}", ChildName(child),
                     "PID " + child.Pid, child.Path, child.Company, new[] { child.Key },
                     child.CpuPercent, child.CpuSampled, child.PrivateWorkingSet, child.IoBytesPerSecond, child.NetworkBytesPerSecond, child.ConnectionCount,
-                    false, false, group.IsApp));
+                    false, false, group.IsApp, child.Efficiency, child.Suspended));
             }
         }
     }

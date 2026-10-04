@@ -14,6 +14,7 @@ public static class Program
     internal const string FirewallBlockArgument = "--firewall-block";
     internal const string FirewallUnblockArgument = "--firewall-unblock";
     internal const string WaitForProcessArgument = "--wait-for-pid";
+    private const string TestInstanceArgument = "--test-instance";
 
     private static Mutex? s_singleInstance;
 
@@ -36,7 +37,8 @@ public static class Program
         }
 
         WaitForPreviousInstance(args);
-        if (!TryAcquireSingleInstance())
+        // --test-instance: automated UI tests run a build next to the copy the user has open.
+        if (!args.Contains(TestInstanceArgument) && !TryAcquireSingleInstance())
         {
             ActivateExistingWindow();
             return 0;

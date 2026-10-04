@@ -287,4 +287,10 @@ Antwort: {0}</value></data>
   <data name="Settings_HistoryNotRunning" xml:space="preserve"><value>Installiert, aber der Dienst läuft nicht.</value></data>
   <data name="Settings_TurningOn" xml:space="preserve"><value>Wird eingeschaltet…</value></data>
   <data name="Settings_TurningOff" xml:space="preserve"><value>Wird ausgeschaltet…</value></data>
+  <data name="Proc_Efficiency" xml:space="preserve"><value>Effizienzmodus</value></data>
+  <data name="Proc_EfficiencyFailed" xml:space="preserve"><value>Effizienzmodus für „{0}“ nicht geändert</value></data>
+  <data name="Proc_RestartHintChange" xml:space="preserve"><value>Als Administrator neu gestartet können mehr Prozesse geändert werden.</value></data>
+  <data name="ProcessesPage_26.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Effizienzmodus</value></data>
+  <data name="ProcessesPage_27.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Angehalten</value></data>
+  <data name="ProcessesPage_28.Label" xml:space="preserve"><value>Effizienzmodus</value></data>
 </root>

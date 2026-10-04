@@ -1,4 +1,5 @@
 using BetterTaskManager.Core.Monitoring;
+using BetterTaskManager.Core.Native;
 using BetterTaskManager.Fluent.Services;
 using BetterTaskManager.Fluent.ViewModels;
 using Microsoft.UI.Xaml;
@@ -110,6 +111,9 @@ public sealed partial class ProcessesPage : Page
         bool hasPath = slot is not null && !string.IsNullOrWhiteSpace(slot.Path);
         OpenLocationButton.IsEnabled = PropertiesButton.IsEnabled = CopyPathButton.IsEnabled = hasPath;
         FirewallButton.IsEnabled = hasPath;
+        // Like Task Manager: not for Windows' own critical processes.
+        EfficiencyButton.IsEnabled = slot?.Data is { } data && !ProcessActions.AnyCritical(data.Processes);
+        EfficiencyButton.IsChecked = slot?.Data?.Efficiency == true;
         bool blocked = hasPath && App.Monitor.IsBlocked(slot!.Path);
         FirewallButton.Label = blocked ? Loc.Get("Firewall_AllowShort") : Loc.Get("Firewall_BlockShort");
         FirewallIcon.Glyph = blocked ? "" : "";
@@ -175,6 +179,15 @@ public sealed partial class ProcessesPage : Page
         menu.Items.Add(MenuItem(Loc.Get("Proc_EndTask"), "", (_, _) => _ = EndSelectedAsync(entireTree: false)));
         menu.Items.Add(MenuItem(Loc.Get("Proc_EndTree"), "", (_, _) => _ = EndSelectedAsync(entireTree: true)));
         menu.Items.Add(new MenuFlyoutSeparator());
+        var efficiency = new ToggleMenuFlyoutItem
+        {
+            Text = Loc.Get("Proc_Efficiency"),
+            IsChecked = slot.Data?.Efficiency == true,
+            IsEnabled = slot.Data is { } data && !ProcessActions.AnyCritical(data.Processes)
+        };
+        efficiency.Click += (_, _) => _ = ToggleEfficiencyAsync();
+        menu.Items.Add(efficiency);
+        menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(MenuItem(Loc.Get("Menu_OpenLocation"), "", (_, _) => ProcessActions.OpenFileLocation(slot.Path), hasPath));
         menu.Items.Add(MenuItem(Loc.Get("Proc_Properties"), "", (_, _) => ProcessActions.ShowProperties(slot.Path), hasPath));
         menu.Items.Add(MenuItem(Loc.Get("Proc_CopyPath"), "", (_, _) => ProcessActions.CopyText(slot.Path), hasPath));
@@ -218,6 +231,23 @@ public sealed partial class ProcessesPage : Page
     }
 
     private void Pause_Click(object sender, RoutedEventArgs e) => App.Monitor.Paused = PauseButton.IsChecked == true;
+
+    private void Efficiency_Click(object sender, RoutedEventArgs e) => _ = ToggleEfficiencyAsync();
+
+    /// <summary>A row counts as in efficiency mode when all its processes are; toggling switches all of them.</summary>
+    private async Task ToggleEfficiencyAsync()
+    {
+        if (Selected is not { Data: { } data }) return;
+        bool on = !data.Efficiency;
+        ProcessActions.ChangeResult result = await ProcessActions.ChangeAsync(data.Processes,
+            (pid, createTime) => ProcessControl.SetEfficiency(pid, createTime, on));
+        App.Monitor.InvalidateProcessDetails();
+        if (result.Failures.Count > 0)
+        {
+            string hint = result.AccessDenied && !App.Monitor.IsElevated ? "\n\n" + Loc.Get("Proc_RestartHintChange") : "";
+            await ShowMessageAsync(Loc.F("Proc_EfficiencyFailed", data.Name), string.Join("\n", result.Failures.Take(5)) + hint);
+        }
+    }
 
     private async Task EndSelectedAsync(bool entireTree)
     {

@@ -32,6 +32,11 @@ public sealed class MonitorEngine : IDisposable
     private long previousIdle, previousKernel, previousUser;
     private Dictionary<int, List<string>> services = new();
     private long servicesReadAt;
+    private readonly Dictionary<(int, long), ProcessControlState> controlStates = new();
+    private long controlReadAt;
+    private volatile bool controlStale;
+    private Dictionary<int, string> users = new();
+    private long usersReadAt;
     private Task? loop;
     private volatile bool paused;
 
@@ -61,6 +66,19 @@ public sealed class MonitorEngine : IDisposable
     }
 
     public MonitorSnapshot? Latest { get; private set; }
+
+    /// <summary>
+    /// Owner, priority and efficiency mode per process. Costs a few milliseconds per read, so priority and efficiency
+    /// are re-read every 2 s and owners every 5 s; the history service does not need them.
+    /// </summary>
+    public bool ReadProcessDetails { get; set; } = true;
+
+    /// <summary>Re-read priority and efficiency mode in the next collection, after this app changed them.</summary>
+    public void InvalidateProcessDetails()
+    {
+        controlStale = true;
+        RequestRefresh();
+    }
 
     /// <summary>
     /// Fall back to the history service's measurements whenever this process cannot run the kernel network trace
@@ -148,6 +166,22 @@ public sealed class MonitorEngine : IDisposable
             servicesReadAt = Stopwatch.GetTimestamp();
         }
         int processorCount = Environment.ProcessorCount;
+        bool readControl = false;
+        if (ReadProcessDetails)
+        {
+            readControl = controlStale || controlReadAt == 0 || Stopwatch.GetElapsedTime(controlReadAt).TotalSeconds >= 2;
+            if (readControl)
+            {
+                controlStale = false;
+                controlStates.Clear();
+                controlReadAt = Stopwatch.GetTimestamp();
+            }
+            if (usersReadAt == 0 || Stopwatch.GetElapsedTime(usersReadAt).TotalSeconds >= 5)
+            {
+                users = ProcessUsers.Read();
+                usersReadAt = Stopwatch.GetTimestamp();
+            }
+        }
 
         var processes = new List<ProcessSample>(raw.Count);
         var liveKeys = new HashSet<(int, long)>();
@@ -176,6 +210,13 @@ public sealed class MonitorEngine : IDisposable
 
             windowTitles.TryGetValue(process.Pid, out string? title);
             services.TryGetValue(process.Pid, out List<string>? hosted);
+            ProcessControlState control = default;
+            if (ReadProcessDetails && process.Pid > 4 && !controlStates.TryGetValue(key, out control))
+            {
+                // Read on the 2-second pass and for processes that started since; failures are remembered too.
+                ProcessControl.TryRead(process.Pid, out control);
+                controlStates[key] = control;
+            }
             processes.Add(new ProcessSample
             {
                 Pid = process.Pid,
@@ -195,7 +236,11 @@ public sealed class MonitorEngine : IDisposable
                 Handles = process.HandleCount,
                 SessionId = process.SessionId,
                 WindowTitle = title,
-                Services = hosted
+                Services = hosted,
+                Suspended = process.Suspended,
+                UserName = users.GetValueOrDefault(process.Pid, ""),
+                Priority = control.Priority,
+                Efficiency = control.Efficiency
             });
         }
 
