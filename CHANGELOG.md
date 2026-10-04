@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.0.0-alpha.4 - unreleased
+
+- The classic WinForms app (Better Task Manager 1.x) is retired from the repository; its last release stays available as v1.1.0-preview.57.
+- `main` now carries the WinUI 3 app.
+
+## 2.0.0-alpha.3 - 2026-10-04
+
+- Per-app network speed and data without administrator rights, fed live by the History service over a read-only local pipe.
+- Repository renamed to Naxterra/Nax-TaskManager.
+
+## 2.0.0-alpha.2 - 2026-10-04
+
+- Renamed to Nax-TaskManager (`NaxTaskManager.exe`); setup upgrades a Better Task Manager install into the new folder and keeps settings and firewall rules.
+- Network page: sortable columns, Data column, Pause, stable row order.
+- Performance page: Free up memory (trim app memory, clear standby cache, empty all working sets).
+
+## 2.0.0-alpha.1 - 2026-10-03
+
+- First release of the WinUI 3 rebuild: Processes, Performance, Network, History and Settings pages, per-app network throughput from the kernel trace, remote host names, memory figures that reconcile with Task Manager, optional background History service.
+
 ## 1.1.0-preview.57 - 2026-09-13
 
 ### Fixed

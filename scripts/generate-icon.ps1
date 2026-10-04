@@ -4,8 +4,8 @@ param()
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
-$iconPath = Join-Path $root "src\BetterTaskManager\assets\BetterTaskManager.ico"
-$previewPath = Join-Path $root "src\BetterTaskManager\assets\BetterTaskManager-icon.png"
+$iconPath = Join-Path $root "src\BetterTaskManager.Fluent\Assets\AppIcon.ico"
+$previewPath = Join-Path $root "src\BetterTaskManager.Fluent\Assets\AppIcon-preview.png"
 
 Add-Type -AssemblyName System.Drawing.Common
 $gdiAssembly = [AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetName().Name -eq "System.Private.Windows.GdiPlus" } | Select-Object -First 1

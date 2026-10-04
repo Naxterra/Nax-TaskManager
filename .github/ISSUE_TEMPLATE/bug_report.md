@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem in Better Task Manager
+about: Report a problem in Nax-TaskManager
 title: "[Bug]: "
 labels: bug
 assignees: ""
@@ -14,12 +14,12 @@ assignees: ""
 
 ## App version
 
-Better Task Manager v1.0
+Nax-TaskManager v2.0.0-alpha.x (Settings → About)
 
 ## Windows version
 
 
-## Are you running as administrator?
+## Are you running as administrator? Is background recording (History service) on?
 
 Yes / No
 

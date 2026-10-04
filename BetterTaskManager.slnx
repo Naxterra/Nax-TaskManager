@@ -3,6 +3,5 @@
     <Project Path="src/BetterTaskManager.Core/BetterTaskManager.Core.csproj" />
     <Project Path="src/BetterTaskManager.Fluent/BetterTaskManager.Fluent.csproj" />
     <Project Path="src/BetterTaskManager.HistoryService/BetterTaskManager.HistoryService.csproj" />
-    <Project Path="src/BetterTaskManager/BetterTaskManager.csproj" />
   </Folder>
 </Solution>

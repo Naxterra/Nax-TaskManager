@@ -35,21 +35,6 @@ jobs:
         shell: pwsh
         run: dotnet build .\BetterTaskManager.slnx -c Release --no-restore --nologo
 
-      # The classic WinForms app (src/BetterTaskManager) is still in the solution until it is retired; keep its own tests.
-      - name: Classic app self-test
-        shell: pwsh
-        run: |
-          $exe = Resolve-Path '.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe'
-          $process = Start-Process -FilePath $exe.Path -ArgumentList '--self-test' -PassThru -Wait
-          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
-
-      - name: Classic app UI smoke test
-        shell: pwsh
-        run: |
-          $exe = Resolve-Path '.\src\BetterTaskManager\bin\Release\net11.0-windows\BetterTaskManager.exe'
-          $process = Start-Process -FilePath $exe.Path -ArgumentList '--ui-smoke-test' -PassThru -Wait
-          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
-
       - name: Publish Nax-TaskManager portable package
         shell: pwsh
         run: .\scripts\publish-fluent.ps1
