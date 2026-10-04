@@ -107,6 +107,9 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchApplication}"; WorkingD
 ; The background history service runs from Program Files as LocalSystem; remove it with the app (one UAC prompt).
 ; Skipped for silent uninstalls, which is how a newer setup removes this version during an upgrade.
 Filename: "{app}\{#AppExeName}"; Parameters: "--uninstall-history-service ""{%TEMP}\NaxTaskManager-uninstall-service.txt"""; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; Verb: "runas"; Check: ShouldRemoveHistoryService; RunOnceId: "RemoveHistoryService"
+; If this app replaced Windows Task Manager, restore the built-in one (one UAC prompt). Only when the redirect is
+; still ours, and skipped for silent uninstalls so the choice survives app upgrades.
+Filename: "{app}\{#AppExeName}"; Parameters: "--replace-taskmanager-off ""{app}\{#AppExeName}"""; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; Verb: "runas"; Check: ShouldRestoreTaskManager; RunOnceId: "RestoreTaskManager"
 
 [Code]
 const
@@ -195,6 +198,17 @@ end;
 function ShouldRemoveHistoryService(): Boolean;
 begin
   Result := (not UninstallSilent()) and RegKeyExists(HKLM64, 'SYSTEM\CurrentControlSet\Services\NaxTaskManagerHistory');
+end;
+
+function ShouldRestoreTaskManager(): Boolean;
+var
+  Value: String;
+begin
+  Result := False;
+  if UninstallSilent() then
+    Exit;
+  if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\taskmgr.exe', 'Debugger', Value) then
+    Result := Pos(Lowercase(ExpandConstant('{app}\{#AppExeName}')), Lowercase(Value)) > 0;
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;

@@ -86,6 +86,29 @@
                 </Grid>
             </Border>
 
+            <TextBlock x:Uid="SettingsPage_27" Text="System integration" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
+            <Border Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="16" RowSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <FontIcon Glyph="&#xE9D5;" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock x:Uid="SettingsPage_28" Text="Replace Windows Task Manager" />
+                        <TextBlock x:Name="ReplaceStatusText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch x:Uid="SettingsPage_29" x:Name="ReplaceToggle" Grid.Column="2" MinWidth="0" VerticalAlignment="Center" OnContent="On" OffContent="Off" Toggled="ReplaceToggle_Toggled" />
+                    <TextBlock x:Uid="SettingsPage_30" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"
+                               Text="Opens Nax-TaskManager when Task Manager is started from the taskbar, Ctrl+Shift+Esc, Ctrl+Alt+Del or the Start menu. This applies to every account on this PC and needs administrator approval to change. Because Windows starts the replacement without Task Manager's automatic elevation, it opens in limited mode; use Restart as administrator for full details. Removed again when you turn this off or uninstall the app." />
+                </Grid>
+            </Border>
+
             <TextBlock x:Uid="SettingsPage_20" Text="History" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
             <Border Style="{StaticResource CardStyle}">
                 <Grid ColumnSpacing="16" RowSpacing="8">

@@ -17,6 +17,8 @@ public static class Program
     private const string TestInstanceArgument = "--test-instance";
     internal const string StartupEnableArgument = "--startup-enable";
     internal const string StartupDisableArgument = "--startup-disable";
+    internal const string ReplaceTaskManagerOnArgument = "--replace-taskmanager-on";
+    internal const string ReplaceTaskManagerOffArgument = "--replace-taskmanager-off";
 
     private static Mutex? s_singleInstance;
 
@@ -46,6 +48,36 @@ public static class Program
             try
             {
                 Core.Startup.StartupApps.SetEnabled(source, args[2], args[0] == StartupEnableArgument);
+                return 0;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+            {
+                return 1;
+            }
+        }
+
+        // Elevated helper mode: make this app replace Windows Task Manager, or restore the built-in one, then exit.
+        if (args.Length == 2 && args[0] == ReplaceTaskManagerOnArgument)
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            try
+            {
+                Core.Native.TaskManagerReplacement.Enable(args[1]);
+                return 0;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+            {
+                return 1;
+            }
+        }
+        if (args.Length >= 1 && args[0] == ReplaceTaskManagerOffArgument)
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            try
+            {
+                // With a path (uninstall), only restore if the redirect is ours, so another tool's entry stays.
+                if (args.Length == 2) Core.Native.TaskManagerReplacement.DisableIfOurs(args[1]);
+                else Core.Native.TaskManagerReplacement.Disable();
                 return 0;
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)

@@ -361,4 +361,15 @@ Answer: {0}</value></data>
   <data name="Startup_NotChanged" xml:space="preserve"><value>"{0}" not changed</value></data>
   <data name="Startup_BiosTime" xml:space="preserve"><value> · last BIOS time {0} s</value></data>
   <data name="Startup_ByPolicy" xml:space="preserve"><value> (policy)</value></data>
+  <data name="SettingsPage_27.Text" xml:space="preserve"><value>System integration</value></data>
+  <data name="SettingsPage_28.Text" xml:space="preserve"><value>Replace Windows Task Manager</value></data>
+  <data name="SettingsPage_29.OnContent" xml:space="preserve"><value>On</value></data>
+  <data name="SettingsPage_29.OffContent" xml:space="preserve"><value>Off</value></data>
+  <data name="SettingsPage_30.Text" xml:space="preserve"><value>Opens Nax-TaskManager when Task Manager is started from the taskbar, Ctrl+Shift+Esc, Ctrl+Alt+Del or the Start menu. This applies to every account on this PC and needs administrator approval to change. Because Windows starts the replacement without Task Manager's automatic elevation, it opens in limited mode; use Restart as administrator for full details. Removed again when you turn this off or uninstall the app.</value></data>
+  <data name="Replace_On" xml:space="preserve"><value>On. Task Manager opens Nax-TaskManager.</value></data>
+  <data name="Replace_Off" xml:space="preserve"><value>Off. Windows opens its own Task Manager.</value></data>
+  <data name="Replace_OffUac" xml:space="preserve"><value>Off. Turning it on asks for administrator approval once.</value></data>
+  <data name="Replace_Other" xml:space="preserve"><value>Another program currently replaces Task Manager:
+{0}</value></data>
+  <data name="Replace_NotChanged" xml:space="preserve"><value>Task Manager replacement not changed</value></data>
 </root>

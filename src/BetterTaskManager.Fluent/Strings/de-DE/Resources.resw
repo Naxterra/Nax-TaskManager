@@ -361,4 +361,15 @@ Antwort: {0}</value></data>
   <data name="Startup_NotChanged" xml:space="preserve"><value>„{0}“ nicht geändert</value></data>
   <data name="Startup_BiosTime" xml:space="preserve"><value> · letzte BIOS-Zeit {0} s</value></data>
   <data name="Startup_ByPolicy" xml:space="preserve"><value> (Richtlinie)</value></data>
+  <data name="SettingsPage_27.Text" xml:space="preserve"><value>Systemintegration</value></data>
+  <data name="SettingsPage_28.Text" xml:space="preserve"><value>Windows Task-Manager ersetzen</value></data>
+  <data name="SettingsPage_29.OnContent" xml:space="preserve"><value>Ein</value></data>
+  <data name="SettingsPage_29.OffContent" xml:space="preserve"><value>Aus</value></data>
+  <data name="SettingsPage_30.Text" xml:space="preserve"><value>Öffnet Nax-TaskManager, wenn der Task-Manager über die Taskleiste, Strg+Umschalt+Esc, Strg+Alt+Entf oder das Startmenü gestartet wird. Dies gilt für jedes Konto auf diesem PC und erfordert zum Ändern eine Administratorfreigabe. Da Windows den Ersatz ohne die automatische Erhöhung des Task-Managers startet, öffnet er im eingeschränkten Modus; verwenden Sie „Als Administrator neu starten“ für alle Details. Wird wieder entfernt, wenn Sie dies ausschalten oder die App deinstallieren.</value></data>
+  <data name="Replace_On" xml:space="preserve"><value>Ein. Der Task-Manager öffnet Nax-TaskManager.</value></data>
+  <data name="Replace_Off" xml:space="preserve"><value>Aus. Windows öffnet seinen eigenen Task-Manager.</value></data>
+  <data name="Replace_OffUac" xml:space="preserve"><value>Aus. Beim Einschalten wird einmal nach Administratorfreigabe gefragt.</value></data>
+  <data name="Replace_Other" xml:space="preserve"><value>Ein anderes Programm ersetzt derzeit den Task-Manager:
+{0}</value></data>
+  <data name="Replace_NotChanged" xml:space="preserve"><value>Task-Manager-Ersatz nicht geändert</value></data>
 </root>

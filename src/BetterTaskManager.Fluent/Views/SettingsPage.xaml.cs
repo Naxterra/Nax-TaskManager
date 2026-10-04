@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using BetterTaskManager.Core.History;
+using BetterTaskManager.Core.Native;
 using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -28,7 +29,70 @@ public sealed partial class SettingsPage : Page
         string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
         VersionText.Text = "Nax-TaskManager " + version.Split('+')[0];
         ShowHistoryState();
+        ShowReplaceState();
         loading = false;
+    }
+
+    private void ShowReplaceState()
+    {
+        string? exe = Environment.ProcessPath;
+        string? other = exe is null ? null : TaskManagerReplacement.OtherTarget(exe);
+        bool ours = exe is not null && TaskManagerReplacement.IsReplacedBy(exe);
+        ReplaceToggle.IsOn = ours;
+        // Leave another tool's replacement alone: show it and disable the switch so toggling cannot overwrite it.
+        ReplaceToggle.IsEnabled = other is null;
+        ReplaceStatusText.Text = ours ? Loc.Get("Replace_On")
+            : other is not null ? Loc.F("Replace_Other", other)
+            : App.Monitor.IsElevated ? Loc.Get("Replace_Off") : Loc.Get("Replace_OffUac");
+    }
+
+    private async void ReplaceToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (loading) return;
+        bool enable = ReplaceToggle.IsOn;
+        string? exe = Environment.ProcessPath;
+        if (exe is null) return;
+
+        ReplaceToggle.IsEnabled = false;
+        string? error = null;
+        if (App.Monitor.IsElevated)
+        {
+            try
+            {
+                if (enable) TaskManagerReplacement.Enable(exe);
+                else TaskManagerReplacement.Disable();
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+            {
+                error = ex.Message;
+            }
+        }
+        else
+        {
+            // No administrator rights: a short-lived elevated copy changes the machine-wide setting (one UAC prompt).
+            var startInfo = new ProcessStartInfo(exe) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
+            startInfo.ArgumentList.Add(enable ? Program.ReplaceTaskManagerOnArgument : Program.ReplaceTaskManagerOffArgument);
+            if (enable) startInfo.ArgumentList.Add(exe);
+            try
+            {
+                using Process helper = Process.Start(startInfo)!;
+                await helper.WaitForExitAsync();
+                if (helper.ExitCode != 0) error = Loc.F("Common_ExitCode", helper.ExitCode);
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                error = Loc.Get("Uac_CancelledNothing");
+            }
+        }
+
+        loading = true;
+        ShowReplaceState();
+        loading = false;
+        ReplaceToggle.IsEnabled = TaskManagerReplacement.OtherTarget(exe) is null;
+        if (error is not null)
+        {
+            await new ContentDialog { XamlRoot = XamlRoot, Title = Loc.Get("Replace_NotChanged"), Content = error, CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();
+        }
     }
 
     private void ShowHistoryState()
