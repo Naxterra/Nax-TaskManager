@@ -68,12 +68,12 @@
                                 TextWrapping="Wrap"
                                 Text="The per-app Memory column only counts memory private to each process. The rest of &quot;In use&quot; belongs to Windows itself, drivers and memory that several processes share." />
                         </StackPanel>
-                        <DropDownButton x:Uid="PerformancePage_6" x:Name="CleanupButton" Grid.Column="1" VerticalAlignment="Top" AutomationProperties.Name="Free up memory">
+                        <SplitButton x:Uid="PerformancePage_6" x:Name="CleanupButton" Grid.Column="1" VerticalAlignment="Top" AutomationProperties.Name="Free up memory" Click="CleanupAll_Click">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xE74D;" FontSize="14" />
                                 <TextBlock x:Uid="PerformancePage_7" Text="Free up memory" />
                             </StackPanel>
-                            <DropDownButton.Flyout>
+                            <SplitButton.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
                                     <MenuFlyoutItem x:Uid="PerformancePage_8" Text="Trim app memory" Tag="Trim" Click="Cleanup_Click">
                                         <MenuFlyoutItem.Icon>
@@ -91,8 +91,8 @@
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                 </MenuFlyout>
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
+                            </SplitButton.Flyout>
+                        </SplitButton>
                     </Grid>
 
                     <InfoBar x:Name="CleanupBar" IsOpen="False" IsClosable="True" />

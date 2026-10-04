@@ -24,6 +24,8 @@ public sealed class AppSettings
     public bool NetworkSortDescending { get; set; }
     public string DetailsSortColumn { get; set; } = "Name";
     public bool DetailsSortDescending { get; set; }
+    /// <summary>The user dismissed the limited-mode notice; do not show it again.</summary>
+    public bool HideElevationNotice { get; set; }
     public Dictionary<string, double> ColumnWidths { get; set; } = new();
     public int WindowWidth { get; set; } = 1280;
     public int WindowHeight { get; set; } = 820;

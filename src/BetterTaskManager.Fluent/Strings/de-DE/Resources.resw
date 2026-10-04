@@ -372,4 +372,8 @@ Antwort: {0}</value></data>
   <data name="Replace_Other" xml:space="preserve"><value>Ein anderes Programm ersetzt derzeit den Task-Manager:
 {0}</value></data>
   <data name="Replace_NotChanged" xml:space="preserve"><value>Task-Manager-Ersatz nicht geändert</value></data>
+  <data name="Cleanup_AllTitle" xml:space="preserve"><value>Arbeitsspeicher jetzt freigeben?</value></data>
+  <data name="Cleanup_AllTextElevated" xml:space="preserve"><value>Führt alle drei Schritte auf einmal aus: App-Arbeitsspeicher trimmen, Standby-Cache leeren und alle Arbeitssätze leeren. Rechnen Sie mit kurzem Ruckeln, während der Speicher wieder eingelesen wird.</value></data>
+  <data name="Cleanup_AllTextStandard" xml:space="preserve"><value>Trimmt den Speicher jeder App, die dieses Konto erreichen kann. Das Leeren des Standby-Caches und aller Arbeitssätze erfordert Administratorrechte.</value></data>
+  <data name="Cleanup_AllButton" xml:space="preserve"><value>Freigeben</value></data>
 </root>

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0-alpha.11 - 2026-10-05
+
+- **Free up memory in one click.** The "Free up memory" button now runs every available step at once (trim app memory, and with administrator rights also the standby cache and all working sets). The dropdown arrow still offers the three steps individually.
+- **The limited-mode notice can be dismissed for good.** Close it once and it stays closed on later launches.
+- **Columns are easier to resize.** The divider between column headers is wider and highlights when you point at it, on every table (Processes, Network, Details, Startup apps).
+- **Network: sorting by Remote host works clearly.** Clicking the Remote host header now reorders the whole app list by each app's remote host (apps that only listen or use UDP sort last), and the connections inside each app stay sorted by host.
+
 ## 2.0.0-alpha.10 - 2026-10-05
 
 - **Replace Windows Task Manager** (Settings, System integration): an optional toggle that makes Nax-TaskManager open when Task Manager is started from the taskbar, Ctrl+Shift+Esc, Ctrl+Alt+Del or the Start menu. It needs administrator approval, shows when another tool already replaces Task Manager and leaves that alone, and is removed when you turn it off or uninstall the app. This uses the same documented mechanism as Sysinternals Process Explorer.

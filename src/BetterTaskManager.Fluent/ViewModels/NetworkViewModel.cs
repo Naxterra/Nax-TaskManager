@@ -230,18 +230,47 @@ public sealed class NetworkViewModel : ObservableObject
         List<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel)> groups,
         Dictionary<string, (double Down, double Up, long Received, long Sent)> traffic)
     {
-        Func<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel), double>? measure = SortColumn switch
-        {
-            SortState => group => group.Connections.Count(connection => connection.State == "Established") * 100000d + group.Connections.Count,
-            SortData => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Received + usage.Sent : 0,
-            SortSpeed => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Down + usage.Up : 0,
-            _ => null
-        };
         var byName = StringComparer.CurrentCultureIgnoreCase;
-        IOrderedEnumerable<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel)> ordered = measure is null
-            ? (SortDescending ? groups.OrderByDescending(group => group.Name, byName) : groups.OrderBy(group => group.Name, byName))
-            : (SortDescending ? groups.OrderByDescending(measure) : groups.OrderBy(measure)).ThenBy(group => group.Name, byName);
+        IOrderedEnumerable<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel)> ordered;
+
+        if (SortColumn == SortRemote)
+        {
+            // Order apps by their alphabetically first remote host, so clicking the header visibly reorders the list;
+            // the connections inside each app are ordered by host too (see SortConnections).
+            var byHost = StringComparer.OrdinalIgnoreCase;
+            ordered = (SortDescending
+                ? groups.OrderByDescending(group => GroupHost(group.Connections), byHost)
+                : groups.OrderBy(group => GroupHost(group.Connections), byHost)).ThenBy(group => group.Name, byName);
+        }
+        else
+        {
+            Func<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel), double>? measure = SortColumn switch
+            {
+                SortState => group => group.Connections.Count(connection => connection.State == "Established") * 100000d + group.Connections.Count,
+                SortData => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Received + usage.Sent : 0,
+                SortSpeed => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Down + usage.Up : 0,
+                _ => null
+            };
+            ordered = measure is null
+                ? (SortDescending ? groups.OrderByDescending(group => group.Name, byName) : groups.OrderBy(group => group.Name, byName))
+                : (SortDescending ? groups.OrderByDescending(measure) : groups.OrderBy(measure)).ThenBy(group => group.Name, byName);
+        }
         return ordered.ThenBy(group => group.Key, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>An app's representative remote host for sorting: the alphabetically first host it talks to. Apps with
+    /// no remote host (only listeners or UDP sockets) sort last.</summary>
+    private static string GroupHost(List<ConnectionSample> connections)
+    {
+        string? best = null;
+        foreach (ConnectionSample connection in connections)
+        {
+            if (connection.Protocol != "TCP" || connection.State == "Listening") continue;
+            string host = connection.RemoteHost ?? connection.RemoteAddress;
+            if (host.Length == 0) continue;
+            if (best is null || string.Compare(host, best, StringComparison.OrdinalIgnoreCase) < 0) best = host;
+        }
+        return best ?? "￿";
     }
 
     /// <summary>

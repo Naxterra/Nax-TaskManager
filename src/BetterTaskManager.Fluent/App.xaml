@@ -72,15 +72,34 @@
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
             </Style>
 
+            <!-- Drag handle between two column headers. The grab strip is wider than the visible line, and the line
+                 highlights on hover so it is clear the columns can be resized. -->
             <Style x:Key="ColumnSplitterStyle" TargetType="Thumb">
-                <Setter Property="Width" Value="7" />
-                <Setter Property="Margin" Value="-3,6" />
+                <Setter Property="Width" Value="11" />
+                <Setter Property="Margin" Value="-5,4" />
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Thumb">
                             <Grid Background="Transparent">
-                                <Border Width="1" HorizontalAlignment="Center" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="Line.Width" Value="2" />
+                                                <Setter Target="Line.Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="Line.Width" Value="2" />
+                                                <Setter Target="Line.Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <Border x:Name="Line" Width="1" HorizontalAlignment="Center" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                             </Grid>
                         </ControlTemplate>
                     </Setter.Value>

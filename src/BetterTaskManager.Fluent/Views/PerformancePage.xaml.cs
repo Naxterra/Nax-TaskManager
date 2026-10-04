@@ -49,19 +49,29 @@ public sealed partial class PerformancePage : Page
         ["System"] = new(Loc.Get("Cleanup_SystemTitle"), Loc.Get("Cleanup_SystemText"), Loc.Get("Cleanup_SystemButton"))
     };
 
+    /// <summary>One flyout item: trim, clear standby, or empty working sets, each with its own confirmation.</summary>
     private async void Cleanup_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not MenuFlyoutItem { Tag: string kind } || !CleanupActions.TryGetValue(kind, out CleanupAction? action)) return;
+        await RunCleanupsAsync(new[] { kind }, action.Title, action.Explanation + "\n\n" + Loc.Get("Cleanup_Note"), action.Button);
+    }
+
+    /// <summary>The primary button runs every cleanup available at this rights level in one click.</summary>
+    private async void CleanupAll_Click(SplitButton sender, SplitButtonClickEventArgs args)
+    {
+        string[] kinds = App.Monitor.IsElevated ? new[] { "Trim", "Standby", "System" } : new[] { "Trim" };
+        string body = (App.Monitor.IsElevated ? Loc.Get("Cleanup_AllTextElevated") : Loc.Get("Cleanup_AllTextStandard")) + "\n\n" + Loc.Get("Cleanup_Note");
+        await RunCleanupsAsync(kinds, Loc.Get("Cleanup_AllTitle"), body, Loc.Get("Cleanup_AllButton"));
+    }
+
+    private async Task RunCleanupsAsync(IReadOnlyList<string> kinds, string title, string body, string button)
+    {
         var confirm = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = action.Title,
-            Content = new TextBlock
-            {
-                Text = action.Explanation + "\n\n" + Loc.Get("Cleanup_Note"),
-                TextWrapping = TextWrapping.Wrap
-            },
-            PrimaryButtonText = action.Button,
+            Title = title,
+            Content = new TextBlock { Text = body, TextWrapping = TextWrapping.Wrap },
+            PrimaryButtonText = button,
             CloseButtonText = Loc.Get("Common_Cancel"),
             DefaultButton = ContentDialogButton.Close
         };
@@ -69,38 +79,55 @@ public sealed partial class PerformancePage : Page
 
         CleanupButton.IsEnabled = false;
         MemoryBreakdown? before = App.Monitor.Latest?.System.Memory;
-        (bool succeeded, string message) = kind switch
+        var messages = new List<string>();
+        bool allOk = true;
+        foreach (string kind in kinds)
         {
-            "Trim" => await Task.Run(() =>
-            {
-                TrimResult trim = MemoryCleanup.TrimAllWorkingSets(Environment.ProcessId);
-                string refused = trim.Denied == 0 ? "" : App.Monitor.IsElevated
-                    ? Loc.F("Cleanup_ProtectedRefused", trim.Denied)
-                    : Loc.F("Cleanup_NeedAdminCount", trim.Denied);
-                return (true, Loc.F("Cleanup_Trimmed", Format.Count(trim.Trimmed)) + refused);
-            }),
-            "Standby" => ToTuple(await Task.Run(MemoryCleanup.PurgeStandbyList), "Cleanup_StandbyDone"),
-            _ => ToTuple(await Task.Run(MemoryCleanup.EmptySystemWorkingSets), "Cleanup_SystemDone")
-        };
+            (bool ok, string message) = await RunOneAsync(kind);
+            allOk &= ok;
+            messages.Add(message);
+        }
 
         // Let the monitor take a fresh sample so the effect is measured, not guessed.
         App.Monitor.RequestRefresh();
         await Task.Delay(1500);
         MemoryBreakdown? after = App.Monitor.Latest?.System.Memory;
-        if (succeeded && before is not null && after is not null)
+        string combined = string.Join("\n", messages);
+        if (allOk && before is not null && after is not null)
         {
-            message += Loc.F("Cleanup_Delta", Format.Gigabytes(before.InUse), Format.Gigabytes(after.InUse),
+            combined += Loc.F("Cleanup_Delta", Format.Gigabytes(before.InUse), Format.Gigabytes(after.InUse),
                 Format.Gigabytes(before.Standby), Format.Gigabytes(after.Standby),
                 Format.Gigabytes(before.Free), Format.Gigabytes(after.Free));
         }
-        CleanupBar.Severity = succeeded ? InfoBarSeverity.Success : InfoBarSeverity.Error;
-        CleanupBar.Title = succeeded ? Loc.Get("Cleanup_Done") : Loc.Get("Cleanup_NotDone");
-        CleanupBar.Message = message;
+        CleanupBar.Severity = allOk ? InfoBarSeverity.Success : InfoBarSeverity.Error;
+        CleanupBar.Title = allOk ? Loc.Get("Cleanup_Done") : Loc.Get("Cleanup_NotDone");
+        CleanupBar.Message = combined;
         CleanupBar.IsOpen = true;
         CleanupButton.IsEnabled = true;
-
-        static (bool, string) ToTuple(CleanupResult result, string doneKey) => (result.Succeeded, result.Succeeded ? Loc.Get(doneKey) : Loc.CleanupFailure(result));
     }
+
+    private static async Task<(bool Succeeded, string Message)> RunOneAsync(string kind)
+    {
+        switch (kind)
+        {
+            case "Trim":
+                return await Task.Run(() =>
+                {
+                    TrimResult trim = MemoryCleanup.TrimAllWorkingSets(Environment.ProcessId);
+                    string refused = trim.Denied == 0 ? "" : App.Monitor.IsElevated
+                        ? Loc.F("Cleanup_ProtectedRefused", trim.Denied)
+                        : Loc.F("Cleanup_NeedAdminCount", trim.Denied);
+                    return (true, Loc.F("Cleanup_Trimmed", Format.Count(trim.Trimmed)) + refused);
+                });
+            case "Standby":
+                return ToTuple(await Task.Run(MemoryCleanup.PurgeStandbyList), "Cleanup_StandbyDone");
+            default:
+                return ToTuple(await Task.Run(MemoryCleanup.EmptySystemWorkingSets), "Cleanup_SystemDone");
+        }
+    }
+
+    private static (bool, string) ToTuple(CleanupResult result, string doneKey) =>
+        (result.Succeeded, result.Succeeded ? Loc.Get(doneKey) : Loc.CleanupFailure(result));
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {

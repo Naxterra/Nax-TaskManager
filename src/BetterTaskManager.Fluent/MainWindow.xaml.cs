@@ -45,7 +45,12 @@ public sealed partial class MainWindow : Window
             }
         };
 
-        ElevationBar.IsOpen = !App.Monitor.IsElevated;
+        ElevationBar.IsOpen = !App.Monitor.IsElevated && !App.Settings.HideElevationNotice;
+        // Remember when the user closes the notice, so it does not reappear on every launch.
+        ElevationBar.Closed += (_, args) =>
+        {
+            if (args.Reason == InfoBarCloseReason.CloseButton) App.Settings.HideElevationNotice = true;
+        };
         string limitedMessage = ElevationBar.Message;
         App.Monitor.Updated += snapshot =>
         {
