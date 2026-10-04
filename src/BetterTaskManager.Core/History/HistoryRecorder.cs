@@ -4,28 +4,32 @@ using BetterTaskManager.Core.Network;
 
 namespace BetterTaskManager.Core.History;
 
-/// <summary>How history groups a process: one key per app, but each service host separately.</summary>
-internal sealed partial record AppIdentity(string Key, string Name, string Path, long CreateTime)
+/// <summary>How history groups a process; the rules live in <see cref="AppIdentityRules"/>.</summary>
+internal sealed record AppIdentity(string Key, string Name, string Path, long CreateTime)
 {
-    public static AppIdentity From(ProcessSample process)
-    {
-        string path = process.Path;
-        if (process.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase) && process.Services is [string service, ..])
-        {
-            return new AppIdentity("svchost:" + service, "Service Host: " + service, path, process.CreateTime);
-        }
-        string key = path.Length > 0 ? VersionNumber().Replace(path.ToLowerInvariant(), "*") : process.ImageName.ToLowerInvariant();
-        return new AppIdentity(key, process.DisplayName, path, process.CreateTime);
-    }
-
-    /// <summary>
-    /// Version numbers in install paths (…\app-4.0.824\…, …\app_2.9939.2.0_x64__…) change with every update;
-    /// replacing them keeps one app's history under one key across updates.
-    /// </summary>
-    [System.Text.RegularExpressions.GeneratedRegex(@"\d+(\.\d+)+")]
-    private static partial System.Text.RegularExpressions.Regex VersionNumber();
+    public static AppIdentity From(ProcessSample process) =>
+        new(AppIdentityRules.AppKey(process), AppIdentityRules.AppName(process), process.Path, process.CreateTime);
 
     public static AppIdentity Unknown(int pid) => new("pid:" + pid, $"Exited process (PID {pid})", "", 0);
+
+    /// <summary>A process that exited before a snapshot listed it, named from the kernel trace.</summary>
+    public static AppIdentity FromTraced(BandwidthMonitor.TracedProcess traced)
+    {
+        string name = System.IO.Path.GetFileNameWithoutExtension(traced.Name);
+        try
+        {
+            if (traced.Path.Length > 0 && File.Exists(traced.Path) &&
+                System.Diagnostics.FileVersionInfo.GetVersionInfo(traced.Path).FileDescription is { Length: > 0 } description)
+            {
+                name = description.Trim();
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+        string key = AppIdentityRules.PathKey(traced.Path) ?? traced.Name.ToLowerInvariant();
+        return new AppIdentity(key, name, traced.Path, -1);
+    }
 }
 
 internal sealed class TrackedConnection
@@ -44,6 +48,8 @@ internal sealed class TrackedConnection
     public bool RemoteHostIsReverse;
     public long BytesIn, BytesOut;
     public string State = "";
+    public string Scope = "";
+    public bool Inbound;
     public bool Changed;
     public bool Ended;
 }
@@ -72,16 +78,20 @@ public sealed class HistoryRecorder : IDisposable
 
     private readonly HistoryStore store;
     private readonly Func<string, HostName?> resolveHost;
+    private readonly TracedProcessLookup? tracedProcess;
     private readonly Dictionary<FlowKey, TrackedConnection> live = new();
     private readonly Dictionary<(string Day, string AppKey), UsageDelta> usage = new();
     // Traffic is counted by PID; a process can exit before the next snapshot names it.
     private readonly Dictionary<int, (AppIdentity App, DateTime SeenUtc)> identities = new();
     private DateTime lastFlush = DateTime.UtcNow, lastPrune;
 
-    public HistoryRecorder(HistoryStore store, Func<string, HostName?> resolveHost)
+    public delegate bool TracedProcessLookup(int pid, out BandwidthMonitor.TracedProcess process);
+
+    public HistoryRecorder(HistoryStore store, Func<string, HostName?> resolveHost, TracedProcessLookup? tracedProcess = null)
     {
         this.store = store;
         this.resolveHost = resolveHost;
+        this.tracedProcess = tracedProcess;
     }
 
     public void Record(MonitorSnapshot snapshot)
@@ -110,6 +120,8 @@ public sealed class HistoryRecorder : IDisposable
             TrackedConnection tracked = Track(key, app, now);
             seenTcp.Add(key);
             tracked.LocalAddress = connection.LocalAddress;
+            tracked.Scope = IpScopes.Label(connection.Scope);
+            tracked.Inbound = connection.Inbound;
             if (tracked.State != connection.State)
             {
                 tracked.State = connection.State;
@@ -129,6 +141,7 @@ public sealed class HistoryRecorder : IDisposable
             var key = new FlowKey(flow.Pid, app.CreateTime, flow.Protocol, localPort, flow.RemoteAddress, flow.RemotePort);
             TrackedConnection tracked = Track(key, app, now);
             active.Add(key);
+            if (tracked.Scope.Length == 0) tracked.Scope = IpScopes.Label(IpScopes.Classify(flow.RemoteAddress));
             tracked.BytesIn += flow.Received;
             tracked.BytesOut += flow.Sent;
             tracked.Changed = true;
@@ -195,7 +208,17 @@ public sealed class HistoryRecorder : IDisposable
         tracked.Changed = true;
     }
 
-    private AppIdentity Identify(int pid) => identities.TryGetValue(pid, out var known) ? known.App : AppIdentity.Unknown(pid);
+    private AppIdentity Identify(int pid)
+    {
+        if (identities.TryGetValue(pid, out var known)) return known.App;
+        if (tracedProcess is not null && tracedProcess(pid, out BandwidthMonitor.TracedProcess traced))
+        {
+            AppIdentity app = AppIdentity.FromTraced(traced);
+            identities[pid] = (app, DateTime.UtcNow);
+            return app;
+        }
+        return AppIdentity.Unknown(pid);
+    }
 
     /// <summary>Writes pending changes now. Called automatically every few seconds and on dispose.</summary>
     public void Flush() => Flush(DateTime.UtcNow);

@@ -170,6 +170,7 @@ public sealed class HistoryViewModel
             : $"{endpoint}\nName the app looked up";
 
         string protocol = record.Protocol == "UDP" ? "UDP" : $"TCP · {record.State}";
+        if (record.Scope.Length > 0) protocol += " · " + record.Scope + (record.Inbound ? " · in" : "");
         string data = record.BytesIn + record.BytesOut > 0 ? Split(record.BytesIn, record.BytesOut) : "–";
         return new ConnectionLogRow(record.Id, time, timeDetail, record.AppName, record.AppPath, remote, remoteDetail, protocol, data);
     }

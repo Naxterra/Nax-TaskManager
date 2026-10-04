@@ -184,7 +184,7 @@ public static class ProcessTree
         bool serviceHost = first.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase);
         if (serviceHost && first.Services is { Count: > 0 } services)
         {
-            string name = "Service Host: " + services[0];
+            string name = "Service Host: " + AppIdentityRules.ServiceName(services[0]);
             return services.Count > 1 ? $"{name} +{services.Count - 1}" : name;
         }
         return first.DisplayName;
@@ -193,7 +193,7 @@ public static class ProcessTree
     private static string ChildName(ProcessSample process)
     {
         if (!string.IsNullOrWhiteSpace(process.WindowTitle)) return process.WindowTitle;
-        if (process.Services is { Count: > 0 } services) return string.Join(", ", services);
+        if (process.Services is { Count: > 0 } services) return string.Join(", ", services.Select(AppIdentityRules.ServiceName));
         return process.DisplayName;
     }
 

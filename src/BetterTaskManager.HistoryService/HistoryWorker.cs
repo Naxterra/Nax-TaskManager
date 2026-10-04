@@ -23,7 +23,7 @@ public sealed class HistoryWorker : IDisposable
         this.log = log;
         store = HistoryStore.OpenForWriting(databasePath);
         engine = new MonitorEngine(sessionPrefix) { Interval = TimeSpan.FromSeconds(2) };
-        recorder = new HistoryRecorder(store, engine.ResolveHost);
+        recorder = new HistoryRecorder(store, engine.ResolveHost, engine.TryGetTracedProcess);
         engine.SnapshotReady += OnSnapshot;
         engine.CollectionFailed += OnError;
     }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using BetterTaskManager.Core.Monitoring;
+using BetterTaskManager.Core.Network;
 using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -14,6 +15,7 @@ public sealed record NetworkRowData(
     string Path,
     string Local,
     string Remote,
+    string Scope,
     string State,
     string Summary,
     string Transferred,
@@ -28,7 +30,7 @@ public sealed class NetworkSlot : ObservableObject
     public override string ToString() => Name;
 
     private static readonly Thickness ChildIndent = new(40, 0, 0, 0);
-    private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", transferred = "", speed = "", remoteDetail = "";
+    private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", transferred = "", scope = "", speed = "", remoteDetail = "";
     private ImageSource? icon;
     private Visibility chevronVisibility, iconVisibility, blockedVisibility = Visibility.Collapsed;
     private double chevronAngle;
@@ -45,6 +47,7 @@ public sealed class NetworkSlot : ObservableObject
     public string Local { get => local; private set => Set(ref local, value); }
     public string Remote { get => remote; private set => Set(ref remote, value); }
     public string State { get => state; private set => Set(ref state, value); }
+    public string Scope { get => scope; private set => Set(ref scope, value); }
     public string Path { get => path; private set => Set(ref path, value); }
     public string Summary { get => summary; private set => Set(ref summary, value); }
     public string Transferred { get => transferred; private set => Set(ref transferred, value); }
@@ -69,6 +72,7 @@ public sealed class NetworkSlot : ObservableObject
         slot.Local = row.Local;
         slot.Remote = row.Remote;
         slot.State = row.State;
+        slot.Scope = row.Scope;
         slot.Path = row.Path;
         slot.Summary = row.Summary;
         slot.Transferred = row.Transferred;
@@ -107,7 +111,7 @@ public sealed class NetworkViewModel : ObservableObject
         if (settings.NetworkSortColumn is not (SortName or SortRemote or SortState or SortData or SortSpeed)) settings.NetworkSortColumn = SortName;
         Layout = new ColumnLayout("Network.", new Dictionary<string, double>
         {
-            ["Name"] = 320, ["Local"] = 240, ["Remote"] = 280, ["State"] = 110, ["Data"] = 170, ["Speed"] = 190
+            ["Name"] = 320, ["Local"] = 220, ["Remote"] = 280, ["Scope"] = 120, ["State"] = 110, ["Data"] = 170, ["Speed"] = 190
         }, settings.ColumnWidths);
         NetworkSlot.SharedLayout = Layout;
         Rows = new SlotCollection<NetworkSlot, (NetworkRowData, Func<string, bool>)>(NetworkSlot.Load);
@@ -162,9 +166,7 @@ public sealed class NetworkViewModel : ObservableObject
                 processes.TryGetValue(first.Pid, out ProcessSample? owner);
                 string name = owner is null || first.Pid == 0
                     ? (first.Pid == 0 ? "Closing connections (no owning process)" : "PID " + first.Pid)
-                    : owner.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase) && owner.Services is { Count: > 0 } services
-                        ? "Service Host: " + services[0]
-                        : owner.DisplayName;
+                    : AppIdentityRules.AppName(owner);
                 return (Key: group.Key, Name: name, Path: owner?.Path ?? "", Connections: group.ToList());
             })
             .Where(group => query.Length == 0 || group.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
@@ -186,7 +188,7 @@ public sealed class NetworkViewModel : ObservableObject
             string summary = $"{established} established · {listening} listening · {group.Connections.Count - established - listening} other";
             string data = measured && usage.Received + usage.Sent > 0 ? $"↓ {Format.Bytes(usage.Received)}   ↑ {Format.Bytes(usage.Sent)}" : "";
             string speed = measured ? Speed(usage.Down, usage.Up) : "";
-            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", summary, data, speed, "", true, isExpanded));
+            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", "", summary, data, speed, "", true, isExpanded));
             if (!isExpanded) continue;
 
             foreach (ConnectionSample connection in SortConnections(group.Connections))
@@ -200,6 +202,7 @@ public sealed class NetworkViewModel : ObservableObject
                     Endpoint(connection.LocalAddress, connection.LocalPort),
                     connection.Protocol == "UDP" ? "*"
                         : connection.RemoteHost is { } host ? $"{host}:{connection.RemotePort}" : Endpoint(connection.RemoteAddress, connection.RemotePort),
+                    ScopeText(connection),
                     connection.State, "", "",
                     measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
                         ? Speed(connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond) : "",
@@ -266,6 +269,14 @@ public sealed class NetworkViewModel : ObservableObject
     {
         if (!expanded.Remove(key)) expanded.Add(key);
         Refresh();
+    }
+
+    /// <summary>"Internet", "LAN · in"…; blank for listeners and UDP sockets, which have no remote side.</summary>
+    private static string ScopeText(ConnectionSample connection)
+    {
+        string scope = IpScopes.Label(connection.Scope);
+        if (scope.Length == 0) return "";
+        return connection.Inbound ? scope + " · in" : scope;
     }
 
     private static string RemoteDetail(ConnectionSample connection)

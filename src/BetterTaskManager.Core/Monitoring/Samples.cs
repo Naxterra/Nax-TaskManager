@@ -50,6 +50,10 @@ public sealed class ConnectionSample
     public string? RemoteHost { get; set; }
     /// <summary>True when <see cref="RemoteHost"/> came from reverse DNS rather than the app's own lookup.</summary>
     public bool RemoteHostIsReverse { get; set; }
+    /// <summary>Where the remote side lives (this PC, LAN, Internet…).</summary>
+    public BetterTaskManager.Core.Network.IpScope Scope { get; set; }
+    /// <summary>TCP only: the remote side connected to a port this process listens on.</summary>
+    public bool Inbound { get; set; }
 }
 
 /// <summary>

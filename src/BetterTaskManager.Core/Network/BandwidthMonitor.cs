@@ -22,6 +22,11 @@ public struct ByteCounts
 /// </summary>
 public sealed class BandwidthMonitor : IDisposable
 {
+    /// <summary>A process seen by the kernel trace; kept after exit so short-lived processes can still be named.</summary>
+    public readonly record struct TracedProcess(string Name, string Path, DateTime? ExitedUtc);
+    private static readonly TimeSpan ExitedProcessMemory = TimeSpan.FromMinutes(10);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, TracedProcess> processes = new();
+
     public const string DefaultSessionName = "NaxTaskManager-Network";
     private static readonly TimeSpan RestartDelay = TimeSpan.FromSeconds(10);
 
@@ -58,7 +63,8 @@ public sealed class BandwidthMonitor : IDisposable
             // Reusing the fixed name replaces a session left behind by a crashed instance.
             session?.Dispose();
             session = new TraceEventSession(sessionName) { StopOnDispose = true };
-            session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
+            // Process events name connections of processes that exit before the next sample (CLI tools, updaters).
+            session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP | KernelTraceEventParser.Keywords.Process);
 
             KernelTraceEventParser kernel = session.Source.Kernel;
             kernel.TcpIpSend += data => Add(data.ProcessID, true, false, data.size, data.sport, data.daddr, data.dport);
@@ -69,6 +75,12 @@ public sealed class BandwidthMonitor : IDisposable
             kernel.UdpIpRecv += data => Add(data.ProcessID, false, true, data.size, data.sport, data.daddr, data.dport);
             kernel.UdpIpSendIPV6 += data => Add(data.ProcessID, false, false, data.size, data.sport, data.daddr, data.dport);
             kernel.UdpIpRecvIPV6 += data => Add(data.ProcessID, false, true, data.size, data.sport, data.daddr, data.dport);
+            kernel.ProcessStart += OnProcessStart;
+            kernel.ProcessDCStart += OnProcessStart;
+            kernel.ProcessStop += data =>
+            {
+                if (processes.TryGetValue(data.ProcessID, out TracedProcess known)) processes[data.ProcessID] = known with { ExitedUtc = DateTime.UtcNow };
+            };
 
             TraceEventSession started = session;
             pump = new Thread(() =>
@@ -105,6 +117,24 @@ public sealed class BandwidthMonitor : IDisposable
     {
         if (IsRunning || disposed || DateTime.UtcNow - lastAttempt < RestartDelay) return;
         TryStart();
+    }
+
+    private void OnProcessStart(ProcessTraceData data)
+    {
+        if (data.ProcessID <= 4) return;
+        processes[data.ProcessID] = new TracedProcess(data.ImageFileName, BetterTaskManager.Core.Native.DevicePaths.ToDosPath(data.KernelImageFileName), null);
+    }
+
+    /// <summary>Name and path of a process the trace saw start, including ones that exited in the last minutes.</summary>
+    public bool TryGetProcess(int pid, out TracedProcess process)
+    {
+        if (!processes.TryGetValue(pid, out process)) return false;
+        if (process.ExitedUtc is { } exited && DateTime.UtcNow - exited > ExitedProcessMemory)
+        {
+            processes.TryRemove(pid, out _);
+            return false;
+        }
+        return true;
     }
 
     private void Add(int pid, bool tcp, bool received, int size, int localPort, IPAddress remote, int remotePort)

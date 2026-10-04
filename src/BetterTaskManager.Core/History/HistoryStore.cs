@@ -1,4 +1,5 @@
 using System.Globalization;
+using BetterTaskManager.Core.Monitoring;
 using Microsoft.Data.Sqlite;
 
 namespace BetterTaskManager.Core.History;
@@ -27,7 +28,9 @@ public sealed record ConnectionRecord(
     bool RemoteHostIsReverse,
     long BytesIn,
     long BytesOut,
-    string State);
+    string State,
+    string Scope,
+    bool Inbound);
 
 /// <summary>
 /// SQLite history of connections and daily per-app traffic. The background service is the only writer; the UI
@@ -36,7 +39,9 @@ public sealed record ConnectionRecord(
 /// </summary>
 public sealed class HistoryStore : IDisposable
 {
-    private const int SchemaVersion = 1;
+    /// <summary>2: app keys follow <see cref="AppIdentityRules"/> (Store apps by package, service suffixes removed).</summary>
+    /// <summary>3: connections record scope (Internet, LAN…) and direction.</summary>
+    private const int SchemaVersion = 3;
 
     private readonly SqliteConnection connection;
     private SqliteCommand? insertConnection, updateConnection, addUsage;
@@ -99,7 +104,9 @@ public sealed class HistoryStore : IDisposable
                 remote_host_reverse INTEGER NOT NULL DEFAULT 0,
                 bytes_in INTEGER NOT NULL DEFAULT 0,
                 bytes_out INTEGER NOT NULL DEFAULT 0,
-                state TEXT NOT NULL);
+                state TEXT NOT NULL,
+                scope TEXT NOT NULL DEFAULT '',
+                inbound INTEGER NOT NULL DEFAULT 0);
             CREATE INDEX IF NOT EXISTS connections_last_seen ON connections(last_seen);
             CREATE INDEX IF NOT EXISTS connections_first_seen ON connections(first_seen);
             CREATE INDEX IF NOT EXISTS connections_app ON connections(app_key, last_seen);
@@ -112,7 +119,65 @@ public sealed class HistoryStore : IDisposable
                 bytes_out INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (day, app_key));
             """);
+        int version = ReadSchemaVersion();
+        if (version < 2) RekeyApps();
+        if (version < 3)
+        {
+            if (!HasColumn("connections", "scope")) Execute("ALTER TABLE connections ADD COLUMN scope TEXT NOT NULL DEFAULT ''");
+            if (!HasColumn("connections", "inbound")) Execute("ALTER TABLE connections ADD COLUMN inbound INTEGER NOT NULL DEFAULT 0");
+        }
         SetMeta("schema_version", SchemaVersion.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private bool HasColumn(string table, string column)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = $"SELECT count(*) FROM pragma_table_info('{table}') WHERE name = $column";
+        command.Parameters.AddWithValue("$column", column);
+        return Convert.ToInt64(command.ExecuteScalar()) > 0;
+    }
+
+    private int ReadSchemaVersion()
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT value FROM meta WHERE key = 'schema_version'";
+        return command.ExecuteScalar() is string value && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int version) ? version : 0;
+    }
+
+    /// <summary>Moves rows recorded under old app keys to the current ones, merging daily totals that now coincide.</summary>
+    private void RekeyApps()
+    {
+        var moves = new List<(string Old, string New)>();
+        using (SqliteCommand command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT app_key, max(app_path) FROM connections GROUP BY app_key UNION SELECT app_key, max(app_path) FROM app_usage GROUP BY app_key";
+            using SqliteDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                string old = reader.GetString(0);
+                string current = AppIdentityRules.Rekey(old, reader.GetString(1));
+                if (current != old) moves.Add((old, current));
+            }
+        }
+        if (moves.Count == 0) return;
+
+        using SqliteTransaction transaction = connection.BeginTransaction();
+        foreach (var (old, current) in moves.Distinct())
+        {
+            using SqliteCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = """
+                UPDATE connections SET app_key = $new WHERE app_key = $old;
+                INSERT INTO app_usage (day, app_key, app_name, app_path, bytes_in, bytes_out)
+                    SELECT day, $new, app_name, app_path, bytes_in, bytes_out FROM app_usage WHERE app_key = $old
+                    ON CONFLICT (day, app_key) DO UPDATE SET bytes_in = bytes_in + excluded.bytes_in, bytes_out = bytes_out + excluded.bytes_out;
+                DELETE FROM app_usage WHERE app_key = $old;
+                """;
+            command.Parameters.AddWithValue("$old", old);
+            command.Parameters.AddWithValue("$new", current);
+            command.ExecuteNonQuery();
+        }
+        transaction.Commit();
     }
 
     /// <summary>Writes new and changed connections plus traffic per (local day, app) in one transaction.</summary>
@@ -121,10 +186,10 @@ public sealed class HistoryStore : IDisposable
         using SqliteTransaction transaction = connection.BeginTransaction();
         insertConnection ??= Prepare("""
             INSERT INTO connections (first_seen, last_seen, app_key, app_name, app_path, pid, protocol, local_address, local_port,
-                remote_address, remote_port, remote_host, remote_host_reverse, bytes_in, bytes_out, state)
-            VALUES ($first, $last, $key, $name, $path, $pid, $protocol, $laddr, $lport, $raddr, $rport, $host, $reverse, $in, $out, $state)
+                remote_address, remote_port, remote_host, remote_host_reverse, bytes_in, bytes_out, state, scope, inbound)
+            VALUES ($first, $last, $key, $name, $path, $pid, $protocol, $laddr, $lport, $raddr, $rport, $host, $reverse, $in, $out, $state, $scope, $inbound)
             RETURNING id
-            """, "$first", "$last", "$key", "$name", "$path", "$pid", "$protocol", "$laddr", "$lport", "$raddr", "$rport", "$host", "$reverse", "$in", "$out", "$state");
+            """, "$first", "$last", "$key", "$name", "$path", "$pid", "$protocol", "$laddr", "$lport", "$raddr", "$rport", "$host", "$reverse", "$in", "$out", "$state", "$scope", "$inbound");
         updateConnection ??= Prepare("""
             UPDATE connections SET last_seen = $last, local_address = $laddr, remote_host = $host, remote_host_reverse = $reverse,
                 bytes_in = $in, bytes_out = $out, state = $state
@@ -143,7 +208,7 @@ public sealed class HistoryStore : IDisposable
             {
                 Bind(insertConnection, ToUnixMs(item.FirstSeen), ToUnixMs(item.LastSeen), item.App.Key, item.App.Name, item.App.Path, item.Pid,
                     item.Protocol, item.LocalAddress, item.LocalPort, item.RemoteAddress, item.RemotePort, (object?)item.RemoteHost ?? DBNull.Value,
-                    item.RemoteHostIsReverse ? 1 : 0, item.BytesIn, item.BytesOut, item.State);
+                    item.RemoteHostIsReverse ? 1 : 0, item.BytesIn, item.BytesOut, item.State, item.Scope, item.Inbound ? 1 : 0);
                 item.Id = (long)insertConnection.ExecuteScalar()!;
             }
             else
@@ -220,9 +285,11 @@ public sealed class HistoryStore : IDisposable
         using SqliteCommand command = connection.CreateCommand();
         var sql = new System.Text.StringBuilder("""
             SELECT id, first_seen, last_seen, app_key, app_name, app_path, pid, protocol, local_address, local_port,
-                remote_address, remote_port, remote_host, remote_host_reverse, bytes_in, bytes_out, state
-            FROM connections WHERE last_seen >= $since
+                remote_address, remote_port, remote_host, remote_host_reverse, bytes_in, bytes_out, state,
             """);
+        // An older service may not have added these columns yet.
+        sql.Append(HasColumn("connections", "scope") ? " scope, inbound" : " '' AS scope, 0 AS inbound");
+        sql.Append(" FROM connections WHERE last_seen >= $since");
         command.Parameters.AddWithValue("$since", ToUnixMs(sinceUtc));
         if (!string.IsNullOrEmpty(appKey))
         {
@@ -260,7 +327,9 @@ public sealed class HistoryStore : IDisposable
                 reader.GetInt64(13) != 0,
                 reader.GetInt64(14),
                 reader.GetInt64(15),
-                reader.GetString(16)));
+                reader.GetString(16),
+                reader.GetString(17),
+                reader.GetInt64(18) != 0));
         }
         return records;
     }

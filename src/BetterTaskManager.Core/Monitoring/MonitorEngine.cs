@@ -79,6 +79,9 @@ public sealed class MonitorEngine : IDisposable
         loop ??= Task.Run(RunAsync);
     }
 
+    /// <summary>A process the kernel trace saw start (elevated only), also shortly after it exited.</summary>
+    public bool TryGetTracedProcess(int pid, out BandwidthMonitor.TracedProcess process) => bandwidth.TryGetProcess(pid, out process);
+
     /// <summary>Known host name for a remote address; unknown addresses are resolved in the background.</summary>
     public HostName? ResolveHost(string address) => hostNames.Resolve(address);
 
@@ -201,6 +204,14 @@ public sealed class MonitorEngine : IDisposable
             RemotePort = connection.RemotePort,
             State = connection.State
         }).ToList();
+        var listening = connections.Where(connection => connection.Protocol == "TCP" && connection.State == "Listening")
+            .Select(connection => (connection.Pid, connection.LocalPort)).ToHashSet();
+        foreach (ConnectionSample connection in connections)
+        {
+            if (connection.Protocol == "UDP" || connection.State == "Listening") continue;
+            connection.Scope = IpScopes.Classify(connection.RemoteAddress);
+            connection.Inbound = listening.Contains((connection.Pid, connection.LocalPort));
+        }
         var connectionCounts = connections.GroupBy(connection => connection.Pid).ToDictionary(group => group.Key, group => group.Count());
         foreach (ProcessSample process in processes)
         {
