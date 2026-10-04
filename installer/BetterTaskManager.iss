@@ -20,7 +20,7 @@
   #define AppIdValue "{{9B62E509-9DBE-4C73-88EC-DF93F70835A1}"
 #endif
 #ifndef AppNameValue
-  #define AppNameValue "Better Task Manager"
+  #define AppNameValue "Nax-TaskManager"
 #endif
 #ifndef CloseApplicationsValue
   #define CloseApplicationsValue "yes"
@@ -31,7 +31,7 @@
 
 #define AppName AppNameValue
 #define AppPublisher "Naxterra"
-#define AppExeName "BetterTaskManager.exe"
+#define AppExeName "NaxTaskManager.exe"
 #define AppUrl "https://github.com/Naxterra/Better-Task-Manager"
 
 [Setup]
@@ -48,6 +48,8 @@ VersionInfoProductVersion={#NumericVersion}
 VersionInfoCompany={#AppPublisher}
 VersionInfoDescription={#AppName} Setup
 DefaultDirName={autopf}\{#AppName}
+; Installs before the rename went to "Better Task Manager"; move to the new folder instead of reusing it.
+UsePreviousAppDir=no
 DefaultGroupName={#AppName}
 AllowNoIcons=yes
 DisableProgramGroupPage=no
@@ -77,14 +79,14 @@ Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 [CustomMessages]
 english.DesktopShortcut=Create a &desktop shortcut
 german.DesktopShortcut=&Desktopverknüpfung erstellen
-english.LaunchApplication=Launch Better Task Manager
-german.LaunchApplication=Better Task Manager starten
-english.RemovingPreviousVersion=Removing the existing Better Task Manager installation...
-german.RemovingPreviousVersion=Die vorhandene Better-Task-Manager-Installation wird entfernt...
-english.PreviousUninstallFailed=The existing Better Task Manager installation could not be removed. Setup will not continue. Uninstaller exit code:
-german.PreviousUninstallFailed=Die vorhandene Better-Task-Manager-Installation konnte nicht entfernt werden. Setup wird nicht fortgesetzt. Deinstallations-Fehlercode:
-english.PreviousUninstallerMissing=An existing Better Task Manager installation was detected, but its uninstaller is missing. Remove or repair the existing installation in Windows Settings before trying again.
-german.PreviousUninstallerMissing=Eine vorhandene Better-Task-Manager-Installation wurde erkannt, aber das Deinstallationsprogramm fehlt. Entfernen oder reparieren Sie die vorhandene Installation in den Windows-Einstellungen und versuchen Sie es erneut.
+english.LaunchApplication=Launch Nax-TaskManager
+german.LaunchApplication=Nax-TaskManager starten
+english.RemovingPreviousVersion=Removing the existing installation...
+german.RemovingPreviousVersion=Die vorhandene Installation wird entfernt...
+english.PreviousUninstallFailed=The existing installation could not be removed. Setup will not continue. Uninstaller exit code:
+german.PreviousUninstallFailed=Die vorhandene Installation konnte nicht entfernt werden. Setup wird nicht fortgesetzt. Deinstallations-Fehlercode:
+english.PreviousUninstallerMissing=An existing installation was detected, but its uninstaller is missing. Remove or repair the existing installation in Windows Settings before trying again.
+german.PreviousUninstallerMissing=Eine vorhandene Installation wurde erkannt, aber das Deinstallationsprogramm fehlt. Entfernen oder reparieren Sie die vorhandene Installation in den Windows-Einstellungen und versuchen Sie es erneut.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopShortcut}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -103,7 +105,7 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchApplication}"; WorkingD
 [UninstallRun]
 ; The background history service runs from Program Files as LocalSystem; remove it with the app (one UAC prompt).
 ; Skipped for silent uninstalls, which is how a newer setup removes this version during an upgrade.
-Filename: "{app}\{#AppExeName}"; Parameters: "--uninstall-history-service ""{%TEMP}\BetterTaskManager-uninstall-service.txt"""; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; Verb: "runas"; Check: ShouldRemoveHistoryService; RunOnceId: "RemoveHistoryService"
+Filename: "{app}\{#AppExeName}"; Parameters: "--uninstall-history-service ""{%TEMP}\NaxTaskManager-uninstall-service.txt"""; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; Verb: "runas"; Check: ShouldRemoveHistoryService; RunOnceId: "RemoveHistoryService"
 
 [Code]
 const
@@ -191,7 +193,7 @@ end;
 
 function ShouldRemoveHistoryService(): Boolean;
 begin
-  Result := (not UninstallSilent()) and RegKeyExists(HKLM64, 'SYSTEM\CurrentControlSet\Services\BetterTaskManagerHistory');
+  Result := (not UninstallSilent()) and RegKeyExists(HKLM64, 'SYSTEM\CurrentControlSet\Services\NaxTaskManagerHistory');
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;

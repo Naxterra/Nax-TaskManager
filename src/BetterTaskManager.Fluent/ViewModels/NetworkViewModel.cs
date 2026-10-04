@@ -16,6 +16,7 @@ public sealed record NetworkRowData(
     string Remote,
     string State,
     string Summary,
+    string Transferred,
     string Speed,
     string RemoteDetail,
     bool Expandable,
@@ -23,8 +24,11 @@ public sealed record NetworkRowData(
 
 public sealed class NetworkSlot : ObservableObject
 {
+    /// <summary>What UI Automation and screen readers announce for the row.</summary>
+    public override string ToString() => Name;
+
     private static readonly Thickness ChildIndent = new(40, 0, 0, 0);
-    private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", speed = "", remoteDetail = "";
+    private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", transferred = "", speed = "", remoteDetail = "";
     private ImageSource? icon;
     private Visibility chevronVisibility, iconVisibility, blockedVisibility = Visibility.Collapsed;
     private double chevronAngle;
@@ -43,6 +47,7 @@ public sealed class NetworkSlot : ObservableObject
     public string State { get => state; private set => Set(ref state, value); }
     public string Path { get => path; private set => Set(ref path, value); }
     public string Summary { get => summary; private set => Set(ref summary, value); }
+    public string Transferred { get => transferred; private set => Set(ref transferred, value); }
     public string Speed { get => speed; private set => Set(ref speed, value); }
     /// <summary>Numeric endpoint and name source, shown as the remote column's tooltip.</summary>
     public string RemoteDetail { get => remoteDetail; private set => Set(ref remoteDetail, value); }
@@ -66,6 +71,7 @@ public sealed class NetworkSlot : ObservableObject
         slot.State = row.State;
         slot.Path = row.Path;
         slot.Summary = row.Summary;
+        slot.Transferred = row.Transferred;
         slot.Speed = row.Speed;
         slot.RemoteDetail = row.RemoteDetail;
         slot.Indent = group ? default : ChildIndent;
@@ -82,17 +88,26 @@ public sealed class NetworkSlot : ObservableObject
     }
 }
 
-public sealed class NetworkViewModel
+public sealed class NetworkViewModel : ObservableObject
 {
+    public const string SortName = "Name";
+    public const string SortRemote = "Remote";
+    public const string SortState = "State";
+    public const string SortData = "Data";
+    public const string SortSpeed = "Speed";
+
     private readonly MonitorHost monitor;
+    private readonly AppSettings settings;
     private readonly HashSet<string> expanded = new(StringComparer.OrdinalIgnoreCase);
 
     public NetworkViewModel(MonitorHost monitor, AppSettings settings)
     {
         this.monitor = monitor;
+        this.settings = settings;
+        if (settings.NetworkSortColumn is not (SortName or SortRemote or SortState or SortData or SortSpeed)) settings.NetworkSortColumn = SortName;
         Layout = new ColumnLayout("Network.", new Dictionary<string, double>
         {
-            ["Name"] = 320, ["Local"] = 260, ["Remote"] = 280, ["State"] = 110, ["Speed"] = 190
+            ["Name"] = 320, ["Local"] = 240, ["Remote"] = 280, ["State"] = 110, ["Data"] = 170, ["Speed"] = 190
         }, settings.ColumnWidths);
         NetworkSlot.SharedLayout = Layout;
         Rows = new SlotCollection<NetworkSlot, (NetworkRowData, Func<string, bool>)>(NetworkSlot.Load);
@@ -102,6 +117,24 @@ public sealed class NetworkViewModel
     public SlotCollection<NetworkSlot, (NetworkRowData, Func<string, bool>)> Rows { get; }
     public bool EstablishedOnly { get; set; }
     public string Summary { get; private set; } = "";
+    public string SortColumn => settings.NetworkSortColumn;
+    public bool SortDescending => settings.NetworkSortDescending;
+
+    /// <summary>Clicking the active column flips the direction; a new column starts with its natural direction.</summary>
+    public void Sort(string column)
+    {
+        if (settings.NetworkSortColumn == column)
+        {
+            settings.NetworkSortDescending = !settings.NetworkSortDescending;
+        }
+        else
+        {
+            settings.NetworkSortColumn = column;
+            settings.NetworkSortDescending = column is SortState or SortData or SortSpeed;
+        }
+        Raise(nameof(SortColumn));
+        Refresh();
+    }
 
     public void Refresh()
     {
@@ -139,11 +172,8 @@ public sealed class NetworkViewModel
                 group.Connections.Any(connection => Endpoint(connection.RemoteAddress, connection.RemotePort).Contains(query, StringComparison.OrdinalIgnoreCase) ||
                     (connection.RemoteHost?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     connection.Pid.ToString(CultureInfo.InvariantCulture) == query))
-            .OrderByDescending(group => traffic.TryGetValue(group.Key, out var rate) ? rate.Down + rate.Up : 0)
-            .ThenByDescending(group => group.Connections.Count(connection => connection.State == "Established"))
-            .ThenByDescending(group => group.Connections.Count)
-            .ThenBy(group => group.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+        groups = SortGroups(groups, traffic);
 
         var rows = new List<NetworkRowData>();
         var keyCounts = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -154,15 +184,12 @@ public sealed class NetworkViewModel
             bool isExpanded = expanded.Contains(group.Key) || (query.Length > 0 && group.Connections.Count <= 50);
             traffic.TryGetValue(group.Key, out var usage);
             string summary = $"{established} established · {listening} listening · {group.Connections.Count - established - listening} other";
-            if (measured && usage.Received + usage.Sent > 0) summary += $" · {Format.Bytes(usage.Received)} down, {Format.Bytes(usage.Sent)} up";
+            string data = measured && usage.Received + usage.Sent > 0 ? $"↓ {Format.Bytes(usage.Received)}   ↑ {Format.Bytes(usage.Sent)}" : "";
             string speed = measured ? Speed(usage.Down, usage.Up) : "";
-            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", summary, speed, "", true, isExpanded));
+            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", summary, data, speed, "", true, isExpanded));
             if (!isExpanded) continue;
 
-            foreach (ConnectionSample connection in group.Connections
-                         .OrderByDescending(connection => connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond)
-                         .ThenBy(connection => connection.State == "Established" ? 0 : connection.State == "Listening" ? 2 : 1)
-                         .ThenBy(connection => connection.RemoteAddress, StringComparer.Ordinal))
+            foreach (ConnectionSample connection in SortConnections(group.Connections))
             {
                 // Several sockets can share one endpoint (e.g. mDNS on UDP 5353); keep row keys unique.
                 string key = $"{group.Key}|{connection.Pid}|{connection.Protocol}|{connection.LocalAddress}|{connection.LocalPort}|{connection.RemoteAddress}|{connection.RemotePort}";
@@ -173,7 +200,7 @@ public sealed class NetworkViewModel
                     Endpoint(connection.LocalAddress, connection.LocalPort),
                     connection.Protocol == "UDP" ? "*"
                         : connection.RemoteHost is { } host ? $"{host}:{connection.RemotePort}" : Endpoint(connection.RemoteAddress, connection.RemotePort),
-                    connection.State, "",
+                    connection.State, "", "",
                     measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
                         ? Speed(connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond) : "",
                     RemoteDetail(connection),
@@ -189,6 +216,50 @@ public sealed class NetworkViewModel
             $"{groups.Count} apps shown" + throughput + (snapshot.NetworkIssues.Count > 0 ? " · some network tables could not be read" : "");
         Func<string, bool> isBlocked = monitor.IsBlocked;
         Rows.Apply(rows.Select(row => (row, isBlocked)).ToList());
+    }
+
+    private List<(string Key, string Name, string Path, List<ConnectionSample> Connections)> SortGroups(
+        List<(string Key, string Name, string Path, List<ConnectionSample> Connections)> groups,
+        Dictionary<string, (double Down, double Up, long Received, long Sent)> traffic)
+    {
+        Func<(string Key, string Name, string Path, List<ConnectionSample> Connections), double>? measure = SortColumn switch
+        {
+            SortState => group => group.Connections.Count(connection => connection.State == "Established") * 100000d + group.Connections.Count,
+            SortData => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Received + usage.Sent : 0,
+            SortSpeed => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Down + usage.Up : 0,
+            _ => null
+        };
+        var byName = StringComparer.CurrentCultureIgnoreCase;
+        IOrderedEnumerable<(string Key, string Name, string Path, List<ConnectionSample> Connections)> ordered = measure is null
+            ? (SortDescending ? groups.OrderByDescending(group => group.Name, byName) : groups.OrderBy(group => group.Name, byName))
+            : (SortDescending ? groups.OrderByDescending(measure) : groups.OrderBy(measure)).ThenBy(group => group.Name, byName);
+        return ordered.ThenBy(group => group.Key, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>
+    /// Connections keep a fixed order (state, host, ports) unless the page is sorted by host or speed, so a group's
+    /// rows do not reshuffle every refresh.
+    /// </summary>
+    private IEnumerable<ConnectionSample> SortConnections(List<ConnectionSample> connections)
+    {
+        static int StateRank(ConnectionSample connection) => connection.State == "Established" ? 0 : connection.State == "Listening" ? 2 : 1;
+        static string Host(ConnectionSample connection) => connection.RemoteHost ?? connection.RemoteAddress;
+        IOrderedEnumerable<ConnectionSample> ordered = SortColumn switch
+        {
+            SortSpeed => SortDescending
+                ? connections.OrderByDescending(connection => connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond)
+                : connections.OrderBy(connection => connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond),
+            SortRemote => SortDescending
+                ? connections.OrderByDescending(Host, StringComparer.OrdinalIgnoreCase)
+                : connections.OrderBy(Host, StringComparer.OrdinalIgnoreCase),
+            _ => connections.OrderBy(StateRank)
+        };
+        return ordered
+            .ThenBy(StateRank)
+            .ThenBy(Host, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(connection => connection.RemotePort)
+            .ThenBy(connection => connection.Protocol, StringComparer.Ordinal)
+            .ThenBy(connection => connection.LocalPort);
     }
 
     public void ToggleExpanded(string key)
@@ -207,9 +278,9 @@ public sealed class NetworkViewModel
             : $"{endpoint}\nName the app looked up";
     }
 
-    /// <summary>Blank when idle so active apps stand out.</summary>
+    /// <summary>Blank when idle (both directions under 0.5 kbit/s, which would print as 0) so active apps stand out.</summary>
     private static string Speed(double down, double up) =>
-        down + up < 1 ? "" : $"↓ {Format.NetworkRate(down)}   ↑ {Format.NetworkRate(up)}";
+        down * 8 < 500 && up * 8 < 500 ? "" : $"↓ {Format.NetworkRate(down)}   ↑ {Format.NetworkRate(up)}";
 
     private static string Endpoint(string address, int port) =>
         address.Contains(':') ? $"[{address}]:{port}" : $"{address}:{port}";

@@ -24,7 +24,7 @@ public sealed class ProcessSample
     public int ConnectionCount { get; set; }
     public double NetworkReceiveBytesPerSecond { get; set; }
     public double NetworkSendBytesPerSecond { get; set; }
-    /// <summary>Bytes received/sent since Better Task Manager started watching this process.</summary>
+    /// <summary>Bytes received/sent since Nax-TaskManager started watching this process.</summary>
     public long NetworkReceivedTotal { get; set; }
     public long NetworkSentTotal { get; set; }
     public double NetworkBytesPerSecond => NetworkReceiveBytesPerSecond + NetworkSendBytesPerSecond;

@@ -37,7 +37,7 @@ public sealed class MonitorEngine : IDisposable
     /// Prefix for the machine-wide ETW session names. A test harness must use its own prefix: reusing the app's
     /// names stops the app's trace sessions.
     /// </param>
-    public MonitorEngine(string sessionPrefix = "BetterTaskManager")
+    public MonitorEngine(string sessionPrefix = "NaxTaskManager")
     {
         bandwidth = new BandwidthMonitor(sessionPrefix + "-Network");
         hostNames = new HostNameResolver(sessionPrefix + "-Dns");

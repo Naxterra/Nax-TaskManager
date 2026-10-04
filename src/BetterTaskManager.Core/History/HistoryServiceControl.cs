@@ -19,15 +19,15 @@ public enum HistoryServiceState
 /// </summary>
 public static class HistoryServiceControl
 {
-    public const string ServiceName = "BetterTaskManagerHistory";
-    public const string DisplayName = "Better Task Manager History";
-    public const string ExecutableName = "BetterTaskManager.HistoryService.exe";
+    public const string ServiceName = "NaxTaskManagerHistory";
+    public const string DisplayName = "Nax-TaskManager History";
+    public const string ExecutableName = "NaxTaskManager.HistoryService.exe";
     /// <summary>Folder next to the app that holds the service build to install from.</summary>
     public const string BundledFolderName = "HistoryService";
     private static readonly TimeSpan StatusTimeout = TimeSpan.FromSeconds(30);
 
     public static string InstallFolder =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Better Task Manager", "HistoryService");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Nax-TaskManager", "HistoryService");
 
     public static HistoryServiceState QueryState()
     {
@@ -72,7 +72,7 @@ public static class HistoryServiceControl
             : Sc("create", ServiceName, "binPath=", binPath, "start=", "delayed-auto", "DisplayName=", DisplayName);
         if (!result.Succeeded) return result;
 
-        Sc("description", ServiceName, "Records which apps connect where and how much data they use, for Better Task Manager's History page.");
+        Sc("description", ServiceName, "Records which apps connect where and how much data they use, for Nax-TaskManager's History page.");
         Sc("failure", ServiceName, "reset=", "86400", "actions=", "restart/60000/restart/60000/restart/60000");
 
         try

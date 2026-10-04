@@ -10,7 +10,7 @@ namespace BetterTaskManager.Fluent;
 
 public static class Program
 {
-    private const string SingleInstanceMutexName = @"Local\Naxterra.BetterTaskManager.Fluent.SingleInstance";
+    private const string SingleInstanceMutexName = @"Local\Naxterra.NaxTaskManager.SingleInstance";
     internal const string FirewallBlockArgument = "--firewall-block";
     internal const string FirewallUnblockArgument = "--firewall-unblock";
     internal const string WaitForProcessArgument = "--wait-for-pid";
@@ -116,7 +116,7 @@ public static class Program
 
     private static void ActivateExistingWindow()
     {
-        string name = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? "BetterTaskManager");
+        string name = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? "NaxTaskManager");
         foreach (Process process in Process.GetProcessesByName(name))
         {
             using (process)

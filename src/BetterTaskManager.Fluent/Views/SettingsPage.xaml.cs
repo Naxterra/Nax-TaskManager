@@ -25,7 +25,7 @@ public sealed partial class SettingsPage : Page
         ElevateButton.Visibility = elevated ? Visibility.Collapsed : Visibility.Visible;
 
         string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
-        VersionText.Text = "Better Task Manager " + version.Split('+')[0];
+        VersionText.Text = "Nax-TaskManager " + version.Split('+')[0];
         ShowHistoryState();
         loading = false;
     }
@@ -86,7 +86,7 @@ public sealed partial class SettingsPage : Page
 
     private void DataFolder_Click(object sender, RoutedEventArgs e)
     {
-        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
+        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NaxTaskManager");
         Directory.CreateDirectory(folder);
         Process.Start(new ProcessStartInfo("explorer.exe", folder) { UseShellExecute = true });
     }

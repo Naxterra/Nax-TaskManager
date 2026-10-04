@@ -1,4 +1,5 @@
 using BetterTaskManager.Core.Monitoring;
+using BetterTaskManager.Core.Native;
 using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -29,6 +30,84 @@ public sealed partial class PerformancePage : Page
     {
         InitializeComponent();
         BuildMemoryBreakdown();
+        if (!App.Monitor.IsElevated)
+        {
+            foreach (MenuFlyoutItem item in new[] { StandbyItem, SystemItem })
+            {
+                item.IsEnabled = false;
+                item.Text += " (needs administrator)";
+            }
+        }
+    }
+
+    private sealed record CleanupAction(string Title, string Explanation, string Button);
+
+    private static readonly Dictionary<string, CleanupAction> CleanupActions = new()
+    {
+        ["Trim"] = new("Trim app memory?",
+            "Asks every app this account can reach to give back the memory it is not actively using. Nax-TaskManager itself is skipped. " +
+            "\"In use\" drops, but the pages only move to the standby or modified list, and apps read them back in as they need them, which can make them briefly slower.",
+            "Trim"),
+        ["Standby"] = new("Clear the standby cache?",
+            "Discards recently used file and program data that Windows keeps in RAM for speed. Free memory goes up, but the next launches and file reads come from disk again. " +
+            "Standby memory already counts as available, so this rarely helps an app that is short of memory.",
+            "Clear"),
+        ["System"] = new("Empty all working sets?",
+            "Trims every process at once, including Windows services and the kernel's system working set. Expect stutter for a few seconds while everything pages back in.",
+            "Empty")
+    };
+
+    private async void Cleanup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: string kind } || !CleanupActions.TryGetValue(kind, out CleanupAction? action)) return;
+        var confirm = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = action.Title,
+            Content = new TextBlock
+            {
+                Text = action.Explanation + "\n\nWindows uses spare RAM as cache on purpose. These are troubleshooting tools, not routine optimisation.",
+                TextWrapping = TextWrapping.Wrap
+            },
+            PrimaryButtonText = action.Button,
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close
+        };
+        if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+
+        CleanupButton.IsEnabled = false;
+        MemoryBreakdown? before = App.Monitor.Latest?.System.Memory;
+        (bool succeeded, string message) = kind switch
+        {
+            "Trim" => await Task.Run(() =>
+            {
+                TrimResult trim = MemoryCleanup.TrimAllWorkingSets(Environment.ProcessId);
+                string refused = trim.Denied == 0 ? "" : App.Monitor.IsElevated
+                    ? $" {trim.Denied} protected processes refused."
+                    : $" {trim.Denied} processes need administrator rights.";
+                return (true, $"Trimmed {Format.Count(trim.Trimmed)} processes.{refused}");
+            }),
+            "Standby" => ToTuple(await Task.Run(MemoryCleanup.PurgeStandbyList)),
+            _ => ToTuple(await Task.Run(MemoryCleanup.EmptySystemWorkingSets))
+        };
+
+        // Let the monitor take a fresh sample so the effect is measured, not guessed.
+        App.Monitor.RequestRefresh();
+        await Task.Delay(1500);
+        MemoryBreakdown? after = App.Monitor.Latest?.System.Memory;
+        if (succeeded && before is not null && after is not null)
+        {
+            message += $" In use {Format.Gigabytes(before.InUse)} → {Format.Gigabytes(after.InUse)}, " +
+                $"standby {Format.Gigabytes(before.Standby)} → {Format.Gigabytes(after.Standby)}, " +
+                $"free {Format.Gigabytes(before.Free)} → {Format.Gigabytes(after.Free)}.";
+        }
+        CleanupBar.Severity = succeeded ? InfoBarSeverity.Success : InfoBarSeverity.Error;
+        CleanupBar.Title = succeeded ? "Done" : "Not done";
+        CleanupBar.Message = message;
+        CleanupBar.IsOpen = true;
+        CleanupButton.IsEnabled = true;
+
+        static (bool, string) ToTuple(CleanupResult result) => (result.Succeeded, result.Message);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)

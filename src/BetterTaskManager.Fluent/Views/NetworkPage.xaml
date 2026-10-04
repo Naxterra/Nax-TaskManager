@@ -34,28 +34,61 @@
                         <FontIcon x:Name="FirewallIcon" Glyph="&#xE785;" />
                     </AppBarButton.Icon>
                 </AppBarButton>
+                <AppBarToggleButton x:Name="PauseButton" Label="Pause" Click="Pause_Click">
+                    <AppBarToggleButton.Icon>
+                        <FontIcon Glyph="&#xE769;" />
+                    </AppBarToggleButton.Icon>
+                </AppBarToggleButton>
             </CommandBar>
         </Grid>
 
-        <Grid Grid.Row="1" Height="36" Padding="0,0,12,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+        <Grid Grid.Row="1" Height="40" Padding="0,0,12,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Name, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Local, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Remote, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.State, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.Layout.Data, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Speed, Mode=OneWay}" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="App / protocol" Margin="44,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button Grid.Column="0" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="36,0,0,0">
+                    <TextBlock Text="App / protocol" />
+                    <FontIcon x:Name="SortName" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
+            </Button>
             <TextBlock Grid.Column="1" Text="Local address" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <TextBlock Grid.Column="2" Text="Remote host" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <TextBlock Grid.Column="3" Text="State" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <TextBlock Grid.Column="4" Text="Speed (down / up)" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button Grid.Column="2" Tag="Remote" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Remote host" Click="Header_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                    <TextBlock Text="Remote host" />
+                    <FontIcon x:Name="SortRemote" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
+            </Button>
+            <Button Grid.Column="3" Tag="State" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by State" Click="Header_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                    <TextBlock Text="State" />
+                    <FontIcon x:Name="SortState" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
+            </Button>
+            <Button Grid.Column="4" Tag="Data" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Data" Click="Header_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                    <TextBlock Text="Data (down / up)" />
+                    <FontIcon x:Name="SortData" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
+            </Button>
+            <Button Grid.Column="5" Tag="Speed" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Speed" Click="Header_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                    <TextBlock Text="Speed (down / up)" />
+                    <FontIcon x:Name="SortSpeed" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
+            </Button>
             <Thumb Tag="Name" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
             <Thumb Tag="Local" Grid.Column="1" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
             <Thumb Tag="Remote" Grid.Column="2" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
             <Thumb Tag="State" Grid.Column="3" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
-            <Thumb Tag="Speed" Grid.Column="4" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
+            <Thumb Tag="Data" Grid.Column="4" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
+            <Thumb Tag="Speed" Grid.Column="5" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
         </Grid>
 
         <ListView
@@ -78,6 +111,7 @@
                             <ColumnDefinition Width="{x:Bind Layout.Local, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.Remote, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.State, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.Data, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.Speed, Mode=OneWay}" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
@@ -88,7 +122,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <Button Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0"
+                            <Button Width="28" Height="28" AutomationProperties.Name="Expand or collapse" Padding="0" Background="Transparent" BorderThickness="0"
                                     Visibility="{x:Bind ChevronVisibility, Mode=OneWay}" Click="Chevron_Click">
                                 <FontIcon Glyph="&#xE76C;" FontSize="10" RenderTransformOrigin="0.5,0.5">
                                     <FontIcon.RenderTransform>
@@ -112,7 +146,8 @@
                         <TextBlock Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Local, Mode=OneWay}" />
                         <TextBlock Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Remote, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind RemoteDetail, Mode=OneWay}" />
                         <TextBlock Grid.Column="3" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind State, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Grid.Column="4" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Speed, Mode=OneWay}" />
+                        <TextBlock Grid.Column="4" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Transferred, Mode=OneWay}" />
+                        <TextBlock Grid.Column="5" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Speed, Mode=OneWay}" />
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

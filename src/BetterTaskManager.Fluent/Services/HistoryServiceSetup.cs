@@ -45,7 +45,7 @@ internal static class HistoryServiceSetup
             return result.Succeeded ? null : result.FailureSummary();
         }
 
-        string resultFile = Path.Combine(Path.GetTempPath(), $"BetterTaskManager-service-{Guid.NewGuid():N}.txt");
+        string resultFile = Path.Combine(Path.GetTempPath(), $"NaxTaskManager-service-{Guid.NewGuid():N}.txt");
         var startInfo = new ProcessStartInfo(Environment.ProcessPath!)
         {
             UseShellExecute = true,

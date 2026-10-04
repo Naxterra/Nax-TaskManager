@@ -79,6 +79,7 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength Remote => this["Remote"];
     public GridLength State => this["State"];
     public GridLength Speed => this["Speed"];
+    public GridLength Data => this["Data"];
 
     public void Resize(string column, double delta)
     {

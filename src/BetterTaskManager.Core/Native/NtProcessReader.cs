@@ -57,7 +57,7 @@ public static class NtProcessReader
 
     public static List<RawProcess> Read()
     {
-        if (IntPtr.Size != 8) throw new PlatformNotSupportedException("Better Task Manager requires 64-bit Windows.");
+        if (IntPtr.Size != 8) throw new PlatformNotSupportedException("Nax-TaskManager requires 64-bit Windows.");
 
         for (int attempt = 0; attempt < 8; attempt++)
         {

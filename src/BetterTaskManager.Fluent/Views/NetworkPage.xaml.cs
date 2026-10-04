@@ -18,6 +18,7 @@ public sealed partial class NetworkPage : Page
     {
         ViewModel = new NetworkViewModel(App.Monitor, App.Settings);
         InitializeComponent();
+        UpdateSortIndicators();
     }
 
     public NetworkViewModel ViewModel { get; }
@@ -27,6 +28,7 @@ public sealed partial class NetworkPage : Page
         App.Monitor.Updated += OnUpdated;
         App.Monitor.SearchChanged += Refresh;
         App.Monitor.FirewallChanged += Refresh;
+        PauseButton.IsChecked = App.Monitor.Paused;
         Refresh();
     }
 
@@ -83,6 +85,30 @@ public sealed partial class NetworkPage : Page
         FirewallButton.Label = blocked ? "Allow network" : "Block network";
         FirewallIcon.Glyph = blocked ? "" : "";
     }
+
+    private void Header_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string column }) return;
+        ViewModel.Sort(column);
+        UpdateSortIndicators();
+        Refresh();
+    }
+
+    private void UpdateSortIndicators()
+    {
+        var indicators = new Dictionary<string, FontIcon>
+        {
+            [NetworkViewModel.SortName] = SortName, [NetworkViewModel.SortRemote] = SortRemote, [NetworkViewModel.SortState] = SortState,
+            [NetworkViewModel.SortData] = SortData, [NetworkViewModel.SortSpeed] = SortSpeed
+        };
+        foreach (var (column, icon) in indicators)
+        {
+            icon.Visibility = column == ViewModel.SortColumn ? Visibility.Visible : Visibility.Collapsed;
+            icon.Glyph = ViewModel.SortDescending ? "\uE70D" : "\uE70E";
+        }
+    }
+
+    private void Pause_Click(object sender, RoutedEventArgs e) => App.Monitor.Paused = PauseButton.IsChecked == true;
 
     private void EstablishedOnly_Click(object sender, RoutedEventArgs e)
     {

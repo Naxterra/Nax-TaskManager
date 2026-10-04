@@ -22,7 +22,7 @@ public struct ByteCounts
 /// </summary>
 public sealed class BandwidthMonitor : IDisposable
 {
-    public const string DefaultSessionName = "BetterTaskManager-Network";
+    public const string DefaultSessionName = "NaxTaskManager-Network";
     private static readonly TimeSpan RestartDelay = TimeSpan.FromSeconds(10);
 
     private readonly object gate = new();

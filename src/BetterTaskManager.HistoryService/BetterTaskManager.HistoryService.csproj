@@ -4,10 +4,10 @@
     <TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
     <RootNamespace>BetterTaskManager.HistoryService</RootNamespace>
-    <AssemblyName>BetterTaskManager.HistoryService</AssemblyName>
-    <Product>Better Task Manager</Product>
+    <AssemblyName>NaxTaskManager.HistoryService</AssemblyName>
+    <Product>Nax-TaskManager</Product>
     <Company>Naxterra</Company>
-    <Version>2.0.0-alpha.1</Version>
+    <Version>2.0.0-alpha.2</Version>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <ImplicitUsings>enable</ImplicitUsings>

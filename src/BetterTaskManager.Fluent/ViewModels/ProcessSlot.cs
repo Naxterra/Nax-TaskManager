@@ -10,6 +10,9 @@ public sealed record ProcessRowContext(long TotalMemory, bool BandwidthAvailable
 
 public sealed class ProcessSlot : ObservableObject
 {
+    /// <summary>What UI Automation and screen readers announce for the row.</summary>
+    public override string ToString() => Name;
+
     private static readonly Thickness ChildIndent = new(40, 0, 0, 0);
     private static readonly Thickness NoIndent = new(0);
 

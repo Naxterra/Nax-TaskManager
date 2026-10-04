@@ -20,7 +20,7 @@ public static class Program
 
         string database = Argument(args, "--db") ?? HistoryStore.DefaultPath;
         int seconds = int.TryParse(Argument(args, "--seconds"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int value) ? value : 0;
-        using var worker = new HistoryWorker(database, "BetterTaskManager-HistoryTest", Console.Error.WriteLine);
+        using var worker = new HistoryWorker(database, "NaxTaskManager-HistoryTest", Console.Error.WriteLine);
         worker.Start();
         Console.WriteLine($"Recording to {database}. " + (seconds > 0 ? $"Stopping after {seconds} s." : "Press Ctrl+C to stop."));
         using var stop = new ManualResetEventSlim();

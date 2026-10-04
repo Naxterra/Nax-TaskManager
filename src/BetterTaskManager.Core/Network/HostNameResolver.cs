@@ -27,7 +27,7 @@ public readonly record struct HostName(string Name, HostNameSource Source);
 /// </summary>
 public sealed class HostNameResolver : IDisposable
 {
-    public const string DefaultSessionName = "BetterTaskManager-Dns";
+    public const string DefaultSessionName = "NaxTaskManager-Dns";
     private const int DnsQueryCompletedEvent = 3008;
     private static readonly TimeSpan CachePollInterval = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan FailedLookupRetry = TimeSpan.FromMinutes(10);

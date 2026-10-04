@@ -13,7 +13,7 @@ $artifacts = Join-Path $root "artifacts"
 $version = [string]$projectXml.Project.PropertyGroup.Version
 if ([string]::IsNullOrWhiteSpace($version)) { throw "The project Version property is missing." }
 
-$folderName = "BetterTaskManager-v$version-portable-win-x64"
+$folderName = "NaxTaskManager-v$version-portable-win-x64"
 $output = Join-Path $artifacts $folderName
 $artifactsFull = [System.IO.Path]::GetFullPath($artifacts).TrimEnd('\') + '\'
 $outputFull = [System.IO.Path]::GetFullPath($output)
@@ -27,12 +27,12 @@ if (Test-Path -LiteralPath $outputFull) { Remove-Item -LiteralPath $outputFull -
 dotnet publish $project -c Release -r win-x64 --self-contained false -o $outputFull
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 
-$executable = Join-Path $outputFull "BetterTaskManager.exe"
+$executable = Join-Path $outputFull "NaxTaskManager.exe"
 foreach ($required in @(
     $executable,
-    (Join-Path $outputFull "BetterTaskManager.pri"),
+    (Join-Path $outputFull "NaxTaskManager.pri"),
     (Join-Path $outputFull "MainWindow.xbf"),
-    (Join-Path $outputFull "HistoryService\BetterTaskManager.HistoryService.exe")
+    (Join-Path $outputFull "HistoryService\NaxTaskManager.HistoryService.exe")
 )) {
     if (-not (Test-Path -LiteralPath $required)) { throw "Published output is incomplete, missing: $required" }
 }
@@ -41,11 +41,11 @@ foreach ($document in @("README.md", "SECURITY.md", "LICENSE")) {
 }
 
 $hash = Get-FileHash -LiteralPath $executable -Algorithm SHA256
-$manifest = $hash.Hash.ToLowerInvariant() + " *BetterTaskManager.exe" + [Environment]::NewLine
+$manifest = $hash.Hash.ToLowerInvariant() + " *NaxTaskManager.exe" + [Environment]::NewLine
 [System.IO.File]::WriteAllText((Join-Path $outputFull "SHA256SUMS.txt"), $manifest, [System.Text.Encoding]::ASCII)
 
 $versionedZip = Join-Path $artifacts ($folderName + ".zip")
 if (Test-Path -LiteralPath $versionedZip) { Remove-Item -LiteralPath $versionedZip -Force }
 Compress-Archive -LiteralPath $outputFull -DestinationPath $versionedZip -CompressionLevel Optimal
 
-Write-Host "Published portable Better Task Manager v$version to $outputFull"
+Write-Host "Published portable Nax-TaskManager v$version to $outputFull"

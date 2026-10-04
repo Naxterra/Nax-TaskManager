@@ -5,8 +5,11 @@ namespace BetterTaskManager.Fluent.Services;
 public sealed class AppSettings
 {
     private static readonly string Folder = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
-    private static readonly string FilePath = Path.Combine(Folder, "fluent-settings.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NaxTaskManager");
+    private static readonly string FilePath = Path.Combine(Folder, "settings.json");
+    /// <summary>Settings from before the rename to Nax-TaskManager; read once when no new file exists.</summary>
+    private static readonly string LegacyFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager", "fluent-settings.json");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public int RefreshIntervalMilliseconds { get; set; } = 1000;
@@ -14,6 +17,9 @@ public sealed class AppSettings
     public string Theme { get; set; } = "System";
     public string ProcessSortColumn { get; set; } = "Memory";
     public bool ProcessSortDescending { get; set; } = true;
+    /// <summary>Network page: by app name by default, so rows do not move while traffic changes.</summary>
+    public string NetworkSortColumn { get; set; } = "Name";
+    public bool NetworkSortDescending { get; set; }
     public Dictionary<string, double> ColumnWidths { get; set; } = new();
     public int WindowWidth { get; set; } = 1280;
     public int WindowHeight { get; set; } = 820;
@@ -22,9 +28,10 @@ public sealed class AppSettings
     {
         try
         {
-            if (File.Exists(FilePath))
+            string path = File.Exists(FilePath) ? FilePath : LegacyFilePath;
+            if (File.Exists(path))
             {
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), JsonOptions) ?? new AppSettings();
+                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), JsonOptions) ?? new AppSettings();
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
@@ -56,9 +63,9 @@ internal static class CrashLog
     {
         try
         {
-            string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterTaskManager");
+            string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NaxTaskManager");
             Directory.CreateDirectory(folder);
-            File.AppendAllText(Path.Combine(folder, "fluent-crash.log"), $"{DateTimeOffset.Now:O}\r\n{exception}\r\n\r\n");
+            File.AppendAllText(Path.Combine(folder, "crash.log"), $"{DateTimeOffset.Now:O}\r\n{exception}\r\n\r\n");
         }
         catch
         {

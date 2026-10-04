@@ -3,7 +3,7 @@ param(
     [string]$IsccPath,
     [string]$AppIdValue = "{{9B62E509-9DBE-4C73-88EC-DF93F70835A1}",
     [string]$UninstallRegistryId = "{9B62E509-9DBE-4C73-88EC-DF93F70835A1}",
-    [string]$AppNameValue = "Better Task Manager",
+    [string]$AppNameValue = "Nax-TaskManager",
     [string]$InstallerBaseNameOverride,
     [switch]$DisableCloseApplications,
     [switch]$SkipReleaseChecksums
@@ -20,9 +20,9 @@ $artifacts = Join-Path $root "artifacts"
 $version = [string]$projectXml.Project.PropertyGroup.Version
 if ([string]::IsNullOrWhiteSpace($version)) { throw "The project Version property is missing." }
 
-$sourceFolderName = "BetterTaskManager-v$version-portable-win-x64"
+$sourceFolderName = "NaxTaskManager-v$version-portable-win-x64"
 $sourceFolder = Join-Path $artifacts $sourceFolderName
-$sourceExecutable = Join-Path $sourceFolder "BetterTaskManager.exe"
+$sourceExecutable = Join-Path $sourceFolder "NaxTaskManager.exe"
 if (-not (Test-Path -LiteralPath $sourceExecutable)) {
     throw "Publish the portable package (scripts\publish-fluent.ps1) before building the installer: $sourceExecutable"
 }
@@ -43,7 +43,7 @@ if (-not (Test-Path -LiteralPath $IsccPath)) { throw "Inno Setup compiler not fo
 # 2.0.0-alpha.3 -> 2.0.0.3; a release without a pre-release number gets .0.
 if ($version -notmatch '^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z]+\.(\d+))?') { throw "Unsupported version format: $version" }
 $numericVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).$(if ($Matches[4]) { $Matches[4] } else { 0 })"
-$installerBaseName = if ([string]::IsNullOrWhiteSpace($InstallerBaseNameOverride)) { "BetterTaskManager-v$version-setup-win-x64" } else { $InstallerBaseNameOverride }
+$installerBaseName = if ([string]::IsNullOrWhiteSpace($InstallerBaseNameOverride)) { "NaxTaskManager-v$version-setup-win-x64" } else { $InstallerBaseNameOverride }
 $installerPath = Join-Path $artifacts ($installerBaseName + ".exe")
 $closeApplicationsValue = if ($DisableCloseApplications) { "no" } else { "yes" }
 
@@ -85,7 +85,7 @@ if (-not $SkipReleaseChecksums) {
     foreach ($path in @($zipPath, $installerPath, $sourceExecutable)) {
         if (-not (Test-Path -LiteralPath $path)) { throw "Release checksum input not found: $path" }
         $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
-        $relativeName = if ($path -eq $sourceExecutable) { "$sourceFolderName/BetterTaskManager.exe" } else { Split-Path $path -Leaf }
+        $relativeName = if ($path -eq $sourceExecutable) { "$sourceFolderName/NaxTaskManager.exe" } else { Split-Path $path -Leaf }
         $checksumLines.Add($hash + " *" + $relativeName)
     }
     [System.IO.File]::WriteAllText($checksumPath, ($checksumLines -join [Environment]::NewLine) + [Environment]::NewLine, [System.Text.Encoding]::ASCII)
