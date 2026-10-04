@@ -5,10 +5,10 @@ using BetterTaskManager.Core.Network;
 namespace BetterTaskManager.Core.History;
 
 /// <summary>How history groups a process; the rules live in <see cref="AppIdentityRules"/>.</summary>
-internal sealed record AppIdentity(string Key, string Name, string Path, long CreateTime)
+internal sealed record AppIdentity(string Key, string Name, string Path, long CreateTime, bool Tunnel = false)
 {
     public static AppIdentity From(ProcessSample process) =>
-        new(AppIdentityRules.AppKey(process), AppIdentityRules.AppName(process), process.Path, process.CreateTime);
+        new(AppIdentityRules.AppKey(process), AppIdentityRules.AppName(process), process.Path, process.CreateTime, VpnTunnels.IsTunnel(process));
 
     public static AppIdentity Unknown(int pid) => new("pid:" + pid, $"Exited process (PID {pid})", "", 0);
 

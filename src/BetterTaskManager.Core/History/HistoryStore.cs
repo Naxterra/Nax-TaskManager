@@ -5,7 +5,7 @@ using Microsoft.Data.Sqlite;
 namespace BetterTaskManager.Core.History;
 
 /// <summary>Network use of one app over a time range.</summary>
-public sealed record AppUsage(string AppKey, string AppName, string AppPath, long BytesIn, long BytesOut, int Connections)
+public sealed record AppUsage(string AppKey, string AppName, string AppPath, long BytesIn, long BytesOut, int Connections, bool Tunnel = false)
 {
     public long Total => BytesIn + BytesOut;
 }
@@ -41,7 +41,7 @@ public sealed class HistoryStore : IDisposable
 {
     /// <summary>2: app keys follow <see cref="AppIdentityRules"/> (Store apps by package, service suffixes removed).</summary>
     /// <summary>3: connections record scope (Internet, LAN…) and direction.</summary>
-    private const int SchemaVersion = 3;
+    private const int SchemaVersion = 4;
 
     private readonly SqliteConnection connection;
     private SqliteCommand? insertConnection, updateConnection, addUsage;
@@ -117,6 +117,7 @@ public sealed class HistoryStore : IDisposable
                 app_path TEXT NOT NULL,
                 bytes_in INTEGER NOT NULL DEFAULT 0,
                 bytes_out INTEGER NOT NULL DEFAULT 0,
+                tunnel INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (day, app_key));
             """);
         int version = ReadSchemaVersion();
@@ -126,6 +127,8 @@ public sealed class HistoryStore : IDisposable
             if (!HasColumn("connections", "scope")) Execute("ALTER TABLE connections ADD COLUMN scope TEXT NOT NULL DEFAULT ''");
             if (!HasColumn("connections", "inbound")) Execute("ALTER TABLE connections ADD COLUMN inbound INTEGER NOT NULL DEFAULT 0");
         }
+        // 4: app_usage marks VPN tunnel processes, which totals leave out.
+        if (version < 4 && !HasColumn("app_usage", "tunnel")) Execute("ALTER TABLE app_usage ADD COLUMN tunnel INTEGER NOT NULL DEFAULT 0");
         SetMeta("schema_version", SchemaVersion.ToString(CultureInfo.InvariantCulture));
     }
 
@@ -196,10 +199,10 @@ public sealed class HistoryStore : IDisposable
             WHERE id = $id
             """, "$last", "$laddr", "$host", "$reverse", "$in", "$out", "$state", "$id");
         addUsage ??= Prepare("""
-            INSERT INTO app_usage (day, app_key, app_name, app_path, bytes_in, bytes_out) VALUES ($day, $key, $name, $path, $in, $out)
+            INSERT INTO app_usage (day, app_key, app_name, app_path, bytes_in, bytes_out, tunnel) VALUES ($day, $key, $name, $path, $in, $out, $tunnel)
             ON CONFLICT (day, app_key) DO UPDATE SET app_name = excluded.app_name, app_path = excluded.app_path,
-                bytes_in = bytes_in + excluded.bytes_in, bytes_out = bytes_out + excluded.bytes_out
-            """, "$day", "$key", "$name", "$path", "$in", "$out");
+                bytes_in = bytes_in + excluded.bytes_in, bytes_out = bytes_out + excluded.bytes_out, tunnel = max(tunnel, excluded.tunnel)
+            """, "$day", "$key", "$name", "$path", "$in", "$out", "$tunnel");
         insertConnection.Transaction = updateConnection.Transaction = addUsage.Transaction = transaction;
 
         foreach (TrackedConnection item in changed)
@@ -221,7 +224,7 @@ public sealed class HistoryStore : IDisposable
 
         foreach (var ((day, key), delta) in usage)
         {
-            Bind(addUsage, day, key, delta.App.Name, delta.App.Path, delta.BytesIn, delta.BytesOut);
+            Bind(addUsage, day, key, delta.App.Name, delta.App.Path, delta.BytesIn, delta.BytesOut, delta.App.Tunnel ? 1 : 0);
             addUsage.ExecuteNonQuery();
         }
 
@@ -247,14 +250,15 @@ public sealed class HistoryStore : IDisposable
         using (SqliteCommand command = connection.CreateCommand())
         {
             command.CommandText = """
-                SELECT app_key, max(app_name), max(app_path), sum(bytes_in), sum(bytes_out)
-                FROM app_usage WHERE day >= $day GROUP BY app_key
+                SELECT app_key, max(app_name), max(app_path), sum(bytes_in), sum(bytes_out),
+                """ + (HasColumn("app_usage", "tunnel") ? " max(tunnel)" : " 0") + """
+                 FROM app_usage WHERE day >= $day GROUP BY app_key
                 """;
             command.Parameters.AddWithValue("$day", Day(fromLocalDay));
             using SqliteDataReader reader = command.ExecuteReader();
             while (reader.Read())
             {
-                apps[reader.GetString(0)] = new AppUsage(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetInt64(3), reader.GetInt64(4), 0);
+                apps[reader.GetString(0)] = new AppUsage(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetInt64(3), reader.GetInt64(4), 0, reader.GetInt64(5) != 0);
             }
         }
 

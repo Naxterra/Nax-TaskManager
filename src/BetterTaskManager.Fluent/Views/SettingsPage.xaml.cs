@@ -36,6 +36,8 @@ public sealed partial class SettingsPage : Page
         HistoryToggle.IsOn = state != HistoryServiceState.NotInstalled;
         HistoryStatusText.Text = state switch
         {
+            HistoryServiceState.Running when HistoryServiceControl.NeedsUpdate(HistoryServiceSetup.BundledFolder) =>
+                "On, but the service is older than this app. Use Update on the History page.",
             HistoryServiceState.Running => "On. Recording while Windows runs, even with this window closed.",
             HistoryServiceState.NotInstalled => App.Monitor.IsElevated ? "Off." : "Off. Turning it on asks for administrator approval once.",
             HistoryServiceState.Starting => "Starting…",

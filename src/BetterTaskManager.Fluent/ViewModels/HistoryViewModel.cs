@@ -1,3 +1,4 @@
+using BetterTaskManager.Core.Network;
 using System.Globalization;
 using BetterTaskManager.Core.History;
 using BetterTaskManager.Fluent.Services;
@@ -137,14 +138,16 @@ public sealed class HistoryViewModel
         };
 
         long maxTotal = Math.Max(1, result.Apps.Count > 0 ? result.Apps.Max(app => app.Total) : 1);
+        // VPN tunnels carry the other apps' traffic again; the total would count it twice.
+        List<AppUsage> counted = result.Apps.Where(app => !app.Tunnel).ToList();
         var apps = new List<AppUsageRow>(result.Apps.Count + 1);
         if (result.Apps.Count > 0) apps.Add(
-            new AppUsageRow("", "All apps", "", $"{Format.Count(result.Apps.Sum(app => app.Connections))} connections",
-                Format.Bytes(result.Apps.Sum(app => app.Total)), Split(result.Apps.Sum(app => app.BytesIn), result.Apps.Sum(app => app.BytesOut)), 0));
+            new AppUsageRow("", "All apps", "", $"{Format.Count(result.Apps.Sum(app => app.Connections))} connections" + (counted.Count < result.Apps.Count ? " · VPN tunnels not counted" : ""),
+                Format.Bytes(counted.Sum(app => app.Total)), Split(counted.Sum(app => app.BytesIn), counted.Sum(app => app.BytesOut)), 0));
         foreach (AppUsage app in result.Apps)
         {
             apps.Add(new AppUsageRow(app.AppKey, app.AppName, app.AppPath,
-                app.Connections == 1 ? "1 connection" : $"{Format.Count(app.Connections)} connections",
+                (app.Connections == 1 ? "1 connection" : $"{Format.Count(app.Connections)} connections") + (app.Tunnel ? " · VPN tunnel, not in total" : ""),
                 app.Total > 0 ? Format.Bytes(app.Total) : "", app.Total > 0 ? Split(app.BytesIn, app.BytesOut) : "",
                 app.Total / (double)maxTotal));
         }

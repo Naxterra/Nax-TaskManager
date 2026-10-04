@@ -144,6 +144,12 @@
                                     Visibility="{x:Bind BlockedVisibility, Mode=OneWay}">
                                 <TextBlock Text="Blocked" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                             </Border>
+                            <Border Grid.Column="3" Margin="0,0,8,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="4"
+                                    Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}"
+                                    Visibility="{x:Bind TunnelVisibility, Mode=OneWay}"
+                                    ToolTipService.ToolTip="VPN tunnel: carries other apps' traffic in encrypted form, so it is left out of the all-apps total.">
+                                <TextBlock Text="VPN tunnel" FontSize="11" Foreground="{ThemeResource SystemFillColorAttentionBrush}" />
+                            </Border>
                         </Grid>
                         <TextBlock Grid.Column="1" Grid.ColumnSpan="4" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Summary, Mode=OneWay}" />

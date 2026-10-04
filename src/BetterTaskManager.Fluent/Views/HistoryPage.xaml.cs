@@ -100,6 +100,13 @@ public sealed partial class HistoryPage : Page
         ServiceButton.IsEnabled = !busy;
         switch (ViewModel.ServiceState)
         {
+            case HistoryServiceState.Running when HistoryServiceControl.NeedsUpdate(HistoryServiceSetup.BundledFolder):
+                ServiceBar.IsOpen = true;
+                ServiceBar.Severity = InfoBarSeverity.Informational;
+                ServiceBar.Title = "Update the History service";
+                ServiceBar.Message = $"The running service is {Short(HistoryServiceControl.VersionIn(HistoryServiceControl.InstallFolder))}; this app brings {Short(HistoryServiceControl.VersionIn(HistoryServiceSetup.BundledFolder))}. Recording continues during the update.";
+                ServiceButton.Content = "Update";
+                break;
             case HistoryServiceState.Running:
                 ServiceBar.IsOpen = false;
                 break;
@@ -119,6 +126,8 @@ public sealed partial class HistoryPage : Page
                 break;
         }
     }
+
+    private static string Short(string? version) => version?.Split('+')[0] ?? "unknown";
 
     private async void ServiceButton_Click(object sender, RoutedEventArgs e)
     {

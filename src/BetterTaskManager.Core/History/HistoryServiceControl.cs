@@ -29,6 +29,18 @@ public static class HistoryServiceControl
     public static string InstallFolder =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Nax-TaskManager", "HistoryService");
 
+    /// <summary>Product version of the service build in <paramref name="folder"/>, or null.</summary>
+    public static string? VersionIn(string folder)
+    {
+        string exe = Path.Combine(folder, ExecutableName);
+        return File.Exists(exe) ? System.Diagnostics.FileVersionInfo.GetVersionInfo(exe).ProductVersion : null;
+    }
+
+    /// <summary>True when the installed service is another build than the one shipped with the app.</summary>
+    public static bool NeedsUpdate(string bundledFolder) =>
+        QueryState() != HistoryServiceState.NotInstalled && VersionIn(bundledFolder) is { } bundled &&
+        VersionIn(InstallFolder) is { } installed && bundled != installed;
+
     public static HistoryServiceState QueryState()
     {
         try

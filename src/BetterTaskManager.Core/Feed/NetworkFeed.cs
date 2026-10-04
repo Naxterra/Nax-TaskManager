@@ -166,6 +166,9 @@ public sealed class NetworkFeedClient : IDisposable
     private static readonly TimeSpan MaxAge = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
     private readonly CancellationTokenSource shutdown = new();
+    private static readonly TimeSpan SmoothingWindow = TimeSpan.FromSeconds(3);
+    private readonly object gate = new();
+    private readonly List<NetworkFeedMessage> recent = new();
     private volatile NetworkFeedMessage? latest;
     private long receivedAt;
     private Task? loop;
@@ -193,6 +196,7 @@ public sealed class NetworkFeedClient : IDisposable
                 // Service restarting, pipe closed, not trusted or a bad frame: never give up, try again shortly.
             }
             latest = null;
+            lock (gate) recent.Clear();
             try { await Task.Delay(RetryDelay, shutdown.Token); } catch (OperationCanceledException) { return; }
         }
     }
@@ -211,9 +215,51 @@ public sealed class NetworkFeedClient : IDisposable
             if (length <= 0 || length > NetworkFeed.MaxFrameBytes) throw new InvalidDataException("Invalid feed frame length " + length);
             byte[] body = new byte[length];
             await pipe.ReadExactlyAsync(body, shutdown.Token);
-            latest = JsonSerializer.Deserialize(body, NetworkFeedJson.Default.NetworkFeedMessage);
+            NetworkFeedMessage? message = JsonSerializer.Deserialize(body, NetworkFeedJson.Default.NetworkFeedMessage);
+            if (message is null) continue;
+            lock (gate)
+            {
+                recent.Add(message);
+                recent.RemoveAll(older => message.TimestampUtc - older.TimestampUtc > SmoothingWindow);
+                latest = Average(recent);
+            }
             Interlocked.Exchange(ref receivedAt, System.Diagnostics.Stopwatch.GetTimestamp());
         }
+    }
+
+    /// <summary>
+    /// Rates averaged over the last few seconds. The app and the service sample on unsynchronised one-second clocks,
+    /// so single samples jump between neighbouring windows; totals come from the newest message.
+    /// </summary>
+    private static NetworkFeedMessage Average(List<NetworkFeedMessage> window)
+    {
+        if (window.Count == 1) return window[0];
+        int count = window.Count;
+        var processes = new Dictionary<(int, long), ProcessTraffic>();
+        var processRates = new Dictionary<(int, long), (double Down, double Up)>();
+        var sockets = new Dictionary<(int, string, int, string, int), SocketTraffic>();
+        var socketRates = new Dictionary<(int, string, int, string, int), (double Down, double Up)>();
+        foreach (NetworkFeedMessage message in window)
+        {
+            foreach (ProcessTraffic process in message.Processes)
+            {
+                var key = (process.Pid, process.CreateTime);
+                processes[key] = process;
+                processRates.TryGetValue(key, out var sum);
+                processRates[key] = (sum.Down + process.ReceivePerSecond, sum.Up + process.SendPerSecond);
+            }
+            foreach (SocketTraffic socket in message.Sockets)
+            {
+                var key = (socket.Pid, socket.Protocol, socket.LocalPort, socket.RemoteAddress, socket.RemotePort);
+                sockets[key] = socket;
+                socketRates.TryGetValue(key, out var sum);
+                socketRates[key] = (sum.Down + socket.ReceivePerSecond, sum.Up + socket.SendPerSecond);
+            }
+        }
+        return new NetworkFeedMessage(
+            window[^1].TimestampUtc,
+            processes.Select(pair => pair.Value with { ReceivePerSecond = processRates[pair.Key].Down / count, SendPerSecond = processRates[pair.Key].Up / count }).ToList(),
+            sockets.Select(pair => pair.Value with { ReceivePerSecond = socketRates[pair.Key].Down / count, SendPerSecond = socketRates[pair.Key].Up / count }).ToList());
     }
 
     private static bool IsServedByHistoryService(NamedPipeClientStream pipe) =>

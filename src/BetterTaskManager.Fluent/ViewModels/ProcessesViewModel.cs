@@ -1,3 +1,4 @@
+using BetterTaskManager.Core.Network;
 using BetterTaskManager.Core.Monitoring;
 using BetterTaskManager.Fluent.Services;
 
@@ -46,7 +47,7 @@ public sealed class ProcessesViewModel : ObservableObject
         IoHeader = Format.Rate(system.IoBytesPerSecond);
         NetworkHeader = Format.Count(snapshot.Connections.Count);
         bool bandwidth = system.PerProcessNetworkAvailable;
-        BandwidthHeader = bandwidth ? Format.Mbps(snapshot.Processes.Sum(process => process.NetworkBytesPerSecond))
+        BandwidthHeader = bandwidth ? Format.Mbps(snapshot.Processes.Where(process => !VpnTunnels.IsTunnel(process)).Sum(process => process.NetworkBytesPerSecond))
             : monitor.IsElevated ? "Paused" : "Admin";
         BandwidthTooltip = bandwidth
             ? system.PerProcessNetworkFromService

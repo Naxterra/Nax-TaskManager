@@ -22,6 +22,7 @@ public sealed record NetworkRowData(
     string Speed,
     string RemoteDetail,
     bool Expandable,
+    bool Tunnel,
     bool Expanded);
 
 public sealed class NetworkSlot : ObservableObject
@@ -32,7 +33,7 @@ public sealed class NetworkSlot : ObservableObject
     private static readonly Thickness ChildIndent = new(40, 0, 0, 0);
     private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", transferred = "", scope = "", speed = "", remoteDetail = "";
     private ImageSource? icon;
-    private Visibility chevronVisibility, iconVisibility, blockedVisibility = Visibility.Collapsed;
+    private Visibility chevronVisibility, iconVisibility, blockedVisibility = Visibility.Collapsed, tunnelVisibility = Visibility.Collapsed;
     private double chevronAngle;
     private Thickness indent;
     private bool isGroup;
@@ -58,6 +59,7 @@ public sealed class NetworkSlot : ObservableObject
     public Visibility ChevronVisibility { get => chevronVisibility; private set => Set(ref chevronVisibility, value); }
     public Visibility IconVisibility { get => iconVisibility; private set => Set(ref iconVisibility, value); }
     public Visibility BlockedVisibility { get => blockedVisibility; private set => Set(ref blockedVisibility, value); }
+    public Visibility TunnelVisibility { get => tunnelVisibility; private set => Set(ref tunnelVisibility, value); }
     public double ChevronAngle { get => chevronAngle; private set => Set(ref chevronAngle, value); }
     public Thickness Indent { get => indent; private set => Set(ref indent, value); }
     public Windows.UI.Text.FontWeight NameWeight => isGroup ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal;
@@ -84,6 +86,7 @@ public sealed class NetworkSlot : ObservableObject
         slot.ChevronVisibility = row.Expandable ? Visibility.Visible : Visibility.Collapsed;
         slot.ChevronAngle = row.Expanded ? 90 : 0;
         slot.BlockedVisibility = group && input.IsBlocked(row.Path) ? Visibility.Visible : Visibility.Collapsed;
+        slot.TunnelVisibility = row.Tunnel ? Visibility.Visible : Visibility.Collapsed;
         if (slot.isGroup != group)
         {
             slot.isGroup = group;
@@ -167,7 +170,7 @@ public sealed class NetworkViewModel : ObservableObject
                 string name = owner is null || first.Pid == 0
                     ? (first.Pid == 0 ? "Closing connections (no owning process)" : "PID " + first.Pid)
                     : AppIdentityRules.AppName(owner);
-                return (Key: group.Key, Name: name, Path: owner?.Path ?? "", Connections: group.ToList());
+                return (Key: group.Key, Name: name, Path: owner?.Path ?? "", Connections: group.ToList(), Tunnel: owner is not null && VpnTunnels.IsTunnel(owner));
             })
             .Where(group => query.Length == 0 || group.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                 group.Path.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
@@ -188,7 +191,7 @@ public sealed class NetworkViewModel : ObservableObject
             string summary = $"{established} established · {listening} listening · {group.Connections.Count - established - listening} other";
             string data = measured && usage.Received + usage.Sent > 0 ? $"↓ {Format.Bytes(usage.Received)}   ↑ {Format.Bytes(usage.Sent)}" : "";
             string speed = measured ? Speed(usage.Down, usage.Up) : "";
-            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", "", summary, data, speed, "", true, isExpanded));
+            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", "", summary, data, speed, "", true, group.Tunnel, isExpanded));
             if (!isExpanded) continue;
 
             foreach (ConnectionSample connection in SortConnections(group.Connections))
@@ -207,13 +210,15 @@ public sealed class NetworkViewModel : ObservableObject
                     measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
                         ? Speed(connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond) : "",
                     RemoteDetail(connection),
-                    false, false));
+                    false, false, false));
             }
         }
 
         int totalEstablished = snapshot.Connections.Count(connection => connection.State == "Established");
+        List<ProcessSample> counted = snapshot.Processes.Where(process => !VpnTunnels.IsTunnel(process)).ToList();
         string throughput = measured
-            ? $" · all apps ↓ {Format.NetworkRate(snapshot.Processes.Sum(p => p.NetworkReceiveBytesPerSecond))} ↑ {Format.NetworkRate(snapshot.Processes.Sum(p => p.NetworkSendBytesPerSecond))}"
+            ? $" · all apps ↓ {Format.NetworkRate(counted.Sum(p => p.NetworkReceiveBytesPerSecond))} ↑ {Format.NetworkRate(counted.Sum(p => p.NetworkSendBytesPerSecond))}" +
+              (counted.Count < snapshot.Processes.Count ? " (VPN tunnels not counted)" : "")
             : " · per-app speed needs administrator rights or the History service";
         Summary = $"{Format.Count(snapshot.Connections.Count)} connections · {Format.Count(totalEstablished)} established · " +
             $"{groups.Count} apps shown" + throughput + (snapshot.System.PerProcessNetworkFromService ? " · measured by the History service" : "") + (snapshot.NetworkIssues.Count > 0 ? " · some network tables could not be read" : "");
@@ -221,11 +226,11 @@ public sealed class NetworkViewModel : ObservableObject
         Rows.Apply(rows.Select(row => (row, isBlocked)).ToList());
     }
 
-    private List<(string Key, string Name, string Path, List<ConnectionSample> Connections)> SortGroups(
-        List<(string Key, string Name, string Path, List<ConnectionSample> Connections)> groups,
+    private List<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel)> SortGroups(
+        List<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel)> groups,
         Dictionary<string, (double Down, double Up, long Received, long Sent)> traffic)
     {
-        Func<(string Key, string Name, string Path, List<ConnectionSample> Connections), double>? measure = SortColumn switch
+        Func<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel), double>? measure = SortColumn switch
         {
             SortState => group => group.Connections.Count(connection => connection.State == "Established") * 100000d + group.Connections.Count,
             SortData => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Received + usage.Sent : 0,
@@ -233,7 +238,7 @@ public sealed class NetworkViewModel : ObservableObject
             _ => null
         };
         var byName = StringComparer.CurrentCultureIgnoreCase;
-        IOrderedEnumerable<(string Key, string Name, string Path, List<ConnectionSample> Connections)> ordered = measure is null
+        IOrderedEnumerable<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel)> ordered = measure is null
             ? (SortDescending ? groups.OrderByDescending(group => group.Name, byName) : groups.OrderBy(group => group.Name, byName))
             : (SortDescending ? groups.OrderByDescending(measure) : groups.OrderBy(measure)).ThenBy(group => group.Name, byName);
         return ordered.ThenBy(group => group.Key, StringComparer.Ordinal).ToList();
