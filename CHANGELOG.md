@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.0-alpha.8 - 2026-10-05
+
+- **Efficiency mode**, as in Task Manager (EcoQoS plus low priority): toggle it from the Processes or Details overflow or context menu. A leaf marks processes in efficiency mode, a pause icon suspended ones. Not offered for Windows' critical processes.
+- **Details page** (Ctrl+5): every process on its own row with PID, status, user name, CPU, memory, priority and description; set priority, end task or process tree.
+- **Startup apps page** (Ctrl+6): the Run keys and startup folders with publisher, status and whether they start for you or all users. Disable and enable work like Task Manager (the entry stays; Windows' startup flag changes). All-users entries ask for administrator approval.
+
 ## 2.0.0-alpha.7 - 2026-10-04
 
 - **German interface.** The app follows the Windows display language; Settings → Language switches between English and Deutsch (applies after a restart). Wording follows the German Task Manager. Process names, window titles, paths and host names are never translated.

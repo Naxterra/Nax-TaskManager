@@ -332,4 +332,31 @@ Antwort: {0}</value></data>
   <data name="Priority_Idle" xml:space="preserve"><value>Niedrig</value></data>
   <data name="ProcState_Running" xml:space="preserve"><value>Wird ausgeführt</value></data>
   <data name="ProcState_Suspended" xml:space="preserve"><value>Angehalten</value></data>
+  <data name="MainWindow_9.Content" xml:space="preserve"><value>Autostart-Apps</value></data>
+  <data name="MainWindow_9.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Autostart-Apps (Strg+6)</value></data>
+  <data name="StartupPage_1.Text" xml:space="preserve"><value>Autostart-Apps</value></data>
+  <data name="StartupPage_2.Label" xml:space="preserve"><value>Deaktivieren</value></data>
+  <data name="StartupPage_3.Label" xml:space="preserve"><value>Dateipfad öffnen</value></data>
+  <data name="StartupPage_4.Label" xml:space="preserve"><value>Aktualisieren</value></data>
+  <data name="StartupPage_5.Label" xml:space="preserve"><value>Eigenschaften</value></data>
+  <data name="StartupPage_6.Label" xml:space="preserve"><value>Befehl kopieren</value></data>
+  <data name="StartupPage_7.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Name sortieren</value></data>
+  <data name="StartupPage_8.Text" xml:space="preserve"><value>Name</value></data>
+  <data name="StartupPage_9.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Herausgeber sortieren</value></data>
+  <data name="StartupPage_10.Text" xml:space="preserve"><value>Herausgeber</value></data>
+  <data name="StartupPage_11.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Status sortieren</value></data>
+  <data name="StartupPage_12.Text" xml:space="preserve"><value>Status</value></data>
+  <data name="StartupPage_13.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach „Startet für“ sortieren</value></data>
+  <data name="StartupPage_14.Text" xml:space="preserve"><value>Startet für</value></data>
+  <data name="StartupPage_15.Text" xml:space="preserve"><value>Befehl</value></data>
+  <data name="Startup_Summary" xml:space="preserve"><value>{0} aktiviert · {1} deaktiviert · wirkt ab der nächsten Anmeldung</value></data>
+  <data name="Startup_Enabled" xml:space="preserve"><value>Aktiviert</value></data>
+  <data name="Startup_Disabled" xml:space="preserve"><value>Deaktiviert</value></data>
+  <data name="Startup_DisabledAt" xml:space="preserve"><value>Deaktiviert am {0}</value></data>
+  <data name="Startup_AllUsers" xml:space="preserve"><value>Alle Benutzer</value></data>
+  <data name="Startup_CurrentUser" xml:space="preserve"><value>Aktueller Benutzer</value></data>
+  <data name="Startup_Enable" xml:space="preserve"><value>Aktivieren</value></data>
+  <data name="Startup_Disable" xml:space="preserve"><value>Deaktivieren</value></data>
+  <data name="Startup_CopyCommand" xml:space="preserve"><value>Befehl kopieren</value></data>
+  <data name="Startup_NotChanged" xml:space="preserve"><value>„{0}“ nicht geändert</value></data>
 </root>

@@ -332,4 +332,31 @@ Answer: {0}</value></data>
   <data name="Priority_Idle" xml:space="preserve"><value>Low</value></data>
   <data name="ProcState_Running" xml:space="preserve"><value>Running</value></data>
   <data name="ProcState_Suspended" xml:space="preserve"><value>Suspended</value></data>
+  <data name="MainWindow_9.Content" xml:space="preserve"><value>Startup apps</value></data>
+  <data name="MainWindow_9.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Startup apps (Ctrl+6)</value></data>
+  <data name="StartupPage_1.Text" xml:space="preserve"><value>Startup apps</value></data>
+  <data name="StartupPage_2.Label" xml:space="preserve"><value>Disable</value></data>
+  <data name="StartupPage_3.Label" xml:space="preserve"><value>Open file location</value></data>
+  <data name="StartupPage_4.Label" xml:space="preserve"><value>Refresh</value></data>
+  <data name="StartupPage_5.Label" xml:space="preserve"><value>Properties</value></data>
+  <data name="StartupPage_6.Label" xml:space="preserve"><value>Copy command</value></data>
+  <data name="StartupPage_7.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Name</value></data>
+  <data name="StartupPage_8.Text" xml:space="preserve"><value>Name</value></data>
+  <data name="StartupPage_9.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Publisher</value></data>
+  <data name="StartupPage_10.Text" xml:space="preserve"><value>Publisher</value></data>
+  <data name="StartupPage_11.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Status</value></data>
+  <data name="StartupPage_12.Text" xml:space="preserve"><value>Status</value></data>
+  <data name="StartupPage_13.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Starts for</value></data>
+  <data name="StartupPage_14.Text" xml:space="preserve"><value>Starts for</value></data>
+  <data name="StartupPage_15.Text" xml:space="preserve"><value>Command</value></data>
+  <data name="Startup_Summary" xml:space="preserve"><value>{0} enabled · {1} disabled · takes effect at the next sign-in</value></data>
+  <data name="Startup_Enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="Startup_Disabled" xml:space="preserve"><value>Disabled</value></data>
+  <data name="Startup_DisabledAt" xml:space="preserve"><value>Disabled on {0}</value></data>
+  <data name="Startup_AllUsers" xml:space="preserve"><value>All users</value></data>
+  <data name="Startup_CurrentUser" xml:space="preserve"><value>Current user</value></data>
+  <data name="Startup_Enable" xml:space="preserve"><value>Enable</value></data>
+  <data name="Startup_Disable" xml:space="preserve"><value>Disable</value></data>
+  <data name="Startup_CopyCommand" xml:space="preserve"><value>Copy command</value></data>
+  <data name="Startup_NotChanged" xml:space="preserve"><value>"{0}" not changed</value></data>
 </root>

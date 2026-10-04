@@ -15,6 +15,8 @@ public static class Program
     internal const string FirewallUnblockArgument = "--firewall-unblock";
     internal const string WaitForProcessArgument = "--wait-for-pid";
     private const string TestInstanceArgument = "--test-instance";
+    internal const string StartupEnableArgument = "--startup-enable";
+    internal const string StartupDisableArgument = "--startup-disable";
 
     private static Mutex? s_singleInstance;
 
@@ -34,6 +36,22 @@ public static class Program
         {
             if (!FirewallRules.IsElevated) return 5;
             return HistoryServiceSetup.RunHelper(args[0], args[1]);
+        }
+
+        // Elevated helper mode: turn an all-users startup entry on or off and exit.
+        if (args.Length == 3 && (args[0] == StartupEnableArgument || args[0] == StartupDisableArgument))
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            if (!Enum.TryParse(args[1], out Core.Startup.StartupSource source)) return 2;
+            try
+            {
+                Core.Startup.StartupApps.SetEnabled(source, args[2], args[0] == StartupEnableArgument);
+                return 0;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+            {
+                return 1;
+            }
         }
 
         WaitForPreviousInstance(args);
