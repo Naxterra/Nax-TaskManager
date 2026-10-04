@@ -48,6 +48,46 @@ public static class HistoryServiceControl
         }
     }
 
+    /// <summary>PID of the running service process from the Service Control Manager, or 0.</summary>
+    public static uint QueryProcessId()
+    {
+        const int ScManagerConnect = 0x0001, ServiceQueryStatus = 0x0004, ScStatusProcessInfo = 0, StatusSize = 36, ProcessIdOffset = 28;
+        IntPtr manager = OpenSCManager(null, null, ScManagerConnect);
+        if (manager == IntPtr.Zero) return 0;
+        try
+        {
+            IntPtr service = OpenService(manager, ServiceName, ServiceQueryStatus);
+            if (service == IntPtr.Zero) return 0;
+            try
+            {
+                byte[] status = new byte[StatusSize];
+                return QueryServiceStatusEx(service, ScStatusProcessInfo, status, StatusSize, out _)
+                    ? BitConverter.ToUInt32(status, ProcessIdOffset)
+                    : 0;
+            }
+            finally
+            {
+                CloseServiceHandle(service);
+            }
+        }
+        finally
+        {
+            CloseServiceHandle(manager);
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("advapi32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr OpenSCManager(string? machine, string? database, int access);
+
+    [System.Runtime.InteropServices.DllImport("advapi32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr OpenService(IntPtr manager, string name, int access);
+
+    [System.Runtime.InteropServices.DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool QueryServiceStatusEx(IntPtr service, int infoLevel, byte[] buffer, int size, out int needed);
+
+    [System.Runtime.InteropServices.DllImport("advapi32.dll")]
+    private static extern bool CloseServiceHandle(IntPtr handle);
+
     /// <summary>Copies the service from <paramref name="sourceFolder"/>, registers it (automatic, delayed start) and starts it. Also updates an existing install.</summary>
     public static CommandResult Install(string sourceFolder)
     {

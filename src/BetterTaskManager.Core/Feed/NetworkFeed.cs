@@ -1,5 +1,4 @@
 using System.IO.Pipes;
-using System.Management;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
@@ -185,9 +184,13 @@ public sealed class NetworkFeedClient : IDisposable
             {
                 if (HistoryServiceControl.QueryState() == HistoryServiceState.Running) await ReadAsync();
             }
-            catch (Exception ex) when (ex is IOException or TimeoutException or UnauthorizedAccessException or JsonException or InvalidDataException or ManagementException)
+            catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
             {
-                // Service restarting, pipe closed or not trusted: try again shortly.
+                return;
+            }
+            catch (Exception)
+            {
+                // Service restarting, pipe closed, not trusted or a bad frame: never give up, try again shortly.
             }
             latest = null;
             try { await Task.Delay(RetryDelay, shutdown.Token); } catch (OperationCanceledException) { return; }
@@ -213,19 +216,8 @@ public sealed class NetworkFeedClient : IDisposable
         }
     }
 
-    private static bool IsServedByHistoryService(NamedPipeClientStream pipe)
-    {
-        if (!GetNamedPipeServerProcessId(pipe.SafePipeHandle, out uint serverPid)) return false;
-        using var searcher = new ManagementObjectSearcher($"SELECT ProcessId FROM Win32_Service WHERE Name = '{HistoryServiceControl.ServiceName}'");
-        foreach (ManagementBaseObject service in searcher.Get())
-        {
-            using (service)
-            {
-                if (Convert.ToUInt32(service["ProcessId"]) == serverPid) return true;
-            }
-        }
-        return false;
-    }
+    private static bool IsServedByHistoryService(NamedPipeClientStream pipe) =>
+        GetNamedPipeServerProcessId(pipe.SafePipeHandle, out uint serverPid) && serverPid != 0 && serverPid == HistoryServiceControl.QueryProcessId();
 
     [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool GetNamedPipeServerProcessId(Microsoft.Win32.SafeHandles.SafePipeHandle pipe, out uint serverProcessId);
