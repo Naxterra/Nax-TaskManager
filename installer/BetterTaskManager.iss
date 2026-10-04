@@ -50,6 +50,7 @@ VersionInfoDescription={#AppName} Setup
 DefaultDirName={autopf}\{#AppName}
 ; Installs before the rename went to "Better Task Manager"; move to the new folder instead of reusing it.
 UsePreviousAppDir=no
+UsePreviousGroup=no
 DefaultGroupName={#AppName}
 AllowNoIcons=yes
 DisableProgramGroupPage=no
