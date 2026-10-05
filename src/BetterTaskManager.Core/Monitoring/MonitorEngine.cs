@@ -90,9 +90,25 @@ public sealed class MonitorEngine : IDisposable
         feed.Start();
     }
 
+    /// <summary>
+    /// Elevated, but the history service already runs the same traces: take its measurements instead of starting a
+    /// second pair of kernel trace sessions, whose buffers sit in non-pageable kernel memory. If the feed stays silent
+    /// (service stopped), the engine starts its own traces after <see cref="FeedFallbackDelay"/>. Call before Start.
+    /// </summary>
+    public void PreferServiceFeed()
+    {
+        ownTraceDeferred = true;
+        hostNames.LiveTraceEnabled = false;
+        UseServiceFeed();
+    }
+
+    private static readonly TimeSpan FeedFallbackDelay = TimeSpan.FromSeconds(20);
+    private bool ownTraceDeferred;
+    private long feedLastSeen = Stopwatch.GetTimestamp();
+
     public void Start()
     {
-        bandwidth.TryStart();
+        if (!ownTraceDeferred) bandwidth.TryStart();
         hostNames.Start();
         loop ??= Task.Run(RunAsync);
     }
@@ -156,7 +172,18 @@ public sealed class MonitorEngine : IDisposable
         previousTimestamp = now;
 
         // Flush first; the counts are drained after the rest of the collection, giving the trace thread time to catch up.
-        bandwidth.EnsureRunning();
+        if (ownTraceDeferred)
+        {
+            if (feed?.Current is not null) feedLastSeen = Stopwatch.GetTimestamp();
+            else if (Stopwatch.GetElapsedTime(feedLastSeen) >= FeedFallbackDelay)
+            {
+                // The service is gone: measure ourselves rather than show nothing.
+                ownTraceDeferred = false;
+                hostNames.LiveTraceEnabled = true;
+                bandwidth.TryStart();
+            }
+        }
+        else bandwidth.EnsureRunning();
         bandwidth.Flush();
         List<RawProcess> raw = NtProcessReader.Read();
         Dictionary<int, string> windowTitles = VisibleWindows.ReadTitlesByProcess();

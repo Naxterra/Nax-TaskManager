@@ -18,7 +18,8 @@ public sealed class HistoryWindowsService : ServiceBase
     protected override void OnStart(string[] args)
     {
         BetterTaskManager.Core.DataFolder.EnsureSecured();
-        worker = new HistoryWorker(HistoryStore.DefaultPath, "NaxTaskManager-History", Log, publishFeed: true);
+        BootMemoryReport? bootReport = BootMemoryReport.ForThisBoot(Path.Combine(HistoryStore.DataFolder, "boot-memory.txt"), Log);
+        worker = new HistoryWorker(HistoryStore.DefaultPath, "NaxTaskManager-History", Log, publishFeed: true, bootReport);
         worker.Start();
         Log("Service started");
     }

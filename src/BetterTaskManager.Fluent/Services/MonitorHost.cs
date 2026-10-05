@@ -28,6 +28,8 @@ public sealed class MonitorHost : IDisposable
         engine.SnapshotReady += OnSnapshotReady;
         IsElevated = FirewallRules.IsElevated;
         if (!IsElevated) engine.UseServiceFeed();
+        // Elevated with the history service running: one set of kernel traces (the service's) is enough.
+        else if (Core.History.HistoryServiceControl.QueryState() == Core.History.HistoryServiceState.Running) engine.PreferServiceFeed();
     }
 
     /// <summary>Raised on the UI thread with the newest snapshot.</summary>

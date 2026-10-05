@@ -11,14 +11,17 @@ public sealed class HistoryWorker : IDisposable
     private readonly MonitorEngine engine;
     private readonly HistoryRecorder recorder;
     private readonly NetworkFeedServer? feed;
+    private readonly BootMemoryReport? bootReport;
     private readonly Action<string> log;
     private readonly object gate = new();
     private DateTime lastError;
     private bool disposed, reportedTraffic;
 
     /// <param name="publishFeed">Serve live traffic to non-elevated app windows (the real service; off for console tests).</param>
-    public HistoryWorker(string databasePath, string sessionPrefix, Action<string> log, bool publishFeed = false)
+    /// <param name="bootReport">Writes the memory breakdown shortly after startup (the real service at boot; console tests).</param>
+    public HistoryWorker(string databasePath, string sessionPrefix, Action<string> log, bool publishFeed = false, BootMemoryReport? bootReport = null)
     {
+        this.bootReport = bootReport;
         if (publishFeed) feed = new NetworkFeedServer(log);
         this.log = log;
         store = HistoryStore.OpenForWriting(databasePath);
@@ -47,6 +50,7 @@ public sealed class HistoryWorker : IDisposable
             }
             recorder.Record(snapshot);
         }
+        bootReport?.Offer(snapshot);
         if (feed is not null)
         {
             feed.Publish(NetworkFeedMessage.From(snapshot));

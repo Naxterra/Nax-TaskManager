@@ -45,7 +45,12 @@ public sealed class BandwidthMonitor : IDisposable
     /// </param>
     public BandwidthMonitor(string sessionName = DefaultSessionName) => this.sessionName = sessionName;
 
+    private const int KernelBufferSizeMB = 16;
+
     public bool IsRunning { get; private set; }
+
+    /// <summary>Events the kernel dropped because the buffers were full (0 when the buffer size is adequate).</summary>
+    public long EventsLost => session?.EventsLost ?? 0;
     public string Status { get; private set; } = "Not started";
 
     public bool TryStart()
@@ -62,7 +67,9 @@ public sealed class BandwidthMonitor : IDisposable
         {
             // Reusing the fixed name replaces a session left behind by a crashed instance.
             session?.Dispose();
-            session = new TraceEventSession(sessionName) { StopOnDispose = true };
+            // The library default reserves 64 MB of non-pageable kernel memory per session. Buffers are flushed every
+            // second, so 16 MB holds several seconds of TCP/IP events even at full gigabit speed.
+            session = new TraceEventSession(sessionName) { StopOnDispose = true, BufferSizeMB = KernelBufferSizeMB };
             // Process events name connections of processes that exit before the next sample (CLI tools, updaters).
             session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP | KernelTraceEventParser.Keywords.Process);
 

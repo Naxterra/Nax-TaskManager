@@ -51,6 +51,12 @@ public sealed class HostNameResolver : IDisposable
 
     public bool LiveDnsEvents { get; private set; }
 
+    /// <summary>
+    /// False while another process (the history service) already traces DNS; names then come from the DNS cache and
+    /// reverse lookups only, as without administrator rights.
+    /// </summary>
+    public bool LiveTraceEnabled { get; set; } = true;
+
     /// <summary>A process's DNS query was answered (live DNS events only): PID, queried name, answer addresses.</summary>
     public event Action<int, string, IReadOnlyList<IPAddress>>? QueryAnswered;
 
@@ -139,11 +145,12 @@ public sealed class HostNameResolver : IDisposable
 
     private void TryStartDnsTrace()
     {
-        if (shutdown.IsCancellationRequested || TraceEventSession.IsElevated() != true) return;
+        if (shutdown.IsCancellationRequested || !LiveTraceEnabled || TraceEventSession.IsElevated() != true) return;
         try
         {
             dnsSession?.Dispose();
-            dnsSession = new TraceEventSession(sessionName) { StopOnDispose = true };
+            // DNS events are a few per second; the 64 MB library default would only waste kernel memory.
+            dnsSession = new TraceEventSession(sessionName) { StopOnDispose = true, BufferSizeMB = 4 };
             var parser = new RegisteredTraceEventParser(dnsSession.Source);
             parser.All += OnDnsEvent;
             dnsSession.EnableProvider("Microsoft-Windows-DNS-Client");
