@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-alpha.14 - 2026-10-05
+
+- **Less kernel memory for network tracing.** The trace sessions used the library default of 64 MB of non-pageable kernel memory each. They now use 16 MB (network) and 4 MB (DNS), and a copy running as administrator no longer starts its own traces while the History service is already tracing; it uses the service's measurements and only falls back to its own traces if the service stops.
+- **Memory report after startup.** The History service writes `C:\ProgramData\NaxTaskManager\boot-memory.txt` 2, 5 and 10 minutes after Windows starts: the in-use breakdown, the vendors and processes with the most memory, and kernel memory per driver. The previous boot's report is kept as `boot-memory.previous.txt`.
+
 ## 2.0.0-alpha.13 - 2026-10-05
 
 - **Processes and Details are now one page.** The Prozesse page has a switch at the top: **Nach App** (the grouped view, with resource columns) and **Alle Prozesse** (a flat list, one row per process, with PID, status and owner). The separate Details tab is gone, and the choice is remembered.
