@@ -31,7 +31,9 @@
 
 #define AppName AppNameValue
 #define AppPublisher "Naxterra"
-#define AppExeName "NaxTaskManager.exe"
+#define AppExeName "Nax-TaskManager.exe"
+; Up to 2.0.0-alpha.14 the program was NaxTaskManager.exe.
+#define LegacyExeName "NaxTaskManager.exe"
 #define AppUrl "https://github.com/Naxterra/Nax-TaskManager"
 
 [Setup]
@@ -68,7 +70,7 @@ WizardStyle=modern dynamic
 SetupLogging=yes
 SetupIconFile={#IconPath}
 CloseApplications={#CloseApplicationsValue}
-CloseApplicationsFilter={#AppExeName}
+CloseApplicationsFilter={#AppExeName},{#LegacyExeName}
 RestartApplications=no
 UninstallDisplayIcon={app}\{#AppExeName}
 LicenseFile={#SourceDir}\LICENSE
@@ -102,6 +104,9 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchApplication}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+
+; "Replace Windows Task Manager" still pointing at the pre-rename exe: point it at the new one (UAC prompt).
+Filename: "{app}\{#AppExeName}"; Parameters: "--replace-taskmanager-on ""{app}\{#AppExeName}"""; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; Verb: "runas"; Check: ShouldMoveTaskManagerReplacement
 
 [UninstallRun]
 ; The background history service runs from Program Files as LocalSystem; remove it with the app (one UAC prompt).
@@ -209,6 +214,15 @@ begin
     Exit;
   if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\taskmgr.exe', 'Debugger', Value) then
     Result := Pos(Lowercase(ExpandConstant('{app}\{#AppExeName}')), Lowercase(Value)) > 0;
+end;
+
+function ShouldMoveTaskManagerReplacement(): Boolean;
+var
+  Value: String;
+begin
+  Result := False;
+  if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\taskmgr.exe', 'Debugger', Value) then
+    Result := Pos(Lowercase(ExpandConstant('{app}\{#LegacyExeName}')), Lowercase(Value)) > 0;
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;

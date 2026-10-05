@@ -58,8 +58,8 @@ Requires the .NET 11 SDK. Inno Setup 6 is downloaded automatically if it is not 
 | Project | Purpose |
 |---|---|
 | `src/BetterTaskManager.Core` | Collection without UI: native process reader, network tables, kernel network trace, DNS names, firewall rules, history store, service feed |
-| `src/BetterTaskManager.Fluent` | The WinUI 3 app (`NaxTaskManager.exe`) |
-| `src/BetterTaskManager.HistoryService` | The background history service (`NaxTaskManager.HistoryService.exe`) |
+| `src/BetterTaskManager.Fluent` | The WinUI 3 app (`Nax-TaskManager.exe`) |
+| `src/BetterTaskManager.HistoryService` | The background history service (`Nax-TaskManager.HistoryService.exe`) |
 
 Design notes, verified measurements and the roadmap are in [docs/FLUENT-REBUILD.md](docs/FLUENT-REBUILD.md).
 

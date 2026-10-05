@@ -44,7 +44,7 @@ jobs:
         run: |
           # The runner is elevated, so this exercises the kernel network trace and the SQLite store for real.
           $portable = Get-ChildItem .\artifacts -Directory -Filter 'NaxTaskManager-v*-portable-win-x64' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          $service = Join-Path $portable.FullName 'HistoryService\NaxTaskManager.HistoryService.exe'
+          $service = Join-Path $portable.FullName 'HistoryService\Nax-TaskManager.HistoryService.exe'
           $db = Join-Path $env:RUNNER_TEMP 'history-ci.db'
           $process = Start-Process -FilePath $service -ArgumentList @('--console', '--db', $db, '--seconds', '15') -PassThru -NoNewWindow
           Invoke-WebRequest -Uri 'https://github.com' -UseBasicParsing | Out-Null

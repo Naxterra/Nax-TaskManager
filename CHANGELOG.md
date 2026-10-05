@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.15 - 2026-10-05
+
+- **The program files follow the product name.** The app is now `Nax-TaskManager.exe` (was `NaxTaskManager.exe`) and the History service `Nax-TaskManager.HistoryService.exe`. Setup closes a running copy under either name. If "Replace Windows Task Manager" pointed at the old exe, Setup points it at the new one (one administrator prompt). Updating the History service switches the service to the new exe and removes the old service files. Settings, history data and the service name stay as they were.
+
 ## 2.0.0-alpha.14 - 2026-10-05
 
 - **Less kernel memory for network tracing.** The trace sessions used the library default of 64 MB of non-pageable kernel memory each. They now use 16 MB (network) and 4 MB (DNS), and a copy running as administrator no longer starts its own traces while the History service is already tracing; it uses the service's measurements and only falls back to its own traces if the service stops.

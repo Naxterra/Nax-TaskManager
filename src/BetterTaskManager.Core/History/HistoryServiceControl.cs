@@ -21,7 +21,9 @@ public static class HistoryServiceControl
 {
     public const string ServiceName = "NaxTaskManagerHistory";
     public const string DisplayName = "Nax-TaskManager History";
-    public const string ExecutableName = "NaxTaskManager.HistoryService.exe";
+    public const string ExecutableName = "Nax-TaskManager.HistoryService.exe";
+    /// <summary>File name prefixes of earlier service builds, removed from the install folder on update.</summary>
+    private static readonly string[] LegacyFilePrefixes = ["NaxTaskManager.HistoryService.", "BetterTaskManager.HistoryService."];
     /// <summary>Folder next to the app that holds the service build to install from.</summary>
     public const string BundledFolderName = "HistoryService";
     private static readonly TimeSpan StatusTimeout = TimeSpan.FromSeconds(30);
@@ -112,6 +114,7 @@ public static class HistoryServiceControl
         try
         {
             CopyFolder(sourceFolder, InstallFolder);
+            RemoveLegacyFiles();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -178,6 +181,24 @@ public static class HistoryServiceControl
         catch (Exception ex) when (ex is InvalidOperationException or System.ServiceProcess.TimeoutException)
         {
             return Failed("Could not stop the service: " + ex.Message);
+        }
+    }
+
+    /// <summary>Deletes the files of earlier builds whose executable had another name; the service is stopped here.</summary>
+    private static void RemoveLegacyFiles()
+    {
+        foreach (string file in Directory.EnumerateFiles(InstallFolder))
+        {
+            string name = Path.GetFileName(file);
+            if (!LegacyFilePrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))) continue;
+            try
+            {
+                File.Delete(file);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A leftover file is harmless; the service runs the new executable.
+            }
         }
     }
 

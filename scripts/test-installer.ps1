@@ -101,13 +101,13 @@ $installArguments = @(
 $firstInstallExit = Invoke-WaitedProcess $InstallerPath $installArguments
 if ($firstInstallExit -ne 0) { throw "Installer failed with exit code $firstInstallExit. See $logPath" }
 
-$installedExe = Join-Path $installDirectory "NaxTaskManager.exe"
+$installedExe = Join-Path $installDirectory "Nax-TaskManager.exe"
 $uninstaller = Get-RegisteredUninstaller $uninstallRegistryPath
 $startMenuGroup = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)) $testAppName
 $startMenuShortcut = Join-Path $startMenuGroup ($testAppName + ".lnk")
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)) ($testAppName + ".lnk")
 foreach ($required in @($installedExe, $uninstaller, (Join-Path $installDirectory "README.md"), (Join-Path $installDirectory "LICENSE"),
-    (Join-Path $installDirectory "HistoryService\NaxTaskManager.HistoryService.exe"))) {
+    (Join-Path $installDirectory "HistoryService\Nax-TaskManager.HistoryService.exe"))) {
     if (-not (Test-Path -LiteralPath $required)) { throw "Installed file missing: $required" }
 }
 if (-not (Test-Path -LiteralPath $startMenuShortcut)) { throw "Start Menu shortcut missing: $startMenuShortcut" }
@@ -127,7 +127,7 @@ if ($shortcut.TargetPath.TrimEnd('\') -ne $installedExe.TrimEnd('\')) { throw "S
 # Starts the installed app and waits for its window. Returns $null when another copy is open: the app is single
 # instance, so a second launch would only hand over to that copy.
 function Start-InstalledApp {
-    $other = @(Get-CimInstance Win32_Process -Filter "Name = 'NaxTaskManager.exe'" | Where-Object { $_.ExecutablePath -ne $installedExe })
+    $other = @(Get-CimInstance Win32_Process -Filter "Name = 'Nax-TaskManager.exe'" | Where-Object { $_.ExecutablePath -ne $installedExe })
     if ($other.Count -gt 0) {
         Write-Warning "Skipping app launch checks because another Nax-TaskManager instance is already open."
         return $null

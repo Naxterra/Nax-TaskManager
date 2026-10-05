@@ -27,12 +27,12 @@ if (Test-Path -LiteralPath $outputFull) { Remove-Item -LiteralPath $outputFull -
 dotnet publish $project -c Release -r win-x64 --self-contained false -o $outputFull
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 
-$executable = Join-Path $outputFull "NaxTaskManager.exe"
+$executable = Join-Path $outputFull "Nax-TaskManager.exe"
 foreach ($required in @(
     $executable,
-    (Join-Path $outputFull "NaxTaskManager.pri"),
+    (Join-Path $outputFull "Nax-TaskManager.pri"),
     (Join-Path $outputFull "MainWindow.xbf"),
-    (Join-Path $outputFull "HistoryService\NaxTaskManager.HistoryService.exe")
+    (Join-Path $outputFull "HistoryService\Nax-TaskManager.HistoryService.exe")
 )) {
     if (-not (Test-Path -LiteralPath $required)) { throw "Published output is incomplete, missing: $required" }
 }
@@ -41,7 +41,7 @@ foreach ($document in @("README.md", "SECURITY.md", "LICENSE")) {
 }
 
 $hash = Get-FileHash -LiteralPath $executable -Algorithm SHA256
-$manifest = $hash.Hash.ToLowerInvariant() + " *NaxTaskManager.exe" + [Environment]::NewLine
+$manifest = $hash.Hash.ToLowerInvariant() + " *Nax-TaskManager.exe" + [Environment]::NewLine
 [System.IO.File]::WriteAllText((Join-Path $outputFull "SHA256SUMS.txt"), $manifest, [System.Text.Encoding]::ASCII)
 
 $versionedZip = Join-Path $artifacts ($folderName + ".zip")

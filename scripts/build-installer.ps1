@@ -22,7 +22,7 @@ if ([string]::IsNullOrWhiteSpace($version)) { throw "The project Version propert
 
 $sourceFolderName = "NaxTaskManager-v$version-portable-win-x64"
 $sourceFolder = Join-Path $artifacts $sourceFolderName
-$sourceExecutable = Join-Path $sourceFolder "NaxTaskManager.exe"
+$sourceExecutable = Join-Path $sourceFolder "Nax-TaskManager.exe"
 if (-not (Test-Path -LiteralPath $sourceExecutable)) {
     throw "Publish the portable package (scripts\publish-fluent.ps1) before building the installer: $sourceExecutable"
 }
@@ -85,7 +85,7 @@ if (-not $SkipReleaseChecksums) {
     foreach ($path in @($zipPath, $installerPath, $sourceExecutable)) {
         if (-not (Test-Path -LiteralPath $path)) { throw "Release checksum input not found: $path" }
         $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
-        $relativeName = if ($path -eq $sourceExecutable) { "$sourceFolderName/NaxTaskManager.exe" } else { Split-Path $path -Leaf }
+        $relativeName = if ($path -eq $sourceExecutable) { "$sourceFolderName/Nax-TaskManager.exe" } else { Split-Path $path -Leaf }
         $checksumLines.Add($hash + " *" + $relativeName)
     }
     [System.IO.File]::WriteAllText($checksumPath, ($checksumLines -join [Environment]::NewLine) + [Environment]::NewLine, [System.Text.Encoding]::ASCII)
