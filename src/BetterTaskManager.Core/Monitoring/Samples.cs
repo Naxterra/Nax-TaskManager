@@ -15,6 +15,10 @@ public sealed class ProcessSample
     public long WorkingSet { get; init; }
     public long CommitCharge { get; init; }
     public double IoBytesPerSecond { get; init; }
+    /// <summary>Utilization of the process's busiest GPU engine, in percent.</summary>
+    public double GpuPercent { get; init; }
+    /// <summary>That engine, e.g. "GPU 0 - 3D"; empty when the process uses no GPU.</summary>
+    public string GpuEngine { get; init; } = "";
     public int Threads { get; init; }
     public int Handles { get; init; }
     public int SessionId { get; init; }
@@ -116,6 +120,9 @@ public sealed class SystemSample
     /// <summary>True when the per-process figures come from the history service rather than this process's own trace.</summary>
     public bool PerProcessNetworkFromService { get; init; }
     public double IoBytesPerSecond { get; init; }
+    /// <summary>Utilization of the busiest GPU engine over all processes, like Task Manager's GPU column header.</summary>
+    public double GpuPercent { get; init; }
+    public bool GpuAvailable { get; init; }
     public int ProcessCount { get; init; }
     public int ThreadCount { get; init; }
     public int HandleCount { get; init; }

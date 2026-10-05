@@ -378,4 +378,7 @@ Antwort: {0}</value></data>
   <data name="Cleanup_AllButton" xml:space="preserve"><value>Freigeben</value></data>
   <data name="ProcessesPage_29.Text" xml:space="preserve"><value>Nach App</value></data>
   <data name="ProcessesPage_30.Text" xml:space="preserve"><value>Alle Prozesse</value></data>
+  <data name="ProcessesPage_31.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach GPU sortieren</value></data>
+  <data name="ProcessesPage_31.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Auslastung des am stärksten genutzten GPU-Moduls je Prozess, wie im Task-Manager</value></data>
+  <data name="DetailsPage_24.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach GPU sortieren</value></data>
 </root>

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.16 - 2026-10-05
+
+- **GPU column on the Processes page**, in both layouts. Like Task Manager, it shows each process's busiest GPU engine; point at a value to see which engine (for example "GPU 0 - 3D"). The header shows the whole GPU, sorting works, and the column can be resized. It works without administrator rights. App groups add up their processes, the same way as CPU.
+
 ## 2.0.0-alpha.15 - 2026-10-05
 
 - **The program files follow the product name.** The app is now `Nax-TaskManager.exe` (was `NaxTaskManager.exe`) and the History service `Nax-TaskManager.HistoryService.exe`. Setup closes a running copy under either name. If "Replace Windows Task Manager" pointed at the old exe, Setup points it at the new one (one administrator prompt). Updating the History service switches the service to the new exe and removes the old service files. Settings, history data and the service name stay as they were.

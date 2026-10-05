@@ -86,6 +86,7 @@
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Io, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Bandwidth, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Network, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.Layout.Gpu, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Publisher, Mode=OneWay}" />
                 <ColumnDefinition Width="*" MinWidth="120" />
             </Grid.ColumnDefinitions>
@@ -141,13 +142,22 @@
                     <FontIcon x:Name="SortNetwork" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button x:Uid="ProcessesPage_20" Grid.Column="6" Tag="Publisher" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Publisher" Click="Header_Click">
+            <Button x:Uid="ProcessesPage_31" Grid.Column="6" Tag="Gpu" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by GPU" Click="Header_Click" ToolTipService.ToolTip="Busiest GPU engine of each process, as in Task Manager">
+                <Grid>
+                    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                        <TextBlock Text="{x:Bind ViewModel.GpuHeader, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        <TextBlock Text="GPU" HorizontalAlignment="Right" />
+                    </StackPanel>
+                    <FontIcon x:Name="SortGpu" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="ProcessesPage_20" Grid.Column="7" Tag="Publisher" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Publisher" Click="Header_Click">
                 <Grid>
                     <TextBlock x:Uid="ProcessesPage_21" Text="Publisher" VerticalAlignment="Bottom" Margin="8,0,0,0" />
                     <FontIcon x:Name="SortPublisher" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button x:Uid="ProcessesPage_22" Grid.Column="7" Tag="Path" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Path" Click="Header_Click">
+            <Button x:Uid="ProcessesPage_22" Grid.Column="8" Tag="Path" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Path" Click="Header_Click">
                 <Grid>
                     <TextBlock x:Uid="ProcessesPage_23" Text="Path" VerticalAlignment="Bottom" Margin="8,0,0,0" />
                     <FontIcon x:Name="SortPath" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
@@ -160,7 +170,8 @@
             <Thumb Tag="Io" Grid.Column="3" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
             <Thumb Tag="Bandwidth" Grid.Column="4" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
             <Thumb Tag="Network" Grid.Column="5" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
-            <Thumb Tag="Publisher" Grid.Column="6" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
+            <Thumb Tag="Gpu" Grid.Column="6" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
+            <Thumb Tag="Publisher" Grid.Column="7" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
         </Grid>
 
         <ListView
@@ -193,6 +204,7 @@
                                 <ColumnDefinition Width="{x:Bind Layout.Io, Mode=OneWay}" />
                                 <ColumnDefinition Width="{x:Bind Layout.Bandwidth, Mode=OneWay}" />
                                 <ColumnDefinition Width="{x:Bind Layout.Network, Mode=OneWay}" />
+                                <ColumnDefinition Width="{x:Bind Layout.Gpu, Mode=OneWay}" />
                                 <ColumnDefinition Width="{x:Bind Layout.Publisher, Mode=OneWay}" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
@@ -266,15 +278,18 @@
                             <Border Grid.Column="5" Background="{x:Bind NetworkHeat, Mode=OneWay}">
                                 <TextBlock Text="{x:Bind NetworkText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                             </Border>
+                            <Border Grid.Column="6" Background="{x:Bind GpuHeat, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind GpuEngine, Mode=OneWay}">
+                                <TextBlock Text="{x:Bind GpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            </Border>
                             <TextBlock
-                                Grid.Column="6"
+                                Grid.Column="7"
                                 Margin="10,0,8,0"
                                 VerticalAlignment="Center"
                                 TextTrimming="CharacterEllipsis"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                 Text="{x:Bind Publisher, Mode=OneWay}" />
                             <TextBlock
-                                Grid.Column="7"
+                                Grid.Column="8"
                                 Margin="10,0,8,0"
                                 VerticalAlignment="Center"
                                 TextTrimming="CharacterEllipsis"
@@ -295,6 +310,7 @@
                 <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.User, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.Cpu, Mode=OneWay}" />
                 <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.Memory, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.Gpu, Mode=OneWay}" />
                 <ColumnDefinition Width="*" MinWidth="120" />
             </Grid.ColumnDefinitions>
             <Button x:Uid="DetailsPage_10" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="FlatHeader_Click">
@@ -333,7 +349,13 @@
                     <FontIcon x:Name="FlatSortMemory" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button x:Uid="DetailsPage_22" Grid.Column="6" Tag="Description" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Description" Click="FlatHeader_Click">
+            <Button x:Uid="DetailsPage_24" Grid.Column="6" Tag="Gpu" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by GPU" Click="FlatHeader_Click">
+                <Grid>
+                    <TextBlock Text="GPU" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="FlatSortGpu" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DetailsPage_22" Grid.Column="7" Tag="Description" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Description" Click="FlatHeader_Click">
                 <Grid>
                     <TextBlock x:Uid="DetailsPage_23" Text="Description" />
                     <FontIcon x:Name="FlatSortDescription" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
@@ -346,6 +368,7 @@
             <Thumb Tag="User" Grid.Column="3" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
             <Thumb Tag="Cpu" Grid.Column="4" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
             <Thumb Tag="Memory" Grid.Column="5" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
+            <Thumb Tag="Gpu" Grid.Column="6" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
         </Grid>
 
         <ListView
@@ -370,6 +393,7 @@
                             <ColumnDefinition Width="{x:Bind Layout.User, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.Cpu, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.Memory, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.Gpu, Mode=OneWay}" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Orientation="Horizontal" Spacing="10" Margin="10,0,8,0">
@@ -385,7 +409,10 @@
                         <Border Grid.Column="5" Background="{x:Bind MemoryHeat, Mode=OneWay}">
                             <TextBlock Text="{x:Bind MemoryText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                         </Border>
-                        <TextBlock Grid.Column="6" Text="{x:Bind Description, Mode=OneWay}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
+                        <Border Grid.Column="6" Background="{x:Bind GpuHeat, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind GpuEngine, Mode=OneWay}">
+                            <TextBlock Text="{x:Bind GpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        </Border>
+                        <TextBlock Grid.Column="7" Text="{x:Bind Description, Mode=OneWay}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </Grid>
                 </DataTemplate>

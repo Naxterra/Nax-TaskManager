@@ -74,6 +74,7 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength Io => this["Io"];
     public GridLength Network => this["Network"];
     public GridLength Bandwidth => this["Bandwidth"];
+    public GridLength Gpu => this["Gpu"];
     public GridLength Publisher => this["Publisher"];
     public GridLength Local => this["Local"];
     public GridLength Remote => this["Remote"];

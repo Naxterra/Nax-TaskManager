@@ -19,6 +19,7 @@ public sealed class MonitorEngine : IDisposable
     private readonly Dictionary<string, (string Description, string Company)> fileInfo = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(int, long), CpuMark> previousMarks = new();
     private readonly MemoryCounters memoryCounters = new();
+    private GpuCounters? gpuCounters;
     private readonly BandwidthMonitor bandwidth;
     private readonly HostNameResolver hostNames;
     private NetworkFeedClient? feed;
@@ -72,6 +73,9 @@ public sealed class MonitorEngine : IDisposable
     /// are re-read every 2 s and owners every 5 s; the history service does not need them.
     /// </summary>
     public bool ReadProcessDetails { get; set; } = true;
+
+    /// <summary>GPU use per process from the GPU Engine performance counters (a few milliseconds per read).</summary>
+    public bool ReadGpu { get; set; } = true;
 
     /// <summary>Re-read priority and efficiency mode in the next collection, after this app changed them.</summary>
     public void InvalidateProcessDetails()
@@ -210,6 +214,14 @@ public sealed class MonitorEngine : IDisposable
             }
         }
 
+        Dictionary<int, ProcessGpu> gpu = [];
+        double gpuTotal = 0;
+        if (ReadGpu)
+        {
+            gpuCounters ??= new GpuCounters();
+            (gpu, gpuTotal) = gpuCounters.Read();
+        }
+
         var processes = new List<ProcessSample>(raw.Count);
         var liveKeys = new HashSet<(int, long)>();
         double totalIo = 0;
@@ -237,6 +249,7 @@ public sealed class MonitorEngine : IDisposable
 
             windowTitles.TryGetValue(process.Pid, out string? title);
             services.TryGetValue(process.Pid, out List<string>? hosted);
+            gpu.TryGetValue(process.Pid, out ProcessGpu processGpu);
             ProcessControlState control = default;
             if (ReadProcessDetails && process.Pid > 4 && !controlStates.TryGetValue(key, out control))
             {
@@ -259,6 +272,8 @@ public sealed class MonitorEngine : IDisposable
                 WorkingSet = process.WorkingSet,
                 CommitCharge = process.CommitCharge,
                 IoBytesPerSecond = io,
+                GpuPercent = processGpu.Percent,
+                GpuEngine = processGpu.Engine ?? "",
                 Threads = process.ThreadCount,
                 Handles = process.HandleCount,
                 SessionId = process.SessionId,
@@ -326,6 +341,8 @@ public sealed class MonitorEngine : IDisposable
             PerProcessNetworkFromService = fromService,
             PerProcessNetworkStatus = fromService ? "Measured by the Nax-TaskManager History service" : bandwidth.Status,
             IoBytesPerSecond = totalIo,
+            GpuPercent = gpuTotal,
+            GpuAvailable = gpuCounters?.Available ?? false,
             ProcessCount = processes.Count,
             ThreadCount = threads,
             HandleCount = handles,
@@ -579,6 +596,7 @@ public sealed class MonitorEngine : IDisposable
         shutdown.Cancel();
         try { loop?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
         memoryCounters.Dispose();
+        gpuCounters?.Dispose();
         bandwidth.Dispose();
         hostNames.Dispose();
         feed?.Dispose();

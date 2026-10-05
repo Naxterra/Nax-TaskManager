@@ -29,7 +29,9 @@ public sealed record ProcessRowData(
     bool Expanded,
     bool IsApp,
     bool Efficiency = false,
-    bool Suspended = false);
+    bool Suspended = false,
+    double Gpu = 0,
+    string GpuEngine = "");
 
 public static class ProcessTree
 {
@@ -39,6 +41,7 @@ public static class ProcessTree
     public const string SortIo = "Io";
     public const string SortNetwork = "Network";
     public const string SortBandwidth = "Bandwidth";
+    public const string SortGpu = "Gpu";
     public const string SortPublisher = "Publisher";
     public const string SortPath = "Path";
 
@@ -54,6 +57,8 @@ public static class ProcessTree
         public double Io;
         public double NetworkRate;
         public int Connections;
+        public double Gpu;
+        public string GpuEngine = "";
     }
 
     public static List<ProcessRowData> Build(IReadOnlyList<ProcessSample> processes, string search, string sortColumn,
@@ -74,6 +79,7 @@ public static class ProcessTree
         {
             group.Name = GroupName(group.Members);
             group.IsApp = group.Members.Any(member => member.WindowTitle is not null);
+            double busiestGpu = 0;
             foreach (ProcessSample member in group.Members)
             {
                 group.Cpu += member.CpuPercent;
@@ -82,7 +88,11 @@ public static class ProcessTree
                 group.Io += member.IoBytesPerSecond;
                 group.NetworkRate += member.NetworkBytesPerSecond;
                 group.Connections += member.ConnectionCount;
+                group.Gpu += member.GpuPercent;
+                if (member.GpuPercent > busiestGpu) (busiestGpu, group.GpuEngine) = (member.GpuPercent, member.GpuEngine);
             }
+            // Summed like the other columns; the engine shown is the busiest member's.
+            group.Gpu = Math.Min(group.Gpu, 100);
 
             if (query.Length == 0 || Matches(group.Name, query) || Matches(group.Members[0].Path, query) || Matches(group.Members[0].Company, query))
             {
@@ -121,7 +131,8 @@ public static class ProcessTree
                 group.Members.Select(member => member.Key).ToList(),
                 group.Cpu, group.CpuSampled, group.Memory, group.Io, group.NetworkRate, group.Connections,
                 expandable, expanded, group.IsApp,
-                group.Members.All(member => member.Efficiency), group.Members.All(member => member.Suspended)));
+                group.Members.All(member => member.Efficiency), group.Members.All(member => member.Suspended),
+                group.Gpu, group.GpuEngine));
 
             if (!expanded) continue;
             foreach (ProcessSample child in SortChildren(children, sortColumn, descending))
@@ -129,7 +140,7 @@ public static class ProcessTree
                 rows.Add(new ProcessRowData(RowKind.Child, $"{group.Key}|{child.Pid}|{child.CreateTime}", ChildName(child),
                     "PID " + child.Pid, child.Path, child.Company, new[] { child.Key },
                     child.CpuPercent, child.CpuSampled, child.PrivateWorkingSet, child.IoBytesPerSecond, child.NetworkBytesPerSecond, child.ConnectionCount,
-                    false, false, group.IsApp, child.Efficiency, child.Suspended));
+                    false, false, group.IsApp, child.Efficiency, child.Suspended, child.GpuPercent, child.GpuEngine));
             }
         }
     }
@@ -144,6 +155,7 @@ public static class ProcessTree
             SortIo => item => item.Group.Io,
             SortNetwork => item => item.Group.Connections,
             SortBandwidth => item => item.Group.NetworkRate,
+            SortGpu => item => item.Group.Gpu,
             SortPublisher => item => item.Group.Members[0].Company,
             SortPath => item => item.Group.Members[0].Path,
             _ => item => item.Group.Name
@@ -160,6 +172,7 @@ public static class ProcessTree
             SortIo => child => child.IoBytesPerSecond,
             SortNetwork => child => child.ConnectionCount,
             SortBandwidth => child => child.NetworkBytesPerSecond,
+            SortGpu => child => child.GpuPercent,
             _ => child => ChildName(child)
         };
         return Order(children, key, descending, ChildName);

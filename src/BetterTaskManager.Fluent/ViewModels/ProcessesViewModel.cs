@@ -9,7 +9,7 @@ public sealed class ProcessesViewModel : ObservableObject
     private readonly MonitorHost monitor;
     private readonly AppSettings settings;
     private readonly HashSet<string> expanded = new(StringComparer.OrdinalIgnoreCase);
-    private string cpuHeader = "", memoryHeader = "", ioHeader = "", networkHeader = "", bandwidthHeader = "", bandwidthTooltip = "";
+    private string cpuHeader = "", memoryHeader = "", ioHeader = "", networkHeader = "", bandwidthHeader = "", bandwidthTooltip = "", gpuHeader = "";
 
     public ProcessesViewModel(MonitorHost monitor, AppSettings settings)
     {
@@ -17,7 +17,7 @@ public sealed class ProcessesViewModel : ObservableObject
         this.settings = settings;
         Layout = new ColumnLayout("Processes.", new Dictionary<string, double>
         {
-            ["Name"] = 360, ["Cpu"] = 88, ["Memory"] = 130, ["Io"] = 140, ["Bandwidth"] = 104, ["Network"] = 104, ["Publisher"] = 200
+            ["Name"] = 360, ["Cpu"] = 88, ["Memory"] = 130, ["Io"] = 140, ["Bandwidth"] = 104, ["Network"] = 104, ["Gpu"] = 88, ["Publisher"] = 200
         }, settings.ColumnWidths);
         ProcessSlot.SharedLayout = Layout;
         Rows = new SlotCollection<ProcessSlot, (ProcessRowData, ProcessRowContext)>(ProcessSlot.Load);
@@ -35,6 +35,7 @@ public sealed class ProcessesViewModel : ObservableObject
     public string NetworkHeader { get => networkHeader; private set => Set(ref networkHeader, value); }
     public string BandwidthHeader { get => bandwidthHeader; private set => Set(ref bandwidthHeader, value); }
     public string BandwidthTooltip { get => bandwidthTooltip; private set => Set(ref bandwidthTooltip, value); }
+    public string GpuHeader { get => gpuHeader; private set => Set(ref gpuHeader, value); }
 
     public void Refresh()
     {
@@ -46,6 +47,7 @@ public sealed class ProcessesViewModel : ObservableObject
         MemoryHeader = Format.WholePercent(system.Memory.LoadPercent);
         IoHeader = Format.Rate(system.IoBytesPerSecond);
         NetworkHeader = Format.Count(snapshot.Connections.Count);
+        GpuHeader = system.GpuAvailable ? Format.WholePercent(system.GpuPercent) : "–";
         bool bandwidth = system.PerProcessNetworkAvailable;
         BandwidthHeader = bandwidth ? Format.Mbps(snapshot.Processes.Where(process => !VpnTunnels.IsTunnel(process)).Sum(process => process.NetworkBytesPerSecond))
             : monitor.IsElevated ? Loc.Get("Header_Paused") : Loc.Get("Header_Admin");
@@ -57,7 +59,7 @@ public sealed class ProcessesViewModel : ObservableObject
             : Loc.NetworkStatus(system.PerProcessNetworkStatus) + Loc.Get("Bandwidth_UseRestart");
 
         List<ProcessRowData> rows = ProcessTree.Build(snapshot.Processes, monitor.SearchText, SortColumn, SortDescending, expanded);
-        var context = new ProcessRowContext(system.Memory.Total, bandwidth, monitor.IsBlocked);
+        var context = new ProcessRowContext(system.Memory.Total, bandwidth, monitor.IsBlocked, system.GpuAvailable);
         Rows.Apply(rows.Select(row => (row, context)).ToList());
     }
 

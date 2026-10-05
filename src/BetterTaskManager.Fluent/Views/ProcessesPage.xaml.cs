@@ -226,7 +226,7 @@ public sealed partial class ProcessesPage : Page
         var indicators = new Dictionary<string, FontIcon>
         {
             [ProcessTree.SortName] = SortName, [ProcessTree.SortCpu] = SortCpu, [ProcessTree.SortMemory] = SortMemory,
-            [ProcessTree.SortIo] = SortIo, [ProcessTree.SortBandwidth] = SortBandwidth, [ProcessTree.SortNetwork] = SortNetwork,
+            [ProcessTree.SortIo] = SortIo, [ProcessTree.SortBandwidth] = SortBandwidth, [ProcessTree.SortNetwork] = SortNetwork, [ProcessTree.SortGpu] = SortGpu,
             [ProcessTree.SortPublisher] = SortPublisher, [ProcessTree.SortPath] = SortPath
         };
         foreach (var (column, icon) in indicators)
@@ -241,7 +241,7 @@ public sealed partial class ProcessesPage : Page
         var indicators = new Dictionary<string, FontIcon>
         {
             [DetailsViewModel.SortName] = FlatSortName, [DetailsViewModel.SortPid] = FlatSortPid, [DetailsViewModel.SortStatus] = FlatSortStatus,
-            [DetailsViewModel.SortUser] = FlatSortUser, [DetailsViewModel.SortCpu] = FlatSortCpu, [DetailsViewModel.SortMemory] = FlatSortMemory,
+            [DetailsViewModel.SortUser] = FlatSortUser, [DetailsViewModel.SortCpu] = FlatSortCpu, [DetailsViewModel.SortMemory] = FlatSortMemory, [DetailsViewModel.SortGpu] = FlatSortGpu,
             [DetailsViewModel.SortDescription] = FlatSortDescription
         };
         foreach (var (column, icon) in indicators)

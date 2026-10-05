@@ -6,10 +6,10 @@ Built with WinUI 3 (Fluent design) on .NET 11. Formerly *Better Task Manager*.
 
 ## Features
 
-- **Processes** — apps and background processes grouped like Task Manager, with icons, CPU, memory, disk I/O, per-app network speed, connection count, publisher and path. End task (creation-time checked, so a reused PID is never killed by mistake), end process tree, open file location, properties, and per-app outbound firewall blocking.
+- **Processes** — apps and background processes grouped like Task Manager, with icons, CPU, memory, disk I/O, per-app network speed, connection count, GPU, publisher and path. End task (creation-time checked, so a reused PID is never killed by mistake), end process tree, open file location, properties, and per-app outbound firewall blocking.
 - **Memory that reconciles** — the Memory column is the private working set, the same figure Task Manager shows. The Performance page splits "In use" into apps, kernel, file cache, drivers and shared memory so the parts add up, and offers *Free up memory* (trim app memory, clear standby cache, empty all working sets) as troubleshooting tools.
 - **Network** — every connection grouped by app with remote host names (from the Windows DNS cache, live DNS events, or reverse DNS), per-connection speed, total data per app, sorting, search and pause.
-- The Processes page has two layouts you switch at the top: **by app** (grouped, resource columns) and **all processes** (flat, one row per process with PID, status, owner and efficiency mode).
+- The Processes page has two layouts you switch at the top: **by app** (grouped, resource columns) and **all processes** (flat, one row per process with PID, status, owner, GPU and efficiency mode).
 - **Startup apps** — the Run keys and startup folders with publisher and status; disable or enable them like Task Manager.
 - **Replace Windows Task Manager** — an optional setting so the taskbar menu, Ctrl+Shift+Esc and Ctrl+Alt+Del open Nax-TaskManager; reversible and removed on uninstall.
 - **History** — an optional background service records connections and traffic per app for 30 days, and lets the app show per-app network speed without administrator rights.

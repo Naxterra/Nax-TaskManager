@@ -14,6 +14,7 @@ public sealed class DetailsViewModel : ObservableObject
     public const string SortUser = "User";
     public const string SortCpu = "Cpu";
     public const string SortMemory = "Memory";
+    public const string SortGpu = "Gpu";
     public const string SortDescription = "Description";
 
     private readonly MonitorHost monitor;
@@ -24,18 +25,18 @@ public sealed class DetailsViewModel : ObservableObject
     {
         this.monitor = monitor;
         this.settings = settings;
-        if (settings.DetailsSortColumn is not (SortName or SortPid or SortStatus or SortUser or SortCpu or SortMemory or SortDescription))
+        if (settings.DetailsSortColumn is not (SortName or SortPid or SortStatus or SortUser or SortCpu or SortMemory or SortGpu or SortDescription))
             settings.DetailsSortColumn = SortName;
         Layout = new ColumnLayout("Details.", new Dictionary<string, double>
         {
-            ["Name"] = 260, ["Pid"] = 80, ["Status"] = 150, ["User"] = 150, ["Cpu"] = 80, ["Memory"] = 110
+            ["Name"] = 260, ["Pid"] = 80, ["Status"] = 150, ["User"] = 150, ["Cpu"] = 80, ["Memory"] = 110, ["Gpu"] = 80
         }, settings.ColumnWidths);
         DetailSlot.SharedLayout = Layout;
-        Rows = new SlotCollection<DetailSlot, (ProcessSample, long)>(DetailSlot.Load);
+        Rows = new SlotCollection<DetailSlot, (ProcessSample, long, bool)>(DetailSlot.Load);
     }
 
     public ColumnLayout Layout { get; }
-    public SlotCollection<DetailSlot, (ProcessSample Process, long TotalMemory)> Rows { get; }
+    public SlotCollection<DetailSlot, (ProcessSample Process, long TotalMemory, bool GpuAvailable)> Rows { get; }
     public string Summary { get => summary; private set => Set(ref summary, value); }
 
     public string SortColumn => settings.DetailsSortColumn;
@@ -48,7 +49,8 @@ public sealed class DetailsViewModel : ObservableObject
         IEnumerable<ProcessSample> visible = snapshot.Processes.Where(process => process.Pid != 0 && Matches(process, query));
         List<ProcessSample> rows = Sort(visible, SortColumn, SortDescending).ToList();
         long total = snapshot.System.Memory.Total;
-        Rows.Apply(rows.Select(process => (process, total)).ToList());
+        bool gpu = snapshot.System.GpuAvailable;
+        Rows.Apply(rows.Select(process => (process, total, gpu)).ToList());
         Summary = Loc.F("Details_Summary", Format.Count(rows.Count), Format.Count(snapshot.Processes.Count(process => process.Efficiency)),
             Format.Count(snapshot.Processes.Count(process => process.Suspended)));
     }
@@ -59,7 +61,7 @@ public sealed class DetailsViewModel : ObservableObject
         else
         {
             settings.DetailsSortColumn = column;
-            settings.DetailsSortDescending = column is SortCpu or SortMemory;
+            settings.DetailsSortDescending = column is SortCpu or SortMemory or SortGpu;
         }
         Raise(nameof(SortColumn));
         Refresh();
@@ -75,6 +77,7 @@ public sealed class DetailsViewModel : ObservableObject
             SortUser => descending ? processes.OrderByDescending(process => process.UserName, text) : processes.OrderBy(process => process.UserName, text),
             SortCpu => Order(processes, process => process.CpuPercent, descending),
             SortMemory => Order(processes, process => process.PrivateWorkingSet, descending),
+            SortGpu => Order(processes, process => process.GpuPercent, descending),
             SortDescription => descending ? processes.OrderByDescending(process => process.Description, text) : processes.OrderBy(process => process.Description, text),
             _ => descending ? processes.OrderByDescending(process => process.ImageName, text) : processes.OrderBy(process => process.ImageName, text)
         };
@@ -98,9 +101,9 @@ public sealed class DetailsViewModel : ObservableObject
 /// <summary>A reusable row of the flat process table.</summary>
 public sealed class DetailSlot : ObservableObject
 {
-    private string name = "", pidText = "", status = "", user = "", cpuText = "", memoryText = "", description = "", path = "";
+    private string name = "", pidText = "", status = "", user = "", cpuText = "", memoryText = "", gpuText = "", gpuEngine = "", description = "", path = "";
     private ImageSource? icon;
-    private Brush cpuHeat = Heat.Level(0), memoryHeat = Heat.Level(0);
+    private Brush cpuHeat = Heat.Level(0), memoryHeat = Heat.Level(0), gpuHeat = Heat.Level(0);
 
     public static ColumnLayout? SharedLayout { get; set; }
     public ColumnLayout Layout => SharedLayout!;
@@ -122,8 +125,12 @@ public sealed class DetailSlot : ObservableObject
     public ImageSource? Icon { get => icon; private set => Set(ref icon, value); }
     public Brush CpuHeat { get => cpuHeat; private set => Set(ref cpuHeat, value); }
     public Brush MemoryHeat { get => memoryHeat; private set => Set(ref memoryHeat, value); }
+    public string GpuText { get => gpuText; private set => Set(ref gpuText, value); }
+    /// <summary>Busiest GPU engine, e.g. "GPU 0 - 3D"; shown as the GPU cell's tooltip.</summary>
+    public string? GpuEngine { get => gpuEngine.Length == 0 ? null : gpuEngine; private set => Set(ref gpuEngine, value ?? ""); }
+    public Brush GpuHeat { get => gpuHeat; private set => Set(ref gpuHeat, value); }
 
-    public static void Load(DetailSlot slot, (ProcessSample Process, long TotalMemory) input)
+    public static void Load(DetailSlot slot, (ProcessSample Process, long TotalMemory, bool GpuAvailable) input)
     {
         ProcessSample process = input.Process;
         slot.Process = process;
@@ -133,6 +140,9 @@ public sealed class DetailSlot : ObservableObject
         slot.User = process.UserName.Length > 0 ? process.UserName : "–";
         slot.CpuText = process.CpuSampled ? Format.Percent(process.CpuPercent) : "…";
         slot.MemoryText = Format.Memory(process.PrivateWorkingSet);
+        slot.GpuText = input.GpuAvailable ? Format.Percent(process.GpuPercent) : "–";
+        slot.GpuEngine = process.GpuEngine;
+        slot.GpuHeat = Heat.Level(Heat.Scale(process.GpuPercent, 0.5, 2, 5, 12, 25, 50));
         slot.Description = process.Description;
         slot.Path = process.Path;
         slot.Icon = IconCache.Get(process.Path);
