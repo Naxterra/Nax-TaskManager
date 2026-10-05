@@ -169,6 +169,34 @@ public sealed class ColumnLayout : ObservableObject
     public int PidColumn => ColumnOf("Pid");
     public int StatusColumn => ColumnOf("Status");
     public int UserColumn => ColumnOf("User");
+    public int LocalColumn => ColumnOf("Local");
+    public int RemoteColumn => ColumnOf("Remote");
+    public int ScopeColumn => ColumnOf("Scope");
+    public int StateColumn => ColumnOf("State");
+    public int DataColumn => ColumnOf("Data");
+    public int SpeedColumn => ColumnOf("Speed");
+
+    /// <summary>
+    /// Columns a wide cell may cover (the Network page's per-app summary covers the address columns that app rows
+    /// leave empty). <see cref="SpanColumn"/>/<see cref="SpanCount"/> give the longest unbroken run of them.
+    /// </summary>
+    public string[] SpanGroup { get; init; } = [];
+
+    public int SpanColumn => LongestSpan().Column;
+    public int SpanCount => LongestSpan().Count;
+
+    private (int Column, int Count) LongestSpan()
+    {
+        int bestStart = 0, bestCount = 0, runStart = 0, runCount = 0;
+        for (int index = 0; index < order.Count; index++)
+        {
+            if (!SpanGroup.Contains(order[index])) { runCount = 0; continue; }
+            if (runCount == 0) runStart = index;
+            runCount++;
+            if (runCount > bestCount) (bestStart, bestCount) = (runStart, runCount);
+        }
+        return bestCount == 0 ? (1, 1) : (bestStart + 1, bestCount);
+    }
 
     public GridLength this[string column] => new(widths.TryGetValue(column, out double width) ? width : 0);
 

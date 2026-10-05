@@ -22,7 +22,7 @@ public sealed class StartupViewModel : ObservableObject
         Layout = new ColumnLayout("Startup.", new Dictionary<string, double>
         {
             ["Name"] = 300, ["Publisher"] = 220, ["Status"] = 130, ["Scope"] = 160
-        }, settings.ColumnWidths);
+        }, settings.ColumnWidths, ["Publisher", "Status", "Scope"], settings.ColumnOrder);
         StartupRow.SharedLayout = Layout;
     }
 

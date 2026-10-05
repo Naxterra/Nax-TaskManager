@@ -2,6 +2,7 @@ using BetterTaskManager.Fluent.Services;
 using BetterTaskManager.Fluent.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 
@@ -20,7 +21,7 @@ internal sealed class ColumnReorder
     private readonly ColumnLayout layout;
     private readonly Border indicator;
     private readonly MenuFlyoutItem moveLeft, moveRight, reset;
-    private Button? source;
+    private FrameworkElement? source;
     private string? column;
     private double startX;
     private bool dragging;
@@ -59,15 +60,15 @@ internal sealed class ColumnReorder
         var menu = new MenuFlyout { Items = { moveLeft, moveRight, new MenuFlyoutSeparator(), reset } };
         menu.Opening += (_, _) =>
         {
-            menuColumn = (menu.Target as Button)?.Tag as string;
+            menuColumn = (menu.Target as FrameworkElement)?.Tag as string;
             int position = menuColumn is null ? -1 : layout.ColumnOf(menuColumn);
             moveLeft.IsEnabled = position > 1;
             moveRight.IsEnabled = position >= 1 && position < layout.Order.Count;
             reset.IsEnabled = !layout.IsDefaultOrder;
         };
-        foreach (Button button in header.Children.OfType<Button>())
+        foreach (FrameworkElement element in header.Children.OfType<FrameworkElement>())
         {
-            if (button.Tag is string tag && layout.IsMovable(tag)) button.ContextFlyout = menu;
+            if (IsHeaderCell(element)) element.ContextFlyout = menu;
         }
     }
 
@@ -81,8 +82,8 @@ internal sealed class ColumnReorder
     {
         Cancel();
         if (!e.GetCurrentPoint(header).Properties.IsLeftButtonPressed) return;
-        if (FindHeaderButton(e.OriginalSource as DependencyObject) is not { Tag: string tag } button || !layout.IsMovable(tag)) return;
-        source = button;
+        if (FindHeaderCell(e.OriginalSource as DependencyObject) is not { Tag: string tag } cell) return;
+        source = cell;
         column = tag;
         startX = e.GetCurrentPoint(header).Position.X;
     }
@@ -139,11 +140,15 @@ internal sealed class ColumnReorder
         indicator.Visibility = Visibility.Collapsed;
     }
 
-    private Button? FindHeaderButton(DependencyObject? element)
+    /// <summary>A header cell is a direct child of the header row tagged with a movable column (not a splitter).</summary>
+    private bool IsHeaderCell(FrameworkElement element) =>
+        element is not Thumb && !ReferenceEquals(element, indicator) && element.Tag is string tag && layout.IsMovable(tag);
+
+    private FrameworkElement? FindHeaderCell(DependencyObject? element)
     {
         while (element is not null && !ReferenceEquals(element, header))
         {
-            if (element is Button button && ReferenceEquals(VisualTreeHelper.GetParent(button), header)) return button;
+            if (element is FrameworkElement cell && ReferenceEquals(VisualTreeHelper.GetParent(cell), header)) return IsHeaderCell(cell) ? cell : null;
             element = VisualTreeHelper.GetParent(element);
         }
         return null;

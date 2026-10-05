@@ -57,12 +57,12 @@
             </CommandBar>
         </Grid>
 
-        <Grid Grid.Row="1" Height="40" Padding="0,0,12,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+        <Grid x:Name="ColumnHeader" Grid.Row="1" Height="40" Padding="0,0,12,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="{x:Bind ViewModel.Layout.Name, Mode=OneWay}" />
-                <ColumnDefinition Width="{x:Bind ViewModel.Layout.Publisher, Mode=OneWay}" />
-                <ColumnDefinition Width="{x:Bind ViewModel.Layout.Status, Mode=OneWay}" />
-                <ColumnDefinition Width="{x:Bind ViewModel.Layout.Scope, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.Layout.W1, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.Layout.W2, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.Layout.W3, Mode=OneWay}" />
                 <ColumnDefinition Width="*" MinWidth="120" />
             </Grid.ColumnDefinitions>
             <Button x:Uid="StartupPage_7" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
@@ -71,19 +71,19 @@
                     <FontIcon x:Name="SortName" FontSize="10" Glyph="&#xE70E;" HorizontalAlignment="Right" VerticalAlignment="Center" />
                 </Grid>
             </Button>
-            <Button x:Uid="StartupPage_9" Grid.Column="1" Tag="Publisher" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Publisher" Click="Header_Click">
+            <Button x:Uid="StartupPage_9" Grid.Column="{x:Bind ViewModel.Layout.PublisherColumn, Mode=OneWay}" Tag="Publisher" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Publisher" Click="Header_Click">
                 <Grid>
                     <TextBlock x:Uid="StartupPage_10" Text="Publisher" />
                     <FontIcon x:Name="SortPublisher" FontSize="10" Glyph="&#xE70E;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button x:Uid="StartupPage_11" Grid.Column="2" Tag="Status" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Status" Click="Header_Click">
+            <Button x:Uid="StartupPage_11" Grid.Column="{x:Bind ViewModel.Layout.StatusColumn, Mode=OneWay}" Tag="Status" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Status" Click="Header_Click">
                 <Grid>
                     <TextBlock x:Uid="StartupPage_12" Text="Status" />
                     <FontIcon x:Name="SortStatus" FontSize="10" Glyph="&#xE70E;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button x:Uid="StartupPage_13" Grid.Column="3" Tag="Scope" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Starts for" Click="Header_Click">
+            <Button x:Uid="StartupPage_13" Grid.Column="{x:Bind ViewModel.Layout.ScopeColumn, Mode=OneWay}" Tag="Scope" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Starts for" Click="Header_Click">
                 <Grid>
                     <TextBlock x:Uid="StartupPage_14" Text="Starts for" />
                     <FontIcon x:Name="SortScope" FontSize="10" Glyph="&#xE70E;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
@@ -92,9 +92,9 @@
             <TextBlock x:Uid="StartupPage_15" Grid.Column="4" Text="Command" Margin="8,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
             <Thumb Tag="Name" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
-            <Thumb Tag="Publisher" Grid.Column="1" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
-            <Thumb Tag="Status" Grid.Column="2" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
-            <Thumb Tag="Scope" Grid.Column="3" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
+            <Thumb Tag="Publisher" Grid.Column="{x:Bind ViewModel.Layout.PublisherColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
+            <Thumb Tag="Status" Grid.Column="{x:Bind ViewModel.Layout.StatusColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
+            <Thumb Tag="Scope" Grid.Column="{x:Bind ViewModel.Layout.ScopeColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
         </Grid>
 
         <ListView
@@ -114,19 +114,19 @@
                     <Grid Height="34" ToolTipService.ToolTip="{x:Bind Command}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="{x:Bind Layout.Name, Mode=OneWay}" />
-                            <ColumnDefinition Width="{x:Bind Layout.Publisher, Mode=OneWay}" />
-                            <ColumnDefinition Width="{x:Bind Layout.Status, Mode=OneWay}" />
-                            <ColumnDefinition Width="{x:Bind Layout.Scope, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W2, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W3, Mode=OneWay}" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Orientation="Horizontal" Spacing="10" Margin="10,0,8,0" Opacity="{x:Bind Opacity}">
                             <Image Width="16" Height="16" Source="{x:Bind Icon}" VerticalAlignment="Center" />
                             <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <TextBlock Grid.Column="1" Text="{x:Bind Publisher}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
+                        <TextBlock Grid.Column="{x:Bind Layout.PublisherColumn, Mode=OneWay}" Text="{x:Bind Publisher}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Grid.Column="2" Text="{x:Bind Status}" ToolTipService.ToolTip="{x:Bind StatusDetail}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="3" Text="{x:Bind Scope}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
+                        <TextBlock Grid.Column="{x:Bind Layout.StatusColumn, Mode=OneWay}" Text="{x:Bind Status}" ToolTipService.ToolTip="{x:Bind StatusDetail}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="{x:Bind Layout.ScopeColumn, Mode=OneWay}" Text="{x:Bind Scope}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock Grid.Column="4" Text="{x:Bind Command}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

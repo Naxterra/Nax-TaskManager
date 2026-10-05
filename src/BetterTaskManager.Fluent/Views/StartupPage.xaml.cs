@@ -19,7 +19,10 @@ public sealed partial class StartupPage : Page
     {
         ViewModel = new StartupViewModel(App.Settings);
         InitializeComponent();
+        columnReorder = new ColumnReorder(ColumnHeader, ViewModel.Layout);
     }
+
+    private readonly ColumnReorder columnReorder;
 
     public StartupViewModel ViewModel { get; }
 
@@ -70,6 +73,7 @@ public sealed partial class StartupPage : Page
 
     private void Header_Click(object sender, RoutedEventArgs e)
     {
+        if (columnReorder.SuppressClick) return;
         if (sender is not FrameworkElement { Tag: string column }) return;
         ViewModel.Sort(column, App.Monitor.SearchText);
         var indicators = new Dictionary<string, FontIcon>

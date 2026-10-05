@@ -115,7 +115,11 @@ public sealed class NetworkViewModel : ObservableObject
         Layout = new ColumnLayout("Network.", new Dictionary<string, double>
         {
             ["Name"] = 320, ["Local"] = 220, ["Remote"] = 280, ["Scope"] = 120, ["State"] = 110, ["Data"] = 170, ["Speed"] = 190
-        }, settings.ColumnWidths);
+        }, settings.ColumnWidths, ["Local", "Remote", "Scope", "State", "Data", "Speed"], settings.ColumnOrder)
+        {
+            // App rows leave these empty and show their connection summary across them instead.
+            SpanGroup = ["Local", "Remote", "Scope", "State"]
+        };
         NetworkSlot.SharedLayout = Layout;
         Rows = new SlotCollection<NetworkSlot, (NetworkRowData, Func<string, bool>)>(NetworkSlot.Load);
     }

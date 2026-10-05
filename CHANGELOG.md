@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.18 - 2026-10-06
+
+- **Move columns on the Network and Startup apps pages too**, the same way as on the Processes page: drag a header, or right-click it for *Move left*, *Move right* and *Reset column order*. On the Network page, the per-app connection summary (established / listening / other) fills whichever address, scope and state columns sit next to each other.
+
 ## 2.0.0-alpha.17 - 2026-10-05
 
 - **Move columns on the Processes page**, in both layouts. Drag a column header left or right and drop it where you want it (an accent bar shows where it lands), or right-click a header for *Move left*, *Move right* and *Reset column order*. The order is remembered. Name stays first, and Path (by app) or Description (all processes) stays last. Dragging never sorts; a click still does.

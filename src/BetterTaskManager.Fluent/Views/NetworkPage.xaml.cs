@@ -18,8 +18,11 @@ public sealed partial class NetworkPage : Page
     {
         ViewModel = new NetworkViewModel(App.Monitor, App.Settings);
         InitializeComponent();
+        columnReorder = new ColumnReorder(ColumnHeader, ViewModel.Layout);
         UpdateSortIndicators();
     }
+
+    private readonly ColumnReorder columnReorder;
 
     public NetworkViewModel ViewModel { get; }
 
@@ -88,6 +91,7 @@ public sealed partial class NetworkPage : Page
 
     private void Header_Click(object sender, RoutedEventArgs e)
     {
+        if (columnReorder.SuppressClick) return;
         if (sender is not FrameworkElement { Tag: string column }) return;
         ViewModel.Sort(column);
         UpdateSortIndicators();
