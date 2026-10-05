@@ -30,7 +30,7 @@ public sealed class DetailsViewModel : ObservableObject
         Layout = new ColumnLayout("Details.", new Dictionary<string, double>
         {
             ["Name"] = 260, ["Pid"] = 80, ["Status"] = 150, ["User"] = 150, ["Cpu"] = 80, ["Memory"] = 110, ["Gpu"] = 80
-        }, settings.ColumnWidths);
+        }, settings.ColumnWidths, ["Pid", "Status", "User", "Cpu", "Memory", "Gpu"], settings.ColumnOrder);
         DetailSlot.SharedLayout = Layout;
         Rows = new SlotCollection<DetailSlot, (ProcessSample, long, bool)>(DetailSlot.Load);
     }

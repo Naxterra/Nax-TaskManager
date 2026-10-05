@@ -381,4 +381,7 @@ Answer: {0}</value></data>
   <data name="ProcessesPage_31.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by GPU</value></data>
   <data name="ProcessesPage_31.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Busiest GPU engine of each process, as in Task Manager</value></data>
   <data name="DetailsPage_24.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by GPU</value></data>
+  <data name="Column_MoveLeft" xml:space="preserve"><value>Move left</value></data>
+  <data name="Column_MoveRight" xml:space="preserve"><value>Move right</value></data>
+  <data name="Column_ResetOrder" xml:space="preserve"><value>Reset column order</value></data>
 </root>

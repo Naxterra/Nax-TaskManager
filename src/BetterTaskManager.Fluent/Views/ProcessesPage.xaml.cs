@@ -18,12 +18,15 @@ public sealed partial class ProcessesPage : Page
     private (int Pid, long CreateTime)? flatSelectedKey;
     private bool restoringSelection;
     private bool flatMode;
+    private readonly ColumnReorder groupedReorder, flatReorder;
 
     public ProcessesPage()
     {
         ViewModel = new ProcessesViewModel(App.Monitor, App.Settings);
         FlatViewModel = new DetailsViewModel(App.Monitor, App.Settings);
         InitializeComponent();
+        groupedReorder = new ColumnReorder(GroupedHeader, ViewModel.Layout);
+        flatReorder = new ColumnReorder(FlatHeader, FlatViewModel.Layout);
         flatMode = App.Settings.ProcessFlatView;
         ModeSelector.SelectedItem = flatMode ? FlatMode : ByAppMode;
         ApplyMode();
@@ -203,6 +206,7 @@ public sealed partial class ProcessesPage : Page
 
     private void Header_Click(object sender, RoutedEventArgs e)
     {
+        if (groupedReorder.SuppressClick) return;
         if (sender is FrameworkElement { Tag: string column })
         {
             ViewModel.Sort(column);
@@ -213,6 +217,7 @@ public sealed partial class ProcessesPage : Page
 
     private void FlatHeader_Click(object sender, RoutedEventArgs e)
     {
+        if (flatReorder.SuppressClick) return;
         if (sender is FrameworkElement { Tag: string column })
         {
             FlatViewModel.Sort(column);

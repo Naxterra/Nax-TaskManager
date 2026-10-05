@@ -29,6 +29,8 @@ public sealed class AppSettings
     /// <summary>The user dismissed the limited-mode notice; do not show it again.</summary>
     public bool HideElevationNotice { get; set; }
     public Dictionary<string, double> ColumnWidths { get; set; } = new();
+    /// <summary>Column order per table ("Processes.", "Details."), comma-separated; absent = default order.</summary>
+    public Dictionary<string, string> ColumnOrder { get; set; } = new();
     public int WindowWidth { get; set; } = 1280;
     public int WindowHeight { get; set; } = 820;
 

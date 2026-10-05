@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.17 - 2026-10-05
+
+- **Move columns on the Processes page**, in both layouts. Drag a column header left or right and drop it where you want it (an accent bar shows where it lands), or right-click a header for *Move left*, *Move right* and *Reset column order*. The order is remembered. Name stays first, and Path (by app) or Description (all processes) stays last. Dragging never sorts; a click still does.
+
 ## 2.0.0-alpha.16 - 2026-10-05
 
 - **GPU column on the Processes page**, in both layouts. Like Task Manager, it shows each process's busiest GPU engine; point at a value to see which engine (for example "GPU 0 - 3D"). The header shows the whole GPU, sorting works, and the column can be resized. It works without administrator rights. App groups add up their processes, the same way as CPU.

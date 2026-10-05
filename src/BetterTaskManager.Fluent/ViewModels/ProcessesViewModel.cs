@@ -18,7 +18,7 @@ public sealed class ProcessesViewModel : ObservableObject
         Layout = new ColumnLayout("Processes.", new Dictionary<string, double>
         {
             ["Name"] = 360, ["Cpu"] = 88, ["Memory"] = 130, ["Io"] = 140, ["Bandwidth"] = 104, ["Network"] = 104, ["Gpu"] = 88, ["Publisher"] = 200
-        }, settings.ColumnWidths);
+        }, settings.ColumnWidths, ["Cpu", "Memory", "Io", "Bandwidth", "Network", "Gpu", "Publisher"], settings.ColumnOrder);
         ProcessSlot.SharedLayout = Layout;
         Rows = new SlotCollection<ProcessSlot, (ProcessRowData, ProcessRowContext)>(ProcessSlot.Load);
     }

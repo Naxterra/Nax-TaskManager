@@ -45,7 +45,12 @@ public sealed class SlotCollection<TSlot, TData> : ObservableCollection<TSlot> w
     }
 }
 
-/// <summary>Column widths shared by the header and every row template.</summary>
+/// <summary>
+/// Column widths shared by the header and every row template. Tables that pass <c>movable</c> also let the user
+/// reorder those columns: the first column stays first, the movable ones follow in <see cref="Order"/>, and the
+/// last (star-sized) column stays last. Templates bind their column definitions by position (<see cref="W1"/>...)
+/// and each cell's Grid.Column to its column's position (<see cref="CpuColumn"/>...).
+/// </summary>
 public sealed class ColumnLayout : ObservableObject
 {
     private readonly Dictionary<string, double> widths;
@@ -53,18 +58,117 @@ public sealed class ColumnLayout : ObservableObject
 
     private readonly Dictionary<string, double> saved;
     private readonly string prefix;
+    private readonly string firstColumn;
+    private readonly IReadOnlyList<string> defaultOrder;
+    private readonly List<string> order;
+    private readonly Dictionary<string, string>? savedOrders;
 
-    public ColumnLayout(string prefix, Dictionary<string, double> defaults, Dictionary<string, double> saved)
+    public ColumnLayout(string prefix, Dictionary<string, double> defaults, Dictionary<string, double> saved,
+        string[]? movable = null, Dictionary<string, string>? savedOrders = null)
     {
         this.prefix = prefix;
         this.saved = saved;
+        this.savedOrders = savedOrders;
+        firstColumn = defaults.Keys.First();
         minimums = defaults.ToDictionary(pair => pair.Key, pair => Math.Min(pair.Value, 60d));
         widths = new Dictionary<string, double>(defaults);
         foreach (string key in defaults.Keys)
         {
             if (saved.TryGetValue(prefix + key, out double value)) widths[key] = Math.Clamp(value, minimums[key], 900);
         }
+
+        defaultOrder = movable ?? [];
+        // Keep the saved order of known columns; columns added in a later version join at their default place.
+        order = [];
+        if (savedOrders is not null && savedOrders.TryGetValue(prefix, out string? text))
+        {
+            order.AddRange(text.Split(',').Where(defaultOrder.Contains).Distinct());
+        }
+        for (int index = 0; index < defaultOrder.Count; index++)
+        {
+            if (!order.Contains(defaultOrder[index])) order.Insert(Math.Min(index, order.Count), defaultOrder[index]);
+        }
     }
+
+    public IReadOnlyList<string> Order => order;
+
+    public bool IsMovable(string column) => order.Contains(column);
+
+    /// <summary>Grid column of a movable column (the first column is 0); -1 for others.</summary>
+    public int ColumnOf(string column) => order.IndexOf(column) is int index and >= 0 ? index + 1 : -1;
+
+    /// <summary>Moves a column to a 1-based position among the movable columns.</summary>
+    public bool Move(string column, int position)
+    {
+        int from = order.IndexOf(column);
+        int to = Math.Clamp(position, 1, order.Count) - 1;
+        if (from < 0 || from == to) return false;
+        order.RemoveAt(from);
+        order.Insert(to, column);
+        SaveOrder();
+        Raise(string.Empty);
+        return true;
+    }
+
+    public void ResetOrder()
+    {
+        order.Clear();
+        order.AddRange(defaultOrder);
+        SaveOrder();
+        Raise(string.Empty);
+    }
+
+    public bool IsDefaultOrder => order.SequenceEqual(defaultOrder);
+
+    private void SaveOrder()
+    {
+        if (savedOrders is null) return;
+        if (IsDefaultOrder) savedOrders.Remove(prefix);
+        else savedOrders[prefix] = string.Join(",", order);
+    }
+
+    /// <summary>The movable position (1-based) under a header x coordinate.</summary>
+    public int PositionAt(double x)
+    {
+        double edge = widths[firstColumn];
+        for (int index = 0; index < order.Count; index++)
+        {
+            edge += widths[order[index]];
+            if (x < edge) return index + 1;
+        }
+        return order.Count;
+    }
+
+    /// <summary>Left edge, in header coordinates, of a movable position (1-based).</summary>
+    public double LeftEdgeOf(int position)
+    {
+        double edge = widths[firstColumn];
+        for (int index = 0; index < position - 1 && index < order.Count; index++) edge += widths[order[index]];
+        return edge;
+    }
+
+    public double WidthOf(int position) => position >= 1 && position <= order.Count ? widths[order[position - 1]] : 0;
+
+    private GridLength At(int position) => new(WidthOf(position));
+
+    public GridLength W1 => At(1);
+    public GridLength W2 => At(2);
+    public GridLength W3 => At(3);
+    public GridLength W4 => At(4);
+    public GridLength W5 => At(5);
+    public GridLength W6 => At(6);
+    public GridLength W7 => At(7);
+
+    public int CpuColumn => ColumnOf("Cpu");
+    public int MemoryColumn => ColumnOf("Memory");
+    public int IoColumn => ColumnOf("Io");
+    public int BandwidthColumn => ColumnOf("Bandwidth");
+    public int NetworkColumn => ColumnOf("Network");
+    public int GpuColumn => ColumnOf("Gpu");
+    public int PublisherColumn => ColumnOf("Publisher");
+    public int PidColumn => ColumnOf("Pid");
+    public int StatusColumn => ColumnOf("Status");
+    public int UserColumn => ColumnOf("User");
 
     public GridLength this[string column] => new(widths.TryGetValue(column, out double width) ? width : 0);
 
@@ -95,6 +199,7 @@ public sealed class ColumnLayout : ObservableObject
         widths[column] = next;
         saved[prefix + column] = next;
         Raise(column);
+        if (ColumnOf(column) is int position and >= 1 and <= 7) Raise("W" + position);
     }
 }
 
