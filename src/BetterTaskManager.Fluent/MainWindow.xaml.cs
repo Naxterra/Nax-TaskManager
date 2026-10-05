@@ -20,7 +20,6 @@ public sealed partial class MainWindow : Window
         ["Performance"] = typeof(PerformancePage),
         ["Network"] = typeof(NetworkPage),
         ["History"] = typeof(HistoryPage),
-        ["Details"] = typeof(DetailsPage),
         ["Startup"] = typeof(StartupPage),
         ["Settings"] = typeof(SettingsPage)
     };
@@ -67,8 +66,7 @@ public sealed partial class MainWindow : Window
         AddAccelerator(VirtualKey.Number2, () => Navigate("Performance"));
         AddAccelerator(VirtualKey.Number3, () => Navigate("Network"));
         AddAccelerator(VirtualKey.Number4, () => Navigate("History"));
-        AddAccelerator(VirtualKey.Number5, () => Navigate("Details"));
-        AddAccelerator(VirtualKey.Number6, () => Navigate("Startup"));
+        AddAccelerator(VirtualKey.Number5, () => Navigate("Startup"));
         AddAccelerator(VirtualKey.F, () => SearchBox.Focus(FocusState.Keyboard));
 
         string[] args = Environment.GetCommandLineArgs();
@@ -120,7 +118,7 @@ public sealed partial class MainWindow : Window
         {
             ContentFrame.Navigate(page, null, new SuppressNavigationTransitionInfo());
         }
-        SearchBox.IsEnabled = tag is "Processes" or "Network" or "History" or "Details" or "Startup";
+        SearchBox.IsEnabled = tag is "Processes" or "Network" or "History" or "Startup";
     }
 
     private void AppTitleBar_PaneToggleRequested(TitleBar sender, object args) => Navigation.IsPaneOpen = !Navigation.IsPaneOpen;

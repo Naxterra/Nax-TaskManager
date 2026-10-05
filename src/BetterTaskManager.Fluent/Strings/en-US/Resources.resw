@@ -376,4 +376,6 @@ Answer: {0}</value></data>
   <data name="Cleanup_AllTextElevated" xml:space="preserve"><value>Runs all three steps at once: trim app memory, clear the standby cache and empty all working sets. Expect a brief stutter while memory pages back in.</value></data>
   <data name="Cleanup_AllTextStandard" xml:space="preserve"><value>Trims the memory of every app this account can reach. Clearing the standby cache and emptying all working sets need administrator rights.</value></data>
   <data name="Cleanup_AllButton" xml:space="preserve"><value>Free up</value></data>
+  <data name="ProcessesPage_29.Text" xml:space="preserve"><value>By app</value></data>
+  <data name="ProcessesPage_30.Text" xml:space="preserve"><value>All processes</value></data>
 </root>

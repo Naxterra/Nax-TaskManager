@@ -1,12 +1,11 @@
 using System.Globalization;
 using BetterTaskManager.Core.Monitoring;
-using BetterTaskManager.Core.Native;
 using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Xaml.Media;
 
 namespace BetterTaskManager.Fluent.ViewModels;
 
-/// <summary>Task Manager's Details tab: one row per process, no grouping.</summary>
+/// <summary>The flat "Alle Prozesse" layout of the Processes page: one row per process, no grouping.</summary>
 public sealed class DetailsViewModel : ObservableObject
 {
     public const string SortName = "Name";
@@ -15,7 +14,6 @@ public sealed class DetailsViewModel : ObservableObject
     public const string SortUser = "User";
     public const string SortCpu = "Cpu";
     public const string SortMemory = "Memory";
-    public const string SortPriority = "Priority";
     public const string SortDescription = "Description";
 
     private readonly MonitorHost monitor;
@@ -26,9 +24,11 @@ public sealed class DetailsViewModel : ObservableObject
     {
         this.monitor = monitor;
         this.settings = settings;
+        if (settings.DetailsSortColumn is not (SortName or SortPid or SortStatus or SortUser or SortCpu or SortMemory or SortDescription))
+            settings.DetailsSortColumn = SortName;
         Layout = new ColumnLayout("Details.", new Dictionary<string, double>
         {
-            ["Name"] = 260, ["Pid"] = 80, ["Status"] = 150, ["User"] = 150, ["Cpu"] = 80, ["Memory"] = 110, ["Priority"] = 150
+            ["Name"] = 260, ["Pid"] = 80, ["Status"] = 150, ["User"] = 150, ["Cpu"] = 80, ["Memory"] = 110
         }, settings.ColumnWidths);
         DetailSlot.SharedLayout = Layout;
         Rows = new SlotCollection<DetailSlot, (ProcessSample, long)>(DetailSlot.Load);
@@ -59,7 +59,7 @@ public sealed class DetailsViewModel : ObservableObject
         else
         {
             settings.DetailsSortColumn = column;
-            settings.DetailsSortDescending = column is SortCpu or SortMemory or SortPriority;
+            settings.DetailsSortDescending = column is SortCpu or SortMemory;
         }
         Raise(nameof(SortColumn));
         Refresh();
@@ -75,7 +75,6 @@ public sealed class DetailsViewModel : ObservableObject
             SortUser => descending ? processes.OrderByDescending(process => process.UserName, text) : processes.OrderBy(process => process.UserName, text),
             SortCpu => Order(processes, process => process.CpuPercent, descending),
             SortMemory => Order(processes, process => process.PrivateWorkingSet, descending),
-            SortPriority => Order(processes, process => PriorityRank(process.Priority), descending),
             SortDescription => descending ? processes.OrderByDescending(process => process.Description, text) : processes.OrderBy(process => process.Description, text),
             _ => descending ? processes.OrderByDescending(process => process.ImageName, text) : processes.OrderBy(process => process.ImageName, text)
         };
@@ -87,18 +86,6 @@ public sealed class DetailsViewModel : ObservableObject
 
     private static int StatusRank(ProcessSample process) => process.Suspended ? 2 : process.Efficiency ? 1 : 0;
 
-    /// <summary>Unknown sorts below Idle.</summary>
-    internal static int PriorityRank(PriorityClass priority) => priority switch
-    {
-        PriorityClass.Idle => 1,
-        PriorityClass.BelowNormal => 2,
-        PriorityClass.Normal => 3,
-        PriorityClass.AboveNormal => 4,
-        PriorityClass.High => 5,
-        PriorityClass.Realtime => 6,
-        _ => 0
-    };
-
     // Match name, description and PID, but not the owner: on a single-user PC every row shares one account name,
     // so matching it floods the results (for example "nax" would match the owner "Naxterra" on every process).
     private static bool Matches(ProcessSample process, string query) =>
@@ -108,10 +95,10 @@ public sealed class DetailsViewModel : ObservableObject
         process.Pid.ToString(CultureInfo.InvariantCulture) == query;
 }
 
-/// <summary>A reusable row of the Details table.</summary>
+/// <summary>A reusable row of the flat process table.</summary>
 public sealed class DetailSlot : ObservableObject
 {
-    private string name = "", pidText = "", status = "", user = "", cpuText = "", memoryText = "", priorityText = "", description = "", path = "";
+    private string name = "", pidText = "", status = "", user = "", cpuText = "", memoryText = "", description = "", path = "";
     private ImageSource? icon;
     private Brush cpuHeat = Heat.Level(0), memoryHeat = Heat.Level(0);
 
@@ -130,7 +117,6 @@ public sealed class DetailSlot : ObservableObject
     public string User { get => user; private set => Set(ref user, value); }
     public string CpuText { get => cpuText; private set => Set(ref cpuText, value); }
     public string MemoryText { get => memoryText; private set => Set(ref memoryText, value); }
-    public string PriorityText { get => priorityText; private set => Set(ref priorityText, value); }
     public string Description { get => description; private set => Set(ref description, value); }
     public string Path { get => path; private set => Set(ref path, value); }
     public ImageSource? Icon { get => icon; private set => Set(ref icon, value); }
@@ -147,7 +133,6 @@ public sealed class DetailSlot : ObservableObject
         slot.User = process.UserName.Length > 0 ? process.UserName : "–";
         slot.CpuText = process.CpuSampled ? Format.Percent(process.CpuPercent) : "…";
         slot.MemoryText = Format.Memory(process.PrivateWorkingSet);
-        slot.PriorityText = PriorityName(process.Priority);
         slot.Description = process.Description;
         slot.Path = process.Path;
         slot.Icon = IconCache.Get(process.Path);
@@ -155,15 +140,4 @@ public sealed class DetailSlot : ObservableObject
         double memoryShare = input.TotalMemory == 0 ? 0 : process.PrivateWorkingSet * 100d / input.TotalMemory;
         slot.MemoryHeat = Heat.Level(Heat.Scale(memoryShare, 0.2, 0.5, 1, 2, 4, 8));
     }
-
-    public static string PriorityName(PriorityClass priority) => priority switch
-    {
-        PriorityClass.Realtime => Loc.Get("Priority_Realtime"),
-        PriorityClass.High => Loc.Get("Priority_High"),
-        PriorityClass.AboveNormal => Loc.Get("Priority_AboveNormal"),
-        PriorityClass.Normal => Loc.Get("Priority_Normal"),
-        PriorityClass.BelowNormal => Loc.Get("Priority_BelowNormal"),
-        PriorityClass.Idle => Loc.Get("Priority_Idle"),
-        _ => "–"
-    };
 }

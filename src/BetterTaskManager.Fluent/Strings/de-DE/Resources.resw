@@ -376,4 +376,6 @@ Antwort: {0}</value></data>
   <data name="Cleanup_AllTextElevated" xml:space="preserve"><value>Führt alle drei Schritte auf einmal aus: App-Arbeitsspeicher trimmen, Standby-Cache leeren und alle Arbeitssätze leeren. Rechnen Sie mit kurzem Ruckeln, während der Speicher wieder eingelesen wird.</value></data>
   <data name="Cleanup_AllTextStandard" xml:space="preserve"><value>Trimmt den Speicher jeder App, die dieses Konto erreichen kann. Das Leeren des Standby-Caches und aller Arbeitssätze erfordert Administratorrechte.</value></data>
   <data name="Cleanup_AllButton" xml:space="preserve"><value>Freigeben</value></data>
+  <data name="ProcessesPage_29.Text" xml:space="preserve"><value>Nach App</value></data>
+  <data name="ProcessesPage_30.Text" xml:space="preserve"><value>Alle Prozesse</value></data>
 </root>

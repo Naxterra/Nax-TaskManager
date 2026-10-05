@@ -60,12 +60,7 @@
                         <FontIcon Glyph="&#xE81C;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="MainWindow_8" Content="Details" Tag="Details" ToolTipService.ToolTip="Details (Ctrl+5)">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8FD;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem x:Uid="MainWindow_9" Content="Startup apps" Tag="Startup" ToolTipService.ToolTip="Startup apps (Ctrl+6)">
+                <NavigationViewItem x:Uid="MainWindow_9" Content="Startup apps" Tag="Startup" ToolTipService.ToolTip="Startup apps (Ctrl+5)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE7B5;" />
                     </NavigationViewItem.Icon>

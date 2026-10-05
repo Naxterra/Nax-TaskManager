@@ -24,6 +24,8 @@ public sealed class AppSettings
     public bool NetworkSortDescending { get; set; }
     public string DetailsSortColumn { get; set; } = "Name";
     public bool DetailsSortDescending { get; set; }
+    /// <summary>Processes page: false shows the grouped "by app" layout, true the flat "all processes" layout.</summary>
+    public bool ProcessFlatView { get; set; }
     /// <summary>The user dismissed the limited-mode notice; do not show it again.</summary>
     public bool HideElevationNotice { get; set; }
     public Dictionary<string, double> ColumnWidths { get; set; } = new();

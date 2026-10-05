@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.0-alpha.13 - 2026-10-05
+
+- **Processes and Details are now one page.** The Prozesse page has a switch at the top: **Nach App** (the grouped view, with resource columns) and **Alle Prozesse** (a flat list, one row per process, with PID, status and owner). The separate Details tab is gone, and the choice is remembered.
+- **Priority removed.** The priority column and the "set priority" action are gone, since they went unused.
+
+
 ## 2.0.0-alpha.12 - 2026-10-05
 
 - **Details search no longer floods.** It stopped matching the owner account, so a term that is part of your Windows user name (for example "nax" inside "Naxterra") no longer matches every process. It now matches the process name, description and PID.
