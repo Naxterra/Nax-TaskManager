@@ -30,6 +30,8 @@ public sealed class MonitorHost : IDisposable
         if (!IsElevated) engine.UseServiceFeed();
         // Elevated with the history service running: one set of kernel traces (the service's) is enough.
         else if (Core.History.HistoryServiceControl.QueryState() == Core.History.HistoryServiceState.Running) engine.PreferServiceFeed();
+        // A copy that was killed while its Disk page showed files left its trace running; stop it.
+        if (IsElevated) Core.Disk.DiskFileActivity.StopLeftover();
     }
 
     /// <summary>Raised on the UI thread with the newest snapshot.</summary>
@@ -194,7 +196,14 @@ public sealed class MonitorHost : IDisposable
         return null;
     }
 
-    public void Dispose() => engine.Dispose();
+    /// <summary>Per-file disk trace for the Disk page; runs only while its file list is shown (administrator only).</summary>
+    public BetterTaskManager.Core.Disk.DiskFileActivity DiskFiles { get; } = new();
+
+    public void Dispose()
+    {
+        DiskFiles.Dispose();
+        engine.Dispose();
+    }
 }
 
 /// <summary>Fixed-size ring of recent values for the trend charts.</summary>

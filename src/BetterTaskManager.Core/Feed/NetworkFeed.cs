@@ -15,7 +15,11 @@ public readonly record struct ProcessTraffic(int Pid, long CreateTime, double Re
 /// <summary>Current rate of one connection or UDP socket with traffic.</summary>
 public readonly record struct SocketTraffic(int Pid, string Protocol, int LocalPort, string RemoteAddress, int RemotePort, double ReceivePerSecond, double SendPerSecond);
 
-public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraffic> Processes, List<SocketTraffic> Sockets)
+/// <summary>Disk bytes per second of one process, as measured by the history service.</summary>
+public readonly record struct ProcessDisk(int Pid, long CreateTime, double ReadPerSecond, double WritePerSecond);
+
+/// <param name="Disk">Per-process disk rates; null from a service version that does not measure them.</param>
+public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraffic> Processes, List<SocketTraffic> Sockets, List<ProcessDisk>? Disk = null)
 {
     /// <summary>Builds the message from a service snapshot: only processes and sockets that moved data.</summary>
     public static NetworkFeedMessage From(MonitorSnapshot snapshot) => new(
@@ -29,7 +33,13 @@ public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraff
             .Where(connection => connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0)
             .Select(connection => new SocketTraffic(connection.Pid, connection.Protocol, connection.LocalPort, connection.RemoteAddress,
                 connection.RemotePort, connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond))
-            .ToList());
+            .ToList(),
+        snapshot.System.PerProcessDiskAvailable
+            ? snapshot.Processes
+                .Where(process => process.DiskBytesPerSecond > 0)
+                .Select(process => new ProcessDisk(process.Pid, process.CreateTime, process.DiskReadBytesPerSecond, process.DiskWriteBytesPerSecond))
+                .ToList()
+            : null);
 }
 
 /// <summary>
@@ -239,8 +249,19 @@ public sealed class NetworkFeedClient : IDisposable
         var processRates = new Dictionary<(int, long), (double Down, double Up)>();
         var sockets = new Dictionary<(int, string, int, string, int), SocketTraffic>();
         var socketRates = new Dictionary<(int, string, int, string, int), (double Down, double Up)>();
+        var disk = new Dictionary<(int, long), (double Read, double Write)>();
+        bool hasDisk = false;
         foreach (NetworkFeedMessage message in window)
         {
+            if (message.Disk is { } entries)
+            {
+                hasDisk = true;
+                foreach (ProcessDisk entry in entries)
+                {
+                    disk.TryGetValue((entry.Pid, entry.CreateTime), out var sum);
+                    disk[(entry.Pid, entry.CreateTime)] = (sum.Read + entry.ReadPerSecond, sum.Write + entry.WritePerSecond);
+                }
+            }
             foreach (ProcessTraffic process in message.Processes)
             {
                 var key = (process.Pid, process.CreateTime);
@@ -259,7 +280,8 @@ public sealed class NetworkFeedClient : IDisposable
         return new NetworkFeedMessage(
             window[^1].TimestampUtc,
             processes.Select(pair => pair.Value with { ReceivePerSecond = processRates[pair.Key].Down / count, SendPerSecond = processRates[pair.Key].Up / count }).ToList(),
-            sockets.Select(pair => pair.Value with { ReceivePerSecond = socketRates[pair.Key].Down / count, SendPerSecond = socketRates[pair.Key].Up / count }).ToList());
+            sockets.Select(pair => pair.Value with { ReceivePerSecond = socketRates[pair.Key].Down / count, SendPerSecond = socketRates[pair.Key].Up / count }).ToList(),
+            hasDisk ? disk.Select(pair => new ProcessDisk(pair.Key.Item1, pair.Key.Item2, pair.Value.Read / count, pair.Value.Write / count)).ToList() : null);
     }
 
     private static bool IsServedByHistoryService(NamedPipeClientStream pipe) =>

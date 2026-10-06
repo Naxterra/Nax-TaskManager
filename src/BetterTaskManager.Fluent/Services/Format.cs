@@ -24,6 +24,9 @@ internal static class Format
         return (bytes / 1073741824d).ToString("0.00", Culture) + " GB";
     }
 
+    /// <summary>Bytes per second with a unit that fits, for disk activity: "0 B/s", "512 KB/s", "12.3 MB/s".</summary>
+    public static string ByteRate(double bytesPerSecond) => Bytes((long)Math.Round(Math.Max(0, bytesPerSecond))) + "/s";
+
     public static string Gigabytes(long bytes) => (bytes / 1073741824d).ToString("0.0", Culture) + " GB";
 
     public static string Percent(double value) => value.ToString("0.0", Culture) + "%";

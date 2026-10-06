@@ -15,6 +15,10 @@ public sealed class ProcessSample
     public long WorkingSet { get; init; }
     public long CommitCharge { get; init; }
     public double IoBytesPerSecond { get; init; }
+    /// <summary>Bytes per second that reached a disk (not cached I/O); needs administrator rights or the history service.</summary>
+    public double DiskReadBytesPerSecond { get; set; }
+    public double DiskWriteBytesPerSecond { get; set; }
+    public double DiskBytesPerSecond => DiskReadBytesPerSecond + DiskWriteBytesPerSecond;
     /// <summary>Utilization of the process's busiest GPU engine, in percent.</summary>
     public double GpuPercent { get; init; }
     /// <summary>That engine, e.g. "GPU 0 - 3D"; empty when the process uses no GPU.</summary>
@@ -123,11 +127,23 @@ public sealed class SystemSample
     /// <summary>Utilization of the busiest GPU engine over all processes, like Task Manager's GPU column header.</summary>
     public double GpuPercent { get; init; }
     public bool GpuAvailable { get; init; }
+    /// <summary>True when per-process disk rates are measured (administrator rights, or the history service).</summary>
+    public bool PerProcessDiskAvailable { get; init; }
+    public bool PerProcessDiskFromService { get; init; }
+    /// <summary>Physical disks; empty when the disk counters are not read.</summary>
+    public IReadOnlyList<DiskSample> Disks { get; init; } = [];
     public int ProcessCount { get; init; }
     public int ThreadCount { get; init; }
     public int HandleCount { get; init; }
     public TimeSpan Uptime { get; init; }
 }
+
+/// <summary>One physical disk, as on Task Manager's Performance page and Resource Monitor's Storage list.</summary>
+public sealed record DiskSample(int Number, string Model, string Kind, IReadOnlyList<VolumeSample> Volumes,
+    double ActivePercent, double ReadPerSecond, double WritePerSecond, double ResponseMilliseconds, double QueueLength);
+
+/// <summary>A drive letter on a physical disk.</summary>
+public sealed record VolumeSample(string Letter, string Label, long Free, long Total);
 
 public sealed class MonitorSnapshot
 {

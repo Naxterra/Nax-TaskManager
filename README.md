@@ -13,6 +13,7 @@ Built with WinUI 3 (Fluent design) on .NET 11. Formerly *Better Task Manager*.
 - Columns on the Processes, Network and Startup apps pages can be resized and moved (drag a header, or right-click it); widths and order are remembered.
 - **Startup apps** — the Run keys and startup folders with publisher and status; disable or enable them like Task Manager.
 - **Replace Windows Task Manager** — an optional setting so the taskbar menu, Ctrl+Shift+Esc and Ctrl+Alt+Del open Nax-TaskManager; reversible and removed on uninstall.
+- **Disk**: like Resource Monitor's Disk tab: every disk with active time, throughput, response time, queue and free space; processes with disk activity (via the History service without administrator rights); and, as administrator, disk activity per file with I/O priority and response time.
 - **History** — an optional background service records connections and traffic per app for 30 days, and lets the app show per-app network speed without administrator rights.
 - English and German interface (follows Windows, or chosen in Settings), light and dark theme, Mica, keyboard shortcuts (Ctrl+1–5 pages, Ctrl+F search).
 

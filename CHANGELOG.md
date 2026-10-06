@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0-alpha.19 - 2026-10-06
+
+- **New Disk page (Datenträger)**, modelled on Resource Monitor's Disk tab.
+  - **Disks:** every physical disk with model, type (SSD/HDD and bus), active time, read and write speed, response time, queue length and the free space of its drives. Works without administrator rights. Empty card readers are hidden.
+  - **Processes with disk activity:** read, write and total per process, averaged over the last minute like Resource Monitor. These are bytes that really reached a disk, not cached file access. Without administrator rights the History service supplies them (update the service once from Settings when the app asks).
+  - **Disk activity per file:** every file being read or written, by which process, with I/O priority and response time. Like in Resource Monitor this needs administrator rights. Its trace runs only while the list is on screen and stops when you leave it.
+  - All three tables sort, resize and have movable columns; search filters both lists; double-click or *Open file location* shows the file or program in Explorer.
+- **Keyboard shortcuts follow the menu order:** Datenträger is Ctrl+4, Verlauf Ctrl+5, Autostart-Apps Ctrl+6. The Autostart-Apps tooltip had shown Ctrl+6 while the shortcut was Ctrl+5; both now agree.
+
 ## 2.0.0-alpha.18 - 2026-10-06
 
 - **Move columns on the Network and Startup apps pages too**, the same way as on the Processes page: drag a header, or right-click it for *Move left*, *Move right* and *Reset column order*. On the Network page, the per-app connection summary (established / listening / other) fills whichever address, scope and state columns sit next to each other.

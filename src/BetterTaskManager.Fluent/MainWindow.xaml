@@ -55,12 +55,17 @@
                         <FontIcon Glyph="&#xE968;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="MainWindow_5" Content="History" Tag="History" ToolTipService.ToolTip="History (Ctrl+4)">
+                <NavigationViewItem x:Uid="MainWindow_10" Content="Disk" Tag="Disk" ToolTipService.ToolTip="Disk (Ctrl+4)">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xEDA2;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="MainWindow_5" Content="History" Tag="History" ToolTipService.ToolTip="History (Ctrl+5)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE81C;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="MainWindow_9" Content="Startup apps" Tag="Startup" ToolTipService.ToolTip="Startup apps (Ctrl+5)">
+                <NavigationViewItem x:Uid="MainWindow_9" Content="Startup apps" Tag="Startup" ToolTipService.ToolTip="Startup apps (Ctrl+6)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE7B5;" />
                     </NavigationViewItem.Icon>

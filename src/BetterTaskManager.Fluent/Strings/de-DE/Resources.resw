@@ -12,7 +12,7 @@
   <data name="MainWindow_4.Content" xml:space="preserve"><value>Netzwerk</value></data>
   <data name="MainWindow_4.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Netzwerk (Strg+3)</value></data>
   <data name="MainWindow_5.Content" xml:space="preserve"><value>Verlauf</value></data>
-  <data name="MainWindow_5.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Verlauf (Strg+4)</value></data>
+  <data name="MainWindow_5.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Verlauf (Strg+5)</value></data>
   <data name="MainWindow_6.Title" xml:space="preserve"><value>Eingeschränkter Modus</value></data>
   <data name="MainWindow_6.Message" xml:space="preserve"><value>Netzwerkgeschwindigkeit pro App und Details zu Systemprozessen erfordern Administratorrechte.</value></data>
   <data name="MainWindow_7.Content" xml:space="preserve"><value>Als Administrator neu starten</value></data>
@@ -384,4 +384,63 @@ Antwort: {0}</value></data>
   <data name="Column_MoveLeft" xml:space="preserve"><value>Nach links verschieben</value></data>
   <data name="Column_MoveRight" xml:space="preserve"><value>Nach rechts verschieben</value></data>
   <data name="Column_ResetOrder" xml:space="preserve"><value>Spaltenreihenfolge zurücksetzen</value></data>
+  <data name="MainWindow_10.Content" xml:space="preserve"><value>Datenträger</value></data>
+  <data name="MainWindow_10.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Datenträger (Strg+4)</value></data>
+  <data name="DiskPage_1.Text" xml:space="preserve"><value>Datenträger</value></data>
+  <data name="DiskPage_2.Label" xml:space="preserve"><value>Dateipfad öffnen</value></data>
+  <data name="DiskPage_3.Label" xml:space="preserve"><value>Anhalten</value></data>
+  <data name="DiskPage_4.Text" xml:space="preserve"><value>Datenträger</value></data>
+  <data name="DiskPage_5.Text" xml:space="preserve"><value>Typ</value></data>
+  <data name="DiskPage_6.Text" xml:space="preserve"><value>Aktive Zeit</value></data>
+  <data name="DiskPage_7.Text" xml:space="preserve"><value>Lesen</value></data>
+  <data name="DiskPage_8.Text" xml:space="preserve"><value>Schreiben</value></data>
+  <data name="DiskPage_9.Text" xml:space="preserve"><value>Antwortzeit</value></data>
+  <data name="DiskPage_10.Text" xml:space="preserve"><value>Warteschlange</value></data>
+  <data name="DiskPage_11.Text" xml:space="preserve"><value>Freier Speicher</value></data>
+  <data name="DiskPage_12.Text" xml:space="preserve"><value>Prozesse mit Datenträgeraktivität</value></data>
+  <data name="DiskPage_13.Text" xml:space="preserve"><value>Datenträgeraktivität pro Datei</value></data>
+  <data name="DiskPage_14.Content" xml:space="preserve"><value>Als Administrator neu starten</value></data>
+  <data name="DiskPage_15.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Name sortieren</value></data>
+  <data name="DiskPage_16.Text" xml:space="preserve"><value>Name</value></data>
+  <data name="DiskPage_17.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach PID sortieren</value></data>
+  <data name="DiskPage_18.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Lesen sortieren</value></data>
+  <data name="DiskPage_19.Text" xml:space="preserve"><value>Lesen</value></data>
+  <data name="DiskPage_20.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Schreiben sortieren</value></data>
+  <data name="DiskPage_21.Text" xml:space="preserve"><value>Schreiben</value></data>
+  <data name="DiskPage_22.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Gesamt sortieren</value></data>
+  <data name="DiskPage_23.Text" xml:space="preserve"><value>Gesamt</value></data>
+  <data name="DiskPage_24.Text" xml:space="preserve"><value>Pfad</value></data>
+  <data name="DiskPage_25.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Name sortieren</value></data>
+  <data name="DiskPage_26.Text" xml:space="preserve"><value>Name</value></data>
+  <data name="DiskPage_27.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach PID sortieren</value></data>
+  <data name="DiskPage_28.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Datei sortieren</value></data>
+  <data name="DiskPage_29.Text" xml:space="preserve"><value>Datei</value></data>
+  <data name="DiskPage_30.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Lesen sortieren</value></data>
+  <data name="DiskPage_31.Text" xml:space="preserve"><value>Lesen</value></data>
+  <data name="DiskPage_32.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Schreiben sortieren</value></data>
+  <data name="DiskPage_33.Text" xml:space="preserve"><value>Schreiben</value></data>
+  <data name="DiskPage_34.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Gesamt sortieren</value></data>
+  <data name="DiskPage_35.Text" xml:space="preserve"><value>Gesamt</value></data>
+  <data name="DiskPage_36.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach E/A-Priorität sortieren</value></data>
+  <data name="DiskPage_37.Text" xml:space="preserve"><value>E/A-Priorität</value></data>
+  <data name="DiskPage_38.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Antwortzeit sortieren</value></data>
+  <data name="DiskPage_39.Text" xml:space="preserve"><value>Antwortzeit</value></data>
+  <data name="Disk_Name" xml:space="preserve"><value>Datenträger {0} ({1})</value></data>
+  <data name="Disk_NameNoLetter" xml:space="preserve"><value>Datenträger {0}</value></data>
+  <data name="Disk_Free" xml:space="preserve"><value>{0} frei von {1}</value></data>
+  <data name="Disk_Summary" xml:space="preserve"><value>{0} Datenträger · Lesen {1} · Schreiben {2}</value></data>
+  <data name="Disk_ProcessNotice" xml:space="preserve"><value>Die Datenträgeraktivität pro Prozess braucht Administratorrechte oder den Nax-TaskManager-Verlaufsdienst.</value></data>
+  <data name="Disk_FileNotice" xml:space="preserve"><value>Die Dateiliste braucht Administratorrechte, wie in der Ressourcenüberwachung.</value></data>
+  <data name="Disk_FileStarting" xml:space="preserve"><value>Datenträger-Ablaufverfolgung wird gestartet…</value></data>
+  <data name="IoPriority_VeryLow" xml:space="preserve"><value>Sehr niedrig</value></data>
+  <data name="IoPriority_Low" xml:space="preserve"><value>Niedrig</value></data>
+  <data name="IoPriority_Normal" xml:space="preserve"><value>Normal</value></data>
+  <data name="IoPriority_High" xml:space="preserve"><value>Hoch</value></data>
+  <data name="IoPriority_Critical" xml:space="preserve"><value>Kritisch</value></data>
+  <data name="DiskPage_18.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
+  <data name="DiskPage_20.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
+  <data name="DiskPage_22.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
+  <data name="DiskPage_30.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
+  <data name="DiskPage_32.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
+  <data name="DiskPage_34.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
 </root>

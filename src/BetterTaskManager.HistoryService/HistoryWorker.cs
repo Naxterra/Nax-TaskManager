@@ -25,7 +25,7 @@ public sealed class HistoryWorker : IDisposable
         if (publishFeed) feed = new NetworkFeedServer(log);
         this.log = log;
         store = HistoryStore.OpenForWriting(databasePath);
-        engine = new MonitorEngine(sessionPrefix) { Interval = TimeSpan.FromSeconds(2), ReadProcessDetails = false, ReadGpu = false };
+        engine = new MonitorEngine(sessionPrefix) { Interval = TimeSpan.FromSeconds(2), ReadProcessDetails = false, ReadGpu = false, ReadDisks = false };
         recorder = new HistoryRecorder(store, engine.ResolveHost, engine.TryGetTracedProcess);
         engine.DnsQueryAnswered += recorder.RecordDnsQuery;
         engine.SnapshotReady += OnSnapshot;

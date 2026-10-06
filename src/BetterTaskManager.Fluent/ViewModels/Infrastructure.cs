@@ -175,6 +175,15 @@ public sealed class ColumnLayout : ObservableObject
     public int StateColumn => ColumnOf("State");
     public int DataColumn => ColumnOf("Data");
     public int SpeedColumn => ColumnOf("Speed");
+    public int KindColumn => ColumnOf("Kind");
+    public int ActiveColumn => ColumnOf("Active");
+    public int ReadColumn => ColumnOf("Read");
+    public int WriteColumn => ColumnOf("Write");
+    public int TotalColumn => ColumnOf("Total");
+    public int ResponseColumn => ColumnOf("Response");
+    public int QueueColumn => ColumnOf("Queue");
+    public int FileColumn => ColumnOf("File");
+    public int PriorityColumn => ColumnOf("Priority");
 
     /// <summary>
     /// Columns a wide cell may cover (the Network page's per-app summary covers the address columns that app rows

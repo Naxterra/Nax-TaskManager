@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="BetterTaskManager.Fluent.Views.DiskPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:BetterTaskManager.Fluent.ViewModels"
+    NavigationCacheMode="Required">
+
+    <Grid Padding="16,8,16,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Page header -->
+        <Grid Margin="4,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Uid="DiskPage_1" Text="Disk" Style="{StaticResource PageTitleStyle}" />
+                <TextBlock Text="{x:Bind ViewModel.Summary, Mode=OneWay}" Style="{StaticResource MutedTextStyle}" />
+            </StackPanel>
+            <CommandBar Grid.Column="2" DefaultLabelPosition="Right" Background="Transparent" VerticalAlignment="Center">
+                <AppBarButton x:Uid="DiskPage_2" x:Name="OpenLocationButton" Label="Open file location" IsEnabled="False" Click="OpenLocation_Click">
+                    <AppBarButton.Icon>
+                        <FontIcon Glyph="&#xE838;" />
+                    </AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarToggleButton x:Uid="DiskPage_3" x:Name="PauseButton" Label="Pause" Click="Pause_Click">
+                    <AppBarToggleButton.Icon>
+                        <FontIcon Glyph="&#xE769;" />
+                    </AppBarToggleButton.Icon>
+                </AppBarToggleButton>
+            </CommandBar>
+        </Grid>
+
+        <!-- ===== Disks ===== -->
+        <Grid x:Name="StorageHeader" Grid.Row="1" Height="40" Padding="0,0,12,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{x:Bind ViewModel.StorageLayout.Name, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.StorageLayout.W1, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.StorageLayout.W2, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.StorageLayout.W3, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.StorageLayout.W4, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.StorageLayout.W5, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.StorageLayout.W6, Mode=OneWay}" />
+                <ColumnDefinition Width="*" MinWidth="120" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Uid="DiskPage_4" Text="Disk" Margin="12,0,0,6" VerticalAlignment="Bottom" />
+            <Border Grid.Column="{x:Bind ViewModel.StorageLayout.KindColumn, Mode=OneWay}" Tag="Kind" Background="Transparent">
+                <TextBlock x:Uid="DiskPage_5" Text="Type" Margin="10,0,0,6" VerticalAlignment="Bottom" />
+            </Border>
+            <Border Grid.Column="{x:Bind ViewModel.StorageLayout.ActiveColumn, Mode=OneWay}" Tag="Active" Background="Transparent">
+                <TextBlock x:Uid="DiskPage_6" Text="Active time" Margin="0,0,10,6" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+            </Border>
+            <Border Grid.Column="{x:Bind ViewModel.StorageLayout.ReadColumn, Mode=OneWay}" Tag="Read" Background="Transparent">
+                <TextBlock x:Uid="DiskPage_7" Text="Read" Margin="0,0,10,6" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+            </Border>
+            <Border Grid.Column="{x:Bind ViewModel.StorageLayout.WriteColumn, Mode=OneWay}" Tag="Write" Background="Transparent">
+                <TextBlock x:Uid="DiskPage_8" Text="Write" Margin="0,0,10,6" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+            </Border>
+            <Border Grid.Column="{x:Bind ViewModel.StorageLayout.ResponseColumn, Mode=OneWay}" Tag="Response" Background="Transparent">
+                <TextBlock x:Uid="DiskPage_9" Text="Response time" Margin="0,0,10,6" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+            </Border>
+            <Border Grid.Column="{x:Bind ViewModel.StorageLayout.QueueColumn, Mode=OneWay}" Tag="Queue" Background="Transparent">
+                <TextBlock x:Uid="DiskPage_10" Text="Queue" Margin="0,0,10,6" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+            </Border>
+            <TextBlock x:Uid="DiskPage_11" Grid.Column="7" Text="Free space" Margin="10,0,0,6" VerticalAlignment="Bottom" />
+
+            <Thumb Tag="Name" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="StorageSplitter_DragDelta" />
+            <Thumb Tag="Kind" Grid.Column="{x:Bind ViewModel.StorageLayout.KindColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="StorageSplitter_DragDelta" />
+            <Thumb Tag="Active" Grid.Column="{x:Bind ViewModel.StorageLayout.ActiveColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="StorageSplitter_DragDelta" />
+            <Thumb Tag="Read" Grid.Column="{x:Bind ViewModel.StorageLayout.ReadColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="StorageSplitter_DragDelta" />
+            <Thumb Tag="Write" Grid.Column="{x:Bind ViewModel.StorageLayout.WriteColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="StorageSplitter_DragDelta" />
+            <Thumb Tag="Response" Grid.Column="{x:Bind ViewModel.StorageLayout.ResponseColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="StorageSplitter_DragDelta" />
+            <Thumb Tag="Queue" Grid.Column="{x:Bind ViewModel.StorageLayout.QueueColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="StorageSplitter_DragDelta" />
+        </Grid>
+
+        <ListView
+            x:Name="DiskList"
+            Grid.Row="2"
+            MaxHeight="250"
+            ItemsSource="{x:Bind ViewModel.Disks}"
+            SelectionMode="None"
+            ItemContainerStyle="{StaticResource TableRowStyle}">
+            <ListView.ItemContainerTransitions>
+                <TransitionCollection />
+            </ListView.ItemContainerTransitions>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:DiskSlot">
+                    <Grid Height="34">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{x:Bind Layout.Name, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W2, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W3, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W4, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W5, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W6, Mode=OneWay}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                            <Run Text="{x:Bind Name, Mode=OneWay}" />
+                            <Run Text="{x:Bind Model, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </TextBlock>
+                        <TextBlock Grid.Column="{x:Bind Layout.KindColumn, Mode=OneWay}" Text="{x:Bind Kind, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Border Grid.Column="{x:Bind Layout.ActiveColumn, Mode=OneWay}" Background="{x:Bind ActiveHeat, Mode=OneWay}">
+                            <TextBlock Text="{x:Bind ActiveText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        </Border>
+                        <TextBlock Grid.Column="{x:Bind Layout.ReadColumn, Mode=OneWay}" Text="{x:Bind ReadText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="{x:Bind Layout.WriteColumn, Mode=OneWay}" Text="{x:Bind WriteText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="{x:Bind Layout.ResponseColumn, Mode=OneWay}" Text="{x:Bind ResponseText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="{x:Bind Layout.QueueColumn, Mode=OneWay}" Text="{x:Bind QueueText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="7" Text="{x:Bind SpaceText, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- ===== Processes / files switch ===== -->
+        <SelectorBar x:Name="ModeSelector" Grid.Row="3" Margin="0,12,0,0" SelectionChanged="ModeSelector_SelectionChanged">
+            <SelectorBarItem x:Uid="DiskPage_12" x:Name="ProcessesMode" Text="Processes with disk activity" IsSelected="True" />
+            <SelectorBarItem x:Uid="DiskPage_13" x:Name="FilesMode" Text="Disk activity per file" />
+        </SelectorBar>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="12" Margin="4,8,0,4" Visibility="{x:Bind ViewModel.NoticeVisibility, Mode=OneWay}">
+            <TextBlock Text="{x:Bind ViewModel.Notice, Mode=OneWay}" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button x:Uid="DiskPage_14" Content="Restart as administrator" Visibility="{x:Bind ViewModel.RestartVisibility, Mode=OneWay}" Click="RestartElevated_Click" />
+        </StackPanel>
+
+        <!-- Processes header -->
+        <Grid x:Name="ProcessHeader" Grid.Row="5" Height="40" Padding="0,0,12,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{x:Bind ViewModel.ProcessLayout.Name, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.ProcessLayout.W1, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.ProcessLayout.W2, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.ProcessLayout.W3, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.ProcessLayout.W4, Mode=OneWay}" />
+                <ColumnDefinition Width="*" MinWidth="120" />
+            </Grid.ColumnDefinitions>
+            <Button x:Uid="DiskPage_15" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_16" Text="Name" Margin="28,0,0,0" />
+                    <FontIcon x:Name="ProcSortName" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_17" Grid.Column="{x:Bind ViewModel.ProcessLayout.PidColumn, Mode=OneWay}" Tag="Pid" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by PID" Click="Header_Click">
+                <Grid>
+                    <TextBlock Text="PID" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="ProcSortPid" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_18" Grid.Column="{x:Bind ViewModel.ProcessLayout.ReadColumn, Mode=OneWay}" Tag="Read" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Read" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_19" Text="Read" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="ProcSortRead" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_20" Grid.Column="{x:Bind ViewModel.ProcessLayout.WriteColumn, Mode=OneWay}" Tag="Write" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Write" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_21" Text="Write" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="ProcSortWrite" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_22" Grid.Column="{x:Bind ViewModel.ProcessLayout.TotalColumn, Mode=OneWay}" Tag="Total" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Total" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_23" Text="Total" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="ProcSortTotal" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <TextBlock x:Uid="DiskPage_24" Grid.Column="5" Text="Path" Margin="10,6,0,0" VerticalAlignment="Center" />
+
+            <Thumb Tag="Name" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="ProcessSplitter_DragDelta" />
+            <Thumb Tag="Pid" Grid.Column="{x:Bind ViewModel.ProcessLayout.PidColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="ProcessSplitter_DragDelta" />
+            <Thumb Tag="Read" Grid.Column="{x:Bind ViewModel.ProcessLayout.ReadColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="ProcessSplitter_DragDelta" />
+            <Thumb Tag="Write" Grid.Column="{x:Bind ViewModel.ProcessLayout.WriteColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="ProcessSplitter_DragDelta" />
+            <Thumb Tag="Total" Grid.Column="{x:Bind ViewModel.ProcessLayout.TotalColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="ProcessSplitter_DragDelta" />
+        </Grid>
+
+        <ListView
+            x:Name="ProcessList"
+            Grid.Row="6"
+            ItemsSource="{x:Bind ViewModel.Processes}"
+            SelectionMode="Single"
+            ItemContainerStyle="{StaticResource TableRowStyle}"
+            SelectionChanged="List_SelectionChanged"
+            DoubleTapped="List_DoubleTapped">
+            <ListView.ItemContainerTransitions>
+                <TransitionCollection />
+            </ListView.ItemContainerTransitions>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:DiskProcessSlot">
+                    <Grid Height="34" ToolTipService.ToolTip="{x:Bind Path, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{x:Bind Layout.Name, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W2, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W3, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W4, Mode=OneWay}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid ColumnSpacing="10" Margin="10,0,8,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Image Width="16" Height="16" Source="{x:Bind Icon, Mode=OneWay}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                        <TextBlock Grid.Column="{x:Bind Layout.PidColumn, Mode=OneWay}" Text="{x:Bind PidText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="{x:Bind Layout.ReadColumn, Mode=OneWay}" Text="{x:Bind ReadText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="{x:Bind Layout.WriteColumn, Mode=OneWay}" Text="{x:Bind WriteText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <Border Grid.Column="{x:Bind Layout.TotalColumn, Mode=OneWay}" Background="{x:Bind TotalHeat, Mode=OneWay}">
+                            <TextBlock Text="{x:Bind TotalText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        </Border>
+                        <TextBlock Grid.Column="5" Text="{x:Bind Path, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Files header -->
+        <Grid x:Name="FileHeader" Grid.Row="5" Height="40" Padding="0,0,12,0" Visibility="Collapsed" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{x:Bind ViewModel.FileLayout.Name, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.FileLayout.W1, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.FileLayout.W2, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.FileLayout.W3, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.FileLayout.W4, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.FileLayout.W5, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.FileLayout.W6, Mode=OneWay}" />
+                <ColumnDefinition Width="{x:Bind ViewModel.FileLayout.W7, Mode=OneWay}" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button x:Uid="DiskPage_25" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_26" Text="Name" Margin="28,0,0,0" />
+                    <FontIcon x:Name="FileSortName" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_27" Grid.Column="{x:Bind ViewModel.FileLayout.PidColumn, Mode=OneWay}" Tag="Pid" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by PID" Click="Header_Click">
+                <Grid>
+                    <TextBlock Text="PID" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="FileSortPid" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_28" Grid.Column="{x:Bind ViewModel.FileLayout.FileColumn, Mode=OneWay}" Tag="File" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by File" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_29" Text="File" Margin="8,0,0,0" />
+                    <FontIcon x:Name="FileSortFile" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_30" Grid.Column="{x:Bind ViewModel.FileLayout.ReadColumn, Mode=OneWay}" Tag="Read" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Read" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_31" Text="Read" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="FileSortRead" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_32" Grid.Column="{x:Bind ViewModel.FileLayout.WriteColumn, Mode=OneWay}" Tag="Write" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Write" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_33" Text="Write" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="FileSortWrite" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_34" Grid.Column="{x:Bind ViewModel.FileLayout.TotalColumn, Mode=OneWay}" Tag="Total" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Total" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_35" Text="Total" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="FileSortTotal" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_36" Grid.Column="{x:Bind ViewModel.FileLayout.PriorityColumn, Mode=OneWay}" Tag="Priority" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by I/O priority" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_37" Text="I/O priority" Margin="8,0,0,0" />
+                    <FontIcon x:Name="FileSortPriority" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+            <Button x:Uid="DiskPage_38" Grid.Column="{x:Bind ViewModel.FileLayout.ResponseColumn, Mode=OneWay}" Tag="Response" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Response time" Click="Header_Click">
+                <Grid>
+                    <TextBlock x:Uid="DiskPage_39" Text="Response time" HorizontalAlignment="Right" />
+                    <FontIcon x:Name="FileSortResponse" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Button>
+
+            <Thumb Tag="Name" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FileSplitter_DragDelta" />
+            <Thumb Tag="Pid" Grid.Column="{x:Bind ViewModel.FileLayout.PidColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FileSplitter_DragDelta" />
+            <Thumb Tag="File" Grid.Column="{x:Bind ViewModel.FileLayout.FileColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FileSplitter_DragDelta" />
+            <Thumb Tag="Read" Grid.Column="{x:Bind ViewModel.FileLayout.ReadColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FileSplitter_DragDelta" />
+            <Thumb Tag="Write" Grid.Column="{x:Bind ViewModel.FileLayout.WriteColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FileSplitter_DragDelta" />
+            <Thumb Tag="Total" Grid.Column="{x:Bind ViewModel.FileLayout.TotalColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FileSplitter_DragDelta" />
+            <Thumb Tag="Priority" Grid.Column="{x:Bind ViewModel.FileLayout.PriorityColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FileSplitter_DragDelta" />
+            <Thumb Tag="Response" Grid.Column="{x:Bind ViewModel.FileLayout.ResponseColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FileSplitter_DragDelta" />
+        </Grid>
+
+        <ListView
+            x:Name="FileList"
+            Grid.Row="6"
+            Visibility="Collapsed"
+            ItemsSource="{x:Bind ViewModel.Files}"
+            SelectionMode="Single"
+            ItemContainerStyle="{StaticResource TableRowStyle}"
+            SelectionChanged="List_SelectionChanged"
+            DoubleTapped="List_DoubleTapped">
+            <ListView.ItemContainerTransitions>
+                <TransitionCollection />
+            </ListView.ItemContainerTransitions>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:DiskFileSlot">
+                    <Grid Height="34" ToolTipService.ToolTip="{x:Bind File, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{x:Bind Layout.Name, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W2, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W3, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W4, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W5, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W6, Mode=OneWay}" />
+                            <ColumnDefinition Width="{x:Bind Layout.W7, Mode=OneWay}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid ColumnSpacing="10" Margin="10,0,8,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Image Width="16" Height="16" Source="{x:Bind Icon, Mode=OneWay}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                        <TextBlock Grid.Column="{x:Bind Layout.PidColumn, Mode=OneWay}" Text="{x:Bind PidText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="{x:Bind Layout.FileColumn, Mode=OneWay}" Text="{x:Bind File, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="{x:Bind Layout.ReadColumn, Mode=OneWay}" Text="{x:Bind ReadText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="{x:Bind Layout.WriteColumn, Mode=OneWay}" Text="{x:Bind WriteText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <Border Grid.Column="{x:Bind Layout.TotalColumn, Mode=OneWay}" Background="{x:Bind TotalHeat, Mode=OneWay}">
+                            <TextBlock Text="{x:Bind TotalText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        </Border>
+                        <TextBlock Grid.Column="{x:Bind Layout.PriorityColumn, Mode=OneWay}" Text="{x:Bind Priority, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Grid.Column="{x:Bind Layout.ResponseColumn, Mode=OneWay}" Text="{x:Bind ResponseText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

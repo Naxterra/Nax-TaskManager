@@ -13,13 +13,14 @@ namespace BetterTaskManager.Core.Monitoring;
 public sealed class MonitorEngine : IDisposable
 {
     private readonly record struct Identity(string Path, string Description, string Company);
-    private readonly record struct CpuMark(long CpuTime, long IoBytes);
+    private readonly record struct CpuMark(long CpuTime, long IoBytes, long DiskRead, long DiskWrite);
 
     private readonly Dictionary<(int, long), Identity> identities = new();
     private readonly Dictionary<string, (string Description, string Company)> fileInfo = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(int, long), CpuMark> previousMarks = new();
     private readonly MemoryCounters memoryCounters = new();
     private GpuCounters? gpuCounters;
+    private DiskCounters? diskCounters;
     private readonly BandwidthMonitor bandwidth;
     private readonly HostNameResolver hostNames;
     private NetworkFeedClient? feed;
@@ -76,6 +77,9 @@ public sealed class MonitorEngine : IDisposable
 
     /// <summary>GPU use per process from the GPU Engine performance counters (a few milliseconds per read).</summary>
     public bool ReadGpu { get; set; } = true;
+
+    /// <summary>Per-disk activity and free space (Disk page); the history service does not need it.</summary>
+    public bool ReadDisks { get; set; } = true;
 
     /// <summary>Re-read priority and efficiency mode in the next collection, after this app changed them.</summary>
     public void InvalidateProcessDetails()
@@ -236,15 +240,17 @@ public sealed class MonitorEngine : IDisposable
 
             Identity identity = ResolveIdentity(process);
             long ioBytes = process.ReadBytes + process.WriteBytes + process.OtherBytes;
-            double cpu = 0, io = 0;
+            double cpu = 0, io = 0, diskRead = 0, diskWrite = 0;
             bool sampled = false;
             if (process.Pid != 0 && elapsedSeconds > 0 && previousMarks.TryGetValue(key, out CpuMark previous))
             {
                 cpu = Math.Clamp((process.CpuTime100ns - previous.CpuTime) / (elapsedSeconds * 1e7 * processorCount) * 100, 0, 100);
                 io = Math.Max(0, (ioBytes - previous.IoBytes) / elapsedSeconds);
+                diskRead = Math.Max(0, (process.DiskReadBytes - previous.DiskRead) / elapsedSeconds);
+                diskWrite = Math.Max(0, (process.DiskWriteBytes - previous.DiskWrite) / elapsedSeconds);
                 sampled = true;
             }
-            previousMarks[key] = new CpuMark(process.CpuTime100ns, ioBytes);
+            previousMarks[key] = new CpuMark(process.CpuTime100ns, ioBytes, process.DiskReadBytes, process.DiskWriteBytes);
             totalIo += io;
 
             windowTitles.TryGetValue(process.Pid, out string? title);
@@ -272,6 +278,8 @@ public sealed class MonitorEngine : IDisposable
                 WorkingSet = process.WorkingSet,
                 CommitCharge = process.CommitCharge,
                 IoBytesPerSecond = io,
+                DiskReadBytesPerSecond = diskRead,
+                DiskWriteBytesPerSecond = diskWrite,
                 GpuPercent = processGpu.Percent,
                 GpuEngine = processGpu.Engine ?? "",
                 Threads = process.ThreadCount,
@@ -316,6 +324,14 @@ public sealed class MonitorEngine : IDisposable
         }
         List<FlowSample> flows = ApplyThroughput(processes, connections, elapsedSeconds);
         bool fromService = !bandwidth.IsRunning && feed?.Current is { } feedMessage && ApplyFeed(processes, connections, feedMessage);
+        bool ownDisk = NtProcessReader.DiskCountersAvailable;
+        bool diskFromService = !ownDisk && feed?.Current is { Disk: { } diskFeed } && ApplyDiskFeed(processes, diskFeed);
+        IReadOnlyList<DiskSample> disks = [];
+        if (ReadDisks)
+        {
+            diskCounters ??= new DiskCounters();
+            disks = diskCounters.Read();
+        }
         foreach (ConnectionSample connection in connections)
         {
             if (connection.Protocol != "TCP" || connection.RemoteAddress.Length == 0) continue;
@@ -342,6 +358,9 @@ public sealed class MonitorEngine : IDisposable
             PerProcessNetworkStatus = fromService ? "Measured by the Nax-TaskManager History service" : bandwidth.Status,
             IoBytesPerSecond = totalIo,
             GpuPercent = gpuTotal,
+            PerProcessDiskAvailable = ownDisk || diskFromService,
+            PerProcessDiskFromService = diskFromService,
+            Disks = disks,
             GpuAvailable = gpuCounters?.Available ?? false,
             ProcessCount = processes.Count,
             ThreadCount = threads,
@@ -472,6 +491,19 @@ public sealed class MonitorEngine : IDisposable
     /// Applies the history service's rates and totals. Processes match on (PID, creation time); TCP rows on the
     /// 5-tuple; UDP rows get the per-port sum on the first matching row, as with the local trace.
     /// </summary>
+    private static bool ApplyDiskFeed(List<ProcessSample> processes, List<ProcessDisk> disk)
+    {
+        var byProcess = new Dictionary<(int, long), ProcessDisk>();
+        foreach (ProcessDisk entry in disk) byProcess[(entry.Pid, entry.CreateTime)] = entry;
+        foreach (ProcessSample process in processes)
+        {
+            if (!byProcess.TryGetValue((process.Pid, process.CreateTime), out ProcessDisk entry)) continue;
+            process.DiskReadBytesPerSecond = entry.ReadPerSecond;
+            process.DiskWriteBytesPerSecond = entry.WritePerSecond;
+        }
+        return true;
+    }
+
     private static bool ApplyFeed(List<ProcessSample> processes, List<ConnectionSample> connections, NetworkFeedMessage message)
     {
         var byProcess = new Dictionary<(int, long), ProcessTraffic>();
@@ -597,6 +629,7 @@ public sealed class MonitorEngine : IDisposable
         try { loop?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
         memoryCounters.Dispose();
         gpuCounters?.Dispose();
+        diskCounters?.Dispose();
         bandwidth.Dispose();
         hostNames.Dispose();
         feed?.Dispose();
