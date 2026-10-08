@@ -170,6 +170,8 @@ public sealed class ColumnLayout : ObservableObject
     public int StatusColumn => ColumnOf("Status");
     public int UserColumn => ColumnOf("User");
     public int LocalColumn => ColumnOf("Local");
+    public int AppColumn => ColumnOf("App");
+    public int ProtocolColumn => ColumnOf("Protocol");
     public int RemoteColumn => ColumnOf("Remote");
     public int ScopeColumn => ColumnOf("Scope");
     public int StateColumn => ColumnOf("State");
@@ -224,6 +226,7 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength Data => this["Data"];
     public GridLength Scope => this["Scope"];
     public GridLength Pid => this["Pid"];
+    public GridLength Time => this["Time"];
     public GridLength Status => this["Status"];
     public GridLength User => this["User"];
     public GridLength Priority => this["Priority"];

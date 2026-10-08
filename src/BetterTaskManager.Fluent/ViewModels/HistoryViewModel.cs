@@ -15,7 +15,7 @@ public enum HistoryRange
     Month
 }
 
-public sealed record AppUsageRow(string Key, string Name, string Path, string Detail, string Total, string Split, double Fraction);
+public sealed record AppUsageRow(string Key, string Name, string Path, string Detail, string Total, string Split, double Fraction, long Bytes = 0);
 
 public sealed class AppUsageSlot : ObservableObject
 {
@@ -46,12 +46,16 @@ public sealed class AppUsageSlot : ObservableObject
     }
 }
 
-public sealed record ConnectionLogRow(long Id, string Time, string TimeDetail, string App, string Path, string Remote, string RemoteDetail, string Protocol, string Data);
+public sealed record ConnectionLogRow(long Id, string Time, string TimeDetail, string App, string Path, string Remote, string RemoteDetail, string Protocol, string Data,
+    DateTime FirstSeen = default, long Bytes = 0);
 
 public sealed class ConnectionLogSlot : ObservableObject
 {
     private string time = "", timeDetail = "", app = "", path = "", remote = "", remoteDetail = "", protocol = "", data = "";
     private ImageSource? icon;
+
+    public static ColumnLayout? SharedLayout { get; set; }
+    public ColumnLayout Layout => SharedLayout!;
 
     public long Id { get; private set; }
     public string Time { get => time; private set => Set(ref time, value); }
@@ -83,6 +87,82 @@ public sealed class ConnectionLogSlot : ObservableObject
 public sealed class HistoryViewModel
 {
     public const int ConnectionLimit = 1000;
+    public const string SortName = "Name";
+    public const string SortData = "Data";
+    public const string SortTime = "Time";
+    public const string SortApp = "App";
+    public const string SortRemote = "Remote";
+    public const string SortProtocol = "Protocol";
+
+    private readonly AppSettings settings;
+    private AppUsageRow? allApps;
+    private List<AppUsageRow> appRows = [];
+    private List<ConnectionLogRow> logRows = [];
+
+    public HistoryViewModel(AppSettings settings)
+    {
+        this.settings = settings;
+        if (settings.HistoryAppSortColumn is not (SortName or SortData)) settings.HistoryAppSortColumn = SortData;
+        if (settings.HistoryLogSortColumn is not (SortTime or SortApp or SortRemote or SortProtocol or SortData)) settings.HistoryLogSortColumn = SortTime;
+        Layout = new ColumnLayout("History.", new Dictionary<string, double>
+        {
+            ["Time"] = 140, ["App"] = 220, ["Remote"] = 360, ["Protocol"] = 260, ["Data"] = 170
+        }, settings.ColumnWidths, ["App", "Remote", "Protocol", "Data"], settings.ColumnOrder);
+        ConnectionLogSlot.SharedLayout = Layout;
+    }
+
+    public ColumnLayout Layout { get; }
+    public string AppSortColumn => settings.HistoryAppSortColumn;
+    public bool AppSortDescending => settings.HistoryAppSortDescending;
+    public string LogSortColumn => settings.HistoryLogSortColumn;
+    public bool LogSortDescending => settings.HistoryLogSortDescending;
+
+    public void SortApps(string column)
+    {
+        settings.HistoryAppSortDescending = settings.HistoryAppSortColumn == column ? !settings.HistoryAppSortDescending : column == SortData;
+        settings.HistoryAppSortColumn = column;
+        Present();
+    }
+
+    /// <summary>Re-sorts the loaded connections; returns true when the page must reload them (switching to or from "largest").</summary>
+    public bool SortLog(string column)
+    {
+        bool wasLargest = LargestFirst;
+        settings.HistoryLogSortDescending = settings.HistoryLogSortColumn == column ? !settings.HistoryLogSortDescending : column is SortTime or SortData;
+        settings.HistoryLogSortColumn = column;
+        Present();
+        return LargestFirst != wasLargest;
+    }
+
+    /// <summary>
+    /// Only the newest <see cref="ConnectionLimit"/> connections are loaded; sorted by data, the biggest ones of the
+    /// period are loaded instead, so the top of the list is right for the whole period.
+    /// </summary>
+    private bool LargestFirst => LogSortColumn == SortData;
+
+    /// <summary>Shows the loaded rows in the chosen order; "All apps" always stays on top.</summary>
+    private void Present()
+    {
+        IComparer<string> text = StringComparer.CurrentCultureIgnoreCase;
+        IEnumerable<AppUsageRow> apps = AppSortColumn == SortName
+            ? AppSortDescending ? appRows.OrderByDescending(row => row.Name, text) : appRows.OrderBy(row => row.Name, text)
+            : AppSortDescending ? appRows.OrderByDescending(row => row.Bytes) : appRows.OrderBy(row => row.Bytes);
+        Apps.Apply((allApps is null ? apps : apps.Prepend(allApps)).ToList());
+
+        IOrderedEnumerable<ConnectionLogRow> log = LogSortColumn switch
+        {
+            SortApp => Order(logRows, row => row.App, text),
+            SortRemote => Order(logRows, row => row.Remote, text),
+            SortProtocol => Order(logRows, row => row.Protocol, text),
+            SortData => LogSortDescending ? logRows.OrderByDescending(row => row.Bytes) : logRows.OrderBy(row => row.Bytes),
+            _ => LogSortDescending ? logRows.OrderByDescending(row => row.FirstSeen) : logRows.OrderBy(row => row.FirstSeen)
+        };
+        // Ties (same app, host...) stay newest first.
+        Connections.Apply(log.ThenByDescending(row => row.FirstSeen).ToList());
+    }
+
+    private IOrderedEnumerable<ConnectionLogRow> Order(List<ConnectionLogRow> rows, Func<ConnectionLogRow, string> key, IComparer<string> comparer) =>
+        LogSortDescending ? rows.OrderByDescending(key, comparer) : rows.OrderBy(key, comparer);
 
     public SlotCollection<AppUsageSlot, AppUsageRow> Apps { get; } = new(AppUsageSlot.Load);
     public SlotCollection<ConnectionLogSlot, ConnectionLogRow> Connections { get; } = new(ConnectionLogSlot.Load);
@@ -104,6 +184,7 @@ public sealed class HistoryViewModel
         HistoryRange range = Range;
         string? appKey = AppKey;
         bool includeDns = IncludeDns;
+        bool largestFirst = LargestFirst;
         DateTime fromDay = DateTime.Today.AddDays(range switch { HistoryRange.Week => -6, HistoryRange.Month => -29, _ => 0 });
         ServiceState = HistoryServiceControl.QueryState();
 
@@ -115,7 +196,7 @@ public sealed class HistoryViewModel
                 if (store is null) return new LoadResult([], [], null, null);
                 return new LoadResult(
                     store.ReadAppUsage(fromDay),
-                    store.ReadConnections(fromDay.ToUniversalTime(), appKey, search, ConnectionLimit, includeDns),
+                    store.ReadConnections(fromDay.ToUniversalTime(), appKey, search, ConnectionLimit, includeDns, largestFirst),
                     store.ReadLastWrite(),
                     null);
             }
@@ -143,22 +224,22 @@ public sealed class HistoryViewModel
         long maxTotal = Math.Max(1, result.Apps.Count > 0 ? result.Apps.Max(app => app.Total) : 1);
         // VPN tunnels carry the other apps' traffic again; the total would count it twice.
         List<AppUsage> counted = result.Apps.Where(app => !app.Tunnel).ToList();
-        var apps = new List<AppUsageRow>(result.Apps.Count + 1);
-        if (result.Apps.Count > 0) apps.Add(
+        var apps = new List<AppUsageRow>(result.Apps.Count);
+        allApps = result.Apps.Count == 0 ? null :
             new AppUsageRow("", Loc.Get("History_AllApps"), "", Loc.F("Common_Connections", Format.Count(result.Apps.Sum(app => app.Connections))) + (counted.Count < result.Apps.Count ? Loc.Get("History_VpnExcluded") : ""),
-                Format.Bytes(counted.Sum(app => app.Total)), Split(counted.Sum(app => app.BytesIn), counted.Sum(app => app.BytesOut)), 0));
+                Format.Bytes(counted.Sum(app => app.Total)), Split(counted.Sum(app => app.BytesIn), counted.Sum(app => app.BytesOut)), 0);
         foreach (AppUsage app in result.Apps)
         {
             apps.Add(new AppUsageRow(app.AppKey, Loc.AppName(app.AppName), app.AppPath,
                 (app.Connections == 1 ? Loc.Get("Common_OneConnection") : Loc.F("Common_Connections", Format.Count(app.Connections))) + (app.Tunnel ? Loc.Get("History_TunnelNotInTotal") : ""),
                 app.Total > 0 ? Format.Bytes(app.Total) : "", app.Total > 0 ? Split(app.BytesIn, app.BytesOut) : "",
-                app.Total / (double)maxTotal));
+                app.Total / (double)maxTotal, app.Total));
         }
-        Apps.Apply(apps);
-
-        Connections.Apply(result.Connections.Select(ToRow).ToList());
+        appRows = apps;
+        logRows = result.Connections.Select(ToRow).ToList();
+        Present();
         ConnectionSummary = result.Connections.Count >= ConnectionLimit
-            ? Loc.F("History_LatestConnections", Format.Count(ConnectionLimit))
+            ? Loc.F(largestFirst ? "History_LargestConnections" : "History_LatestConnections", Format.Count(ConnectionLimit))
             : Loc.F("Common_Connections", Format.Count(result.Connections.Count));
     }
 
@@ -179,12 +260,13 @@ public sealed class HistoryViewModel
         {
             string answers = record.LocalAddress.Length > 0 ? record.LocalAddress : Loc.Get("Dns_NoAddresses");
             return new ConnectionLogRow(record.Id, time, timeDetail, Loc.AppName(record.AppName), record.AppPath, record.RemoteHost ?? record.RemoteAddress,
-                Loc.F("Dns_Detail", answers), Loc.Get("Dns_Lookup"), "–");
+                Loc.F("Dns_Detail", answers), Loc.Get("Dns_Lookup"), "–", record.FirstSeen, 0);
         }
         string protocol = record.Protocol == "UDP" ? "UDP" : "TCP · " + Loc.State(record.State);
         if (record.Scope.Length > 0) protocol += " · " + Loc.Scope(record.Scope) + (record.Inbound ? Loc.Get("Scope_Inbound") : "");
         string data = record.BytesIn + record.BytesOut > 0 ? Split(record.BytesIn, record.BytesOut) : "–";
-        return new ConnectionLogRow(record.Id, time, timeDetail, Loc.AppName(record.AppName), record.AppPath, remote, remoteDetail, protocol, data);
+        return new ConnectionLogRow(record.Id, time, timeDetail, Loc.AppName(record.AppName), record.AppPath, remote, remoteDetail, protocol, data,
+            record.FirstSeen, record.BytesIn + record.BytesOut);
     }
 
     private static string Split(long received, long sent) => $"↓ {Format.Bytes(received)}  ↑ {Format.Bytes(sent)}";

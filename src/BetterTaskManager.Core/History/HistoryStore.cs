@@ -284,7 +284,8 @@ public sealed class HistoryStore : IDisposable
     }
 
     /// <summary>Most recent connections first, optionally for one app and/or matching a search text.</summary>
-    public List<ConnectionRecord> ReadConnections(DateTime sinceUtc, string? appKey, string? search, int limit, bool includeDns = true)
+    /// <param name="largestFirst">Return the connections that moved the most data instead of the newest ones.</param>
+    public List<ConnectionRecord> ReadConnections(DateTime sinceUtc, string? appKey, string? search, int limit, bool includeDns = true, bool largestFirst = false)
     {
         using SqliteCommand command = connection.CreateCommand();
         var sql = new System.Text.StringBuilder("""
@@ -307,7 +308,7 @@ public sealed class HistoryStore : IDisposable
             string escaped = search.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
             command.Parameters.AddWithValue("$q", "%" + escaped + "%");
         }
-        sql.Append(" ORDER BY first_seen DESC, id DESC LIMIT $limit");
+        sql.Append(largestFirst ? " ORDER BY bytes_in + bytes_out DESC, id DESC LIMIT $limit" : " ORDER BY first_seen DESC, id DESC LIMIT $limit");
         command.Parameters.AddWithValue("$limit", limit);
         command.CommandText = sql.ToString();
 

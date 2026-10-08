@@ -444,4 +444,12 @@ Answer: {0}</value></data>
   <data name="DiskPage_32.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Average per second over the last minute, like Resource Monitor</value></data>
   <data name="DiskPage_34.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Average per second over the last minute, like Resource Monitor</value></data>
   <data name="Disk_Exited" xml:space="preserve"><value>{0} (exited)</value></data>
+  <data name="HistoryPage_15.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by App</value></data>
+  <data name="HistoryPage_16.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Data used</value></data>
+  <data name="HistoryPage_17.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Started</value></data>
+  <data name="HistoryPage_18.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by App</value></data>
+  <data name="HistoryPage_19.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Remote host</value></data>
+  <data name="HistoryPage_20.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Protocol</value></data>
+  <data name="HistoryPage_21.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Data</value></data>
+  <data name="History_LargestConnections" xml:space="preserve"><value>Largest {0} connections</value></data>
 </root>

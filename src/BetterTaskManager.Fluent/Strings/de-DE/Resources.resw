@@ -444,4 +444,12 @@ Antwort: {0}</value></data>
   <data name="DiskPage_32.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
   <data name="DiskPage_34.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
   <data name="Disk_Exited" xml:space="preserve"><value>{0} (beendet)</value></data>
+  <data name="HistoryPage_15.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach App sortieren</value></data>
+  <data name="HistoryPage_16.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Datenmenge sortieren</value></data>
+  <data name="HistoryPage_17.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Beginn sortieren</value></data>
+  <data name="HistoryPage_18.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach App sortieren</value></data>
+  <data name="HistoryPage_19.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Remotehost sortieren</value></data>
+  <data name="HistoryPage_20.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Protokoll sortieren</value></data>
+  <data name="HistoryPage_21.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Daten sortieren</value></data>
+  <data name="History_LargestConnections" xml:space="preserve"><value>Größte {0} Verbindungen</value></data>
 </root>

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-alpha.22 - 2026-10-08
+
+- **History page can be sorted.** Click "App" or "Data used" above the app list ("All apps" stays on top), and Started, App, Remote host, Protocol or Data above the connection list. The connection list's columns can also be resized and moved like the other tables. The sort order is remembered.
+- **Sorting by Data shows the biggest connections of the whole period.** The list holds 1,000 connections; sorted by data it now loads the 1,000 largest of the chosen period instead of the newest 1,000, and the line below says which ("Largest 1,000 connections").
+
 ## 2.0.0-alpha.21 - 2026-10-08
 
 - **Disk page: exited processes keep their name.** The lists average the last minute, so a process that wrote to disk and then exited stayed listed as "PID 18580". It now shows as, for example, "powershell.exe (exited)" with its path, in both lists. The file list also names processes that lived too briefly to be seen in a snapshot, from the trace's own process events.

@@ -65,8 +65,22 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid Padding="0,0,12,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                    <TextBlock x:Uid="HistoryPage_8" Text="App" Margin="44,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Uid="HistoryPage_9" Text="Data used" Margin="0,0,0,6" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button x:Uid="HistoryPage_15" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by App" Click="AppHeader_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="36,0,0,0">
+                            <TextBlock x:Uid="HistoryPage_8" Text="App" />
+                            <FontIcon x:Name="AppSortName" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Uid="HistoryPage_16" Grid.Column="1" Tag="Data" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Data used" Click="AppHeader_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon x:Name="AppSortData" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                            <TextBlock x:Uid="HistoryPage_9" Text="Data used" />
+                        </StackPanel>
+                    </Button>
                 </Grid>
                 <ListView
                     x:Name="AppList"
@@ -115,19 +129,50 @@
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Grid Padding="0,0,12,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                <Grid x:Name="LogHeader" Padding="0,0,12,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="140" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="*" MinWidth="160" />
-                        <ColumnDefinition Width="260" />
-                        <ColumnDefinition Width="170" />
+                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.Time, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.W1, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.W2, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.W3, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.W4, Mode=OneWay}" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock x:Uid="HistoryPage_10" Text="Started" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Uid="HistoryPage_11" Grid.Column="1" Text="App" Margin="36,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Uid="HistoryPage_12" Grid.Column="2" Text="Remote host" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Uid="HistoryPage_13" Grid.Column="3" Text="Protocol" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Uid="HistoryPage_14" Grid.Column="4" Text="Data" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <Button x:Uid="HistoryPage_17" Tag="Time" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Started" Click="LogHeader_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                            <TextBlock x:Uid="HistoryPage_10" Text="Started" />
+                            <FontIcon x:Name="LogSortTime" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Uid="HistoryPage_18" Grid.Column="{x:Bind ViewModel.Layout.AppColumn, Mode=OneWay}" Tag="App" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by App" Click="LogHeader_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                            <TextBlock x:Uid="HistoryPage_11" Text="App" />
+                            <FontIcon x:Name="LogSortApp" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Uid="HistoryPage_19" Grid.Column="{x:Bind ViewModel.Layout.RemoteColumn, Mode=OneWay}" Tag="Remote" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Remote host" Click="LogHeader_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                            <TextBlock x:Uid="HistoryPage_12" Text="Remote host" />
+                            <FontIcon x:Name="LogSortRemote" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Uid="HistoryPage_20" Grid.Column="{x:Bind ViewModel.Layout.ProtocolColumn, Mode=OneWay}" Tag="Protocol" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Protocol" Click="LogHeader_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                            <TextBlock x:Uid="HistoryPage_13" Text="Protocol" />
+                            <FontIcon x:Name="LogSortProtocol" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Uid="HistoryPage_21" Grid.Column="{x:Bind ViewModel.Layout.DataColumn, Mode=OneWay}" Tag="Data" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Data" Click="LogHeader_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                            <TextBlock x:Uid="HistoryPage_14" Text="Data" />
+                            <FontIcon x:Name="LogSortData" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Thumb Tag="Time" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="LogSplitter_DragDelta" />
+                    <Thumb Tag="App" Grid.Column="{x:Bind ViewModel.Layout.AppColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="LogSplitter_DragDelta" />
+                    <Thumb Tag="Remote" Grid.Column="{x:Bind ViewModel.Layout.RemoteColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="LogSplitter_DragDelta" />
+                    <Thumb Tag="Protocol" Grid.Column="{x:Bind ViewModel.Layout.ProtocolColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="LogSplitter_DragDelta" />
+                    <Thumb Tag="Data" Grid.Column="{x:Bind ViewModel.Layout.DataColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="LogSplitter_DragDelta" />
                 </Grid>
                 <ListView
                     x:Name="ConnectionList"
@@ -143,23 +188,28 @@
                         <DataTemplate x:DataType="vm:ConnectionLogSlot">
                             <Grid Height="34">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="140" />
-                                    <ColumnDefinition Width="220" />
-                                    <ColumnDefinition Width="*" MinWidth="160" />
-                                    <ColumnDefinition Width="260" />
-                                    <ColumnDefinition Width="170" />
+                                    <ColumnDefinition Width="{x:Bind Layout.Time, Mode=OneWay}" />
+                                    <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />
+                                    <ColumnDefinition Width="{x:Bind Layout.W2, Mode=OneWay}" />
+                                    <ColumnDefinition Width="{x:Bind Layout.W3, Mode=OneWay}" />
+                                    <ColumnDefinition Width="{x:Bind Layout.W4, Mode=OneWay}" />
+                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Time, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind TimeDetail, Mode=OneWay}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="10,0,8,0" ToolTipService.ToolTip="{x:Bind Path, Mode=OneWay}">
+                                <Grid Grid.Column="{x:Bind Layout.AppColumn, Mode=OneWay}" ColumnSpacing="8" Margin="10,0,8,0" ToolTipService.ToolTip="{x:Bind Path, Mode=OneWay}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
                                     <Image Width="18" Height="18" Source="{x:Bind Icon, Mode=OneWay}" />
-                                    <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="170" Text="{x:Bind App, Mode=OneWay}" />
-                                </StackPanel>
-                                <TextBlock Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Remote, Mode=OneWay}"
+                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind App, Mode=OneWay}" />
+                                </Grid>
+                                <TextBlock Grid.Column="{x:Bind Layout.RemoteColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Remote, Mode=OneWay}"
                                            ToolTipService.ToolTip="{x:Bind RemoteDetail, Mode=OneWay}" />
-                                <TextBlock Grid.Column="3" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Protocol, Mode=OneWay}"
+                                <TextBlock Grid.Column="{x:Bind Layout.ProtocolColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Protocol, Mode=OneWay}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <TextBlock Grid.Column="4" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Data, Mode=OneWay}" />
+                                <TextBlock Grid.Column="{x:Bind Layout.DataColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Data, Mode=OneWay}" />
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>

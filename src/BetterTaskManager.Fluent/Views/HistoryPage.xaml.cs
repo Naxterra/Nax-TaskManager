@@ -16,12 +16,57 @@ public sealed partial class HistoryPage : Page
 
     public HistoryPage()
     {
-        ViewModel = new HistoryViewModel();
+        ViewModel = new HistoryViewModel(App.Settings);
         InitializeComponent();
+        logReorder = new ColumnReorder(LogHeader, ViewModel.Layout);
+        UpdateSortIndicators();
         timer.Tick += (_, _) => _ = LoadAsync();
     }
 
+    private readonly ColumnReorder logReorder;
+
     public HistoryViewModel ViewModel { get; }
+
+    private void AppHeader_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string column }) return;
+        ViewModel.SortApps(column);
+        UpdateSortIndicators();
+        RestoreAppSelection();
+    }
+
+    private void LogHeader_Click(object sender, RoutedEventArgs e)
+    {
+        if (logReorder.SuppressClick || sender is not FrameworkElement { Tag: string column }) return;
+        bool reload = ViewModel.SortLog(column);
+        UpdateSortIndicators();
+        if (reload) _ = LoadAsync();
+    }
+
+    private void LogSplitter_DragDelta(object sender, Microsoft.UI.Xaml.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string column }) ViewModel.Layout.Resize(column, e.HorizontalChange);
+    }
+
+    private void UpdateSortIndicators()
+    {
+        var apps = new Dictionary<string, FontIcon> { [HistoryViewModel.SortName] = AppSortName, [HistoryViewModel.SortData] = AppSortData };
+        foreach (var (column, icon) in apps)
+        {
+            icon.Visibility = column == ViewModel.AppSortColumn ? Visibility.Visible : Visibility.Collapsed;
+            icon.Glyph = ViewModel.AppSortDescending ? "\uE70D" : "\uE70E";
+        }
+        var log = new Dictionary<string, FontIcon>
+        {
+            [HistoryViewModel.SortTime] = LogSortTime, [HistoryViewModel.SortApp] = LogSortApp, [HistoryViewModel.SortRemote] = LogSortRemote,
+            [HistoryViewModel.SortProtocol] = LogSortProtocol, [HistoryViewModel.SortData] = LogSortData
+        };
+        foreach (var (column, icon) in log)
+        {
+            icon.Visibility = column == ViewModel.LogSortColumn ? Visibility.Visible : Visibility.Collapsed;
+            icon.Glyph = ViewModel.LogSortDescending ? "\uE70D" : "\uE70E";
+        }
+    }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
