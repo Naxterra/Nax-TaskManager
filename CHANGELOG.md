@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.20 - 2026-10-08
+
+- **"Open file location" opens the right folder again.** For any program whose path contains a space (everything under "Program Files", for example) Explorer opened the Documents folder instead of selecting the file. This affected double-click on the Disk page and "Open file location" on every page.
+
 ## 2.0.0-alpha.19 - 2026-10-06
 
 - **New Disk page (Datenträger)**, modelled on Resource Monitor's Disk tab.

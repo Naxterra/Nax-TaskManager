@@ -74,9 +74,9 @@ public static class ProcessActions
     public static void OpenFileLocation(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
-        var startInfo = new ProcessStartInfo("explorer.exe") { UseShellExecute = true };
-        startInfo.ArgumentList.Add("/select," + path);
-        Process.Start(startInfo);
+        // Only the path may be quoted: ArgumentList quotes the whole "/select,..." argument when the path has a space,
+        // and Explorer then ignores it and opens Documents instead.
+        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
     }
 
     public static void ShowProperties(string path)
