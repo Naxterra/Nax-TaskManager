@@ -36,6 +36,8 @@ public sealed class DiskFileActivity : IDisposable
     private readonly Dictionary<(int Pid, ulong FileKey), Entry> entries = new();
     /// <summary>File names by kernel file key, from name events and from rundowns of the files already open.</summary>
     private readonly ConcurrentDictionary<ulong, string> names = new();
+    /// <summary>Image names from the trace's process events, so short-lived processes can still be named.</summary>
+    private readonly ConcurrentDictionary<int, string> processNames = new();
     private readonly string sessionName;
     private TraceEventSession? session;
     private Thread? pump;
@@ -59,14 +61,17 @@ public sealed class DiskFileActivity : IDisposable
         {
             session?.Dispose();
             session = new TraceEventSession(sessionName) { StopOnDispose = true, BufferSizeMB = KernelBufferSizeMB };
-            // DiskFileIO names files opened from now on; Thread lets the parser attribute completions to processes.
+            // DiskFileIO names files opened from now on; Thread lets the parser attribute completions to processes;
+            // Process names processes that exit before the app's next snapshot.
             session.EnableKernelProvider(KernelTraceEventParser.Keywords.DiskIO | KernelTraceEventParser.Keywords.DiskFileIO |
-                KernelTraceEventParser.Keywords.Thread);
+                KernelTraceEventParser.Keywords.Thread | KernelTraceEventParser.Keywords.Process);
             KernelTraceEventParser kernel = session.Source.Kernel;
             kernel.DiskIORead += data => Add(data, read: true);
             kernel.DiskIOWrite += data => Add(data, read: false);
             kernel.FileIOName += data => Remember(data.FileKey, data.FileName);
             kernel.FileIOFileCreate += data => Remember(data.FileKey, data.FileName);
+            kernel.ProcessStart += data => processNames[data.ProcessID] = data.ImageFileName;
+            kernel.ProcessDCStart += data => processNames[data.ProcessID] = data.ImageFileName;
             TraceEventSession started = session;
             pump = new Thread(() =>
             {
@@ -115,7 +120,11 @@ public sealed class DiskFileActivity : IDisposable
         pump = null;
         lock (gate) entries.Clear();
         names.Clear();
+        processNames.Clear();
     }
+
+    /// <summary>Image name of a process the trace saw start or running; empty when unknown.</summary>
+    public string ProcessName(int pid) => processNames.TryGetValue(pid, out string? name) ? name : "";
 
     private void Remember(ulong fileKey, string? name)
     {

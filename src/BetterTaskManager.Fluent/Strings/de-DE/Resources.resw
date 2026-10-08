@@ -443,4 +443,5 @@ Antwort: {0}</value></data>
   <data name="DiskPage_30.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
   <data name="DiskPage_32.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
   <data name="DiskPage_34.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Durchschnitt pro Sekunde über die letzte Minute, wie in der Ressourcenüberwachung</value></data>
+  <data name="Disk_Exited" xml:space="preserve"><value>{0} (beendet)</value></data>
 </root>

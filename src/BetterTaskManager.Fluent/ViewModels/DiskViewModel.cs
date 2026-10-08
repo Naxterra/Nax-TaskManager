@@ -36,6 +36,11 @@ public sealed class DiskViewModel : ObservableObject
 
     private readonly MonitorHost monitor;
     private readonly Dictionary<(int Pid, long CreateTime), Queue<(DateTime Time, double Read, double Write)>> processBytes = new();
+    /// <summary>
+    /// Name and path of every process seen with disk traffic. The rates are a one-minute average, so a process can
+    /// stay in the list for up to a minute after it exited, when it is no longer in the snapshot.
+    /// </summary>
+    private readonly Dictionary<(int Pid, long CreateTime), (string Name, string Path)> identities = new();
     private DateTime lastSnapshot;
     private DateTime firstSnapshot;
     private string summary = "", notice = "";
@@ -128,11 +133,16 @@ public sealed class DiskViewModel : ObservableObject
             if (process.DiskBytesPerSecond <= 0) continue;
             if (!processBytes.TryGetValue(process.Key, out var queue)) processBytes[process.Key] = queue = new();
             queue.Enqueue((snapshot.Timestamp, process.DiskReadBytesPerSecond * seconds, process.DiskWriteBytesPerSecond * seconds));
+            identities[process.Key] = (process.ImageName, process.Path);
         }
         foreach (var (key, queue) in processBytes.ToList())
         {
             while (queue.Count > 0 && snapshot.Timestamp - queue.Peek().Time > Window) queue.Dequeue();
-            if (queue.Count == 0) processBytes.Remove(key);
+            if (queue.Count == 0)
+            {
+                processBytes.Remove(key);
+                identities.Remove(key);
+            }
         }
     }
 
@@ -146,9 +156,11 @@ public sealed class DiskViewModel : ObservableObject
         var rows = new List<DiskProcessRow>();
         foreach (var (key, queue) in processBytes)
         {
-            processes.TryGetValue(key, out ProcessSample? process);
-            string name = process?.ImageName ?? "PID " + key.Pid;
-            var row = new DiskProcessRow(key.Pid, key.CreateTime, name, process?.Path ?? "",
+            identities.TryGetValue(key, out var known);
+            bool alive = processes.ContainsKey(key);
+            string name = known.Name is { Length: > 0 } ? known.Name : "PID " + key.Pid;
+            if (!alive) name = Loc.F("Disk_Exited", name);
+            var row = new DiskProcessRow(key.Pid, key.CreateTime, name, known.Path ?? "",
                 queue.Sum(sample => sample.Read) / window, queue.Sum(sample => sample.Write) / window);
             if (Matches(query, row.Pid, row.Name, row.Path)) rows.Add(row);
         }
@@ -177,9 +189,19 @@ public sealed class DiskViewModel : ObservableObject
         var rows = new List<DiskFileRow>();
         foreach (FileActivity activity in monitor.DiskFiles.Read())
         {
-            processes.TryGetValue(activity.Pid, out ProcessSample? process);
-            string name = activity.Pid == 4 ? "System" : process?.ImageName ?? (activity.Pid > 0 ? "PID " + activity.Pid : "–");
-            var row = new DiskFileRow(activity.Pid, name, process?.Path ?? "", activity.File, activity.ReadPerSecond, activity.WritePerSecond,
+            string name, path;
+            if (activity.Pid == 4) (name, path) = ("System", "");
+            else if (processes.TryGetValue(activity.Pid, out ProcessSample? process)) (name, path) = (process.ImageName, process.Path);
+            else
+            {
+                // Exited: the name from the disk list, or from the trace's own process events for processes that
+                // lived too briefly to appear in any snapshot.
+                var known = identities.FirstOrDefault(pair => pair.Key.Pid == activity.Pid).Value;
+                string traced = monitor.DiskFiles.ProcessName(activity.Pid);
+                string label = known.Name is { Length: > 0 } ? known.Name : traced.Length > 0 ? traced : activity.Pid > 0 ? "PID " + activity.Pid : "–";
+                (name, path) = (activity.Pid > 0 ? Loc.F("Disk_Exited", label) : label, known.Path ?? "");
+            }
+            var row = new DiskFileRow(activity.Pid, name, path, activity.File, activity.ReadPerSecond, activity.WritePerSecond,
                 activity.ResponseMilliseconds, activity.Priority);
             if (Matches(query, row.Pid, row.Name, row.File)) rows.Add(row);
         }

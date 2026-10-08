@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.21 - 2026-10-08
+
+- **Disk page: exited processes keep their name.** The lists average the last minute, so a process that wrote to disk and then exited stayed listed as "PID 18580". It now shows as, for example, "powershell.exe (exited)" with its path, in both lists. The file list also names processes that lived too briefly to be seen in a snapshot, from the trace's own process events.
+
 ## 2.0.0-alpha.20 - 2026-10-08
 
 - **"Open file location" opens the right folder again.** For any program whose path contains a space (everything under "Program Files", for example) Explorer opened the Documents folder instead of selecting the file. This affected double-click on the Disk page and "Open file location" on every page.
