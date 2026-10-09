@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.23 - 2026-10-09
+
+- **Big written files no longer stay in RAM.** Windows keeps every written byte in its file cache: a 31 GB game update left 18 GB of The Witcher 3's texture data in memory although the game never ran. The History service now watches the NTFS change journal of every local drive and, when a file of 256 MB or more was written and closed (game updates, installers, downloads, copies), removes it from RAM 30 seconds later and once more after 5 minutes, after virus scanners have read it. Files a running program still has open or mapped keep their data. Each removal is written to `C:\ProgramData\NaxTaskManager\service.log`. Update the History service to get it.
+
 ## 2.0.0-alpha.22 - 2026-10-08
 
 - **History page can be sorted.** Click "App" or "Data used" above the app list ("All apps" stays on top), and Started, App, Remote host, Protocol or Data above the connection list. The connection list's columns can also be resized and moved like the other tables. The sort order is remembered.
