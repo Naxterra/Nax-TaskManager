@@ -12,6 +12,7 @@ public sealed class HistoryWorker : IDisposable
     private readonly HistoryRecorder recorder;
     private readonly NetworkFeedServer? feed;
     private readonly BootMemoryReport? bootReport;
+    private readonly BetterTaskManager.Core.Disk.CacheTrimmer? cacheTrimmer;
     private readonly Action<string> log;
     private readonly object gate = new();
     private DateTime lastError;
@@ -19,8 +20,11 @@ public sealed class HistoryWorker : IDisposable
 
     /// <param name="publishFeed">Serve live traffic to non-elevated app windows (the real service; off for console tests).</param>
     /// <param name="bootReport">Writes the memory breakdown shortly after startup (the real service at boot; console tests).</param>
-    public HistoryWorker(string databasePath, string sessionPrefix, Action<string> log, bool publishFeed = false, BootMemoryReport? bootReport = null)
+    /// <param name="trimCache">Keep big files out of RAM after they were written (the real service; console tests opt in).</param>
+    public HistoryWorker(string databasePath, string sessionPrefix, Action<string> log, bool publishFeed = false, BootMemoryReport? bootReport = null,
+        bool trimCache = false)
     {
+        if (trimCache) cacheTrimmer = new BetterTaskManager.Core.Disk.CacheTrimmer(log);
         this.bootReport = bootReport;
         if (publishFeed) feed = new NetworkFeedServer(log);
         this.log = log;
@@ -36,6 +40,7 @@ public sealed class HistoryWorker : IDisposable
     {
         feed?.Start();
         engine.Start();
+        cacheTrimmer?.Start();
     }
 
     private void OnSnapshot(MonitorSnapshot snapshot)
@@ -69,6 +74,7 @@ public sealed class HistoryWorker : IDisposable
 
     public void Dispose()
     {
+        cacheTrimmer?.Dispose();
         feed?.Dispose();
         engine.Dispose();
         lock (gate)

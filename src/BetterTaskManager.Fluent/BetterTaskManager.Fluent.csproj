@@ -8,7 +8,7 @@
     <AssemblyName>Nax-TaskManager</AssemblyName>
     <Product>Nax-TaskManager</Product>
     <Company>Naxterra</Company>
-    <Version>2.0.0-alpha.22</Version>
+    <Version>2.0.0-alpha.23</Version>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64;ARM64</Platforms>

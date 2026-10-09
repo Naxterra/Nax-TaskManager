@@ -24,7 +24,9 @@ public static class Program
         string? reportPath = Argument(args, "--boot-report");
         BootMemoryReport? report = reportPath is null ? null
             : new BootMemoryReport(reportPath, [TimeSpan.FromMilliseconds(Environment.TickCount64) + TimeSpan.FromSeconds(4)], Console.Error.WriteLine);
-        using var worker = new HistoryWorker(database, "NaxTaskManager-HistoryTest", Console.Error.WriteLine, bootReport: report);
+        // --cache-trim: also run the cache trimmer (needs administrator rights, like the service).
+        using var worker = new HistoryWorker(database, "NaxTaskManager-HistoryTest", Console.Error.WriteLine, bootReport: report,
+            trimCache: args.Contains("--cache-trim"));
         worker.Start();
         Console.WriteLine($"Recording to {database}. " + (seconds > 0 ? $"Stopping after {seconds} s." : "Press Ctrl+C to stop."));
         using var stop = new ManualResetEventSlim();
