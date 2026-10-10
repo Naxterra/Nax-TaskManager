@@ -108,14 +108,6 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchApplication}"; WorkingD
 ; "Replace Windows Task Manager" still pointing at the pre-rename exe: point it at the new one (UAC prompt).
 Filename: "{app}\{#AppExeName}"; Parameters: "--replace-taskmanager-on ""{app}\{#AppExeName}"""; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; Verb: "runas"; Check: ShouldMoveTaskManagerReplacement
 
-[UninstallRun]
-; The background history service runs from Program Files as LocalSystem; remove it with the app (one UAC prompt).
-; Skipped for silent uninstalls, which is how a newer setup removes this version during an upgrade.
-Filename: "{app}\{#AppExeName}"; Parameters: "--uninstall-history-service ""{%TEMP}\NaxTaskManager-uninstall-service.txt"""; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; Verb: "runas"; Check: ShouldRemoveHistoryService; RunOnceId: "RemoveHistoryService"
-; If this app replaced Windows Task Manager, restore the built-in one (one UAC prompt). Only when the redirect is
-; still ours, and skipped for silent uninstalls so the choice survives app upgrades.
-Filename: "{app}\{#AppExeName}"; Parameters: "--replace-taskmanager-off ""{app}\{#AppExeName}"""; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; Verb: "runas"; Check: ShouldRestoreTaskManager; RunOnceId: "RestoreTaskManager"
-
 [Code]
 const
   UninstallRegistryKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#UninstallRegistryId}_is1';
@@ -259,4 +251,31 @@ begin
 
   PreviousVersionRemoved := True;
   Log('Previous installation removed successfully before installing the new version.');
+end;
+
+procedure RunElevatedApp(const Parameters: String);
+var
+  ResultCode: Integer;
+begin
+  if not ShellExec('runas', ExpandConstant('{app}\{#AppExeName}'), Parameters, ExpandConstant('{app}'),
+      SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
+    Log('Could not run ' + Parameters + ': ' + SysErrorMessage(ResultCode))
+  else
+    Log(Parameters + ' exited with code ' + IntToStr(ResultCode));
+end;
+
+// [UninstallRun] Check functions are evaluated at install time, where UninstallSilent() is not allowed,
+// so these steps run here, before the app files are removed.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep <> usUninstall then
+    Exit;
+  // The background history service runs from Program Files as LocalSystem; remove it with the app (one UAC prompt).
+  // Skipped for silent uninstalls, which is how a newer setup removes this version during an upgrade.
+  if ShouldRemoveHistoryService() then
+    RunElevatedApp('--uninstall-history-service "' + ExpandConstant('{%TEMP}') + '\NaxTaskManager-uninstall-service.txt"');
+  // If this app replaced Windows Task Manager, restore the built-in one (one UAC prompt). Only when the redirect is
+  // still ours, and skipped for silent uninstalls so the choice survives app upgrades.
+  if ShouldRestoreTaskManager() then
+    RunElevatedApp('--replace-taskmanager-off "' + ExpandConstant('{app}\{#AppExeName}') + '"');
 end;
