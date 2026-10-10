@@ -56,7 +56,7 @@ scripts\build-installer.ps1     # Inno Setup installer + SHA256SUMS
 scripts\test-installer.ps1      # install / upgrade / smoke test / uninstall under a test AppId
 ```
 
-Requires the .NET 11 SDK. Inno Setup 6 is downloaded automatically if it is not installed.
+Requires the .NET 11 SDK and Inno Setup 7 (`winget install JRSoftware.InnoSetup.7`).
 
 | Project | Purpose |
 |---|---|

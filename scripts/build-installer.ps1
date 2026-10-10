@@ -30,15 +30,14 @@ if (-not (Test-Path -LiteralPath $iconPath)) { throw "Application icon not found
 
 if ([string]::IsNullOrWhiteSpace($IsccPath)) {
     $knownPaths = @(
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
-        "C:\Program Files\Inno Setup 6\ISCC.exe"
+        (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 7\ISCC.exe"),
+        "C:\Program Files\Inno Setup 7\ISCC.exe"
     )
     $IsccPath = $knownPaths | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 }
-if ([string]::IsNullOrWhiteSpace($IsccPath)) {
-    $IsccPath = & (Join-Path $PSScriptRoot "bootstrap-inno.ps1") | Select-Object -Last 1
+if ([string]::IsNullOrWhiteSpace($IsccPath) -or -not (Test-Path -LiteralPath $IsccPath)) {
+    throw "Inno Setup 7 compiler (ISCC.exe) not found. Install it with: winget install JRSoftware.InnoSetup.7"
 }
-if (-not (Test-Path -LiteralPath $IsccPath)) { throw "Inno Setup compiler not found: $IsccPath" }
 
 # 2.0.0-alpha.3 -> 2.0.0.3; a release without a pre-release number gets .0.
 if ($version -notmatch '^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z]+\.(\d+))?') { throw "Unsupported version format: $version" }
