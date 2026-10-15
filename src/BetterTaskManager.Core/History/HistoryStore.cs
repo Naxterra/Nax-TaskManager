@@ -30,7 +30,8 @@ public sealed record ConnectionRecord(
     long BytesOut,
     string State,
     string Scope,
-    bool Inbound);
+    bool Inbound,
+    bool RemoteHostFromOtherApp = false);
 
 /// <summary>
 /// SQLite history of connections and daily per-app traffic. The background service is the only writer; the UI
@@ -211,13 +212,13 @@ public sealed class HistoryStore : IDisposable
             {
                 Bind(insertConnection, ToUnixMs(item.FirstSeen), ToUnixMs(item.LastSeen), item.App.Key, item.App.Name, item.App.Path, item.Pid,
                     item.Protocol, item.LocalAddress, item.LocalPort, item.RemoteAddress, item.RemotePort, (object?)item.RemoteHost ?? DBNull.Value,
-                    item.RemoteHostIsReverse ? 1 : 0, item.BytesIn, item.BytesOut, item.State, item.Scope, item.Inbound ? 1 : 0);
+                    item.RemoteHostSource, item.BytesIn, item.BytesOut, item.State, item.Scope, item.Inbound ? 1 : 0);
                 item.Id = (long)insertConnection.ExecuteScalar()!;
             }
             else
             {
                 Bind(updateConnection, ToUnixMs(item.LastSeen), item.LocalAddress, (object?)item.RemoteHost ?? DBNull.Value,
-                    item.RemoteHostIsReverse ? 1 : 0, item.BytesIn, item.BytesOut, item.State, item.Id);
+                    item.RemoteHostSource, item.BytesIn, item.BytesOut, item.State, item.Id);
                 updateConnection.ExecuteNonQuery();
             }
         }
@@ -330,12 +331,13 @@ public sealed class HistoryStore : IDisposable
                 reader.GetString(10),
                 reader.GetInt32(11),
                 reader.IsDBNull(12) ? null : reader.GetString(12),
-                reader.GetInt64(13) != 0,
+                reader.GetInt64(13) == 1,
                 reader.GetInt64(14),
                 reader.GetInt64(15),
                 reader.GetString(16),
                 reader.GetString(17),
-                reader.GetInt64(18) != 0));
+                reader.GetInt64(18) != 0,
+                reader.GetInt64(13) == 2));
         }
         return records;
     }
