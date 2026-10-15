@@ -34,6 +34,7 @@ public sealed class HostNameResolver : IDisposable
 {
     public const string DefaultSessionName = "NaxTaskManager-Dns";
     private const int DnsQueryCompletedEvent = 3008;
+    private const ulong DnsQueryNoWireQuery = 0x10;
     private static readonly TimeSpan CachePollInterval = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan FailedLookupRetry = TimeSpan.FromMinutes(10);
 
@@ -53,6 +54,7 @@ public sealed class HostNameResolver : IDisposable
     private readonly string sessionName;
     private TraceEventSession? dnsSession;
     private Task? cacheLoop;
+    private bool cacheReadOnce;
 
     /// <param name="sessionName">Machine-wide ETW session name; tests must pass their own (see <see cref="BandwidthMonitor"/>).</param>
     public HostNameResolver(string sessionName = DefaultSessionName) => this.sessionName = sessionName;
@@ -127,7 +129,10 @@ public sealed class HostNameResolver : IDisposable
             if (!LiveDnsEvents) TryStartDnsTrace();
             try
             {
-                ReadDnsCache();
+                // With live DNS events every new lookup arrives as it happens; the cache is read once for the names
+                // looked up before the trace started. Without them (no administrator rights) it is the only source.
+                if (!LiveDnsEvents || !cacheReadOnce) ReadDnsCache();
+                cacheReadOnce = true;
             }
             catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
             {
@@ -202,6 +207,9 @@ public sealed class HostNameResolver : IDisposable
     {
         if ((int)data.ID != DnsQueryCompletedEvent) return;
         if (data.PayloadByName("QueryName") is not string name || name.Length == 0) return;
+        // Cache-only queries (DNS_QUERY_NO_WIRE_QUERY) never reach the network. Reading the DNS cache through WMI makes
+        // WmiPrvSE issue one per cache entry (about 200 every read), which is not anyone's network activity.
+        if (data.PayloadByName("QueryOptions") is { } options && (Convert.ToUInt64(options) & DnsQueryNoWireQuery) != 0) return;
         string results = data.PayloadByName("QueryResults") as string ?? "";
         int pid = data.ProcessID;
 
