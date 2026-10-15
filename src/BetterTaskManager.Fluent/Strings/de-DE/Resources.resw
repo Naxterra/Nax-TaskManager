@@ -73,9 +73,6 @@
   <data name="ProcessesPage_11.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach CPU sortieren</value></data>
   <data name="ProcessesPage_12.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Arbeitsspeicher sortieren</value></data>
   <data name="ProcessesPage_13.Text" xml:space="preserve"><value>Arbeitsspeicher</value></data>
-  <data name="ProcessesPage_14.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Datei- und Geräte-E/A (Lesen + Schreiben + Sonstiges) pro Sekunde</value></data>
-  <data name="ProcessesPage_14.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Datenträger / E/A sortieren</value></data>
-  <data name="ProcessesPage_15.Text" xml:space="preserve"><value>Datenträger / E/A</value></data>
   <data name="ProcessesPage_16.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Netzwerkgeschwindigkeit sortieren</value></data>
   <data name="ProcessesPage_17.Text" xml:space="preserve"><value>Netzwerk</value></data>
   <data name="ProcessesPage_18.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Offene TCP/UDP-Verbindungen und Listener</value></data>
@@ -456,4 +453,9 @@ Antwort: {0}</value></data>
 Diesen Namen hat eine andere App abgefragt, nicht diese. Die Adresse kann auch zu anderen Websites gehören (Content-Delivery-Netzwerke betreiben viele Websites unter einer Adresse), der Name ist also eine Vermutung.</value></data>
   <data name="History_FilteredTo" xml:space="preserve"><value>Nur Verbindungen von {0}</value></data>
   <data name="HistoryPage_22.Content" xml:space="preserve"><value>Alle Apps anzeigen</value></data>
+  <data name="Column_Disk" xml:space="preserve"><value>Datenträger</value></data>
+  <data name="Column_DiskIo" xml:space="preserve"><value>Datenträger / E/A</value></data>
+  <data name="Column_DiskTooltip" xml:space="preserve"><value>Bytes pro Sekunde, die einen Datenträger erreicht haben (Lesen + Schreiben), wie die Spalte Datenträger im Task-Manager</value></data>
+  <data name="Column_DiskIoTooltip" xml:space="preserve"><value>Alle Datei- und Geräte-E/A pro Sekunde (Lesen + Schreiben + Sonstiges), auch Pipes zwischen Prozessen. Echte Datenträgerwerte brauchen Administratorrechte oder den Verlaufsdienst.</value></data>
+  <data name="ProcessesPage_14.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Datenträger sortieren</value></data>
 </root>

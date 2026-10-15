@@ -9,7 +9,7 @@ public sealed class ProcessesViewModel : ObservableObject
     private readonly MonitorHost monitor;
     private readonly AppSettings settings;
     private readonly HashSet<string> expanded = new(StringComparer.OrdinalIgnoreCase);
-    private string cpuHeader = "", memoryHeader = "", ioHeader = "", networkHeader = "", bandwidthHeader = "", bandwidthTooltip = "", gpuHeader = "";
+    private string cpuHeader = "", memoryHeader = "", ioHeader = "", networkHeader = "", bandwidthHeader = "", bandwidthTooltip = "", gpuHeader = "", ioLabel = "", ioTooltip = "";
 
     public ProcessesViewModel(MonitorHost monitor, AppSettings settings)
     {
@@ -36,6 +36,8 @@ public sealed class ProcessesViewModel : ObservableObject
     public string BandwidthHeader { get => bandwidthHeader; private set => Set(ref bandwidthHeader, value); }
     public string BandwidthTooltip { get => bandwidthTooltip; private set => Set(ref bandwidthTooltip, value); }
     public string GpuHeader { get => gpuHeader; private set => Set(ref gpuHeader, value); }
+    public string IoLabel { get => ioLabel; private set => Set(ref ioLabel, value); }
+    public string IoTooltip { get => ioTooltip; private set => Set(ref ioTooltip, value); }
 
     public void Refresh()
     {
@@ -45,7 +47,11 @@ public sealed class ProcessesViewModel : ObservableObject
         SystemSample system = snapshot.System;
         CpuHeader = system.CpuSampled ? Format.WholePercent(system.CpuPercent) : "…";
         MemoryHeader = Format.WholePercent(system.Memory.LoadPercent);
-        IoHeader = Format.Rate(system.IoBytesPerSecond);
+        // Real disk bytes when they are measured (Task Manager's Disk column); else all file and device I/O.
+        bool realDisk = system.PerProcessDiskAvailable && system.Disks.Count > 0;
+        IoHeader = realDisk ? Format.ByteRate(system.Disks.Sum(disk => disk.ReadPerSecond + disk.WritePerSecond)) : Format.Rate(system.IoBytesPerSecond);
+        IoLabel = realDisk ? Loc.Get("Column_Disk") : Loc.Get("Column_DiskIo");
+        IoTooltip = realDisk ? Loc.Get("Column_DiskTooltip") : Loc.Get("Column_DiskIoTooltip");
         NetworkHeader = Format.Count(snapshot.Connections.Count);
         GpuHeader = system.GpuAvailable ? Format.WholePercent(system.GpuPercent) : "–";
         bool bandwidth = system.PerProcessNetworkAvailable;
@@ -58,8 +64,8 @@ public sealed class ProcessesViewModel : ObservableObject
             : monitor.IsElevated ? Loc.NetworkStatus(system.PerProcessNetworkStatus)
             : Loc.NetworkStatus(system.PerProcessNetworkStatus) + Loc.Get("Bandwidth_UseRestart");
 
-        List<ProcessRowData> rows = ProcessTree.Build(snapshot.Processes, monitor.SearchText, SortColumn, SortDescending, expanded);
-        var context = new ProcessRowContext(system.Memory.Total, bandwidth, monitor.IsBlocked, system.GpuAvailable);
+        List<ProcessRowData> rows = ProcessTree.Build(snapshot.Processes, monitor.SearchText, SortColumn, SortDescending, expanded, realDisk);
+        var context = new ProcessRowContext(system.Memory.Total, bandwidth, monitor.IsBlocked, system.GpuAvailable, realDisk);
         Rows.Apply(rows.Select(row => (row, context)).ToList());
     }
 

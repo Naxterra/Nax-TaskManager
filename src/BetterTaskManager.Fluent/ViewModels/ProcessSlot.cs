@@ -6,7 +6,7 @@ namespace BetterTaskManager.Fluent.ViewModels;
 
 /// <summary>A reusable row of the Processes table. <see cref="Load"/> only raises changes for values that moved.</summary>
 /// <summary>Values shared by every row of one refresh.</summary>
-public sealed record ProcessRowContext(long TotalMemory, bool BandwidthAvailable, Func<string, bool> IsBlocked, bool GpuAvailable = true);
+public sealed record ProcessRowContext(long TotalMemory, bool BandwidthAvailable, Func<string, bool> IsBlocked, bool GpuAvailable = true, bool RealDisk = false);
 
 public sealed class ProcessSlot : ObservableObject
 {
@@ -89,7 +89,8 @@ public sealed class ProcessSlot : ObservableObject
         slot.ChevronAngle = row.Expanded ? 90 : 0;
         slot.CpuText = row.CpuSampled ? Format.Percent(row.Cpu) : "…";
         slot.MemoryText = Format.Memory(row.Memory);
-        slot.IoText = Format.Rate(row.Io);
+        // Real disk rates are mostly KB/s; one decimal of MB/s would show them all as 0.0.
+        slot.IoText = context.RealDisk ? Format.ByteRate(row.Io) : Format.Rate(row.Io);
         slot.NetworkText = row.Connections == 0 ? "–" : Format.Count(row.Connections);
         slot.CpuHeat = Heat.Level(Heat.Scale(row.Cpu, 0.5, 2, 5, 12, 25, 50));
         slot.BandwidthText = context.BandwidthAvailable ? Format.Mbps(row.NetworkRate) : "–";

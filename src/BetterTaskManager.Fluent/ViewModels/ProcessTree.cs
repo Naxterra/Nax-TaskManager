@@ -61,9 +61,14 @@ public static class ProcessTree
         public string GpuEngine = "";
     }
 
+    /// <param name="realDisk">
+    /// Fill the disk column with bytes that reached a disk (administrator rights or the history service), like Task
+    /// Manager; otherwise with all file and device I/O, which also counts pipes and other inter-process traffic.
+    /// </param>
     public static List<ProcessRowData> Build(IReadOnlyList<ProcessSample> processes, string search, string sortColumn,
-        bool descending, ISet<string> expandedKeys)
+        bool descending, ISet<string> expandedKeys, bool realDisk = false)
     {
+        Func<ProcessSample, double> io = realDisk ? process => process.DiskBytesPerSecond : process => process.IoBytesPerSecond;
         var groups = new Dictionary<string, Group>(StringComparer.OrdinalIgnoreCase);
         foreach (ProcessSample process in processes)
         {
@@ -85,7 +90,7 @@ public static class ProcessTree
                 group.Cpu += member.CpuPercent;
                 group.CpuSampled |= member.CpuSampled;
                 group.Memory += member.PrivateWorkingSet;
-                group.Io += member.IoBytesPerSecond;
+                group.Io += io(member);
                 group.NetworkRate += member.NetworkBytesPerSecond;
                 group.Connections += member.ConnectionCount;
                 group.Gpu += member.GpuPercent;
@@ -105,14 +110,14 @@ public static class ProcessTree
         }
 
         var rows = new List<ProcessRowData>(visible.Count + 16);
-        AddSection(rows, Loc.Get("Section_Apps"), visible.Where(item => item.Group.IsApp), query, sortColumn, descending, expandedKeys);
-        AddSection(rows, Loc.Get("Section_Background"), visible.Where(item => !item.Group.IsApp), query, sortColumn, descending, expandedKeys);
+        AddSection(rows, Loc.Get("Section_Apps"), visible.Where(item => item.Group.IsApp), query, sortColumn, descending, expandedKeys, io);
+        AddSection(rows, Loc.Get("Section_Background"), visible.Where(item => !item.Group.IsApp), query, sortColumn, descending, expandedKeys, io);
         return rows;
     }
 
     private static void AddSection(List<ProcessRowData> rows, string title,
         IEnumerable<(Group Group, List<ProcessSample> Children, bool ForceExpand)> items, string query,
-        string sortColumn, bool descending, ISet<string> expandedKeys)
+        string sortColumn, bool descending, ISet<string> expandedKeys, Func<ProcessSample, double> io)
     {
         var list = items.ToList();
         if (list.Count == 0) return;
@@ -135,11 +140,11 @@ public static class ProcessTree
                 group.Gpu, group.GpuEngine));
 
             if (!expanded) continue;
-            foreach (ProcessSample child in SortChildren(children, sortColumn, descending))
+            foreach (ProcessSample child in SortChildren(children, sortColumn, descending, io))
             {
                 rows.Add(new ProcessRowData(RowKind.Child, $"{group.Key}|{child.Pid}|{child.CreateTime}", ChildName(child),
                     "PID " + child.Pid, child.Path, child.Company, new[] { child.Key },
-                    child.CpuPercent, child.CpuSampled, child.PrivateWorkingSet, child.IoBytesPerSecond, child.NetworkBytesPerSecond, child.ConnectionCount,
+                    child.CpuPercent, child.CpuSampled, child.PrivateWorkingSet, io(child), child.NetworkBytesPerSecond, child.ConnectionCount,
                     false, false, group.IsApp, child.Efficiency, child.Suspended, child.GpuPercent, child.GpuEngine));
             }
         }
@@ -163,13 +168,13 @@ public static class ProcessTree
         return Order(items, key, descending, item => item.Group.Name);
     }
 
-    private static IEnumerable<ProcessSample> SortChildren(List<ProcessSample> children, string column, bool descending)
+    private static IEnumerable<ProcessSample> SortChildren(List<ProcessSample> children, string column, bool descending, Func<ProcessSample, double> io)
     {
         Func<ProcessSample, object> key = column switch
         {
             SortCpu => child => child.CpuPercent,
             SortMemory => child => child.PrivateWorkingSet,
-            SortIo => child => child.IoBytesPerSecond,
+            SortIo => child => io(child),
             SortNetwork => child => child.ConnectionCount,
             SortBandwidth => child => child.NetworkBytesPerSecond,
             SortGpu => child => child.GpuPercent,

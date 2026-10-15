@@ -115,11 +115,11 @@
                     <FontIcon x:Name="SortMemory" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
             </Button>
-            <Button x:Uid="ProcessesPage_14" Grid.Column="{x:Bind ViewModel.Layout.IoColumn, Mode=OneWay}" Tag="Io" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Disk / I/O" Click="Header_Click" ToolTipService.ToolTip="File and device I/O (read + write + other) per second">
+            <Button x:Uid="ProcessesPage_14" Grid.Column="{x:Bind ViewModel.Layout.IoColumn, Mode=OneWay}" Tag="Io" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Disk" Click="Header_Click" ToolTipService.ToolTip="{x:Bind ViewModel.IoTooltip, Mode=OneWay}">
                 <Grid>
                     <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom">
                         <TextBlock Text="{x:Bind ViewModel.IoHeader, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                        <TextBlock x:Uid="ProcessesPage_15" Text="Disk / I/O" HorizontalAlignment="Right" />
+                        <TextBlock Text="{x:Bind ViewModel.IoLabel, Mode=OneWay}" HorizontalAlignment="Right" />
                     </StackPanel>
                     <FontIcon x:Name="SortIo" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
                 </Grid>
