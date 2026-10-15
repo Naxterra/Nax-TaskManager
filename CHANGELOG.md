@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.25 - 2026-10-15
+
+- **No more "WMI Provider Host" DNS lookups in History.** They came from Nax-TaskManager itself: it reads the Windows DNS cache every 10 seconds through WMI, and Windows answers that by running one cache-only query per cache entry inside WMI Provider Host (about 200 per read, 7,436 history rows on one day). These queries never reach the network. History now ignores every cache-only query, and the History service reads the cache only once at startup and then relies on the live DNS events, which see every real lookup anyway. A window without administrator rights still reads the cache (its only source of names), without leaving traces in History.
+
 ## 2.0.0-alpha.24 - 2026-10-15
 
 - **No more borrowed host names on shared addresses.** When an app connected to an address it had not looked up itself, the Network and History pages showed whatever name another app had looked up for that address. Content delivery networks serve thousands of sites from the same addresses, so this could be wrong: 2.7 GB of Brave traffic to a Fastly address showed as "artifacts.bitwarden.com" only because Nax-Updater had looked that name up, while Mozilla's services used the same address. Now an address that was answered for several names gets no name (the IP is shown), and a name that only another app looked up is marked "≈" with an explanation in the tooltip. Connections recorded before this version keep their names.
