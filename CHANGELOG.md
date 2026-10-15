@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.26 - 2026-10-15
+
+- **The Processes page's disk column shows real disk traffic.** It used to count all file and device I/O, including pipes between a program's own processes, so a chat app showed 7.3 MB/s there while the Disk page correctly showed a few KB/s. Whenever real disk bytes are measured (administrator rights, or the History service for a normal window) the column is now called "Disk", shows bytes that reached a disk like Task Manager, uses B/s, KB/s or MB/s as fits, and its header shows the disks' total. Without them it falls back to "Disk / I/O" as before, and the tooltip says which one you see.
+
 ## 2.0.0-alpha.25 - 2026-10-15
 
 - **No more "WMI Provider Host" DNS lookups in History.** They came from Nax-TaskManager itself: it reads the Windows DNS cache every 10 seconds through WMI, and Windows answers that by running one cache-only query per cache entry inside WMI Provider Host (about 200 per read, 7,436 history rows on one day). These queries never reach the network. History now ignores every cache-only query, and the History service reads the cache only once at startup and then relies on the live DNS events, which see every real lookup anyway. A window without administrator rights still reads the cache (its only source of names), without leaving traces in History.

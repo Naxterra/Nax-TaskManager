@@ -73,9 +73,6 @@
   <data name="ProcessesPage_11.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by CPU</value></data>
   <data name="ProcessesPage_12.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Memory</value></data>
   <data name="ProcessesPage_13.Text" xml:space="preserve"><value>Memory</value></data>
-  <data name="ProcessesPage_14.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>File and device I/O (read + write + other) per second</value></data>
-  <data name="ProcessesPage_14.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Disk / I/O</value></data>
-  <data name="ProcessesPage_15.Text" xml:space="preserve"><value>Disk / I/O</value></data>
   <data name="ProcessesPage_16.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Network speed</value></data>
   <data name="ProcessesPage_17.Text" xml:space="preserve"><value>Network</value></data>
   <data name="ProcessesPage_18.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Open TCP/UDP connections and listeners</value></data>
@@ -456,4 +453,9 @@ Answer: {0}</value></data>
 Name looked up by another app, not by this one. This address can also serve other sites (content delivery networks host many sites on one address), so the name is a guess.</value></data>
   <data name="History_FilteredTo" xml:space="preserve"><value>Only connections of {0}</value></data>
   <data name="HistoryPage_22.Content" xml:space="preserve"><value>Show all apps</value></data>
+  <data name="Column_Disk" xml:space="preserve"><value>Disk</value></data>
+  <data name="Column_DiskIo" xml:space="preserve"><value>Disk / I/O</value></data>
+  <data name="Column_DiskTooltip" xml:space="preserve"><value>Bytes per second that reached a disk (read + write), like Task Manager's Disk column</value></data>
+  <data name="Column_DiskIoTooltip" xml:space="preserve"><value>All file and device I/O per second (read + write + other), including pipes between processes. Real disk bytes need administrator rights or the History service.</value></data>
+  <data name="ProcessesPage_14.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Disk</value></data>
 </root>
