@@ -45,7 +45,8 @@ internal sealed class TrackedConnection
     public DateTime LastSeen;
     public string LocalAddress = "";
     public string? RemoteHost;
-    public bool RemoteHostIsReverse;
+    /// <summary>0 the app's own lookup, 1 reverse DNS, 2 another app's lookup (stored in remote_host_reverse).</summary>
+    public int RemoteHostSource;
     public long BytesIn, BytesOut;
     public string State = "";
     public string Scope = "";
@@ -128,7 +129,7 @@ public sealed class HistoryRecorder : IDisposable
                 tracked.State = connection.State;
                 tracked.Changed = true;
             }
-            if (connection.RemoteHost is { } host) SetHost(tracked, host, connection.RemoteHostIsReverse);
+            if (connection.RemoteHost is { } host) SetHost(tracked, host, connection.RemoteHostIsReverse ? 1 : connection.RemoteHostFromOtherApp ? 2 : 0);
         }
 
         var active = new HashSet<FlowKey>();
@@ -148,7 +149,7 @@ public sealed class HistoryRecorder : IDisposable
             tracked.BytesOut += flow.Sent;
             tracked.Changed = true;
             if (tracked.State.Length == 0) tracked.State = flow.Protocol == "UDP" ? "UDP" : "Closed";
-            if (tracked.RemoteHost is null && resolveHost(flow.RemoteAddress, flow.Pid) is { } host) SetHost(tracked, host.Name, host.Source == HostNameSource.Reverse);
+            if (tracked.RemoteHost is null && resolveHost(flow.RemoteAddress, flow.Pid) is { } host) SetHost(tracked, host.Name, SourceCode(host.Source));
 
             var usageKey = (today, app.Key);
             if (!usage.TryGetValue(usageKey, out UsageDelta? delta)) usage[usageKey] = delta = new UsageDelta { App = app };
@@ -229,11 +230,19 @@ public sealed class HistoryRecorder : IDisposable
         return tracked;
     }
 
-    private static void SetHost(TrackedConnection tracked, string host, bool reverse)
+    /// <summary>How a stored host name was found: 0 the app's own lookup, 1 reverse DNS, 2 another app's lookup.</summary>
+    private static int SourceCode(HostNameSource source) => source switch
     {
-        if (tracked.RemoteHost == host && tracked.RemoteHostIsReverse == reverse) return;
+        HostNameSource.Reverse => 1,
+        HostNameSource.OtherApp => 2,
+        _ => 0
+    };
+
+    private static void SetHost(TrackedConnection tracked, string host, int source)
+    {
+        if (tracked.RemoteHost == host && tracked.RemoteHostSource == source) return;
         tracked.RemoteHost = host;
-        tracked.RemoteHostIsReverse = reverse;
+        tracked.RemoteHostSource = source;
         tracked.Changed = true;
     }
 

@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -52,7 +53,13 @@
             </InfoBar.ActionButton>
         </InfoBar>
 
-        <Grid Grid.Row="2" ColumnSpacing="12">
+        <StackPanel x:Name="FilterBar" Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="4,0,0,8" Visibility="Collapsed">
+            <FontIcon Glyph="&#xE71C;" FontSize="14" VerticalAlignment="Center" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+            <TextBlock x:Name="FilterText" VerticalAlignment="Center" />
+            <Button x:Uid="HistoryPage_22" Content="Show all apps" Click="ShowAllApps_Click" />
+        </StackPanel>
+
+        <Grid Grid.Row="3" ColumnSpacing="12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="400" />
                 <ColumnDefinition Width="*" />

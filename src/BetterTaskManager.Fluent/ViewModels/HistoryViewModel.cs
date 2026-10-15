@@ -251,9 +251,10 @@ public sealed class HistoryViewModel
         string timeDetail = Loc.F("History_TimeDetail", first.ToString("G"), last.ToString("G"), Format.Duration(last - first));
 
         string endpoint = record.RemoteAddress.Contains(':') ? $"[{record.RemoteAddress}]:{record.RemotePort}" : $"{record.RemoteAddress}:{record.RemotePort}";
-        string remote = record.RemoteHost is { } host ? $"{host}:{record.RemotePort}" : endpoint;
+        string remote = record.RemoteHost is { } host ? $"{(record.RemoteHostFromOtherApp ? "≈ " : "")}{host}:{record.RemotePort}" : endpoint;
         string remoteDetail = record.RemoteHost is null ? endpoint
             : record.RemoteHostIsReverse ? Loc.F("Remote_Reverse", endpoint)
+            : record.RemoteHostFromOtherApp ? Loc.F("Remote_OtherApp", endpoint)
             : Loc.F("Remote_Lookup", endpoint);
 
         if (record.Protocol == "DNS")

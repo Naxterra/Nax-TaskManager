@@ -114,6 +114,7 @@ public sealed partial class HistoryPage : Page
             : App.Monitor.SearchText.Trim().Length > 0 ? Loc.Get("History_EmptySearch")
             : Loc.Get("History_EmptyPeriod");
         RestoreAppSelection();
+        UpdateFilterBar();
         UpdateServiceBar();
     }
 
@@ -207,6 +208,20 @@ public sealed partial class HistoryPage : Page
     private void DnsToggle_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.IncludeDns = DnsToggle.IsChecked == true;
+        _ = LoadAsync();
+    }
+
+    /// <summary>A selected app filters the connection list; say so plainly, with the way back.</summary>
+    private void UpdateFilterBar()
+    {
+        string? name = ViewModel.AppKey is { } key ? ViewModel.Apps.FirstOrDefault(app => app.Key == key)?.Name : null;
+        FilterBar.Visibility = name is null ? Visibility.Collapsed : Visibility.Visible;
+        if (name is not null) FilterText.Text = Loc.F("History_FilteredTo", name);
+    }
+
+    private void ShowAllApps_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.AppKey = null;
         _ = LoadAsync();
     }
 

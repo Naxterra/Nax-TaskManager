@@ -13,7 +13,12 @@ public enum HostNameSource
     /// <summary>The name an app looked up (DNS cache or live DNS event): what the app actually asked for.</summary>
     Lookup,
     /// <summary>Reverse DNS (PTR). Often a hosting provider's name rather than the service's.</summary>
-    Reverse
+    Reverse,
+    /// <summary>
+    /// Another app looked this name up for the address; the connecting app did not. A guess: the address may serve
+    /// other sites too (content delivery networks host thousands of sites on the same addresses).
+    /// </summary>
+    OtherApp
 }
 
 public readonly record struct HostName(string Name, HostNameSource Source);
@@ -38,6 +43,9 @@ public sealed class HostNameResolver : IDisposable
     // CDN address usually asked for different names; like Portmaster, prefer the connecting app's own lookup.
     private readonly Dictionary<int, Dictionary<IPAddress, (string Name, DateTime At)>> byProcess = new();
     private static readonly TimeSpan ProcessNameLifetime = TimeSpan.FromHours(12);
+    // Every name any app looked up per address. An address answered for several names is shared (a CDN), so the name
+    // another app asked for says nothing about what this app connected to.
+    private readonly Dictionary<IPAddress, Dictionary<string, DateTime>> lookups = new();
     private readonly Dictionary<IPAddress, DateTime> failedReverse = new();
     private readonly HashSet<IPAddress> pendingReverse = new();
     private readonly SemaphoreSlim reverseSlots = new(4);
@@ -60,7 +68,12 @@ public sealed class HostNameResolver : IDisposable
     /// <summary>A process's DNS query was answered (live DNS events only): PID, queried name, answer addresses.</summary>
     public event Action<int, string, IReadOnlyList<IPAddress>>? QueryAnswered;
 
-    /// <summary>The name <paramref name="pid"/> itself looked up for the address, else any known name.</summary>
+    /// <summary>
+    /// The name <paramref name="pid"/> itself looked up for the address. With live DNS events (which know who asked),
+    /// otherwise a name another app looked up, marked <see cref="HostNameSource.OtherApp"/>, but only when the address
+    /// was answered for that one name; a shared address gets no name rather than a wrong one. Without live DNS events,
+    /// any known name.
+    /// </summary>
     public HostName? Resolve(string address, int pid)
     {
         if (pid > 0 && IPAddress.TryParse(address, out IPAddress? ip))
@@ -68,9 +81,16 @@ public sealed class HostNameResolver : IDisposable
             ip = Normalize(ip);
             lock (gate)
             {
-                if (byProcess.TryGetValue(pid, out var own) && own.TryGetValue(ip, out var entry) && DateTime.UtcNow - entry.At < ProcessNameLifetime)
+                DateTime now = DateTime.UtcNow;
+                if (byProcess.TryGetValue(pid, out var own) && own.TryGetValue(ip, out var entry) && now - entry.At < ProcessNameLifetime)
                 {
                     return new HostName(entry.Name, HostNameSource.Lookup);
+                }
+                if (LiveDnsEvents && lookups.TryGetValue(ip, out var asked))
+                {
+                    var recent = asked.Where(pair => now - pair.Value < ProcessNameLifetime).Select(pair => pair.Key).Take(2).ToList();
+                    if (recent.Count > 1) return null;
+                    if (recent.Count == 1) return new HostName(recent[0], HostNameSource.OtherApp);
                 }
             }
         }
@@ -193,6 +213,22 @@ public sealed class HostNameResolver : IDisposable
             ip = Normalize(ip);
             if (!answers.Contains(ip)) answers.Add(ip);
             Remember(ip, name, HostNameSource.Lookup);
+        }
+        if (answers.Count > 0)
+        {
+            DateTime now = DateTime.UtcNow;
+            lock (gate)
+            {
+                foreach (IPAddress ip in answers)
+                {
+                    if (!lookups.TryGetValue(ip, out var asked)) lookups[ip] = asked = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+                    asked[name.TrimEnd('.')] = now;
+                }
+                if (lookups.Count > 20000)
+                {
+                    foreach (IPAddress stale in lookups.Where(pair => pair.Value.Values.All(at => now - at > ProcessNameLifetime)).Select(pair => pair.Key).ToList()) lookups.Remove(stale);
+                }
+            }
         }
         if (pid > 4 && answers.Count > 0)
         {

@@ -208,7 +208,7 @@ public sealed class NetworkViewModel : ObservableObject
                     connection.Protocol, "PID " + connection.Pid, group.Path,
                     Endpoint(connection.LocalAddress, connection.LocalPort),
                     connection.Protocol == "UDP" ? "*"
-                        : connection.RemoteHost is { } host ? $"{host}:{connection.RemotePort}" : Endpoint(connection.RemoteAddress, connection.RemotePort),
+                        : connection.RemoteHost is { } host ? $"{(connection.RemoteHostFromOtherApp ? "≈ " : "")}{host}:{connection.RemotePort}" : Endpoint(connection.RemoteAddress, connection.RemotePort),
                     ScopeText(connection),
                     Loc.State(connection.State), "", "",
                     measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
@@ -322,8 +322,8 @@ public sealed class NetworkViewModel : ObservableObject
         if (connection.Protocol == "UDP") return Loc.Get("Remote_UdpNone");
         string endpoint = Endpoint(connection.RemoteAddress, connection.RemotePort);
         if (connection.RemoteHost is null) return endpoint;
-        return connection.RemoteHostIsReverse
-            ? Loc.F("Remote_Reverse", endpoint)
+        return connection.RemoteHostIsReverse ? Loc.F("Remote_Reverse", endpoint)
+            : connection.RemoteHostFromOtherApp ? Loc.F("Remote_OtherApp", endpoint)
             : Loc.F("Remote_Lookup", endpoint);
     }
 

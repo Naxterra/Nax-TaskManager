@@ -452,4 +452,8 @@ Antwort: {0}</value></data>
   <data name="HistoryPage_20.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Protokoll sortieren</value></data>
   <data name="HistoryPage_21.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Daten sortieren</value></data>
   <data name="History_LargestConnections" xml:space="preserve"><value>Größte {0} Verbindungen</value></data>
+  <data name="Remote_OtherApp" xml:space="preserve"><value>{0}
+Diesen Namen hat eine andere App abgefragt, nicht diese. Die Adresse kann auch zu anderen Websites gehören (Content-Delivery-Netzwerke betreiben viele Websites unter einer Adresse), der Name ist also eine Vermutung.</value></data>
+  <data name="History_FilteredTo" xml:space="preserve"><value>Nur Verbindungen von {0}</value></data>
+  <data name="HistoryPage_22.Content" xml:space="preserve"><value>Alle Apps anzeigen</value></data>
 </root>

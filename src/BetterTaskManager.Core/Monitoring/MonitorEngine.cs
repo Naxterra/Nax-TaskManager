@@ -339,6 +339,7 @@ public sealed class MonitorEngine : IDisposable
             {
                 connection.RemoteHost = host.Name;
                 connection.RemoteHostIsReverse = host.Source == HostNameSource.Reverse;
+                connection.RemoteHostFromOtherApp = host.Source == HostNameSource.OtherApp;
             }
         }
 

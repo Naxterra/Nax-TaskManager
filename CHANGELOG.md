@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-alpha.24 - 2026-10-15
+
+- **No more borrowed host names on shared addresses.** When an app connected to an address it had not looked up itself, the Network and History pages showed whatever name another app had looked up for that address. Content delivery networks serve thousands of sites from the same addresses, so this could be wrong: 2.7 GB of Brave traffic to a Fastly address showed as "artifacts.bitwarden.com" only because Nax-Updater had looked that name up, while Mozilla's services used the same address. Now an address that was answered for several names gets no name (the IP is shown), and a name that only another app looked up is marked "≈" with an explanation in the tooltip. Connections recorded before this version keep their names.
+- **History shows when the list is filtered.** Selecting an app on the left filters the connection list to that app; a bar above the lists now says so ("Only connections of Brave Origin") with a button to show all apps again.
+
 ## 2.0.0-alpha.23 - 2026-10-09
 
 - **Big written files no longer stay in RAM.** Windows keeps every written byte in its file cache: a 31 GB game update left 18 GB of The Witcher 3's texture data in memory although the game never ran. The History service now watches the NTFS change journal of every local drive and, when a file of 256 MB or more was written and closed (game updates, installers, downloads, copies), removes it from RAM 30 seconds later and once more after 5 minutes, after virus scanners have read it. Files a running program still has open or mapped keep their data. Each removal is written to `C:\ProgramData\NaxTaskManager\service.log`. Update the History service to get it.
