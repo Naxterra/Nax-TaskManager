@@ -46,6 +46,13 @@ public sealed partial class MainWindow : Window
         };
 
         ElevationBar.IsOpen = !App.Monitor.IsElevated && !App.Settings.HideElevationNotice;
+        // "Replace Windows Task Manager" was on and the redirect is gone: say so instead of silently opening Windows'.
+        TaskManagerSwitch.RememberExistingChoice();
+        ReplaceLostBar.IsOpen = TaskManagerSwitch.WasRemoved;
+        ReplaceLostBar.Closed += (_, args) =>
+        {
+            if (args.Reason == InfoBarCloseReason.CloseButton) App.Settings.ReplaceTaskManagerWanted = false;
+        };
         // Remember when the user closes the notice, so it does not reappear on every launch.
         ElevationBar.Closed += (_, args) =>
         {
@@ -129,6 +136,15 @@ public sealed partial class MainWindow : Window
         App.Monitor.SearchText = sender.Text;
 
     private void RestartElevated_Click(object sender, RoutedEventArgs e) => App.RestartElevated();
+
+    private async void RestoreReplace_Click(object sender, RoutedEventArgs e)
+    {
+        RestoreReplaceButton.IsEnabled = false;
+        string? error = await TaskManagerSwitch.SetAsync(true);
+        RestoreReplaceButton.IsEnabled = true;
+        if (error is null) ReplaceLostBar.IsOpen = false;
+        else ReplaceLostBar.Message = error;
+    }
 
     private void AddAccelerator(VirtualKey key, Action action)
     {

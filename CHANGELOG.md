@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.27 - 2026-10-17
+
+- **Notice when "Replace Windows Task Manager" was removed.** Redirecting Task Manager is something security software and Windows sometimes undo on their own (on 2026-10-16 the setting disappeared at 09:18, half an hour after startup, without anything in Nax-TaskManager or its installer touching it). The app now remembers that you switched the replacement on and, if the setting is gone when it starts, shows a warning with a **Restore** button (one administrator prompt). Closing the warning means you no longer want the replacement. Turn it on once in Settings to start this.
+
 ## 2.0.0-alpha.26 - 2026-10-15
 
 - **The Processes page's disk column shows real disk traffic.** It used to count all file and device I/O, including pipes between a program's own processes, so a chat app showed 7.3 MB/s there while the Disk page correctly showed a few KB/s. Whenever real disk bytes are measured (administrator rights, or the History service for a normal window) the column is now called "Disk", shows bytes that reached a disk like Task Manager, uses B/s, KB/s or MB/s as fits, and its header shows the disks' total. Without them it falls back to "Disk / I/O" as before, and the tooltip says which one you see.

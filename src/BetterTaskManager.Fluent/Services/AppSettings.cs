@@ -33,6 +33,8 @@ public sealed class AppSettings
     public bool ProcessFlatView { get; set; }
     /// <summary>The user dismissed the limited-mode notice; do not show it again.</summary>
     public bool HideElevationNotice { get; set; }
+    /// <summary>The user turned "Replace Windows Task Manager" on; used to notice when something removed it.</summary>
+    public bool ReplaceTaskManagerWanted { get; set; }
     public Dictionary<string, double> ColumnWidths { get; set; } = new();
     /// <summary>Column order per table ("Processes.", "Details."), comma-separated; absent = default order.</summary>
     public Dictionary<string, string> ColumnOrder { get; set; } = new();

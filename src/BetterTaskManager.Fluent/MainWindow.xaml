@@ -77,6 +77,18 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
+                <StackPanel>
+                <InfoBar x:Uid="MainWindow_11"
+                    x:Name="ReplaceLostBar"
+                    Margin="16,8,16,0"
+                    IsClosable="True"
+                    Severity="Warning"
+                    Title="Windows Task Manager is no longer replaced"
+                    Message="Another program or Windows removed the setting.">
+                    <InfoBar.ActionButton>
+                        <Button x:Uid="MainWindow_12" x:Name="RestoreReplaceButton" Content="Restore" Click="RestoreReplace_Click" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
                 <InfoBar x:Uid="MainWindow_6"
                     x:Name="ElevationBar"
                     Margin="16,8,16,0"
@@ -88,6 +100,7 @@
                         <Button x:Uid="MainWindow_7" Content="Restart as administrator" Click="RestartElevated_Click" />
                     </InfoBar.ActionButton>
                 </InfoBar>
+                </StackPanel>
                 <Frame x:Name="ContentFrame" Grid.Row="1" />
             </Grid>
         </NavigationView>

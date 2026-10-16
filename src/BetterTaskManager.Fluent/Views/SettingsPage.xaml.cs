@@ -54,36 +54,7 @@ public sealed partial class SettingsPage : Page
         if (exe is null) return;
 
         ReplaceToggle.IsEnabled = false;
-        string? error = null;
-        if (App.Monitor.IsElevated)
-        {
-            try
-            {
-                if (enable) TaskManagerReplacement.Enable(exe);
-                else TaskManagerReplacement.Disable();
-            }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
-            {
-                error = ex.Message;
-            }
-        }
-        else
-        {
-            // No administrator rights: a short-lived elevated copy changes the machine-wide setting (one UAC prompt).
-            var startInfo = new ProcessStartInfo(exe) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
-            startInfo.ArgumentList.Add(enable ? Program.ReplaceTaskManagerOnArgument : Program.ReplaceTaskManagerOffArgument);
-            if (enable) startInfo.ArgumentList.Add(exe);
-            try
-            {
-                using Process helper = Process.Start(startInfo)!;
-                await helper.WaitForExitAsync();
-                if (helper.ExitCode != 0) error = Loc.F("Common_ExitCode", helper.ExitCode);
-            }
-            catch (System.ComponentModel.Win32Exception)
-            {
-                error = Loc.Get("Uac_CancelledNothing");
-            }
-        }
+        string? error = await TaskManagerSwitch.SetAsync(enable);
 
         loading = true;
         ShowReplaceState();
