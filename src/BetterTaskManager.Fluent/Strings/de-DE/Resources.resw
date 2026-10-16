@@ -458,4 +458,7 @@ Diesen Namen hat eine andere App abgefragt, nicht diese. Die Adresse kann auch z
   <data name="Column_DiskTooltip" xml:space="preserve"><value>Bytes pro Sekunde, die einen Datenträger erreicht haben (Lesen + Schreiben), wie die Spalte Datenträger im Task-Manager</value></data>
   <data name="Column_DiskIoTooltip" xml:space="preserve"><value>Alle Datei- und Geräte-E/A pro Sekunde (Lesen + Schreiben + Sonstiges), auch Pipes zwischen Prozessen. Echte Datenträgerwerte brauchen Administratorrechte oder den Verlaufsdienst.</value></data>
   <data name="ProcessesPage_14.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nach Datenträger sortieren</value></data>
+  <data name="MainWindow_11.Title" xml:space="preserve"><value>Windows-Task-Manager wird nicht mehr ersetzt</value></data>
+  <data name="MainWindow_11.Message" xml:space="preserve"><value>Ein anderes Programm oder Windows hat die Einstellung entfernt, deshalb öffnen Taskleistenmenü, Strg+Umschalt+Esc und Strg+Alt+Entf wieder den Windows-Task-Manager.</value></data>
+  <data name="MainWindow_12.Content" xml:space="preserve"><value>Wiederherstellen</value></data>
 </root>
