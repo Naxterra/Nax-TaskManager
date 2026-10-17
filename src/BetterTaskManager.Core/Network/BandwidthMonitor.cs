@@ -23,7 +23,8 @@ public struct ByteCounts
 public sealed class BandwidthMonitor : IDisposable
 {
     /// <summary>A process seen by the kernel trace; kept after exit so short-lived processes can still be named.</summary>
-    public readonly record struct TracedProcess(string Name, string Path, DateTime? ExitedUtc);
+    /// <param name="StartedUtc">When the trace saw it start; <see cref="DateTime.MinValue"/> for processes already running.</param>
+    public readonly record struct TracedProcess(string Name, string Path, DateTime? ExitedUtc, DateTime StartedUtc = default);
     private static readonly TimeSpan ExitedProcessMemory = TimeSpan.FromMinutes(10);
     private readonly System.Collections.Concurrent.ConcurrentDictionary<int, TracedProcess> processes = new();
 
@@ -82,8 +83,8 @@ public sealed class BandwidthMonitor : IDisposable
             kernel.UdpIpRecv += data => Add(data.ProcessID, false, true, data.size, data.sport, data.daddr, data.dport);
             kernel.UdpIpSendIPV6 += data => Add(data.ProcessID, false, false, data.size, data.sport, data.daddr, data.dport);
             kernel.UdpIpRecvIPV6 += data => Add(data.ProcessID, false, true, data.size, data.sport, data.daddr, data.dport);
-            kernel.ProcessStart += OnProcessStart;
-            kernel.ProcessDCStart += OnProcessStart;
+            kernel.ProcessStart += data => OnProcessStart(data, data.TimeStamp.ToUniversalTime());
+            kernel.ProcessDCStart += data => OnProcessStart(data, DateTime.MinValue);
             kernel.ProcessStop += data =>
             {
                 if (processes.TryGetValue(data.ProcessID, out TracedProcess known)) processes[data.ProcessID] = known with { ExitedUtc = DateTime.UtcNow };
@@ -126,10 +127,10 @@ public sealed class BandwidthMonitor : IDisposable
         TryStart();
     }
 
-    private void OnProcessStart(ProcessTraceData data)
+    private void OnProcessStart(ProcessTraceData data, DateTime startedUtc)
     {
         if (data.ProcessID <= 4) return;
-        processes[data.ProcessID] = new TracedProcess(data.ImageFileName, BetterTaskManager.Core.Native.DevicePaths.ToDosPath(data.KernelImageFileName), null);
+        processes[data.ProcessID] = new TracedProcess(data.ImageFileName, BetterTaskManager.Core.Native.DevicePaths.ToDosPath(data.KernelImageFileName), null, startedUtc);
     }
 
     /// <summary>Name and path of a process the trace saw start, including ones that exited in the last minutes.</summary>

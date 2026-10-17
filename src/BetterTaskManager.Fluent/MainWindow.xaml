@@ -78,6 +78,13 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <StackPanel>
+                <InfoBar x:Uid="MainWindow_13"
+                    x:Name="CollectionBar"
+                    Margin="16,8,16,0"
+                    IsClosable="False"
+                    Severity="Error"
+                    Title="Measuring failed"
+                    Message="" />
                 <InfoBar x:Uid="MainWindow_11"
                     x:Name="ReplaceLostBar"
                     Margin="16,8,16,0"

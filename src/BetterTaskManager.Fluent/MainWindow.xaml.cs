@@ -59,8 +59,15 @@ public sealed partial class MainWindow : Window
             if (args.Reason == InfoBarCloseReason.CloseButton) App.Settings.HideElevationNotice = true;
         };
         string limitedMessage = ElevationBar.Message;
+        // A failed collection leaves the last numbers on screen: say so until a new snapshot arrives.
+        App.Monitor.CollectionFailed += message =>
+        {
+            CollectionBar.Message = Loc.F("Collection_Failed", message);
+            CollectionBar.IsOpen = true;
+        };
         App.Monitor.Updated += snapshot =>
         {
+            CollectionBar.IsOpen = false;
             ElevationBar.Message = snapshot.System.PerProcessNetworkFromService
                 ? Loc.Get("Limited_FeedMessage")
                 : limitedMessage;

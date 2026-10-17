@@ -206,6 +206,9 @@ public sealed class HistoryStore : IDisposable
             """, "$day", "$key", "$name", "$path", "$in", "$out", "$tunnel");
         insertConnection.Transaction = updateConnection.Transaction = addUsage.Transaction = transaction;
 
+        // New row ids are published to the tracked connections only after the commit: after a rollback they must stay
+        // 0 so the retry inserts again instead of updating a row that does not exist (or another row with that id).
+        var inserted = new List<(TrackedConnection Item, long Id)>();
         foreach (TrackedConnection item in changed)
         {
             if (item.Id == 0)
@@ -213,7 +216,7 @@ public sealed class HistoryStore : IDisposable
                 Bind(insertConnection, ToUnixMs(item.FirstSeen), ToUnixMs(item.LastSeen), item.App.Key, item.App.Name, item.App.Path, item.Pid,
                     item.Protocol, item.LocalAddress, item.LocalPort, item.RemoteAddress, item.RemotePort, (object?)item.RemoteHost ?? DBNull.Value,
                     item.RemoteHostSource, item.BytesIn, item.BytesOut, item.State, item.Scope, item.Inbound ? 1 : 0);
-                item.Id = (long)insertConnection.ExecuteScalar()!;
+                inserted.Add((item, (long)insertConnection.ExecuteScalar()!));
             }
             else
             {
@@ -231,6 +234,7 @@ public sealed class HistoryStore : IDisposable
 
         SetMeta("last_write", ToUnixMs(nowUtc).ToString(CultureInfo.InvariantCulture), transaction);
         transaction.Commit();
+        foreach (var (item, id) in inserted) item.Id = id;
     }
 
     /// <summary>Deletes connections and daily totals older than the retention period.</summary>

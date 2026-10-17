@@ -19,8 +19,55 @@ public static class Program
     internal const string StartupDisableArgument = "--startup-disable";
     internal const string ReplaceTaskManagerOnArgument = "--replace-taskmanager-on";
     internal const string ReplaceTaskManagerOffArgument = "--replace-taskmanager-off";
+    internal const string UninstallCleanupArgument = "--uninstall-cleanup";
+    internal const string CacheTrimOnArgument = "--cache-trim-on";
+    internal const string CacheTrimOffArgument = "--cache-trim-off";
 
     private static Mutex? s_singleInstance;
+
+    /// <summary>
+    /// Restores Windows Task Manager if it points at <paramref name="executablePath"/>, removes every block this app
+    /// made (WFP filters and older Windows Firewall rules) and the History service. Each step runs even if another
+    /// failed. The exit code has one bit per failed step (1 Task Manager, 2 blocks, 4 service); details go to
+    /// <paramref name="resultFile"/>.
+    /// </summary>
+    private static int UninstallCleanup(string executablePath, string resultFile)
+    {
+        int code = 0;
+        var details = new List<string>();
+        try
+        {
+            Core.Native.TaskManagerReplacement.DisableIfOurs(executablePath);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+        {
+            code |= 1;
+            details.Add("Task Manager: " + ex.Message);
+        }
+        try
+        {
+            FirewallRules.RemoveAll();
+        }
+        catch (Exception ex) when (ex is Core.Firewall.WfpException or IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            code |= 2;
+            details.Add("Blocks: " + ex.Message);
+        }
+        CommandResult service = Core.History.HistoryServiceControl.Uninstall();
+        if (!service.Succeeded)
+        {
+            code |= 4;
+            details.Add("History service: " + service.FailureSummary());
+        }
+        try
+        {
+            File.WriteAllText(resultFile, code == 0 ? "OK" : string.Join(Environment.NewLine, details));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+        return code;
+    }
 
     [STAThread]
     private static int Main(string[] args)
@@ -84,6 +131,28 @@ public static class Program
             {
                 return 1;
             }
+        }
+
+        // Elevated helper mode: switch the service's removal of written files from RAM on or off, then exit.
+        if (args.Length == 1 && (args[0] == CacheTrimOnArgument || args[0] == CacheTrimOffArgument))
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            try
+            {
+                Core.Disk.CacheTrimmer.SetEnabled(args[0] == CacheTrimOnArgument);
+                return 0;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                return 1;
+            }
+        }
+
+        // Elevated helper mode for the uninstaller: undo everything outside the app folder, then exit.
+        if (args.Length == 3 && args[0] == UninstallCleanupArgument)
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            return UninstallCleanup(args[1], args[2]);
         }
 
         WaitForPreviousInstance(args);

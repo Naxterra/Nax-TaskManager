@@ -99,6 +99,20 @@ public sealed class HostNameResolver : IDisposable
         return Resolve(address);
     }
 
+    /// <summary>
+    /// A process with this PID was created at <paramref name="createdUtc"/>: lookups recorded for the PID before that
+    /// belong to an earlier process that used the same PID and must not be credited to the new one.
+    /// </summary>
+    public void ProcessStarted(int pid, DateTime createdUtc)
+    {
+        lock (gate)
+        {
+            if (!byProcess.TryGetValue(pid, out var own)) return;
+            foreach (IPAddress ip in own.Where(pair => pair.Value.At < createdUtc).Select(pair => pair.Key).ToList()) own.Remove(ip);
+            if (own.Count == 0) byProcess.Remove(pid);
+        }
+    }
+
     public void Start()
     {
         TryStartDnsTrace();

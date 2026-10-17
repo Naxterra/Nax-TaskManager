@@ -28,7 +28,8 @@ internal sealed record AppIdentity(string Key, string Name, string Path, long Cr
         {
         }
         string key = AppIdentityRules.PathKey(traced.Path) ?? traced.Name.ToLowerInvariant();
-        return new AppIdentity(key, name, traced.Path, -1);
+        // The trace's start time stands in for the creation time, so a later process on the same PID can be told apart.
+        return new AppIdentity(key, name, traced.Path, traced.StartedUtc > DateTime.MinValue ? traced.StartedUtc.ToFileTimeUtc() : -1);
     }
 }
 
@@ -82,6 +83,8 @@ public sealed class HistoryRecorder : IDisposable
     private readonly System.Collections.Concurrent.ConcurrentQueue<(int Pid, string Name, IReadOnlyList<IPAddress> Answers, DateTime At)> dnsQueries = new();
     private readonly TracedProcessLookup? tracedProcess;
     private readonly Dictionary<FlowKey, TrackedConnection> live = new();
+    // Connections that ended and were replaced by a new one on the same key before their last change was written.
+    private readonly List<TrackedConnection> endedPending = new();
     private readonly Dictionary<(string Day, string AppKey), UsageDelta> usage = new();
     // Traffic is counted by PID; a process can exit before the next snapshot names it.
     private readonly Dictionary<int, (AppIdentity App, DateTime SeenUtc)> identities = new();
@@ -207,8 +210,13 @@ public sealed class HistoryRecorder : IDisposable
     {
         if (!live.TryGetValue(key, out TrackedConnection? tracked) || tracked.Ended)
         {
-            // An ended UDP flow that starts again becomes a new row, like a new TCP connection would.
-            if (tracked is { Ended: true }) live.Remove(key);
+            // An ended UDP flow that starts again becomes a new row, like a new TCP connection would. The old one keeps
+            // its unwritten changes until the next flush.
+            if (tracked is { Ended: true })
+            {
+                live.Remove(key);
+                if (tracked.Changed) endedPending.Add(tracked);
+            }
             tracked = new TrackedConnection
             {
                 App = app,
@@ -248,24 +256,37 @@ public sealed class HistoryRecorder : IDisposable
 
     private AppIdentity Identify(int pid)
     {
-        if (identities.TryGetValue(pid, out var known)) return known.App;
-        if (tracedProcess is not null && tracedProcess(pid, out BandwidthMonitor.TracedProcess traced))
+        bool traced = tracedProcess is not null && tracedProcess(pid, out tracedEntry);
+        if (identities.TryGetValue(pid, out var known))
         {
-            AppIdentity app = AppIdentity.FromTraced(traced);
+            // The kernel trace saw a process start under this PID after the cached one was created: the PID was reused
+            // by a process that came and went between two snapshots, so the cached identity belongs to its predecessor.
+            if (!traced || tracedEntry.StartedUtc <= CreatedUtc(known.App) + PidReuseTolerance) return known.App;
+        }
+        if (traced)
+        {
+            AppIdentity app = AppIdentity.FromTraced(tracedEntry);
             identities[pid] = (app, DateTime.UtcNow);
             return app;
         }
-        return AppIdentity.Unknown(pid);
+        return known.App ?? AppIdentity.Unknown(pid);
     }
+
+    private BandwidthMonitor.TracedProcess tracedEntry;
+    private static readonly TimeSpan PidReuseTolerance = TimeSpan.FromSeconds(2);
+
+    /// <summary>Creation time of a snapshot process (FILETIME); traced identities have none.</summary>
+    private static DateTime CreatedUtc(AppIdentity app) => app.CreateTime > 0 ? DateTime.FromFileTimeUtc(app.CreateTime) : DateTime.MinValue;
 
     /// <summary>Writes pending changes now. Called automatically every few seconds and on dispose.</summary>
     public void Flush() => Flush(DateTime.UtcNow);
 
     private void Flush(DateTime now)
     {
-        List<TrackedConnection> changed = live.Values.Where(tracked => tracked.Changed).ToList();
+        List<TrackedConnection> changed = live.Values.Where(tracked => tracked.Changed).Concat(endedPending).ToList();
         if (changed.Count > 0 || usage.Count > 0) store.Write(changed, usage, now);
         foreach (TrackedConnection tracked in changed) tracked.Changed = false;
+        endedPending.Clear();
         usage.Clear();
         foreach (var key in live.Where(pair => pair.Value.Ended).Select(pair => pair.Key).ToList()) live.Remove(key);
         foreach (int pid in identities.Where(pair => now - pair.Value.SeenUtc > ExitedProcessMemory).Select(pair => pair.Key).ToList()) identities.Remove(pid);

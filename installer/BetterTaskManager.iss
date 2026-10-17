@@ -90,6 +90,10 @@ english.PreviousUninstallFailed=The existing installation could not be removed. 
 german.PreviousUninstallFailed=Die vorhandene Installation konnte nicht entfernt werden. Setup wird nicht fortgesetzt. Deinstallations-Fehlercode:
 english.PreviousUninstallerMissing=An existing installation was detected, but its uninstaller is missing. Remove or repair the existing installation in Windows Settings before trying again.
 german.PreviousUninstallerMissing=Eine vorhandene Installation wurde erkannt, aber das Deinstallationsprogramm fehlt. Entfernen oder reparieren Sie die vorhandene Installation in den Windows-Einstellungen und versuchen Sie es erneut.
+english.TaskManagerRestoreFailed=Windows Task Manager could not be restored, so it still opens Nax-TaskManager. If you uninstall now, Task Manager will not open until the setting is removed.%n%nUninstall anyway?
+german.TaskManagerRestoreFailed=Der Windows-Task-Manager konnte nicht wiederhergestellt werden und öffnet weiterhin Nax-TaskManager. Wenn Sie jetzt deinstallieren, öffnet sich der Task-Manager nicht mehr, bis die Einstellung entfernt ist.%n%nTrotzdem deinstallieren?
+english.CleanupFailed=Not everything could be cleaned up (blocked programs or the History service may remain). Details: %TEMP%\NaxTaskManager-uninstall.txt%n%nUninstall anyway?
+german.CleanupFailed=Nicht alles konnte aufgeräumt werden (gesperrte Programme oder der Verlaufsdienst können bleiben). Details: %TEMP%\NaxTaskManager-uninstall.txt%n%nTrotzdem deinstallieren?
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopShortcut}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -192,20 +196,25 @@ begin
   Result := not FileExists(Uninstaller);
 end;
 
-function ShouldRemoveHistoryService(): Boolean;
-begin
-  Result := (not UninstallSilent()) and RegKeyExists(HKLM64, 'SYSTEM\CurrentControlSet\Services\NaxTaskManagerHistory');
-end;
-
-function ShouldRestoreTaskManager(): Boolean;
+// Windows Task Manager still opens this app (the redirect points into this installation).
+function TaskManagerStillOurs(): Boolean;
 var
   Value: String;
 begin
   Result := False;
-  if UninstallSilent() then
-    Exit;
   if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\taskmgr.exe', 'Debugger', Value) then
     Result := Pos(Lowercase(ExpandConstant('{app}\{#AppExeName}')), Lowercase(Value)) > 0;
+end;
+
+// A newer setup runs this uninstaller with /NAXUPGRADE before installing itself.
+function IsUpgradeUninstall(): Boolean;
+var
+  Index: Integer;
+begin
+  Result := False;
+  for Index := 1 to ParamCount do
+    if CompareText(ParamStr(Index), '/NAXUPGRADE') = 0 then
+      Result := True;
 end;
 
 function ShouldMoveTaskManagerReplacement(): Boolean;
@@ -236,7 +245,8 @@ begin
 
   Log('Existing installation detected. Running previous uninstaller: ' + Uninstaller);
   WizardForm.StatusLabel.Caption := CustomMessage('RemovingPreviousVersion');
-  if (not ShellExec('', Uninstaller, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS', '',
+  // /NAXUPGRADE tells the old uninstaller this is an upgrade: keep the service, blocks and Task Manager choice.
+  if (not ShellExec('', Uninstaller, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /NAXUPGRADE', '',
       SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode)) or (ResultCode <> 0) then
   begin
     Result := CustomMessage('PreviousUninstallFailed') + ' ' + IntToStr(ResultCode);
@@ -253,29 +263,33 @@ begin
   Log('Previous installation removed successfully before installing the new version.');
 end;
 
-procedure RunElevatedApp(const Parameters: String);
+// A real uninstall (not the removal a newer setup does before upgrading) undoes everything outside the app folder in
+// one elevated step: Windows Task Manager is restored if it opens this app, every block is removed (otherwise blocked
+// programs would stay blocked with nothing left to unblock them) and the History service goes. This runs before any
+// file is removed, so a failure can still stop the uninstall.
+function InitializeUninstall(): Boolean;
 var
   ResultCode: Integer;
 begin
-  if not ShellExec('runas', ExpandConstant('{app}\{#AppExeName}'), Parameters, ExpandConstant('{app}'),
-      SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
-    Log('Could not run ' + Parameters + ': ' + SysErrorMessage(ResultCode))
-  else
-    Log(Parameters + ' exited with code ' + IntToStr(ResultCode));
-end;
-
-// [UninstallRun] Check functions are evaluated at install time, where UninstallSilent() is not allowed,
-// so these steps run here, before the app files are removed.
-procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-begin
-  if CurUninstallStep <> usUninstall then
+  Result := True;
+  if IsUpgradeUninstall() then
     Exit;
-  // The background history service runs from Program Files as LocalSystem; remove it with the app (one UAC prompt).
-  // Skipped for silent uninstalls, which is how a newer setup removes this version during an upgrade.
-  if ShouldRemoveHistoryService() then
-    RunElevatedApp('--uninstall-history-service "' + ExpandConstant('{%TEMP}') + '\NaxTaskManager-uninstall-service.txt"');
-  // If this app replaced Windows Task Manager, restore the built-in one (one UAC prompt). Only when the redirect is
-  // still ours, and skipped for silent uninstalls so the choice survives app upgrades.
-  if ShouldRestoreTaskManager() then
-    RunElevatedApp('--replace-taskmanager-off "' + ExpandConstant('{app}\{#AppExeName}') + '"');
+  if not ShellExec('runas', ExpandConstant('{app}\{#AppExeName}'),
+      '--uninstall-cleanup "' + ExpandConstant('{app}\{#AppExeName}') + '" "' + ExpandConstant('{%TEMP}') + '\NaxTaskManager-uninstall.txt"',
+      ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    ResultCode := -1;
+  Log('Uninstall cleanup exited with code ' + IntToStr(ResultCode));
+  if ResultCode = 0 then
+    Exit;
+  // Removing the program now would leave Windows Task Manager pointing at a deleted file.
+  if TaskManagerStillOurs() then
+  begin
+    if UninstallSilent() then
+      Result := False
+    else
+      Result := MsgBox(CustomMessage('TaskManagerRestoreFailed'), mbError, MB_YESNO or MB_DEFBUTTON2) = IDYES;
+    Exit;
+  end;
+  if not UninstallSilent() then
+    Result := MsgBox(CustomMessage('CleanupFailed'), mbConfirmation, MB_YESNO) = IDYES;
 end;

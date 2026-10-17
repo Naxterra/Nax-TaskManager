@@ -461,4 +461,14 @@ Diesen Namen hat eine andere App abgefragt, nicht diese. Die Adresse kann auch z
   <data name="MainWindow_11.Title" xml:space="preserve"><value>Windows-Task-Manager wird nicht mehr ersetzt</value></data>
   <data name="MainWindow_11.Message" xml:space="preserve"><value>Ein anderes Programm oder Windows hat die Einstellung entfernt, deshalb öffnen Taskleistenmenü, Strg+Umschalt+Esc und Strg+Alt+Entf wieder den Windows-Task-Manager.</value></data>
   <data name="MainWindow_12.Content" xml:space="preserve"><value>Wiederherstellen</value></data>
+  <data name="SettingsPage_31.Text" xml:space="preserve"><value>Arbeitsspeicher</value></data>
+  <data name="SettingsPage_32.Text" xml:space="preserve"><value>Geschriebene Dateien aus dem RAM entfernen</value></data>
+  <data name="SettingsPage_33.OnContent" xml:space="preserve"><value>Ein</value></data>
+  <data name="SettingsPage_33.OffContent" xml:space="preserve"><value>Aus</value></data>
+  <data name="SettingsPage_34.Text" xml:space="preserve"><value>Windows behält alles, was auf einen Datenträger geschrieben wurde, im Dateicache. Der Verlaufsdienst entfernt Dateien ab 256 MB (Spiel-Updates, Installationsprogramme, Downloads) 30 Sekunden nach dem Schreiben aus dem RAM und nach 5 Minuten noch einmal. Dateien, die ein laufendes Programm noch nutzt, bleiben im RAM. Braucht den Verlaufsdienst; Ändern braucht Administratorrechte.</value></data>
+  <data name="CacheTrim_On" xml:space="preserve"><value>Ein: große geschriebene Dateien verlassen den RAM kurz nach dem Schreiben.</value></data>
+  <data name="CacheTrim_Off" xml:space="preserve"><value>Aus: Windows behält geschriebene Dateien im Cache, bis Speicher gebraucht wird.</value></data>
+  <data name="CacheTrim_NoService" xml:space="preserve"><value>Der Verlaufsdienst läuft nicht; schalten Sie unten die Aufzeichnung im Hintergrund ein, um dies zu nutzen.</value></data>
+  <data name="MainWindow_13.Title" xml:space="preserve"><value>Messung fehlgeschlagen</value></data>
+  <data name="Collection_Failed" xml:space="preserve"><value>Die angezeigten Werte stammen von der letzten erfolgreichen Aktualisierung. Fehler: {0}</value></data>
 </root>

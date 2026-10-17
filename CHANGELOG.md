@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0-alpha.28 - 2026-10-17
+
+Fixes from an external code review (all eight findings confirmed and fixed):
+
+- **Uninstall cleans up everything outside the app folder.** A real uninstall (silent or not) now runs one elevated step before any file is removed: it restores Windows Task Manager if it opens this app, removes every network block (otherwise blocked programs stayed blocked with nothing left to unblock them) and removes the History service. If Task Manager cannot be restored, a silent uninstall stops and an interactive one asks first, so Task Manager never points at a deleted program. Upgrades tell the old uninstaller to keep all of this.
+- **Safer data folder.** `C:\ProgramData\NaxTaskManager` now gets Administrators as owner. A folder someone else created first, or a link to another place, is not used: links are removed (never their target) and other folders are renamed to `NaxTaskManager.untrusted-<time>`.
+- **Blocking never weakens protection.** Old Windows Firewall rules are removed only after the new block is in place; unblocking reports an error if an old rule survives; a failed update of the block list file no longer reports an applied block as failed.
+- **History keeps every connection.** A connection that ended and restarted on the same address before the next save lost its first part; a failed database write could lose a connection on the retry; a program that reused the PID of an exited one within a second or two could be credited with the other's traffic or DNS names. All fixed, with regression checks in `tests/history-checks.cs`.
+- **Switch for removing written files from RAM** in Settings (Memory), on by default.
+- **Warning when measuring fails**, instead of silently showing old values.
+- `SECURITY.md` describes WFP blocking, uninstall cleanup and the data folder rules.
+
 ## 2.0.0-alpha.27 - 2026-10-17
 
 - **Notice when "Replace Windows Task Manager" was removed.** Redirecting Task Manager is something security software and Windows sometimes undo on their own (on 2026-10-16 the setting disappeared at 09:18, half an hour after startup, without anything in Nax-TaskManager or its installer touching it). The app now remembers that you switched the replacement on and, if the setting is gone when it starts, shows a warning with a **Restore** button (one administrator prompt). Closing the warning means you no longer want the replacement. Turn it on once in Settings to start this.

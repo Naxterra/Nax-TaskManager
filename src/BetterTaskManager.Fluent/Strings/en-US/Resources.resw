@@ -461,4 +461,14 @@ Name looked up by another app, not by this one. This address can also serve othe
   <data name="MainWindow_11.Title" xml:space="preserve"><value>Windows Task Manager is no longer replaced</value></data>
   <data name="MainWindow_11.Message" xml:space="preserve"><value>Another program or Windows removed the setting, so the taskbar menu, Ctrl+Shift+Esc and Ctrl+Alt+Del open Windows Task Manager again.</value></data>
   <data name="MainWindow_12.Content" xml:space="preserve"><value>Restore</value></data>
+  <data name="SettingsPage_31.Text" xml:space="preserve"><value>Memory</value></data>
+  <data name="SettingsPage_32.Text" xml:space="preserve"><value>Remove written files from RAM</value></data>
+  <data name="SettingsPage_33.OnContent" xml:space="preserve"><value>On</value></data>
+  <data name="SettingsPage_33.OffContent" xml:space="preserve"><value>Off</value></data>
+  <data name="SettingsPage_34.Text" xml:space="preserve"><value>Windows keeps everything written to disk in its file cache. The History service removes files of 256 MB or more (game updates, installers, downloads) from RAM 30 seconds after they were written, and again after 5 minutes. Files a running program still uses stay in RAM. Needs the History service; changing it needs administrator approval.</value></data>
+  <data name="CacheTrim_On" xml:space="preserve"><value>On: big written files leave RAM shortly after they were written.</value></data>
+  <data name="CacheTrim_Off" xml:space="preserve"><value>Off: Windows keeps written files in its cache until memory is needed.</value></data>
+  <data name="CacheTrim_NoService" xml:space="preserve"><value>The History service is not running; turn on background recording below to use this.</value></data>
+  <data name="MainWindow_13.Title" xml:space="preserve"><value>Measuring failed</value></data>
+  <data name="Collection_Failed" xml:space="preserve"><value>The values shown are from the last successful update. Error: {0}</value></data>
 </root>

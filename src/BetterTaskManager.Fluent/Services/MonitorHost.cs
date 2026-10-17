@@ -26,6 +26,7 @@ public sealed class MonitorHost : IDisposable
         this.settings = settings;
         engine.Interval = TimeSpan.FromMilliseconds(Math.Clamp(settings.RefreshIntervalMilliseconds, 250, 10000));
         engine.SnapshotReady += OnSnapshotReady;
+        engine.CollectionFailed += ex => dispatcher?.TryEnqueue(DispatcherQueuePriority.Normal, () => CollectionFailed?.Invoke(ex.Message));
         IsElevated = FirewallRules.IsElevated;
         if (!IsElevated) engine.UseServiceFeed();
         // Elevated with the history service running: one set of kernel traces (the service's) is enough.
@@ -36,6 +37,8 @@ public sealed class MonitorHost : IDisposable
 
     /// <summary>Raised on the UI thread with the newest snapshot.</summary>
     public event Action<MonitorSnapshot>? Updated;
+    /// <summary>A collection failed; the numbers on screen are from the last good snapshot until the next one arrives.</summary>
+    public event Action<string>? CollectionFailed;
     public event Action? SearchChanged;
     public event Action? FirewallChanged;
 

@@ -37,13 +37,48 @@ public static class WfpBlocker
     public static void Block(string path)
     {
         using (var engine = Engine.Open()) BlockCore(engine, path);
-        WriteMirror();
+        TryWriteMirror();
     }
 
     public static void Unblock(string path)
     {
         using (var engine = Engine.Open()) UnblockCore(engine, path);
-        WriteMirror();
+        TryWriteMirror();
+    }
+
+    /// <summary>
+    /// Removes every filter this app created, then its sublayer and provider, and the mirror file. Used when the app
+    /// is uninstalled, so no program stays blocked without a way to unblock it. Idempotent; needs administrator rights.
+    /// </summary>
+    public static void RemoveAll()
+    {
+        HashSet<string> paths = ReadFilters();
+        using (var engine = Engine.Open())
+        {
+            foreach (string path in paths) UnblockCore(engine, path);
+            Guid subLayer = SubLayerKey;
+            uint result = FwpmSubLayerDeleteByKey0(engine.Handle, ref subLayer);
+            if (result != 0 && result != ErrorSubLayerNotFound) throw new WfpException("FwpmSubLayerDeleteByKey0", result);
+            Guid provider = ProviderKey;
+            result = FwpmProviderDeleteByKey0(engine.Handle, ref provider);
+            if (result != 0 && result != ErrorProviderNotFound) throw new WfpException("FwpmProviderDeleteByKey0", result);
+        }
+        if (File.Exists(MirrorPath)) File.Delete(MirrorPath);
+    }
+
+    /// <summary>
+    /// The filters are what blocks; the mirror only tells the unelevated app what is blocked. A failed mirror write
+    /// must not turn an applied change into a reported failure, and the next change rewrites the file anyway.
+    /// </summary>
+    private static void TryWriteMirror()
+    {
+        try
+        {
+            WriteMirror();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     private static void BlockCore(Engine engine, string path)
@@ -392,6 +427,12 @@ public static class WfpBlocker
 
     [DllImport("fwpuclnt.dll")]
     private static extern uint FwpmFilterDeleteByKey0(IntPtr engineHandle, ref Guid key);
+
+    [DllImport("fwpuclnt.dll")]
+    private static extern uint FwpmSubLayerDeleteByKey0(IntPtr engineHandle, ref Guid key);
+
+    [DllImport("fwpuclnt.dll")]
+    private static extern uint FwpmProviderDeleteByKey0(IntPtr engineHandle, ref Guid key);
 
     [DllImport("fwpuclnt.dll", CharSet = CharSet.Unicode)]
     private static extern uint FwpmGetAppIdFromFileName0(string fileName, out IntPtr appId);

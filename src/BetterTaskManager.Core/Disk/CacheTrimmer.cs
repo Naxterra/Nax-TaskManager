@@ -63,6 +63,29 @@ public sealed class CacheTrimmer : IDisposable
     }
 
     public long Threshold { get; }
+
+    /// <summary>
+    /// Marker file in the protected data folder: present means the user switched trimming off in Settings. The service
+    /// runs as SYSTEM and cannot read the user's settings, and only administrators may change files there.
+    /// </summary>
+    public static string DisabledMarkerPath => Path.Combine(DataFolder.Path, "cache-trim-off");
+
+    /// <summary>On unless switched off in Settings (default on).</summary>
+    public static bool Enabled => !File.Exists(DisabledMarkerPath);
+
+    /// <summary>Switches trimming on or off for the service. Needs administrator rights.</summary>
+    public static void SetEnabled(bool enabled)
+    {
+        if (enabled)
+        {
+            if (File.Exists(DisabledMarkerPath)) File.Delete(DisabledMarkerPath);
+            return;
+        }
+        DataFolder.EnsureSecured();
+        File.WriteAllText(DisabledMarkerPath, "Removing written files from RAM was switched off in Nax-TaskManager's settings.");
+    }
+
+    private bool running = true;
     public long FilesTrimmed { get; private set; }
     public long BytesTrimmed { get; private set; }
 
@@ -115,8 +138,23 @@ public sealed class CacheTrimmer : IDisposable
         {
             try
             {
-                foreach (Volume volume in volumes) ReadJournal(volume);
-                TrimDue();
+                bool enabled = Enabled;
+                if (enabled != running)
+                {
+                    running = enabled;
+                    log(enabled ? "Cache trim: switched on in Settings" : "Cache trim: switched off in Settings");
+                }
+                if (enabled)
+                {
+                    foreach (Volume volume in volumes) ReadJournal(volume);
+                    TrimDue();
+                }
+                else
+                {
+                    // Paused: forget pending files and follow the journal's end, so switching on again starts fresh.
+                    pending.Clear();
+                    foreach (Volume volume in volumes) QueryJournal(volume);
+                }
             }
             catch (Exception ex)
             {

@@ -53,23 +53,45 @@ public static partial class FirewallRules
     /// <summary>
     /// Blocks or allows outbound traffic for an executable. Enforcement is a Windows Filtering Platform filter, which
     /// also works while a third-party firewall has turned Windows Firewall rules off. Windows Firewall rules from
-    /// earlier versions (either name) are removed either way. The caller must be elevated.
+    /// earlier versions (either name) are removed only after the filter change took effect, so a failed block never
+    /// leaves the program less protected than before; an unblock fails if such a rule survives. Must be elevated.
     /// </summary>
     public static CommandResult Apply(string path, bool block)
     {
         if (string.IsNullOrWhiteSpace(path)) return new CommandResult(87, "", "The executable path is empty.", false);
-        string rule = RuleNameForPath(path);
-        CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + LegacyRuleName(rule));
-        CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + rule);
         try
         {
             if (block) WfpBlocker.Block(path);
             else WfpBlocker.Unblock(path);
-            return new CommandResult(0, "", "", false);
         }
         catch (Exception ex) when (ex is WfpException or IOException or UnauthorizedAccessException)
         {
             return new CommandResult(ex is WfpException wfp ? (int)wfp.Code : 1, "", ex.Message, false);
+        }
+
+        string rule = RuleNameForPath(path);
+        string[] legacy = [LegacyRuleName(rule), rule];
+        foreach (string name in legacy) CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + name);
+        if (!block && legacy.FirstOrDefault(RuleExists) is { } remaining)
+        {
+            return new CommandResult(1, "", $"The Windows Firewall rule \"{remaining}\" from an earlier version could not be removed.", false);
+        }
+        return new CommandResult(0, "", "", false);
+    }
+
+    private static bool RuleExists(string name) =>
+        CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=" + name).ExitCode == 0;
+
+    /// <summary>Removes every block this app ever made: WFP filters and Windows Firewall rules of earlier versions.</summary>
+    public static void RemoveAll()
+    {
+        WfpBlocker.RemoveAll();
+        CommandResult result = CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=all", "dir=out");
+        if (!result.Succeeded) return;
+        foreach (string hash in RuleNamePattern().Matches(result.StandardOutput).Select(match => match.Groups[1].Value.ToUpperInvariant()).Distinct())
+        {
+            CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + RulePrefix + hash);
+            CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + LegacyRulePrefix + hash);
         }
     }
 }

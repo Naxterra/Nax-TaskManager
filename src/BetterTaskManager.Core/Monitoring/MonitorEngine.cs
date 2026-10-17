@@ -242,6 +242,8 @@ public sealed class MonitorEngine : IDisposable
             long ioBytes = process.ReadBytes + process.WriteBytes + process.OtherBytes;
             double cpu = 0, io = 0, diskRead = 0, diskWrite = 0;
             bool sampled = false;
+            // A process seen for the first time may reuse the PID of one that exited: drop that one's DNS lookups.
+            if (process.Pid > 4 && process.CreateTime > 0 && !previousMarks.ContainsKey(key)) hostNames.ProcessStarted(process.Pid, DateTime.FromFileTimeUtc(process.CreateTime));
             if (process.Pid != 0 && elapsedSeconds > 0 && previousMarks.TryGetValue(key, out CpuMark previous))
             {
                 cpu = Math.Clamp((process.CpuTime100ns - previous.CpuTime) / (elapsedSeconds * 1e7 * processorCount) * 100, 0, 100);

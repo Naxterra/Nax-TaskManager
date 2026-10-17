@@ -30,7 +30,56 @@ public sealed partial class SettingsPage : Page
         VersionText.Text = "Nax-TaskManager " + version.Split('+')[0];
         ShowHistoryState();
         ShowReplaceState();
+        ShowCacheTrimState();
         loading = false;
+    }
+
+    private void ShowCacheTrimState()
+    {
+        bool on = Core.Disk.CacheTrimmer.Enabled;
+        CacheTrimToggle.IsOn = on;
+        bool service = HistoryServiceControl.QueryState() == HistoryServiceState.Running;
+        CacheTrimStatusText.Text = !service ? Loc.Get("CacheTrim_NoService") : on ? Loc.Get("CacheTrim_On") : Loc.Get("CacheTrim_Off");
+    }
+
+    private async void CacheTrimToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (loading) return;
+        bool enable = CacheTrimToggle.IsOn;
+        CacheTrimToggle.IsEnabled = false;
+        string? error = null;
+        if (App.Monitor.IsElevated)
+        {
+            try
+            {
+                Core.Disk.CacheTrimmer.SetEnabled(enable);
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                error = ex.Message;
+            }
+        }
+        else
+        {
+            // The setting lives in the protected data folder, read by the History service: one UAC prompt.
+            var startInfo = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
+            startInfo.ArgumentList.Add(enable ? Program.CacheTrimOnArgument : Program.CacheTrimOffArgument);
+            try
+            {
+                using Process helper = Process.Start(startInfo)!;
+                await helper.WaitForExitAsync();
+                if (helper.ExitCode != 0) error = Loc.F("Common_ExitCode", helper.ExitCode);
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                error = Loc.Get("Uac_CancelledNothing");
+            }
+        }
+        loading = true;
+        ShowCacheTrimState();
+        loading = false;
+        CacheTrimToggle.IsEnabled = true;
+        if (error is not null) CacheTrimStatusText.Text = error;
     }
 
     private void ShowReplaceState()
