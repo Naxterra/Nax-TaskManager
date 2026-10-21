@@ -322,6 +322,7 @@ public sealed partial class ProcessesPage : Page
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(MenuItem(blocked ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"), FirewallGlyph,
             (_, _) => _ = ToggleFirewallAsync(target.Path), hasPath));
+        menu.Items.Add(MenuItem(Loc.Get("Rules_Menu"), "", (_, _) => _ = AppRulesDialog.ShowAsync(XamlRoot, target.Path, target.Name), hasPath));
         if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
         else menu.ShowAt(source);
         e.Handled = true;

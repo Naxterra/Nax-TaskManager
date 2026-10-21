@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0-alpha.29 - 2026-10-21
+
+- **Per-app network rules.** Every app can now get its own rules instead of only "block everything": right-click an app on the Processes or Network page (or select it on Network and click **Rules**) and choose what to block. Four switches block the Internet, the local network, connections within this PC, or connections other devices start to the app; below them, an outgoing and an incoming rule list in Portmaster's form (`+ LAN`, `- Internet`, `+ 1.1.1.1 TCP/443`, `- * UDP/53`, with `#` comments) where the first matching line decides and everything else stays allowed. Presets give the common cases (web only, local network only, this PC only), and mistakes are explained line by line before saving. Apps with rules show a "Rules" badge on the Network page.
+- **Rules are enforced by Windows itself.** They become persistent Windows Filtering Platform filters under this app's own provider, so they work next to Bitdefender or any other firewall, survive restarts and need no running program. Saving asks once for administrator approval. "Block network" still wins over any rule, and uninstalling removes all rules.
+- **Blocks take effect at once.** Blocking an app, or saving rules that block one of its open connections, now closes those connections immediately instead of letting a running download continue. Tested: a running download stops within a second, over IPv4 and IPv6.
+- Limits: Windows sends ping requests itself, so ICMP rules do not affect `ping`; a rule can block a program's own ICMP sockets only. Rules apply to the executable path, like the whole-app block.
+
 ## 2.0.0-alpha.28 - 2026-10-17
 
 Fixes from an external code review (all eight findings confirmed and fixed):

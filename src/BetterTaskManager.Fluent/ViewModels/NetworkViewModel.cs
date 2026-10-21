@@ -33,7 +33,7 @@ public sealed class NetworkSlot : ObservableObject
     private static readonly Thickness ChildIndent = new(40, 0, 0, 0);
     private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", transferred = "", scope = "", speed = "", remoteDetail = "";
     private ImageSource? icon;
-    private Visibility chevronVisibility, iconVisibility, blockedVisibility = Visibility.Collapsed, tunnelVisibility = Visibility.Collapsed;
+    private Visibility chevronVisibility, iconVisibility, blockedVisibility = Visibility.Collapsed, rulesVisibility = Visibility.Collapsed, tunnelVisibility = Visibility.Collapsed;
     private double chevronAngle;
     private Thickness indent;
     private bool isGroup;
@@ -59,12 +59,13 @@ public sealed class NetworkSlot : ObservableObject
     public Visibility ChevronVisibility { get => chevronVisibility; private set => Set(ref chevronVisibility, value); }
     public Visibility IconVisibility { get => iconVisibility; private set => Set(ref iconVisibility, value); }
     public Visibility BlockedVisibility { get => blockedVisibility; private set => Set(ref blockedVisibility, value); }
+    public Visibility RulesVisibility { get => rulesVisibility; private set => Set(ref rulesVisibility, value); }
     public Visibility TunnelVisibility { get => tunnelVisibility; private set => Set(ref tunnelVisibility, value); }
     public double ChevronAngle { get => chevronAngle; private set => Set(ref chevronAngle, value); }
     public Thickness Indent { get => indent; private set => Set(ref indent, value); }
     public Windows.UI.Text.FontWeight NameWeight => isGroup ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal;
 
-    public static void Load(NetworkSlot slot, (NetworkRowData Row, Func<string, bool> IsBlocked) input)
+    public static void Load(NetworkSlot slot, (NetworkRowData Row, Func<string, NetworkAccess> Access) input)
     {
         NetworkRowData row = input.Row;
         slot.Data = row;
@@ -85,7 +86,9 @@ public sealed class NetworkSlot : ObservableObject
         slot.Icon = group ? IconCache.Get(row.Path) : null;
         slot.ChevronVisibility = row.Expandable ? Visibility.Visible : Visibility.Collapsed;
         slot.ChevronAngle = row.Expanded ? 90 : 0;
-        slot.BlockedVisibility = group && input.IsBlocked(row.Path) ? Visibility.Visible : Visibility.Collapsed;
+        NetworkAccess access = group ? input.Access(row.Path) : NetworkAccess.Open;
+        slot.BlockedVisibility = access == NetworkAccess.Blocked ? Visibility.Visible : Visibility.Collapsed;
+        slot.RulesVisibility = access == NetworkAccess.Rules ? Visibility.Visible : Visibility.Collapsed;
         slot.TunnelVisibility = row.Tunnel ? Visibility.Visible : Visibility.Collapsed;
         if (slot.isGroup != group)
         {
@@ -121,11 +124,11 @@ public sealed class NetworkViewModel : ObservableObject
             SpanGroup = ["Local", "Remote", "Scope", "State"]
         };
         NetworkSlot.SharedLayout = Layout;
-        Rows = new SlotCollection<NetworkSlot, (NetworkRowData, Func<string, bool>)>(NetworkSlot.Load);
+        Rows = new SlotCollection<NetworkSlot, (NetworkRowData, Func<string, NetworkAccess>)>(NetworkSlot.Load);
     }
 
     public ColumnLayout Layout { get; }
-    public SlotCollection<NetworkSlot, (NetworkRowData, Func<string, bool>)> Rows { get; }
+    public SlotCollection<NetworkSlot, (NetworkRowData, Func<string, NetworkAccess>)> Rows { get; }
     public bool EstablishedOnly { get; set; }
     public string Summary { get; private set; } = "";
     public string SortColumn => settings.NetworkSortColumn;
@@ -226,8 +229,8 @@ public sealed class NetworkViewModel : ObservableObject
             : Loc.Get("Network_NeedsAdmin");
         Summary = Loc.F("Network_Summary", Format.Count(snapshot.Connections.Count), Format.Count(totalEstablished), groups.Count) +
             throughput + (snapshot.System.PerProcessNetworkFromService ? Loc.Get("Network_FromService") : "") + (snapshot.NetworkIssues.Count > 0 ? Loc.Get("Network_TablesFailed") : "");
-        Func<string, bool> isBlocked = monitor.IsBlocked;
-        Rows.Apply(rows.Select(row => (row, isBlocked)).ToList());
+        Func<string, NetworkAccess> access = monitor.AccessOf;
+        Rows.Apply(rows.Select(row => (row, access)).ToList());
     }
 
     private List<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel)> SortGroups(

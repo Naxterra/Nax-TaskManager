@@ -34,6 +34,11 @@
                         <FontIcon x:Name="FirewallIcon" Glyph="&#xE785;" />
                     </AppBarButton.Icon>
                 </AppBarButton>
+                <AppBarButton x:Uid="NetworkPage_21" x:Name="RulesButton" Label="Rules" IsEnabled="False" Click="Rules_Click">
+                    <AppBarButton.Icon>
+                        <FontIcon Glyph="&#xE8D7;" />
+                    </AppBarButton.Icon>
+                </AppBarButton>
                 <AppBarToggleButton x:Uid="NetworkPage_4" x:Name="PauseButton" Label="Pause" Click="Pause_Click">
                     <AppBarToggleButton.Icon>
                         <FontIcon Glyph="&#xE769;" />
@@ -143,17 +148,25 @@
                                 <Run Text="{x:Bind Name, Mode=OneWay}" FontWeight="{x:Bind NameWeight, Mode=OneWay}" />
                                 <Run Text="{x:Bind Detail, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
                             </TextBlock>
-                            <Border Grid.Column="3" Margin="0,0,8,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="4"
-                                    Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
-                                    Visibility="{x:Bind BlockedVisibility, Mode=OneWay}">
-                                <TextBlock x:Uid="NetworkPage_18" Text="Blocked" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                            </Border>
-                            <Border x:Uid="NetworkPage_19" Grid.Column="3" Margin="0,0,8,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="4"
-                                    Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}"
-                                    Visibility="{x:Bind TunnelVisibility, Mode=OneWay}"
-                                    ToolTipService.ToolTip="VPN tunnel: carries other apps' traffic in encrypted form, so it is left out of the all-apps total.">
-                                <TextBlock x:Uid="NetworkPage_20" Text="VPN tunnel" FontSize="11" Foreground="{ThemeResource SystemFillColorAttentionBrush}" />
-                            </Border>
+                            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                <Border Margin="0,0,8,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="4"
+                                        Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
+                                        Visibility="{x:Bind BlockedVisibility, Mode=OneWay}">
+                                    <TextBlock x:Uid="NetworkPage_18" Text="Blocked" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                </Border>
+                                <Border x:Uid="NetworkPage_22" Margin="0,0,8,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="4"
+                                        Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                        Visibility="{x:Bind RulesVisibility, Mode=OneWay}"
+                                        ToolTipService.ToolTip="This app has its own network rules.">
+                                    <TextBlock x:Uid="NetworkPage_23" Text="Rules" FontSize="11" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                </Border>
+                                <Border x:Uid="NetworkPage_19" Margin="0,0,8,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="4"
+                                        Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}"
+                                        Visibility="{x:Bind TunnelVisibility, Mode=OneWay}"
+                                        ToolTipService.ToolTip="VPN tunnel: carries other apps' traffic in encrypted form, so it is left out of the all-apps total.">
+                                    <TextBlock x:Uid="NetworkPage_20" Text="VPN tunnel" FontSize="11" Foreground="{ThemeResource SystemFillColorAttentionBrush}" />
+                                </Border>
+                            </StackPanel>
                         </Grid>
                         <TextBlock Grid.Column="{x:Bind Layout.SpanColumn, Mode=OneWay}" Grid.ColumnSpan="{x:Bind Layout.SpanCount, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Summary, Mode=OneWay}" />

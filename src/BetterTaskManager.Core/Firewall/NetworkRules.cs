@@ -146,6 +146,18 @@ public static class RuleScopes
     }
 }
 
+public enum RuleParseError
+{
+    None,
+    Format,
+    Action,
+    Target,
+    ProtocolPorts,
+    Protocol,
+    PortsNeedTcpOrUdp,
+    Ports
+}
+
 public enum RuleTargetKind
 {
     Any,
@@ -231,8 +243,30 @@ public sealed record NetworkRule(bool Allow, RuleTargetKind Target, Cidr? Addres
     /// <summary>Parses one rule line; <paramref name="error"/> says what is wrong in plain words.</summary>
     public static bool TryParse(string line, out NetworkRule? rule, out string error)
     {
+        bool parsed = TryParse(line, out rule, out RuleParseError code, out string token);
+        error = parsed ? "" : Describe(code, token);
+        return parsed;
+    }
+
+    /// <summary>English text for a parse error; the app shows its own translation of the same code.</summary>
+    public static string Describe(RuleParseError error, string token) => error switch
+    {
+        RuleParseError.Format => "Expected: + or -, then a target, then optionally protocol/port.",
+        RuleParseError.Action => "A rule starts with + (allow) or - (block).",
+        RuleParseError.Target => $"\"{token}\" is not *, LAN, Internet, Localhost, an IP address or a range.",
+        RuleParseError.ProtocolPorts => $"\"{token}\" should look like TCP/443.",
+        RuleParseError.Protocol => $"\"{token}\" is not a protocol (TCP, UDP, ICMP, * or a number).",
+        RuleParseError.PortsNeedTcpOrUdp => "Only TCP and UDP have ports.",
+        RuleParseError.Ports => $"\"{token}\" is not a port, a range like 1000-2000 or a name like HTTPS.",
+        _ => ""
+    };
+
+    /// <summary>Parses one rule line; on failure <paramref name="token"/> is the part that is wrong.</summary>
+    public static bool TryParse(string line, out NetworkRule? rule, out RuleParseError error, out string token)
+    {
         rule = null;
-        error = "";
+        error = RuleParseError.None;
+        token = "";
         string comment = "";
         int hash = line.IndexOf('#');
         if (hash >= 0)
@@ -241,11 +275,11 @@ public sealed record NetworkRule(bool Allow, RuleTargetKind Target, Cidr? Addres
             line = line[..hash];
         }
         string[] parts = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length is < 2 or > 3) { error = "Expected: + or -, then a target, then optionally protocol/port."; return false; }
+        if (parts.Length is < 2 or > 3) { error = RuleParseError.Format; return false; }
         bool allow;
         if (parts[0] == "+") allow = true;
         else if (parts[0] == "-") allow = false;
-        else { error = "A rule starts with + (allow) or - (block)."; return false; }
+        else { error = RuleParseError.Action; token = parts[0]; return false; }
 
         RuleTargetKind kind;
         Cidr? address = null;
@@ -256,7 +290,7 @@ public sealed record NetworkRule(bool Allow, RuleTargetKind Target, Cidr? Addres
             case "LAN": kind = RuleTargetKind.Lan; break;
             case "INTERNET": kind = RuleTargetKind.Internet; break;
             default:
-                if (!Cidr.TryParse(parts[1], out Cidr cidr)) { error = $"\"{parts[1]}\" is not *, LAN, Internet, Localhost, an IP address or a range."; return false; }
+                if (!Cidr.TryParse(parts[1], out Cidr cidr)) { error = RuleParseError.Target; token = parts[1]; return false; }
                 kind = RuleTargetKind.Address;
                 address = cidr;
                 break;
@@ -266,7 +300,7 @@ public sealed record NetworkRule(bool Allow, RuleTargetKind Target, Cidr? Addres
         if (parts.Length == 3)
         {
             string[] protocolPorts = parts[2].Split('/');
-            if (protocolPorts.Length > 2) { error = $"\"{parts[2]}\" should look like TCP/443."; return false; }
+            if (protocolPorts.Length > 2) { error = RuleParseError.ProtocolPorts; token = parts[2]; return false; }
             string name = protocolPorts[0].ToUpperInvariant();
             protocol = name switch
             {
@@ -276,11 +310,11 @@ public sealed record NetworkRule(bool Allow, RuleTargetKind Target, Cidr? Addres
                 "ICMP" or "ICMP6" or "ICMPV6" => Icmp,
                 _ => int.TryParse(name, NumberStyles.None, CultureInfo.InvariantCulture, out int number) && number <= 255 ? number : -2
             };
-            if (protocol == -2) { error = $"\"{protocolPorts[0]}\" is not a protocol (TCP, UDP, ICMP, * or a number)."; return false; }
+            if (protocol == -2) { error = RuleParseError.Protocol; token = protocolPorts[0]; return false; }
             if (protocolPorts.Length == 2)
             {
-                if (protocol is not (AnyProtocol or Tcp or Udp)) { error = "Only TCP and UDP have ports."; return false; }
-                if (!TryParsePorts(protocolPorts[1], out portFrom, out portTo)) { error = $"\"{protocolPorts[1]}\" is not a port, a range like 1000-2000 or a name like HTTPS."; return false; }
+                if (protocol is not (AnyProtocol or Tcp or Udp)) { error = RuleParseError.PortsNeedTcpOrUdp; token = parts[2]; return false; }
+                if (!TryParsePorts(protocolPorts[1], out portFrom, out portTo)) { error = RuleParseError.Ports; token = protocolPorts[1]; return false; }
             }
         }
         rule = new NetworkRule(allow, kind, address, protocol, portFrom, portTo, comment);

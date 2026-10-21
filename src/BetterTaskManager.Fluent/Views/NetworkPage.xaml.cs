@@ -85,6 +85,7 @@ public sealed partial class NetworkPage : Page
         bool hasPath = path.Length > 0;
         bool blocked = hasPath && App.Monitor.IsBlocked(path);
         FirewallButton.IsEnabled = hasPath;
+        RulesButton.IsEnabled = hasPath;
         FirewallButton.Label = blocked ? Loc.Get("Firewall_AllowShort") : Loc.Get("Firewall_BlockShort");
         FirewallIcon.Glyph = blocked ? "" : "";
     }
@@ -155,6 +156,9 @@ public sealed partial class NetworkPage : Page
         };
         firewall.Click += (_, _) => _ = ToggleFirewallAsync(slot.Path);
         menu.Items.Add(firewall);
+        var rules = new MenuFlyoutItem { Text = Loc.Get("Rules_Menu"), Icon = new FontIcon { Glyph = "" }, IsEnabled = hasPath };
+        rules.Click += (_, _) => _ = EditRulesAsync(slot);
+        menu.Items.Add(rules);
         var location = new MenuFlyoutItem { Text = Loc.Get("Menu_OpenLocation"), Icon = new FontIcon { Glyph = "" }, IsEnabled = hasPath };
         location.Click += (_, _) => ProcessActions.OpenFileLocation(slot.Path);
         menu.Items.Add(location);
@@ -172,6 +176,19 @@ public sealed partial class NetworkPage : Page
     private void Firewall_Click(object sender, RoutedEventArgs e)
     {
         if (Selected is { Path.Length: > 0 } slot) _ = ToggleFirewallAsync(slot.Path);
+    }
+
+    private void Rules_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected is { Path.Length: > 0 } slot) _ = EditRulesAsync(slot);
+    }
+
+    private async Task EditRulesAsync(NetworkSlot slot)
+    {
+        // Connection rows carry their app's path; the dialog is titled with the app, not the connection.
+        string name = slot.Data?.Kind == RowKind.Group ? slot.Name : System.IO.Path.GetFileName(slot.Path);
+        await AppRulesDialog.ShowAsync(XamlRoot, slot.Path, name);
+        UpdateCommands();
     }
 
     private async Task ToggleFirewallAsync(string path)

@@ -471,4 +471,45 @@ Name looked up by another app, not by this one. This address can also serve othe
   <data name="CacheTrim_NoService" xml:space="preserve"><value>The History service is not running; turn on background recording below to use this.</value></data>
   <data name="MainWindow_13.Title" xml:space="preserve"><value>Measuring failed</value></data>
   <data name="Collection_Failed" xml:space="preserve"><value>The values shown are from the last successful update. Error: {0}</value></data>
+  <data name="NetworkPage_21.Label" xml:space="preserve"><value>Rules</value></data>
+  <data name="NetworkPage_22.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>This app has its own network rules.</value></data>
+  <data name="NetworkPage_23.Text" xml:space="preserve"><value>Rules</value></data>
+  <data name="Rules_Menu" xml:space="preserve"><value>Network rules…</value></data>
+  <data name="Rules_Title" xml:space="preserve"><value>Network rules: {0}</value></data>
+  <data name="Rules_BlockedNote" xml:space="preserve"><value>Network access of this app is blocked completely. The rules take effect once it is allowed again.</value></data>
+  <data name="Rules_SwitchesTitle" xml:space="preserve"><value>Block</value></data>
+  <data name="Rules_BlockInternet" xml:space="preserve"><value>Block the Internet</value></data>
+  <data name="Rules_BlockLan" xml:space="preserve"><value>Block the local network (LAN)</value></data>
+  <data name="Rules_BlockLocalhost" xml:space="preserve"><value>Block connections within this PC (localhost)</value></data>
+  <data name="Rules_BlockInbound" xml:space="preserve"><value>Block connections that other devices start to this app</value></data>
+  <data name="Rules_SwitchesNote" xml:space="preserve"><value>These switches take precedence over the rules below.</value></data>
+  <data name="Rules_OutgoingTitle" xml:space="preserve"><value>Outgoing rules (connections the app starts)</value></data>
+  <data name="Rules_IncomingTitle" xml:space="preserve"><value>Incoming rules (connections to the app)</value></data>
+  <data name="Rules_Presets" xml:space="preserve"><value>Presets</value></data>
+  <data name="Rules_PresetWeb" xml:space="preserve"><value>Web only (HTTP and HTTPS)</value></data>
+  <data name="Rules_PresetLan" xml:space="preserve"><value>Local network only</value></data>
+  <data name="Rules_PresetLocal" xml:space="preserve"><value>This PC only</value></data>
+  <data name="Rules_HelpTitle" xml:space="preserve"><value>How rules work</value></data>
+  <data name="Rules_Help" xml:space="preserve"><value>Write one rule per line. The first rule that matches a connection decides, and a connection that no rule matches is allowed.
+A rule starts with + (allow) or - (block), followed by a target and optionally a protocol with ports. Anything after # is a comment.
+Targets are * (everything), LAN, Internet, Localhost, an IP address such as 1.1.1.1, or a range such as 10.0.0.0/8 or 2001:db8::/32.
+Protocols are TCP, UDP, ICMP, * or a protocol number. Ports are a number such as 443, a range such as 1000-2000, or a name such as HTTPS, and */443 means TCP and UDP.
+Incoming rules compare the port on this PC that the connection arrives at.
+Examples: "+ LAN" allows the local network, "- * TCP/25" blocks sending mail directly, and "+ 1.1.1.1 TCP/443" followed by "- Internet" allows only that one server on the Internet.
+Windows sends ping requests itself, so ICMP rules do not affect ping.</value></data>
+  <data name="Rules_UacNote" xml:space="preserve"><value>Saving asks once for administrator approval.</value></data>
+  <data name="Rules_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Rules_RemoveAll" xml:space="preserve"><value>Remove all rules</value></data>
+  <data name="Rules_NotSaved" xml:space="preserve"><value>Network rules not saved</value></data>
+  <data name="Rules_Failed" xml:space="preserve"><value>Saving the network rules failed (code {0}).</value></data>
+  <data name="Uac_CancelledRules" xml:space="preserve"><value>Administrator approval was cancelled. The network rules were not changed.</value></data>
+  <data name="Rules_ErrLineOut" xml:space="preserve"><value>Outgoing, line {0}: {1}</value></data>
+  <data name="Rules_ErrLineIn" xml:space="preserve"><value>Incoming, line {0}: {1}</value></data>
+  <data name="Rules_Err_Format" xml:space="preserve"><value>A rule is + or -, then a target, then optionally protocol/ports.</value></data>
+  <data name="Rules_Err_Action" xml:space="preserve"><value>"{0}" must be + (allow) or - (block).</value></data>
+  <data name="Rules_Err_Target" xml:space="preserve"><value>"{0}" is not *, LAN, Internet, Localhost, an IP address or a range.</value></data>
+  <data name="Rules_Err_ProtocolPorts" xml:space="preserve"><value>"{0}" should look like TCP/443.</value></data>
+  <data name="Rules_Err_Protocol" xml:space="preserve"><value>"{0}" is not a protocol (TCP, UDP, ICMP, * or a number).</value></data>
+  <data name="Rules_Err_PortsNeedTcpOrUdp" xml:space="preserve"><value>Only TCP and UDP have ports ("{0}").</value></data>
+  <data name="Rules_Err_Ports" xml:space="preserve"><value>"{0}" is not a port, a range such as 1000-2000 or a name such as HTTPS.</value></data>
 </root>

@@ -49,6 +49,8 @@ public sealed class MonitorHost : IDisposable
     public HistoryBuffer ReceiveHistory { get; } = new(HistoryLength);
     public HistoryBuffer SendHistory { get; } = new(HistoryLength);
     public HashSet<string> BlockRules { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Per-app network rules by executable path, as stored by the last change.</summary>
+    public Dictionary<string, AppNetworkPolicy> Policies { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool FirewallStateKnown { get; private set; }
 
     public string SearchText
@@ -144,12 +146,35 @@ public sealed class MonitorHost : IDisposable
     public bool IsBlocked(string path) =>
         !string.IsNullOrWhiteSpace(path) && BlockRules.Contains(FirewallRules.RuleNameForPath(path));
 
+    public bool HasRules(string path) => !string.IsNullOrWhiteSpace(path) && Policies.ContainsKey(path);
+
+    public NetworkAccess AccessOf(string path) => IsBlocked(path) ? NetworkAccess.Blocked : HasRules(path) ? NetworkAccess.Rules : NetworkAccess.Open;
+
+    /// <summary>A copy of the app's rules to edit, or empty rules for an app that has none.</summary>
+    public AppNetworkPolicy PolicyFor(string path)
+    {
+        if (!Policies.TryGetValue(path, out AppNetworkPolicy? policy)) return new AppNetworkPolicy { Path = path };
+        return new AppNetworkPolicy
+        {
+            Path = path,
+            BlockInternet = policy.BlockInternet,
+            BlockLan = policy.BlockLan,
+            BlockLocalhost = policy.BlockLocalhost,
+            BlockInbound = policy.BlockInbound,
+            Outgoing = [.. policy.Outgoing],
+            Incoming = [.. policy.Incoming]
+        };
+    }
+
     public async Task RefreshFirewallAsync()
     {
         try
         {
             BlockRules = await Task.Run(FirewallRules.ReadBlockRuleNames);
             FirewallStateKnown = true;
+            List<AppNetworkPolicy> policies = await Task.Run(NetworkPolicyStore.Load);
+            Policies = policies.Where(policy => policy.Path.Length > 0).GroupBy(policy => policy.Path, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);
         }
         catch (Exception ex)
         {
@@ -199,6 +224,45 @@ public sealed class MonitorHost : IDisposable
         return null;
     }
 
+    /// <summary>
+    /// Saves one app's network rules (empty rules remove them). Without elevation this starts a short-lived elevated
+    /// copy of the app with the rules as its argument, so Windows shows one UAC prompt per change.
+    /// </summary>
+    public async Task<string?> SetPolicyAsync(AppNetworkPolicy policy)
+    {
+        if (IsElevated)
+        {
+            CommandResult result = await Task.Run(() => FirewallRules.ApplyPolicy(policy));
+            if (!result.Succeeded) return result.FailureSummary();
+        }
+        else
+        {
+            var startInfo = new ProcessStartInfo(Environment.ProcessPath!)
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            startInfo.ArgumentList.Add(Program.PolicyApplyArgument);
+            startInfo.ArgumentList.Add(Convert.ToBase64String(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(policy)));
+            int exitCode;
+            try
+            {
+                using Process helper = Process.Start(startInfo)!;
+                await helper.WaitForExitAsync();
+                exitCode = helper.ExitCode;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                return Loc.Get("Uac_CancelledRules");
+            }
+            if (exitCode != 0) return Loc.F("Rules_Failed", exitCode);
+        }
+
+        await RefreshFirewallAsync();
+        return null;
+    }
+
     /// <summary>Per-file disk trace for the Disk page; runs only while its file list is shown (administrator only).</summary>
     public BetterTaskManager.Core.Disk.DiskFileActivity DiskFiles { get; } = new();
 
@@ -207,6 +271,14 @@ public sealed class MonitorHost : IDisposable
         DiskFiles.Dispose();
         engine.Dispose();
     }
+}
+
+/// <summary>What limits an app's network access: nothing, its own rules, or a block of everything.</summary>
+public enum NetworkAccess
+{
+    Open,
+    Rules,
+    Blocked
 }
 
 /// <summary>Fixed-size ring of recent values for the trend charts.</summary>

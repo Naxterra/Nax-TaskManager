@@ -471,4 +471,45 @@ Diesen Namen hat eine andere App abgefragt, nicht diese. Die Adresse kann auch z
   <data name="CacheTrim_NoService" xml:space="preserve"><value>Der Verlaufsdienst läuft nicht; schalten Sie unten die Aufzeichnung im Hintergrund ein, um dies zu nutzen.</value></data>
   <data name="MainWindow_13.Title" xml:space="preserve"><value>Messung fehlgeschlagen</value></data>
   <data name="Collection_Failed" xml:space="preserve"><value>Die angezeigten Werte stammen von der letzten erfolgreichen Aktualisierung. Fehler: {0}</value></data>
+  <data name="NetworkPage_21.Label" xml:space="preserve"><value>Regeln</value></data>
+  <data name="NetworkPage_22.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Diese App hat eigene Netzwerkregeln.</value></data>
+  <data name="NetworkPage_23.Text" xml:space="preserve"><value>Regeln</value></data>
+  <data name="Rules_Menu" xml:space="preserve"><value>Netzwerkregeln…</value></data>
+  <data name="Rules_Title" xml:space="preserve"><value>Netzwerkregeln: {0}</value></data>
+  <data name="Rules_BlockedNote" xml:space="preserve"><value>Der Netzwerkzugriff dieser App ist vollständig gesperrt. Die Regeln wirken, sobald er wieder erlaubt ist.</value></data>
+  <data name="Rules_SwitchesTitle" xml:space="preserve"><value>Sperren</value></data>
+  <data name="Rules_BlockInternet" xml:space="preserve"><value>Internet sperren</value></data>
+  <data name="Rules_BlockLan" xml:space="preserve"><value>Lokales Netzwerk (LAN) sperren</value></data>
+  <data name="Rules_BlockLocalhost" xml:space="preserve"><value>Verbindungen innerhalb dieses PCs sperren (localhost)</value></data>
+  <data name="Rules_BlockInbound" xml:space="preserve"><value>Verbindungen sperren, die andere Geräte zu dieser App aufbauen</value></data>
+  <data name="Rules_SwitchesNote" xml:space="preserve"><value>Diese Schalter haben Vorrang vor den Regeln unten.</value></data>
+  <data name="Rules_OutgoingTitle" xml:space="preserve"><value>Ausgehende Regeln (Verbindungen, die die App aufbaut)</value></data>
+  <data name="Rules_IncomingTitle" xml:space="preserve"><value>Eingehende Regeln (Verbindungen zur App)</value></data>
+  <data name="Rules_Presets" xml:space="preserve"><value>Vorlagen</value></data>
+  <data name="Rules_PresetWeb" xml:space="preserve"><value>Nur Web (HTTP und HTTPS)</value></data>
+  <data name="Rules_PresetLan" xml:space="preserve"><value>Nur lokales Netzwerk</value></data>
+  <data name="Rules_PresetLocal" xml:space="preserve"><value>Nur dieser PC</value></data>
+  <data name="Rules_HelpTitle" xml:space="preserve"><value>So funktionieren Regeln</value></data>
+  <data name="Rules_Help" xml:space="preserve"><value>Schreiben Sie eine Regel pro Zeile. Die erste Regel, die zu einer Verbindung passt, entscheidet, und eine Verbindung, zu der keine Regel passt, ist erlaubt.
+Eine Regel beginnt mit + (erlauben) oder - (sperren), danach folgen ein Ziel und optional ein Protokoll mit Ports. Alles nach # ist ein Kommentar.
+Ziele sind * (alles), LAN, Internet, Localhost, eine IP-Adresse wie 1.1.1.1 oder ein Bereich wie 10.0.0.0/8 oder 2001:db8::/32.
+Protokolle sind TCP, UDP, ICMP, * oder eine Protokollnummer. Ports sind eine Zahl wie 443, ein Bereich wie 1000-2000 oder ein Name wie HTTPS, und */443 bedeutet TCP und UDP.
+Eingehende Regeln vergleichen den Port auf diesem PC, an dem die Verbindung ankommt.
+Beispiele: „+ LAN“ erlaubt das lokale Netzwerk, „- * TCP/25“ sperrt das direkte Senden von E-Mails, und „+ 1.1.1.1 TCP/443“ gefolgt von „- Internet“ erlaubt im Internet nur diesen einen Server.
+Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</value></data>
+  <data name="Rules_UacNote" xml:space="preserve"><value>Beim Speichern fragt Windows einmal nach der Administratorfreigabe.</value></data>
+  <data name="Rules_Save" xml:space="preserve"><value>Speichern</value></data>
+  <data name="Rules_RemoveAll" xml:space="preserve"><value>Alle Regeln entfernen</value></data>
+  <data name="Rules_NotSaved" xml:space="preserve"><value>Netzwerkregeln nicht gespeichert</value></data>
+  <data name="Rules_Failed" xml:space="preserve"><value>Das Speichern der Netzwerkregeln ist fehlgeschlagen (Code {0}).</value></data>
+  <data name="Uac_CancelledRules" xml:space="preserve"><value>Die Administratorfreigabe wurde abgebrochen. Die Netzwerkregeln wurden nicht geändert.</value></data>
+  <data name="Rules_ErrLineOut" xml:space="preserve"><value>Ausgehend, Zeile {0}: {1}</value></data>
+  <data name="Rules_ErrLineIn" xml:space="preserve"><value>Eingehend, Zeile {0}: {1}</value></data>
+  <data name="Rules_Err_Format" xml:space="preserve"><value>Eine Regel besteht aus + oder -, einem Ziel und optional Protokoll/Ports.</value></data>
+  <data name="Rules_Err_Action" xml:space="preserve"><value>„{0}“ muss + (erlauben) oder - (sperren) sein.</value></data>
+  <data name="Rules_Err_Target" xml:space="preserve"><value>„{0}“ ist weder *, LAN, Internet, Localhost, eine IP-Adresse noch ein Bereich.</value></data>
+  <data name="Rules_Err_ProtocolPorts" xml:space="preserve"><value>„{0}“ sollte wie TCP/443 aussehen.</value></data>
+  <data name="Rules_Err_Protocol" xml:space="preserve"><value>„{0}“ ist kein Protokoll (TCP, UDP, ICMP, * oder eine Zahl).</value></data>
+  <data name="Rules_Err_PortsNeedTcpOrUdp" xml:space="preserve"><value>Nur TCP und UDP haben Ports („{0}“).</value></data>
+  <data name="Rules_Err_Ports" xml:space="preserve"><value>„{0}“ ist weder ein Port noch ein Bereich wie 1000-2000 noch ein Name wie HTTPS.</value></data>
 </root>

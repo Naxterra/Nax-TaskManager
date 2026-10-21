@@ -6,7 +6,7 @@ Built with WinUI 3 (Fluent design) on .NET 11. Formerly *Better Task Manager*.
 
 ## Features
 
-- **Processes** — apps and background processes grouped like Task Manager, with icons, CPU, memory, disk I/O, per-app network speed, connection count, GPU, publisher and path. End task (creation-time checked, so a reused PID is never killed by mistake), end process tree, open file location, properties, and per-app outbound firewall blocking.
+- **Processes** — apps and background processes grouped like Task Manager, with icons, CPU, memory, disk I/O, per-app network speed, connection count, GPU, publisher and path. End task (creation-time checked, so a reused PID is never killed by mistake), end process tree, open file location, properties, per-app outbound firewall blocking, and per-app network rules (block the Internet, the LAN, this PC or inbound connections, plus ordered allow and block rules by address, range, scope, protocol and port, enforced as Windows Filtering Platform filters).
 - **Memory that reconciles** — the Memory column is the private working set, the same figure Task Manager shows. The Performance page splits "In use" into apps, kernel, file cache, drivers and shared memory so the parts add up, and offers *Free up memory* (trim app memory, clear standby cache, empty all working sets) as troubleshooting tools.
 - **Network** — every connection grouped by app with remote host names (from the Windows DNS cache, live DNS events, or reverse DNS), per-connection speed, total data per app, sorting, search and pause.
 - The Processes page has two layouts you switch at the top: **by app** (grouped, resource columns) and **all processes** (flat, one row per process with PID, status, owner, GPU and efficiency mode).
@@ -35,7 +35,7 @@ The app starts without elevation. These features need administrator rights:
 |---|---|---|
 | Per-app network speed and data | Shown when the History service runs | Measured by the app itself (kernel TCP/IP trace) |
 | Path, publisher and icon of system processes | Hidden for protected processes | Shown |
-| Firewall block/allow | One UAC prompt per change | Direct |
+| Firewall block/allow and network rules | One UAC prompt per change | Direct |
 | Clear standby cache, empty all working sets | Unavailable | Available |
 | Install the History service | One UAC prompt | Direct |
 
