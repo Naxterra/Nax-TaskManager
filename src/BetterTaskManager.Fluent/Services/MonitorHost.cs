@@ -48,6 +48,11 @@ public sealed class MonitorHost : IDisposable
     public HistoryBuffer MemoryHistory { get; } = new(HistoryLength);
     public HistoryBuffer ReceiveHistory { get; } = new(HistoryLength);
     public HistoryBuffer SendHistory { get; } = new(HistoryLength);
+    public HistoryBuffer DiskReadHistory { get; } = new(HistoryLength);
+    public HistoryBuffer DiskWriteHistory { get; } = new(HistoryLength);
+    public HistoryBuffer DiskActiveHistory { get; } = new(HistoryLength);
+    public HistoryBuffer GpuHistory { get; } = new(HistoryLength);
+    public HistoryBuffer ConnectionHistory { get; } = new(HistoryLength);
     public HashSet<string> BlockRules { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Per-app network rules by executable path, as stored by the last change.</summary>
     public Dictionary<string, AppNetworkPolicy> Policies { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -131,6 +136,14 @@ public sealed class MonitorHost : IDisposable
             ReceiveHistory.Add(system.NetworkReceiveBytesPerSecond);
             SendHistory.Add(system.NetworkSendBytesPerSecond);
         }
+        if (system.Disks.Count > 0)
+        {
+            DiskReadHistory.Add(system.Disks.Sum(disk => disk.ReadPerSecond));
+            DiskWriteHistory.Add(system.Disks.Sum(disk => disk.WritePerSecond));
+            DiskActiveHistory.Add(system.Disks.Max(disk => disk.ActivePercent));
+        }
+        if (system.GpuAvailable) GpuHistory.Add(system.GpuPercent);
+        ConnectionHistory.Add(snapshot.Connections.Count(connection => connection.State == "Established"));
 
         if (viewSuspended) return;
         try

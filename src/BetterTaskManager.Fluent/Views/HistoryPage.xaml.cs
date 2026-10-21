@@ -234,21 +234,41 @@ public sealed partial class HistoryPage : Page
         _ = LoadAsync();
     }
 
+    private void ConnectionList_SelectionChanged(object sender, SelectionChangedEventArgs e) => RowMenu.TrackSelection(e);
+
+    private void Row_PointerEntered(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, true);
+
+    private void Row_PointerExited(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, false);
+
+    /// <summary>The row's "…" button: selects its row and opens the same menu as a right-click.</summary>
+    private void RowMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: ConnectionLogSlot slot }) return;
+        ConnectionList.SelectedItem = slot;
+        RowMenu.Show(BuildMenu(slot), sender);
+    }
+
     /// <summary>Right-click, Shift+F10 and the Menu key all arrive here.</summary>
     private void ConnectionList_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
     {
         if (e.OriginalSource is not FrameworkElement source) return;
         if ((source.DataContext as ConnectionLogSlot ?? (source as ListViewItem)?.Content as ConnectionLogSlot) is not { } slot) return;
         ConnectionList.SelectedItem = slot;
-        var menu = new MenuFlyout();
-        var copy = new MenuFlyoutItem { Text = Loc.Get("Menu_CopyRemoteHost"), Icon = new FontIcon { Glyph = "" } };
-        copy.Click += (_, _) => ProcessActions.CopyText(slot.Remote);
-        menu.Items.Add(copy);
-        var location = new MenuFlyoutItem { Text = Loc.Get("Menu_OpenLocation"), Icon = new FontIcon { Glyph = "" }, IsEnabled = slot.Path.Length > 0 };
-        location.Click += (_, _) => ProcessActions.OpenFileLocation(slot.Path);
-        menu.Items.Add(location);
+        MenuFlyout menu = BuildMenu(slot);
         if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
         else menu.ShowAt(source);
         e.Handled = true;
+    }
+
+    private static MenuFlyout BuildMenu(ConnectionLogSlot slot)
+    {
+        var menu = new MenuFlyout();
+        var copy = new MenuFlyoutItem { Text = Loc.Get("Menu_CopyRemoteHost"), Icon = new FontIcon { Glyph = "\uE8C8" } };
+        copy.Click += (_, _) => ProcessActions.CopyText(slot.Remote);
+        menu.Items.Add(copy);
+        var location = new MenuFlyoutItem { Text = Loc.Get("Menu_OpenLocation"), Icon = new FontIcon { Glyph = "\uE838" }, IsEnabled = slot.Path.Length > 0 };
+        location.Click += (_, _) => ProcessActions.OpenFileLocation(slot.Path);
+        menu.Items.Add(location);
+        return menu;
     }
 }

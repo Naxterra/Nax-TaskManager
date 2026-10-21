@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0-alpha.30 - 2026-10-22
+
+A pass over the whole interface, after the feedback that it was hard to navigate and looked like a text screen:
+
+- **Navigation with names.** The left pane is open with the page names (Processes, Performance, Network, Disk, History, Startup apps) instead of six unlabeled icons; it folds to icons on narrow windows and with the pane button in the title bar. Pages ease in when you switch.
+- **Actions where the rows are.** Every row shows a "…" button when you point at it or select it, with the same actions as the right-click menu (end task, efficiency mode, open location, properties, copy path, block network, network rules, enable or disable startup entries, copy remote host). The main action of each page is an accent button next to the title: End task, Rules, Disable or Enable.
+- **Tiles with sparklines.** Processes shows CPU, memory, disk, network and GPU tiles with the last minute as a small chart; Network shows download, upload and connection tiles. The numbers that used to be one muted sentence have a face now.
+- **Tables on cards.** Each table sits on a card with a distinct header row, 20-pixel app icons and a little more air; hover and selection states stay.
+- **Network rules as a list.** The rules dialog edits rules as rows (allow or block, target, address, protocol, ports, comment, with move-up, move-down and remove) instead of a text box. "Edit as text" shows the same rules as lines for pasting or presets; mistakes are explained and Save stays off until they are fixed.
+
 ## 2.0.0-alpha.29 - 2026-10-21
 
 - **Per-app network rules.** Every app can now get its own rules instead of only "block everything": right-click an app on the Processes or Network page (or select it on Network and click **Rules**) and choose what to block. Four switches block the Internet, the local network, connections within this PC, or connections other devices start to the app; below them, an outgoing and an incoming rule list in Portmaster's form (`+ LAN`, `- Internet`, `+ 1.1.1.1 TCP/443`, `- * UDP/53`, with `#` comments) where the first matching line decides and everything else stays allowed. Presets give the common cases (web only, local network only, this PC only), and mistakes are explained line by line before saving. Apps with rules show a "Rules" badge on the Network page.

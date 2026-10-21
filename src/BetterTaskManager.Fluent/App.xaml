@@ -24,6 +24,8 @@
                     <SolidColorBrush x:Key="ChartMemoryBrush" Color="#B38CFF" />
                     <SolidColorBrush x:Key="ChartReceiveBrush" Color="#2DE0B0" />
                     <SolidColorBrush x:Key="ChartSendBrush" Color="#FFC263" />
+                    <SolidColorBrush x:Key="ChartDiskBrush" Color="#7FD6A2" />
+                    <SolidColorBrush x:Key="ChartGpuBrush" Color="#FF99A4" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <Color x:Key="HeatColor">#F2A000</Color>
@@ -39,6 +41,8 @@
                     <SolidColorBrush x:Key="ChartMemoryBrush" Color="#6C3DC1" />
                     <SolidColorBrush x:Key="ChartReceiveBrush" Color="#007B62" />
                     <SolidColorBrush x:Key="ChartSendBrush" Color="#9A5A00" />
+                    <SolidColorBrush x:Key="ChartDiskBrush" Color="#1E8A4F" />
+                    <SolidColorBrush x:Key="ChartGpuBrush" Color="#C4314B" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -102,6 +106,43 @@
                                 <Border x:Name="Line" Width="1" HorizontalAlignment="Center" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                             </Grid>
                         </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- A table sits on a card: header row with its own surface on top, the rows below. -->
+            <Style x:Key="TableCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="0,0,0,4" />
+            </Style>
+
+            <Style x:Key="TableHeaderStyle" TargetType="Grid">
+                <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="0,0,0,1" />
+                <Setter Property="CornerRadius" Value="8,8,0,0" />
+                <Setter Property="Padding" Value="0,0,12,0" />
+            </Style>
+
+            <!-- The "…" button at the end of a row; the row shows it while hovered or selected. -->
+            <Style x:Key="RowMenuButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="28" />
+                <Setter Property="Height" Value="26" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="ContentTemplate">
+                    <Setter.Value>
+                        <DataTemplate>
+                            <FontIcon Glyph="&#xE712;" FontSize="14" />
+                        </DataTemplate>
                     </Setter.Value>
                 </Setter>
             </Style>

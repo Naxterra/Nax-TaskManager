@@ -99,7 +99,7 @@ public sealed class DetailsViewModel : ObservableObject
 }
 
 /// <summary>A reusable row of the flat process table.</summary>
-public sealed class DetailSlot : ObservableObject
+public sealed class DetailSlot : RowSlot
 {
     private string name = "", pidText = "", status = "", user = "", cpuText = "", memoryText = "", gpuText = "", gpuEngine = "", description = "", path = "";
     private ImageSource? icon;

@@ -24,6 +24,39 @@ public abstract class ObservableObject : INotifyPropertyChanged
 }
 
 /// <summary>
+/// State every table row shares: the row's "…" button is shown while the pointer is over the row or the row is
+/// selected, so the actions are found where the row is instead of only in a toolbar or a hidden context menu.
+/// </summary>
+public abstract class RowSlot : ObservableObject
+{
+    private bool hovered, selected;
+
+    public bool Hovered
+    {
+        get => hovered;
+        set
+        {
+            if (hovered == value) return;
+            hovered = value;
+            Raise(nameof(MenuVisibility));
+        }
+    }
+
+    public bool Selected
+    {
+        get => selected;
+        set
+        {
+            if (selected == value) return;
+            selected = value;
+            Raise(nameof(MenuVisibility));
+        }
+    }
+
+    public Visibility MenuVisibility => hovered || selected ? Visibility.Visible : Visibility.Collapsed;
+}
+
+/// <summary>
 /// A list of reusable row slots. Each refresh writes new values into the existing slots instead of
 /// removing and re-inserting rows, so the list never rebuilds its containers, keeps its scroll position and
 /// only realized rows do binding work.

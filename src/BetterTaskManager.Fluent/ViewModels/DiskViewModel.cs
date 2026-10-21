@@ -294,7 +294,7 @@ public sealed class DiskSlot : ObservableObject
 }
 
 /// <summary>A row of the processes-with-disk-activity list.</summary>
-public sealed class DiskProcessSlot : ObservableObject
+public sealed class DiskProcessSlot : RowSlot
 {
     private string name = "", pidText = "", readText = "", writeText = "", totalText = "", path = "";
     private ImageSource? icon;
@@ -329,7 +329,7 @@ public sealed class DiskProcessSlot : ObservableObject
 }
 
 /// <summary>A row of the per-file disk activity list.</summary>
-public sealed class DiskFileSlot : ObservableObject
+public sealed class DiskFileSlot : RowSlot
 {
     private string name = "", pidText = "", file = "", readText = "", writeText = "", totalText = "", priority = "", responseText = "";
     private ImageSource? icon;

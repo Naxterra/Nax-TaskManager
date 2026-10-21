@@ -29,6 +29,11 @@ public sealed partial class ProcessesPage : Page
         flatReorder = new ColumnReorder(FlatHeader, FlatViewModel.Layout);
         flatMode = App.Settings.ProcessFlatView;
         ModeSelector.SelectedItem = flatMode ? FlatMode : ByAppMode;
+        CpuTile.Caption = Loc.Get("Tile_Cpu");
+        MemoryTile.Caption = Loc.Get("Tile_Memory");
+        DiskTile.Caption = Loc.Get("Tile_Disk");
+        NetworkTile.Caption = Loc.Get("Tile_Network");
+        GpuTile.Caption = Loc.Get("Tile_Gpu");
         ApplyMode();
         UpdateSortIndicators();
         UpdateFlatSortIndicators();
@@ -82,7 +87,27 @@ public sealed partial class ProcessesPage : Page
             RestoreSelection();
         }
         UpdateSummary();
+        UpdateTiles();
         UpdateCommands();
+    }
+
+    /// <summary>The strip under the title: totals with the last minute as sparklines.</summary>
+    private void UpdateTiles()
+    {
+        if (App.Monitor.Latest is not { } snapshot) return;
+        SystemSample system = snapshot.System;
+        MonitorHost monitor = App.Monitor;
+        CpuTile.Update(Format.WholePercent(system.CpuPercent), Loc.F("Tile_Processes", Format.Count(system.ProcessCount)), monitor.CpuHistory, 100);
+        MemoryTile.Update(Format.WholePercent(system.Memory.LoadPercent), Loc.F("Tile_MemoryDetail", Format.Gigabytes(system.Memory.InUse), Format.Gigabytes(system.Memory.Total)), monitor.MemoryHistory, 100);
+        double read = system.Disks.Sum(disk => disk.ReadPerSecond), write = system.Disks.Sum(disk => disk.WritePerSecond);
+        double diskMax = Math.Max(Math.Max(monitor.DiskReadHistory.Max(), monitor.DiskWriteHistory.Max()), 1048576);
+        DiskTile.Update(Format.ByteRate(read + write), Loc.F("Tile_DiskDetail", Format.ByteRate(read), Format.ByteRate(write)), monitor.DiskReadHistory, diskMax, monitor.DiskWriteHistory);
+        double networkMax = Math.Max(Math.Max(monitor.ReceiveHistory.Max(), monitor.SendHistory.Max()), 131072);
+        NetworkTile.Update("↓ " + Format.NetworkRate(system.NetworkReceiveBytesPerSecond), "↑ " + Format.NetworkRate(system.NetworkSendBytesPerSecond), monitor.ReceiveHistory, networkMax, monitor.SendHistory);
+        bool gpu = system.GpuAvailable;
+        GpuTile.Visibility = gpu ? Visibility.Visible : Visibility.Collapsed;
+        GpuTileColumn.Width = gpu ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        if (gpu) GpuTile.Update(Format.WholePercent(system.GpuPercent), Loc.F("Tile_PeakDetail", Format.WholePercent(monitor.GpuHistory.Max())), monitor.GpuHistory, 100);
     }
 
     private void UpdateSummary()
@@ -104,6 +129,7 @@ public sealed partial class ProcessesPage : Page
 
     private void RowList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        RowMenu.TrackSelection(e);
         if (restoringSelection) return;
         if (RowList.SelectedItem is ProcessSlot { Data.Kind: RowKind.Section })
         {
@@ -121,6 +147,7 @@ public sealed partial class ProcessesPage : Page
 
     private void FlatList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        RowMenu.TrackSelection(e);
         if (restoringSelection) return;
         flatSelectedKey = (FlatList.SelectedItem as DetailSlot)?.Key;
         UpdateCommands();
@@ -303,9 +330,30 @@ public sealed partial class ProcessesPage : Page
         ShowContextMenu(source, e);
     }
 
+    private void Row_PointerEntered(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, true);
+
+    private void Row_PointerExited(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, false);
+
+    /// <summary>The row's "…" button: selects its row and opens the same menu as a right-click.</summary>
+    private void RowMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: var context }) return;
+        if (context is ProcessSlot slot) RowList.SelectedItem = slot;
+        else if (context is DetailSlot detail) FlatList.SelectedItem = detail;
+        if (BuildMenu() is { } menu) RowMenu.Show(menu, sender);
+    }
+
     private void ShowContextMenu(FrameworkElement source, ContextRequestedEventArgs e)
     {
-        if (CurrentTarget() is not { } target) return;
+        if (BuildMenu() is not { } menu) return;
+        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
+        else menu.ShowAt(source);
+        e.Handled = true;
+    }
+
+    private MenuFlyout? BuildMenu()
+    {
+        if (CurrentTarget() is not { } target) return null;
         bool hasPath = target.Path.Length > 0;
         bool blocked = hasPath && App.Monitor.IsBlocked(target.Path);
 
@@ -323,9 +371,7 @@ public sealed partial class ProcessesPage : Page
         menu.Items.Add(MenuItem(blocked ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"), FirewallGlyph,
             (_, _) => _ = ToggleFirewallAsync(target.Path), hasPath));
         menu.Items.Add(MenuItem(Loc.Get("Rules_Menu"), "", (_, _) => _ = AppRulesDialog.ShowAsync(XamlRoot, target.Path, target.Name), hasPath));
-        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
-        else menu.ShowAt(source);
-        e.Handled = true;
+        return menu;
     }
 
     private static MenuFlyoutItem MenuItem(string text, string glyph, RoutedEventHandler click, bool enabled = true)

@@ -49,7 +49,7 @@ public sealed class AppUsageSlot : ObservableObject
 public sealed record ConnectionLogRow(long Id, string Time, string TimeDetail, string App, string Path, string Remote, string RemoteDetail, string Protocol, string Data,
     DateTime FirstSeen = default, long Bytes = 0);
 
-public sealed class ConnectionLogSlot : ObservableObject
+public sealed class ConnectionLogSlot : RowSlot
 {
     private string time = "", timeDetail = "", app = "", path = "", remote = "", remoteDetail = "", protocol = "", data = "";
     private ImageSource? icon;

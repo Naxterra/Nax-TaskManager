@@ -35,8 +35,11 @@
             Grid.Row="1"
             IsBackButtonVisible="Collapsed"
             IsPaneToggleButtonVisible="False"
-            PaneDisplayMode="LeftCompact"
-            OpenPaneLength="220"
+            PaneDisplayMode="Auto"
+            CompactModeThresholdWidth="700"
+            ExpandedModeThresholdWidth="1100"
+            IsPaneOpen="True"
+            OpenPaneLength="200"
             IsSettingsVisible="True"
             SelectionChanged="Navigation_SelectionChanged">
             <NavigationView.MenuItems>

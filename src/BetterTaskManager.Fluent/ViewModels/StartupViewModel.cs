@@ -71,7 +71,7 @@ public sealed class StartupViewModel : ObservableObject
     }
 }
 
-public sealed class StartupRow
+public sealed class StartupRow : RowSlot
 {
     public StartupRow(StartupApp app)
     {

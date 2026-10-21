@@ -8,7 +8,7 @@ namespace BetterTaskManager.Fluent.ViewModels;
 /// <summary>Values shared by every row of one refresh.</summary>
 public sealed record ProcessRowContext(long TotalMemory, bool BandwidthAvailable, Func<string, bool> IsBlocked, bool GpuAvailable = true, bool RealDisk = false);
 
-public sealed class ProcessSlot : ObservableObject
+public sealed class ProcessSlot : RowSlot
 {
     /// <summary>What UI Automation and screen readers announce for the row.</summary>
     public override string ToString() => Name;

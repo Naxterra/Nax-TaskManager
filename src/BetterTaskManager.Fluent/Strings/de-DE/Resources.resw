@@ -512,4 +512,47 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="Rules_Err_Protocol" xml:space="preserve"><value>„{0}“ ist kein Protokoll (TCP, UDP, ICMP, * oder eine Zahl).</value></data>
   <data name="Rules_Err_PortsNeedTcpOrUdp" xml:space="preserve"><value>Nur TCP und UDP haben Ports („{0}“).</value></data>
   <data name="Rules_Err_Ports" xml:space="preserve"><value>„{0}“ ist weder ein Port noch ein Bereich wie 1000-2000 noch ein Name wie HTTPS.</value></data>
+  <data name="Common_RowMenu.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Weitere Aktionen</value></data>
+  <data name="Common_RowMenu.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Weitere Aktionen</value></data>
+  <data name="ProcessesPage_32.Text" xml:space="preserve"><value>Task beenden</value></data>
+  <data name="NetworkPage_24.Text" xml:space="preserve"><value>Regeln</value></data>
+  <data name="Tile_Cpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="Tile_Memory" xml:space="preserve"><value>Arbeitsspeicher</value></data>
+  <data name="Tile_Disk" xml:space="preserve"><value>Datenträger</value></data>
+  <data name="Tile_Network" xml:space="preserve"><value>Netzwerk</value></data>
+  <data name="Tile_Gpu" xml:space="preserve"><value>GPU</value></data>
+  <data name="Tile_Download" xml:space="preserve"><value>Download</value></data>
+  <data name="Tile_Upload" xml:space="preserve"><value>Upload</value></data>
+  <data name="Tile_Connections" xml:space="preserve"><value>Verbindungen</value></data>
+  <data name="Tile_Read" xml:space="preserve"><value>Lesen</value></data>
+  <data name="Tile_Write" xml:space="preserve"><value>Schreiben</value></data>
+  <data name="Tile_Active" xml:space="preserve"><value>Aktive Zeit</value></data>
+  <data name="Tile_Processes" xml:space="preserve"><value>{0} Prozesse</value></data>
+  <data name="Tile_MemoryDetail" xml:space="preserve"><value>{0} von {1} belegt</value></data>
+  <data name="Tile_DiskDetail" xml:space="preserve"><value>{0} gelesen, {1} geschrieben</value></data>
+  <data name="Tile_Upload_Detail" xml:space="preserve"><value>Upload</value></data>
+  <data name="Tile_Established" xml:space="preserve"><value>{0} hergestellt, {1} Apps</value></data>
+  <data name="Tile_PeakDetail" xml:space="preserve"><value>Spitze {0}</value></data>
+  <data name="Tile_BusiestDisk" xml:space="preserve"><value>am stärksten genutzt</value></data>
+  <data name="StartupPage_16.Text" xml:space="preserve"><value>Deaktivieren</value></data>
+  <data name="Rules_Allow" xml:space="preserve"><value>Erlauben</value></data>
+  <data name="Rules_Block" xml:space="preserve"><value>Sperren</value></data>
+  <data name="Rules_TargetAny" xml:space="preserve"><value>Alles</value></data>
+  <data name="Rules_TargetLan" xml:space="preserve"><value>Lokales Netzwerk (LAN)</value></data>
+  <data name="Rules_TargetInternet" xml:space="preserve"><value>Internet</value></data>
+  <data name="Rules_TargetLocalhost" xml:space="preserve"><value>Dieser PC (localhost)</value></data>
+  <data name="Rules_TargetAddress" xml:space="preserve"><value>Adresse oder Bereich…</value></data>
+  <data name="Rules_AddressPlaceholder" xml:space="preserve"><value>Bereich, Adresse oder Netz</value></data>
+  <data name="Rules_ProtoAny" xml:space="preserve"><value>Alle</value></data>
+  <data name="Rules_PortsPlaceholder" xml:space="preserve"><value>z. B. 443 oder 1000-2000</value></data>
+  <data name="Rules_CommentPlaceholder" xml:space="preserve"><value>Kommentar</value></data>
+  <data name="Rules_AddRule" xml:space="preserve"><value>Regel hinzufügen</value></data>
+  <data name="Rules_MoveUp" xml:space="preserve"><value>Nach oben</value></data>
+  <data name="Rules_MoveDown" xml:space="preserve"><value>Nach unten</value></data>
+  <data name="Rules_Remove" xml:space="preserve"><value>Regel entfernen</value></data>
+  <data name="Rules_TextMode" xml:space="preserve"><value>Als Text bearbeiten</value></data>
+  <data name="Rules_RowMode" xml:space="preserve"><value>Als Liste bearbeiten</value></data>
+  <data name="Rules_NoRules" xml:space="preserve"><value>Noch keine Regeln: Alles ist erlaubt, sofern kein Schalter oben es sperrt. Regeln gelten in ihrer Reihenfolge, die erste passende entscheidet.</value></data>
+  <data name="NetworkPage_25.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Regeln</value></data>
+  <data name="ProcessesPage_33.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Task beenden</value></data>
 </root>

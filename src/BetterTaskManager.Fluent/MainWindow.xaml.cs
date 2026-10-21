@@ -132,7 +132,8 @@ public sealed partial class MainWindow : Window
         string tag = args.IsSettingsSelected ? "Settings" : (args.SelectedItemContainer?.Tag as string ?? "Processes");
         if (Pages.TryGetValue(tag, out Type? page) && ContentFrame.CurrentSourcePageType != page)
         {
-            ContentFrame.Navigate(page, null, new SuppressNavigationTransitionInfo());
+            // Pages are cached, so the transition is the only visible change: content eases in from below.
+            ContentFrame.Navigate(page, null, new EntranceNavigationTransitionInfo());
         }
         SearchBox.IsEnabled = tag is "Processes" or "Network" or "Disk" or "History" or "Startup";
     }

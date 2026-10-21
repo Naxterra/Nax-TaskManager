@@ -140,7 +140,51 @@ public sealed partial class DiskPage : Page
 
     private void UpdateCommands() => OpenLocationButton.IsEnabled = SelectedPath().Length > 0;
 
-    private void List_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateCommands();
+    private void List_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        RowMenu.TrackSelection(e);
+        UpdateCommands();
+    }
+
+    private void Row_PointerEntered(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, true);
+
+    private void Row_PointerExited(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, false);
+
+    /// <summary>The row's "…" button: selects its row and opens the same menu as a right-click.</summary>
+    private void RowMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: var context }) return;
+        if (context is DiskProcessSlot process) ProcessList.SelectedItem = process;
+        else if (context is DiskFileSlot file) FileList.SelectedItem = file;
+        else return;
+        RowMenu.Show(BuildMenu(), sender);
+    }
+
+    private void List_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
+    {
+        if (e.OriginalSource is not FrameworkElement source) return;
+        object? context = source.DataContext ?? (source as ListViewItem)?.Content;
+        if (context is DiskProcessSlot process) ProcessList.SelectedItem = process;
+        else if (context is DiskFileSlot file) FileList.SelectedItem = file;
+        else return;
+        MenuFlyout menu = BuildMenu();
+        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
+        else menu.ShowAt(source);
+        e.Handled = true;
+    }
+
+    private MenuFlyout BuildMenu()
+    {
+        string path = SelectedPath();
+        var menu = new MenuFlyout();
+        var location = new MenuFlyoutItem { Text = Loc.Get("Menu_OpenLocation"), Icon = new FontIcon { Glyph = "\uE838" }, IsEnabled = path.Length > 0 };
+        location.Click += (_, _) => ProcessActions.OpenFileLocation(path);
+        menu.Items.Add(location);
+        var copy = new MenuFlyoutItem { Text = Loc.Get("Proc_CopyPath"), Icon = new FontIcon { Glyph = "\uE8C8" }, IsEnabled = path.Length > 0 };
+        copy.Click += (_, _) => ProcessActions.CopyText(path);
+        menu.Items.Add(copy);
+        return menu;
+    }
 
     private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) => ProcessActions.OpenFileLocation(SelectedPath());
 

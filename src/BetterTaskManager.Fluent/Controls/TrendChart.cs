@@ -63,6 +63,28 @@ public sealed class TrendChart : Grid
         set => SetValue(SecondStrokeProperty, value);
     }
 
+    private bool compact;
+
+    /// <summary>Whether the area under the line is tinted; off for values that barely move, which would be a solid block.</summary>
+    public bool Filled
+    {
+        get => fill.Visibility == Visibility.Visible;
+        set => fill.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>A sparkline: no grid lines, no border, any height. For the stat tiles under the page titles.</summary>
+    public bool Compact
+    {
+        get => compact;
+        set
+        {
+            compact = value;
+            MinHeight = value ? 0 : 80;
+            BorderThickness = value ? new Thickness(0) : new Thickness(1);
+            foreach (Line gridLine in gridLines) gridLine.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
+        }
+    }
+
     public void Update(HistoryBuffer values, double max, HistoryBuffer? second = null)
     {
         primary = values;

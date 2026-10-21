@@ -19,7 +19,23 @@ public sealed partial class NetworkPage : Page
         ViewModel = new NetworkViewModel(App.Monitor, App.Settings);
         InitializeComponent();
         columnReorder = new ColumnReorder(ColumnHeader, ViewModel.Layout);
+        DownloadTile.Caption = Loc.Get("Tile_Download");
+        UploadTile.Caption = Loc.Get("Tile_Upload");
+        ConnectionsTile.Caption = Loc.Get("Tile_Connections");
         UpdateSortIndicators();
+    }
+
+    /// <summary>The strip under the title: throughput and connection count with the last minute as sparklines.</summary>
+    private void UpdateTiles()
+    {
+        if (App.Monitor.Latest is not { } snapshot) return;
+        SystemSample system = snapshot.System;
+        MonitorHost monitor = App.Monitor;
+        double max = Math.Max(Math.Max(monitor.ReceiveHistory.Max(), monitor.SendHistory.Max()), 131072);
+        DownloadTile.Update(Format.NetworkRate(system.NetworkReceiveBytesPerSecond), Loc.F("Tile_PeakDetail", Format.NetworkRate(monitor.ReceiveHistory.Max())), monitor.ReceiveHistory, max);
+        UploadTile.Update(Format.NetworkRate(system.NetworkSendBytesPerSecond), Loc.F("Tile_PeakDetail", Format.NetworkRate(monitor.SendHistory.Max())), monitor.SendHistory, max);
+        int established = snapshot.Connections.Count(connection => connection.State == "Established");
+        ConnectionsTile.Update(Format.Count(snapshot.Connections.Count), Loc.F("Tile_Established", Format.Count(established), ViewModel.AppCount), monitor.ConnectionHistory, Math.Max(monitor.ConnectionHistory.Max(), 10));
     }
 
     private readonly ColumnReorder columnReorder;
@@ -48,6 +64,7 @@ public sealed partial class NetworkPage : Page
     {
         ViewModel.Refresh();
         SummaryText.Text = ViewModel.Summary;
+        UpdateTiles();
         restoringSelection = true;
         try
         {
@@ -74,6 +91,7 @@ public sealed partial class NetworkPage : Page
 
     private void RowList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        RowMenu.TrackSelection(e);
         if (restoringSelection) return;
         selectedKey = Selected?.Key;
         UpdateCommands();
@@ -138,12 +156,32 @@ public sealed partial class NetworkPage : Page
         Refresh();
     }
 
+    private void Row_PointerEntered(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, true);
+
+    private void Row_PointerExited(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, false);
+
+    /// <summary>The row's "…" button: selects its row and opens the same menu as a right-click.</summary>
+    private void RowMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: NetworkSlot slot }) return;
+        RowList.SelectedItem = slot;
+        RowMenu.Show(BuildMenu(slot), sender);
+    }
+
     /// <summary>Right-click, Shift+F10 and the Menu key all arrive here.</summary>
     private void RowList_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
     {
         if (e.OriginalSource is not FrameworkElement source) return;
         if ((source.DataContext as NetworkSlot ?? (source as ListViewItem)?.Content as NetworkSlot) is not { } slot) return;
         RowList.SelectedItem = slot;
+        MenuFlyout menu = BuildMenu(slot);
+        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
+        else menu.ShowAt(source);
+        e.Handled = true;
+    }
+
+    private MenuFlyout BuildMenu(NetworkSlot slot)
+    {
         bool hasPath = slot.Path.Length > 0;
         bool blocked = hasPath && App.Monitor.IsBlocked(slot.Path);
 
@@ -168,9 +206,7 @@ public sealed partial class NetworkPage : Page
             copy.Click += (_, _) => ProcessActions.CopyText(slot.Remote);
             menu.Items.Add(copy);
         }
-        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
-        else menu.ShowAt(source);
-        e.Handled = true;
+        return menu;
     }
 
     private void Firewall_Click(object sender, RoutedEventArgs e)

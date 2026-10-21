@@ -56,6 +56,7 @@ public sealed partial class StartupPage : Page
 
     private void RowList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        RowMenu.TrackSelection(e);
         if (RowList.SelectedItem is StartupRow row) selectedKey = row.App.Key;
         UpdateCommands();
     }
@@ -64,7 +65,8 @@ public sealed partial class StartupPage : Page
     {
         StartupApp? app = Selected;
         ToggleButton.IsEnabled = app is { Locked: false };
-        ToggleButton.Label = app is { Enabled: false } ? Loc.Get("Startup_Enable") : Loc.Get("Startup_Disable");
+        ToggleLabel.Text = app is { Enabled: false } ? Loc.Get("Startup_Enable") : Loc.Get("Startup_Disable");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ToggleButton, ToggleLabel.Text);
         ToggleIcon.Glyph = app is { Enabled: false } ? "" : "";
         bool hasPath = app is not null && app.ExecutablePath.Length > 0;
         OpenLocationButton.IsEnabled = PropertiesButton.IsEnabled = hasPath;
@@ -99,12 +101,32 @@ public sealed partial class StartupPage : Page
         if (Selected is { Locked: false } app) _ = SetEnabledAsync(app, !app.Enabled);
     }
 
+    private void Row_PointerEntered(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, true);
+
+    private void Row_PointerExited(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, false);
+
+    /// <summary>The row's "…" button: selects its row and opens the same menu as a right-click.</summary>
+    private void RowMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: StartupRow row }) return;
+        RowList.SelectedItem = row;
+        RowMenu.Show(BuildMenu(row), sender);
+    }
+
     private void RowList_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
     {
         var source = e.OriginalSource as FrameworkElement;
         StartupRow? row = source?.DataContext as StartupRow ?? (source as ListViewItem)?.Content as StartupRow ?? RowList.SelectedItem as StartupRow;
         if (source is null || row is null) return;
         RowList.SelectedItem = row;
+        MenuFlyout menu = BuildMenu(row);
+        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
+        else menu.ShowAt(source);
+        e.Handled = true;
+    }
+
+    private MenuFlyout BuildMenu(StartupRow row)
+    {
         StartupApp app = row.App;
         bool hasPath = app.ExecutablePath.Length > 0;
 
@@ -115,9 +137,7 @@ public sealed partial class StartupPage : Page
         menu.Items.Add(MenuItem(Loc.Get("Menu_OpenLocation"), "", (_, _) => ProcessActions.OpenFileLocation(app.ExecutablePath), hasPath));
         menu.Items.Add(MenuItem(Loc.Get("Proc_Properties"), "", (_, _) => ProcessActions.ShowProperties(app.ExecutablePath), hasPath));
         menu.Items.Add(MenuItem(Loc.Get("Startup_CopyCommand"), "", (_, _) => ProcessActions.CopyText(app.Command)));
-        if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);
-        else menu.ShowAt(source);
-        e.Handled = true;
+        return menu;
     }
 
     private static MenuFlyoutItem MenuItem(string text, string glyph, RoutedEventHandler click, bool enabled = true)

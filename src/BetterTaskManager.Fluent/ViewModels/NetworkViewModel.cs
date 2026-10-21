@@ -25,7 +25,7 @@ public sealed record NetworkRowData(
     bool Tunnel,
     bool Expanded);
 
-public sealed class NetworkSlot : ObservableObject
+public sealed class NetworkSlot : RowSlot
 {
     /// <summary>What UI Automation and screen readers announce for the row.</summary>
     public override string ToString() => Name;
@@ -131,6 +131,8 @@ public sealed class NetworkViewModel : ObservableObject
     public SlotCollection<NetworkSlot, (NetworkRowData, Func<string, NetworkAccess>)> Rows { get; }
     public bool EstablishedOnly { get; set; }
     public string Summary { get; private set; } = "";
+    /// <summary>Apps shown after the search filter, for the connections tile.</summary>
+    public int AppCount { get; private set; }
     public string SortColumn => settings.NetworkSortColumn;
     public bool SortDescending => settings.NetworkSortDescending;
 
@@ -227,6 +229,7 @@ public sealed class NetworkViewModel : ObservableObject
             ? Loc.F("Network_AllApps", Format.NetworkRate(counted.Sum(p => p.NetworkReceiveBytesPerSecond)), Format.NetworkRate(counted.Sum(p => p.NetworkSendBytesPerSecond))) +
               (counted.Count < snapshot.Processes.Count ? Loc.Get("Network_VpnNotCounted") : "")
             : Loc.Get("Network_NeedsAdmin");
+        AppCount = groups.Count;
         Summary = Loc.F("Network_Summary", Format.Count(snapshot.Connections.Count), Format.Count(totalEstablished), groups.Count) +
             throughput + (snapshot.System.PerProcessNetworkFromService ? Loc.Get("Network_FromService") : "") + (snapshot.NetworkIssues.Count > 0 ? Loc.Get("Network_TablesFailed") : "");
         Func<string, NetworkAccess> access = monitor.AccessOf;
