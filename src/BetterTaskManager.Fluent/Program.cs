@@ -22,6 +22,7 @@ public static class Program
     internal const string UninstallCleanupArgument = "--uninstall-cleanup";
     internal const string CacheTrimOnArgument = "--cache-trim-on";
     internal const string CacheTrimOffArgument = "--cache-trim-off";
+    internal const string PolicyApplyArgument = "--policy-apply";
 
     private static Mutex? s_singleInstance;
 
@@ -77,6 +78,24 @@ public static class Program
         {
             if (!FirewallRules.IsElevated) return 5;
             CommandResult result = FirewallRules.Apply(args[1], args[0] == FirewallBlockArgument);
+            return result.Succeeded ? 0 : (result.ExitCode == 0 ? 1 : result.ExitCode);
+        }
+
+        // Elevated helper mode: apply one app's network rules (JSON, Base64) and exit.
+        if (args.Length == 2 && args[0] == PolicyApplyArgument)
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            AppNetworkPolicy? policy;
+            try
+            {
+                policy = System.Text.Json.JsonSerializer.Deserialize<AppNetworkPolicy>(Convert.FromBase64String(args[1]));
+            }
+            catch (Exception ex) when (ex is FormatException or System.Text.Json.JsonException)
+            {
+                return 87;
+            }
+            if (policy is null) return 87;
+            CommandResult result = FirewallRules.ApplyPolicy(policy);
             return result.Succeeded ? 0 : (result.ExitCode == 0 ? 1 : result.ExitCode);
         }
 

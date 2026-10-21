@@ -69,6 +69,9 @@ public static partial class FirewallRules
             return new CommandResult(ex is WfpException wfp ? (int)wfp.Code : 1, "", ex.Message, false);
         }
 
+        // The filter applies to new connections at once; close the open ones too, so the block is immediate.
+        if (block) TryCut(path, (_, _, _) => true);
+
         string rule = RuleNameForPath(path);
         string[] legacy = [LegacyRuleName(rule), rule];
         foreach (string name in legacy) CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + name);
@@ -79,13 +82,53 @@ public static partial class FirewallRules
         return new CommandResult(0, "", "", false);
     }
 
+    /// <summary>
+    /// Applies one app's rules: the WFP filters first (one transaction), then the stored copy the app reads, then
+    /// open connections the new rules block are closed. An empty policy removes the app's rules. Must be elevated.
+    /// </summary>
+    public static CommandResult ApplyPolicy(AppNetworkPolicy policy)
+    {
+        if (string.IsNullOrWhiteSpace(policy.Path) || !Path.IsPathFullyQualified(policy.Path))
+        {
+            return new CommandResult(87, "", "The executable path is not a full path.", false);
+        }
+        var errors = new List<string>();
+        NetworkRule.ParseList(string.Join('\n', policy.Outgoing), errors);
+        NetworkRule.ParseList(string.Join('\n', policy.Incoming), errors);
+        if (errors.Count > 0) return new CommandResult(87, "", "Invalid rule: " + string.Join("; ", errors), false);
+        try
+        {
+            WfpBlocker.ApplyPolicy(policy);
+            NetworkPolicyStore.Save(policy);
+        }
+        catch (Exception ex) when (ex is WfpException or IOException or UnauthorizedAccessException)
+        {
+            return new CommandResult(ex is WfpException wfp ? (int)wfp.Code : 1, "", ex.Message, false);
+        }
+        TryCut(policy.Path, (inbound, remote, port) => policy.Evaluate(inbound, remote, 6, port) is not null);
+        return new CommandResult(0, "", "", false);
+    }
+
+    private static void TryCut(string path, Func<bool, System.Net.IPAddress, int, bool> blocked)
+    {
+        try
+        {
+            ConnectionCutter.Cut(path, blocked);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException)
+        {
+            // The filters already block; closing open connections only makes it faster.
+        }
+    }
+
     private static bool RuleExists(string name) =>
         CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=" + name).ExitCode == 0;
 
-    /// <summary>Removes every block this app ever made: WFP filters and Windows Firewall rules of earlier versions.</summary>
+    /// <summary>Removes every block and rule this app ever made: WFP filters, the stored rules and Windows Firewall rules of earlier versions.</summary>
     public static void RemoveAll()
     {
         WfpBlocker.RemoveAll();
+        NetworkPolicyStore.DeleteAll();
         CommandResult result = CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=all", "dir=out");
         if (!result.Succeeded) return;
         foreach (string hash in RuleNamePattern().Matches(result.StandardOutput).Select(match => match.Groups[1].Value.ToUpperInvariant()).Distinct())

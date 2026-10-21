@@ -11,7 +11,7 @@ namespace BetterTaskManager.Core.Firewall;
 /// ALE connect layer, keyed by a GUID derived from the path, under this app's own provider and sublayer.
 /// Changing filters needs administrator rights.
 /// </summary>
-public static class WfpBlocker
+public static partial class WfpBlocker
 {
     private static readonly Guid ProviderKey = new("6f1b5e6a-1c33-4b8e-9f4c-0a5e2d7c4b11");
     private static readonly Guid SubLayerKey = new("6f1b5e6a-1c33-4b8e-9f4c-0a5e2d7c4b12");
@@ -47,15 +47,25 @@ public static class WfpBlocker
     }
 
     /// <summary>
-    /// Removes every filter this app created, then its sublayer and provider, and the mirror file. Used when the app
+    /// Removes every filter this app created (whole-app blocks and rules), then its sublayer and provider, and the mirror file. Used when the app
     /// is uninstalled, so no program stays blocked without a way to unblock it. Idempotent; needs administrator rights.
     /// </summary>
     public static void RemoveAll()
     {
-        HashSet<string> paths = ReadFilters();
         using (var engine = Engine.Open())
         {
-            foreach (string path in paths) UnblockCore(engine, path);
+            Transaction(engine, () =>
+            {
+                foreach (Guid layer in AllLayers)
+                {
+                    foreach (WfpFilterInfo filter in EnumerateFilters(engine, layer))
+                    {
+                        Guid key = filter.Key;
+                        uint deleted = FwpmFilterDeleteByKey0(engine.Handle, ref key);
+                        if (deleted != 0 && deleted != ErrorFilterNotFound) throw new WfpException("FwpmFilterDeleteByKey0", deleted);
+                    }
+                }
+            });
             Guid subLayer = SubLayerKey;
             uint result = FwpmSubLayerDeleteByKey0(engine.Handle, ref subLayer);
             if (result != 0 && result != ErrorSubLayerNotFound) throw new WfpException("FwpmSubLayerDeleteByKey0", result);
@@ -139,61 +149,14 @@ public static class WfpBlocker
         File.Move(temporary, MirrorPath, overwrite: true);
     }
 
+    /// <summary>Paths with a whole-app block: the connect-layer filters that are not rule filters.</summary>
     private static HashSet<string> ReadFilters()
     {
-        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using var engine = Engine.Open();
-        IntPtr providerKey = Marshal.AllocHGlobal(Marshal.SizeOf<Guid>());
-        IntPtr template = Marshal.AllocHGlobal(Marshal.SizeOf<FilterEnumTemplate>());
-        try
-        {
-            Marshal.StructureToPtr(ProviderKey, providerKey, false);
-            var enumTemplate = new FilterEnumTemplate
-            {
-                ProviderKey = providerKey,
-                LayerKey = LayerConnectV4,
-                EnumType = 0, // FWP_FILTER_ENUM_FULLY_CONTAINED
-                Flags = 0,
-                ActionMask = 0xFFFFFFFF
-            };
-            Marshal.StructureToPtr(enumTemplate, template, false);
-            uint result = FwpmFilterCreateEnumHandle0(engine.Handle, template, out IntPtr enumHandle);
-            if (result == ErrorProviderNotFound) return paths; // nothing was ever blocked
-            if (result != 0) throw new WfpException("FwpmFilterCreateEnumHandle0", result);
-            try
-            {
-                while (true)
-                {
-                    result = FwpmFilterEnum0(engine.Handle, enumHandle, 256, out IntPtr entries, out uint count);
-                    if (result != 0) throw new WfpException("FwpmFilterEnum0", result);
-                    try
-                    {
-                        for (int index = 0; index < count; index++)
-                        {
-                            IntPtr filter = Marshal.ReadIntPtr(entries, index * IntPtr.Size);
-                            var data = Marshal.PtrToStructure<Filter>(filter);
-                            string? description = Marshal.PtrToStringUni(data.DisplayData.Description);
-                            if (!string.IsNullOrEmpty(description)) paths.Add(description);
-                        }
-                    }
-                    finally
-                    {
-                        if (entries != IntPtr.Zero) FwpmFreeMemory0(ref entries);
-                    }
-                    if (count < 256) break;
-                }
-            }
-            finally
-            {
-                FwpmFilterDestroyEnumHandle0(engine.Handle, enumHandle);
-            }
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(providerKey);
-            Marshal.FreeHGlobal(template);
-        }
-        return paths;
+        return EnumerateFilters(engine, LayerConnectV4)
+            .Select(filter => filter.Description)
+            .Where(description => description.Length > 0 && !description.StartsWith(RuleDescriptionPrefix, StringComparison.Ordinal))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private static uint AddFilter(Engine engine, string path, Guid layer)
