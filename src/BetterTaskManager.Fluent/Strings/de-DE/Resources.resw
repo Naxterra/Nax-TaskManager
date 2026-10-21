@@ -591,4 +591,15 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="Details_Protocol" xml:space="preserve"><value>Protokoll</value></data>
   <data name="Details_State" xml:space="preserve"><value>Status</value></data>
   <data name="Details_Scope" xml:space="preserve"><value>Bereich</value></data>
+  <data name="NetworkPage_27.Text" xml:space="preserve"><value>Apps</value></data>
+  <data name="NetworkPage_28.Content" xml:space="preserve"><value>Sortierung: Name</value></data>
+  <data name="NetworkPage_29.Content" xml:space="preserve"><value>Sortierung: Daten</value></data>
+  <data name="NetworkPage_30.Content" xml:space="preserve"><value>Sortierung: Tempo</value></data>
+  <data name="NetworkPage_31.Text" xml:space="preserve"><value>App</value></data>
+  <data name="Network_AllAppsRow" xml:space="preserve"><value>Alle Apps</value></data>
+  <data name="Network_ConnectionsShown" xml:space="preserve"><value>{0} Verbindungen angezeigt</value></data>
+  <data name="Network_TrafficTitle" xml:space="preserve"><value>Datenverkehr, letzte Minute</value></data>
+  <data name="Network_TrafficDown" xml:space="preserve"><value>Download {0}</value></data>
+  <data name="Network_TrafficUp" xml:space="preserve"><value>Upload {0}</value></data>
+  <data name="Network_AppSubline" xml:space="preserve"><value>{0} von {1} hergestellt</value></data>
 </root>

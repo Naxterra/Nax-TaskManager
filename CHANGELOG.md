@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0-alpha.33 - 2026-10-22
+
+Redesign stage 3: the Network page as master and detail.
+
+- **Apps on the left.** Every program with open sockets is one row with its icon, "x of y established", its current rates and two small meters for download and upload (relative to the busiest app). "All apps" sits on top. A dropdown sorts the list by name, data or speed.
+- **The selected app's connections in the middle.** The table shows only that app's connections (or all of them, with an App column saying whose), with remote host, local address, scope, state with a colored dot, and speed. Clicking Remote host, State or Speed sorts the connections.
+- **Traffic chart.** Under the table, the selected app's download and upload over the last minute.
+- **Details on the right** for the connection or app selected last, as before. Expanding and collapsing app groups is gone; picking an app on the left replaces it.
+
 ## 2.0.0-alpha.32 - 2026-10-22
 
 Redesign stage 2: the details card.
