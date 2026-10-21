@@ -22,7 +22,78 @@ public sealed partial class NetworkPage : Page
         DownloadTile.Caption = Loc.Get("Tile_Download");
         UploadTile.Caption = Loc.Get("Tile_Upload");
         ConnectionsTile.Caption = Loc.Get("Tile_Connections");
+        Details.Tile1.Caption = Loc.Get("Tile_Download");
+        Details.Tile1.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartReceiveBrush"];
+        Details.Tile2.Caption = Loc.Get("Tile_Upload");
+        Details.Tile2.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartSendBrush"];
+        detailRules = Controls.DetailPane.ActionButton("\uE8D7", Loc.Get("Rules_Menu"), (_, _) => { if (Selected is { Path.Length: > 0 } slot) _ = EditRulesAsync(slot); });
+        detailFirewall = Controls.DetailPane.ActionButton("\uE785", Loc.Get("Firewall_Block"), Firewall_Click);
+        detailOpen = Controls.DetailPane.ActionButton("\uE838", Loc.Get("Menu_OpenLocation"), (_, _) => { if (Selected is { Path.Length: > 0 } slot) ProcessActions.OpenFileLocation(slot.Path); });
+        detailCopy = Controls.DetailPane.ActionButton("\uE8C8", Loc.Get("Menu_CopyRemoteAddress"), (_, _) => { if (Selected is { } slot) ProcessActions.CopyText(slot.Remote); });
+        Details.SetActions([detailRules, detailFirewall, detailOpen, detailCopy]);
+        DetailsToggle.IsChecked = App.Settings.ShowDetailsPane;
+        Details.Visibility = App.Settings.ShowDetailsPane ? Visibility.Visible : Visibility.Collapsed;
         UpdateSortIndicators();
+    }
+
+    private void DetailsToggle_Click(object sender, RoutedEventArgs e)
+    {
+        App.Settings.ShowDetailsPane = DetailsToggle.IsChecked == true;
+        Details.Visibility = App.Settings.ShowDetailsPane ? Visibility.Visible : Visibility.Collapsed;
+        UpdateDetails();
+    }
+
+    /// <summary>The card on the right: the selected app with its traffic history, or the selected connection.</summary>
+    private void UpdateDetails()
+    {
+        if (Details.Visibility == Visibility.Collapsed) return;
+        if (Selected is not { Data: { } row } slot)
+        {
+            detailKey = null;
+            Details.ShowEmpty(Loc.Get("Details_EmptyNetwork"));
+            return;
+        }
+        if (row.Key != detailKey)
+        {
+            detailKey = row.Key;
+            detailDown = new HistoryBuffer(MonitorHost.HistoryLength);
+            detailUp = new HistoryBuffer(MonitorHost.HistoryLength);
+        }
+        detailDown.Add(row.Down);
+        detailUp.Add(row.Up);
+        double max = Math.Max(Math.Max(detailDown.Max(), detailUp.Max()), 1024);
+        Details.Tile1.Update(Format.NetworkRate(row.Down), "", detailDown, max);
+        Details.Tile2.Update(Format.NetworkRate(row.Up), "", detailUp, max);
+        bool group = row.Kind == RowKind.Group;
+        bool hasPath = slot.Path.Length > 0;
+        Details.BeginFacts();
+        if (group)
+        {
+            int connections = int.TryParse(row.Detail.Trim('(', ')'), out int all) ? all : row.Established + row.Listening;
+            Details.SetHeader(IconCache.Get(row.Path), row.Name, hasPath ? System.IO.Path.GetFileName(row.Path) : "", connections == 1 ? Loc.Get("Common_OneConnection") : Loc.F("Common_Connections", connections));
+            Details.Fact(Loc.Get("Details_Established"), Format.Count(row.Established));
+            Details.Fact(Loc.Get("Details_Listening"), Format.Count(row.Listening));
+            if (row.Received + row.Sent > 0) Details.Fact(Loc.Get("Details_Received"), Format.Bytes(row.Received));
+            if (row.Received + row.Sent > 0) Details.Fact(Loc.Get("Details_Sent"), Format.Bytes(row.Sent));
+            NetworkAccess access = App.Monitor.AccessOf(slot.Path);
+            Details.Fact(Loc.Get("Details_Access"), access switch { NetworkAccess.Blocked => Loc.Get("Details_AccessBlocked"), NetworkAccess.Rules => Loc.Get("Details_AccessRules"), _ => Loc.Get("Details_AccessOpen") });
+            if (hasPath) Details.Fact(Loc.Get("Details_Path"), slot.Path, copyable: true);
+        }
+        else
+        {
+            Details.SetHeader(IconCache.Get(row.Path), row.Remote.Length > 0 ? row.Remote : row.Local, hasPath ? System.IO.Path.GetFileName(row.Path) : "", row.Name + (row.State.Length > 0 ? " · " + row.State : ""));
+            if (row.RemoteAddress.Length > 0) Details.Fact(Loc.Get("Details_Remote"), row.RemoteAddress, copyable: true);
+            Details.Fact(Loc.Get("Details_Local"), row.Local);
+            Details.Fact(Loc.Get("Details_Protocol"), row.Name);
+            if (row.State.Length > 0) Details.Fact(Loc.Get("Details_State"), row.State);
+            if (row.Scope.Length > 0) Details.Fact(Loc.Get("Details_Scope"), row.Scope);
+            Details.Fact("PID", row.Pid.ToString(System.Globalization.CultureInfo.CurrentCulture));
+            if (hasPath) Details.Fact(Loc.Get("Details_Path"), slot.Path, copyable: true);
+        }
+        Details.EndFacts();
+        detailRules.IsEnabled = detailFirewall.IsEnabled = detailOpen.IsEnabled = hasPath;
+        detailCopy.Visibility = group ? Visibility.Collapsed : Visibility.Visible;
+        Controls.DetailPane.SetActionText(detailFirewall, hasPath && App.Monitor.IsBlocked(slot.Path) ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"));
     }
 
     /// <summary>The strip under the title: throughput and connection count with the last minute as sparklines.</summary>
@@ -39,6 +110,9 @@ public sealed partial class NetworkPage : Page
     }
 
     private readonly ColumnReorder columnReorder;
+    private readonly Button detailRules, detailFirewall, detailOpen, detailCopy;
+    private string? detailKey;
+    private HistoryBuffer detailDown = new(MonitorHost.HistoryLength), detailUp = new(MonitorHost.HistoryLength);
 
     public NetworkViewModel ViewModel { get; }
 
@@ -85,6 +159,7 @@ public sealed partial class NetworkPage : Page
             restoringSelection = false;
         }
         UpdateCommands();
+        UpdateDetails();
     }
 
     private NetworkSlot? Selected => RowList.SelectedItem as NetworkSlot;
@@ -95,6 +170,7 @@ public sealed partial class NetworkPage : Page
         if (restoringSelection) return;
         selectedKey = Selected?.Key;
         UpdateCommands();
+        UpdateDetails();
     }
 
     private void UpdateCommands()

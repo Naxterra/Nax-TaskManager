@@ -19,6 +19,9 @@ public sealed partial class ProcessesPage : Page
     private bool restoringSelection;
     private bool flatMode;
     private readonly ColumnReorder groupedReorder, flatReorder;
+    private readonly Button detailOpen, detailFirewall, detailRules, detailEnd;
+    private string? detailKey;
+    private HistoryBuffer detailCpu = new(MonitorHost.HistoryLength), detailMemory = new(MonitorHost.HistoryLength);
 
     public ProcessesPage()
     {
@@ -34,6 +37,18 @@ public sealed partial class ProcessesPage : Page
         DiskTile.Caption = Loc.Get("Tile_Disk");
         NetworkTile.Caption = Loc.Get("Tile_Network");
         GpuTile.Caption = Loc.Get("Tile_Gpu");
+        Details.Tile1.Caption = "CPU";
+        Details.Tile1.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartCpuBrush"];
+        Details.Tile2.Caption = Loc.Get("Tile_Memory");
+        Details.Tile2.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartMemoryBrush"];
+        detailOpen = Controls.DetailPane.ActionButton("\uE838", Loc.Get("Menu_OpenLocation"), OpenLocation_Click);
+        detailFirewall = Controls.DetailPane.ActionButton("\uE785", Loc.Get("Firewall_Block"), Firewall_Click);
+        detailRules = Controls.DetailPane.ActionButton("\uE8D7", Loc.Get("Rules_Menu"), (_, _) => { if (CurrentTarget() is { Path.Length: > 0 } target) _ = AppRulesDialog.ShowAsync(XamlRoot, target.Path, target.Name); });
+        detailEnd = Controls.DetailPane.ActionButton("\uE711", Loc.Get("Proc_EndTask"), EndTask_Click);
+        Controls.DetailPane.MakeDanger(detailEnd);
+        Details.SetActions([detailOpen, detailFirewall, detailRules, detailEnd]);
+        DetailsToggle.IsChecked = App.Settings.ShowDetailsPane;
+        Details.Visibility = App.Settings.ShowDetailsPane ? Visibility.Visible : Visibility.Collapsed;
         ApplyMode();
         UpdateSortIndicators();
         UpdateFlatSortIndicators();
@@ -89,6 +104,63 @@ public sealed partial class ProcessesPage : Page
         UpdateSummary();
         UpdateTiles();
         UpdateCommands();
+        UpdateDetails();
+    }
+
+    private void DetailsToggle_Click(object sender, RoutedEventArgs e)
+    {
+        App.Settings.ShowDetailsPane = DetailsToggle.IsChecked == true;
+        Details.Visibility = App.Settings.ShowDetailsPane ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>The card on the right: the selected app or process with its own CPU and memory history.</summary>
+    private void UpdateDetails()
+    {
+        if (Details.Visibility == Visibility.Collapsed) return;
+        Target? target = CurrentTarget();
+        if (target is null)
+        {
+            detailKey = null;
+            Details.ShowEmpty(Loc.Get("Details_EmptyProcess"));
+            return;
+        }
+        string key = flatMode ? "pid:" + (FlatList.SelectedItem as DetailSlot)?.Key.Pid : "group:" + selectedKey;
+        if (key != detailKey)
+        {
+            detailKey = key;
+            detailCpu = new HistoryBuffer(MonitorHost.HistoryLength);
+            detailMemory = new HistoryBuffer(MonitorHost.HistoryLength);
+        }
+        var members = new List<ProcessSample>();
+        if (App.Monitor.Latest is { } snapshot)
+        {
+            var wanted = target.Processes.ToHashSet();
+            members = snapshot.Processes.Where(process => wanted.Contains(process.Key)).ToList();
+        }
+        double cpu = members.Sum(process => process.CpuPercent);
+        long memory = members.Sum(process => process.PrivateWorkingSet);
+        detailCpu.Add(cpu);
+        detailMemory.Add(memory);
+        string publisher = members.Select(process => process.Company).FirstOrDefault(company => company.Length > 0) ?? "";
+        string count = target.Processes.Count == 1 ? "PID " + target.Processes[0].Pid : Loc.F("Tile_Processes", target.Processes.Count);
+        Details.SetHeader(IconCache.Get(target.Path), target.Name, publisher, count);
+        Details.Tile1.Update(Format.Percent(cpu), "", detailCpu, 100);
+        Details.Tile2.Update(Format.Memory(memory), "", detailMemory, Math.Max(detailMemory.Max(), 1));
+        Details.BeginFacts();
+        if (target.Processes.Count > 1) Details.Fact("PID", string.Join(", ", target.Processes.Take(6).Select(process => process.Pid)) + (target.Processes.Count > 6 ? ", …" : ""));
+        else Details.Fact("PID", target.Processes[0].Pid.ToString(System.Globalization.CultureInfo.CurrentCulture));
+        if (publisher.Length > 0) Details.Fact(Loc.Get("Details_Publisher"), publisher);
+        Details.Fact(Loc.Get("Details_Status"), members.Any(process => process.Suspended) ? Loc.Get("ProcState_Suspended") : target.Efficiency ? Loc.Get("Proc_Efficiency") : Loc.Get("ProcState_Running"));
+        Details.Fact(Loc.Get("Details_Threads"), Format.Count(members.Sum(process => process.Threads)));
+        Details.Fact(Loc.Get("Details_Handles"), Format.Count(members.Sum(process => process.Handles)));
+        Details.Fact(Loc.Get("Details_Connections"), Format.Count(members.Sum(process => process.ConnectionCount)));
+        string user = members.Select(process => process.UserName).FirstOrDefault(name => name.Length > 0) ?? "";
+        if (user.Length > 0) Details.Fact(Loc.Get("Details_User"), user);
+        if (target.Path.Length > 0) Details.Fact(Loc.Get("Details_Path"), target.Path, copyable: true);
+        Details.EndFacts();
+        bool hasPath = target.Path.Length > 0;
+        detailOpen.IsEnabled = detailRules.IsEnabled = detailFirewall.IsEnabled = hasPath;
+        Controls.DetailPane.SetActionText(detailFirewall, hasPath && App.Monitor.IsBlocked(target.Path) ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"));
     }
 
     /// <summary>The strip under the title: totals with the last minute as sparklines.</summary>
@@ -121,6 +193,9 @@ public sealed partial class ProcessesPage : Page
         SystemSample system = snapshot.System;
         SummaryText.Text = Loc.F("Proc_Summary", Format.Count(system.ProcessCount), Format.Count(system.ThreadCount),
             Format.Count(system.HandleCount), Format.Duration(system.Uptime));
+        int apps = ViewModel.Rows.Count(slot => slot.Data?.Kind == RowKind.Group && slot.Data.IsApp);
+        ByAppMode.Text = Loc.F("Proc_ByAppCount", apps);
+        FlatMode.Text = Loc.F("Proc_AllCount", Format.Count(system.ProcessCount));
     }
 
     // ===== Selection =====
@@ -143,6 +218,7 @@ public sealed partial class ProcessesPage : Page
             selectedKey = (RowList.SelectedItem as ProcessSlot)?.Key;
         }
         UpdateCommands();
+        UpdateDetails();
     }
 
     private void FlatList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -151,6 +227,7 @@ public sealed partial class ProcessesPage : Page
         if (restoringSelection) return;
         flatSelectedKey = (FlatList.SelectedItem as DetailSlot)?.Key;
         UpdateCommands();
+        UpdateDetails();
     }
 
     private void RestoreSelection()

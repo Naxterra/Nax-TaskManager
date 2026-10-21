@@ -23,7 +23,16 @@ public sealed record NetworkRowData(
     string RemoteDetail,
     bool Expandable,
     bool Tunnel,
-    bool Expanded);
+    bool Expanded,
+    double Down = 0,
+    double Up = 0,
+    long Received = 0,
+    long Sent = 0,
+    int Established = 0,
+    int Listening = 0,
+    int Pid = 0,
+    string RemoteAddress = "",
+    string RawState = "");
 
 public sealed class NetworkSlot : RowSlot
 {
@@ -221,7 +230,8 @@ public sealed class NetworkViewModel : ObservableObject
             string summary = Loc.F("Network_GroupSummary", established, listening, group.Connections.Count - established - listening);
             string data = measured && usage.Received + usage.Sent > 0 ? $"↓ {Format.Bytes(usage.Received)}   ↑ {Format.Bytes(usage.Sent)}" : "";
             string speed = measured ? Speed(usage.Down, usage.Up) : "";
-            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", "", summary, data, speed, "", true, group.Tunnel, isExpanded));
+            rows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", "", summary, data, speed, "", true, group.Tunnel, isExpanded,
+                usage.Down, usage.Up, usage.Received, usage.Sent, established, listening));
             if (!isExpanded) continue;
 
             foreach (ConnectionSample connection in SortConnections(group.Connections))
@@ -240,7 +250,9 @@ public sealed class NetworkViewModel : ObservableObject
                     measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
                         ? Speed(connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond) : "",
                     RemoteDetail(connection),
-                    false, false, false));
+                    false, false, false,
+                    connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond, 0, 0, 0, 0, connection.Pid,
+                    connection.Protocol == "UDP" ? "" : Endpoint(connection.RemoteAddress, connection.RemotePort), connection.State));
             }
         }
 

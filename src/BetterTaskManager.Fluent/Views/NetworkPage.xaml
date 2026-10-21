@@ -13,8 +13,12 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
 
-        <Grid Margin="4,0,0,12">
+        <Grid Margin="4,0,0,12" Grid.ColumnSpan="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -47,6 +51,11 @@
                             <FontIcon Glyph="&#xE769;" />
                         </AppBarToggleButton.Icon>
                     </AppBarToggleButton>
+                    <AppBarToggleButton x:Uid="NetworkPage_26" x:Name="DetailsToggle" Label="Details" Click="DetailsToggle_Click">
+                        <AppBarToggleButton.Icon>
+                            <FontIcon Glyph="&#xE8A0;" />
+                        </AppBarToggleButton.Icon>
+                    </AppBarToggleButton>
                 </CommandBar>
             </StackPanel>
         </Grid>
@@ -61,6 +70,8 @@
             <controls:StatTile x:Name="UploadTile" Grid.Column="1" Stroke="{ThemeResource ChartSendBrush}" />
             <controls:StatTile x:Name="ConnectionsTile" Grid.Column="2" Stroke="{ThemeResource ChartCpuBrush}" Filled="False" />
         </Grid>
+
+        <controls:DetailPane x:Name="Details" Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Width="340" Margin="12,0,0,0" />
 
         <Border Grid.Row="2" Style="{StaticResource TableCardStyle}">
             <Grid>

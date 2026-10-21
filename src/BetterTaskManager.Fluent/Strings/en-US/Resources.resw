@@ -564,4 +564,31 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="Status_SourceOwn" xml:space="preserve"><value>Own measurement (administrator)</value></data>
   <data name="Status_SourceNone" xml:space="preserve"><value>History service not connected</value></data>
   <data name="Status_SourceUnknown" xml:space="preserve"><value>Connecting…</value></data>
+  <data name="ProcessesPage_34.Label" xml:space="preserve"><value>Details</value></data>
+  <data name="NetworkPage_26.Label" xml:space="preserve"><value>Details</value></data>
+  <data name="Proc_ByAppCount" xml:space="preserve"><value>By app ({0})</value></data>
+  <data name="Proc_AllCount" xml:space="preserve"><value>All processes ({0})</value></data>
+  <data name="Details_EmptyProcess" xml:space="preserve"><value>Select a process to see its details and actions here.</value></data>
+  <data name="Details_EmptyNetwork" xml:space="preserve"><value>Select an app or a connection to see its details here.</value></data>
+  <data name="Details_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Details_Publisher" xml:space="preserve"><value>Publisher</value></data>
+  <data name="Details_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Details_Threads" xml:space="preserve"><value>Threads</value></data>
+  <data name="Details_Handles" xml:space="preserve"><value>Handles</value></data>
+  <data name="Details_Connections" xml:space="preserve"><value>Connections</value></data>
+  <data name="Details_User" xml:space="preserve"><value>User</value></data>
+  <data name="Details_Path" xml:space="preserve"><value>Path</value></data>
+  <data name="Details_Established" xml:space="preserve"><value>Established</value></data>
+  <data name="Details_Listening" xml:space="preserve"><value>Listening</value></data>
+  <data name="Details_Received" xml:space="preserve"><value>Received</value></data>
+  <data name="Details_Sent" xml:space="preserve"><value>Sent</value></data>
+  <data name="Details_Access" xml:space="preserve"><value>Network access</value></data>
+  <data name="Details_AccessOpen" xml:space="preserve"><value>Allowed</value></data>
+  <data name="Details_AccessBlocked" xml:space="preserve"><value>Blocked</value></data>
+  <data name="Details_AccessRules" xml:space="preserve"><value>Own rules</value></data>
+  <data name="Details_Remote" xml:space="preserve"><value>Remote</value></data>
+  <data name="Details_Local" xml:space="preserve"><value>Local</value></data>
+  <data name="Details_Protocol" xml:space="preserve"><value>Protocol</value></data>
+  <data name="Details_State" xml:space="preserve"><value>State</value></data>
+  <data name="Details_Scope" xml:space="preserve"><value>Scope</value></data>
 </root>

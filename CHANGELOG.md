@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0-alpha.32 - 2026-10-22
+
+Redesign stage 2: the details card.
+
+- **Details card on Processes and Network.** The right side of both pages shows the selected row: icon, name, publisher and process count; two mini tiles with the selected app's own CPU and memory (or download and upload) history as sparklines; the facts (PIDs, status, threads, handles, connections, user, path with a copy button; on Network established and listening counts, data totals and the app's network access, or for a connection its remote and local endpoints, protocol, state, scope and PID); and the actions as full-width buttons, with End task in red. A **Details** button in the toolbar hides and shows the card, and the choice is remembered.
+- **View switch in the table.** "By app (n)" and "All processes (n)" sit on the table card like tabs, with their counts.
+- Tiles adapt their sparkline width to the room they have, so the numbers no longer get cut off next to the card.
+
 ## 2.0.0-alpha.31 - 2026-10-22
 
 The first stage of the redesign toward the concept art: the app's own look instead of the Windows 11 Task Manager look.

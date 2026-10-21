@@ -564,4 +564,31 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="Status_SourceOwn" xml:space="preserve"><value>Eigene Messung (Administrator)</value></data>
   <data name="Status_SourceNone" xml:space="preserve"><value>Verlaufsdienst nicht verbunden</value></data>
   <data name="Status_SourceUnknown" xml:space="preserve"><value>Verbindung wird hergestellt…</value></data>
+  <data name="ProcessesPage_34.Label" xml:space="preserve"><value>Details</value></data>
+  <data name="NetworkPage_26.Label" xml:space="preserve"><value>Details</value></data>
+  <data name="Proc_ByAppCount" xml:space="preserve"><value>Nach App ({0})</value></data>
+  <data name="Proc_AllCount" xml:space="preserve"><value>Alle Prozesse ({0})</value></data>
+  <data name="Details_EmptyProcess" xml:space="preserve"><value>Wählen Sie einen Prozess aus, um hier Details und Aktionen zu sehen.</value></data>
+  <data name="Details_EmptyNetwork" xml:space="preserve"><value>Wählen Sie eine App oder eine Verbindung aus, um hier Details zu sehen.</value></data>
+  <data name="Details_Copy" xml:space="preserve"><value>Kopieren</value></data>
+  <data name="Details_Publisher" xml:space="preserve"><value>Herausgeber</value></data>
+  <data name="Details_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Details_Threads" xml:space="preserve"><value>Threads</value></data>
+  <data name="Details_Handles" xml:space="preserve"><value>Handles</value></data>
+  <data name="Details_Connections" xml:space="preserve"><value>Verbindungen</value></data>
+  <data name="Details_User" xml:space="preserve"><value>Benutzer</value></data>
+  <data name="Details_Path" xml:space="preserve"><value>Pfad</value></data>
+  <data name="Details_Established" xml:space="preserve"><value>Hergestellt</value></data>
+  <data name="Details_Listening" xml:space="preserve"><value>Abhörend</value></data>
+  <data name="Details_Received" xml:space="preserve"><value>Empfangen</value></data>
+  <data name="Details_Sent" xml:space="preserve"><value>Gesendet</value></data>
+  <data name="Details_Access" xml:space="preserve"><value>Netzwerkzugriff</value></data>
+  <data name="Details_AccessOpen" xml:space="preserve"><value>Erlaubt</value></data>
+  <data name="Details_AccessBlocked" xml:space="preserve"><value>Gesperrt</value></data>
+  <data name="Details_AccessRules" xml:space="preserve"><value>Eigene Regeln</value></data>
+  <data name="Details_Remote" xml:space="preserve"><value>Remote</value></data>
+  <data name="Details_Local" xml:space="preserve"><value>Lokal</value></data>
+  <data name="Details_Protocol" xml:space="preserve"><value>Protokoll</value></data>
+  <data name="Details_State" xml:space="preserve"><value>Status</value></data>
+  <data name="Details_Scope" xml:space="preserve"><value>Bereich</value></data>
 </root>

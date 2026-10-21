@@ -12,24 +12,24 @@ namespace BetterTaskManager.Fluent.Controls;
 /// </summary>
 public sealed class StatTile : Grid
 {
-    private readonly TextBlock caption = new();
-    private readonly TextBlock value = new();
+    private readonly TextBlock caption = new() { TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock value = new() { TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly TextBlock detail = new() { TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly TrendChart chart = new() { Compact = true, Height = 44, Width = 130, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Grid grid = new() { ColumnSpacing = 10 };
+    private readonly StackPanel text = new() { Spacing = 0, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TrendChart chart = new() { Compact = true, Height = 44, Width = 96, VerticalAlignment = VerticalAlignment.Center };
     private readonly Rectangle edge = new() { Width = 3, RadiusX = 1.5, RadiusY = 1.5, VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(0, 2, 0, 2) };
 
     public StatTile()
     {
-        Padding = new Thickness(12, 10, 14, 10);
+        Padding = new Thickness(12, 10, 12, 10);
         MinWidth = 190;
         CornerRadius = new CornerRadius(10);
         BorderThickness = new Thickness(1);
-        var grid = new Grid { ColumnSpacing = 10 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.Children.Add(edge);
-        var text = new StackPanel { Spacing = 0, VerticalAlignment = VerticalAlignment.Center };
         text.Children.Add(caption);
         text.Children.Add(value);
         text.Children.Add(detail);
@@ -40,6 +40,35 @@ public sealed class StatTile : Grid
         Children.Add(grid);
         Loaded += (_, _) => ApplyResources();
         ActualThemeChanged += (_, _) => ApplyResources();
+        // The sparkline takes about a third of the tile, so the numbers keep their room in narrow tiles.
+        SizeChanged += (_, args) => { if (!stacked) chart.Width = Math.Clamp(args.NewSize.Width * 0.34, 56, 130); };
+    }
+
+    private bool stacked;
+
+    /// <summary>Text above a full-width sparkline instead of beside a fixed one, for narrow places like the details card.</summary>
+    public bool Stacked
+    {
+        get => stacked;
+        set
+        {
+            stacked = value;
+            if (value)
+            {
+                grid.ColumnDefinitions[2].Width = new GridLength(0);
+                grid.RowDefinitions.Clear();
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                Grid.SetColumn(chart, 1);
+                Grid.SetRow(chart, 1);
+                Grid.SetRowSpan(edge, 2);
+                chart.Width = double.NaN;
+                chart.HorizontalAlignment = HorizontalAlignment.Stretch;
+                chart.Height = 36;
+                chart.Margin = new Thickness(0, 6, 0, 0);
+                Padding = new Thickness(10, 8, 12, 8);
+            }
+        }
     }
 
     public static readonly DependencyProperty CaptionProperty = DependencyProperty.Register(
@@ -100,8 +129,14 @@ public sealed class StatTile : Grid
         caption.Style = (Style)resources["CaptionTextBlockStyle"];
         caption.Foreground = (Brush)resources["TextFillColorSecondaryBrush"];
         value.Style = (Style)resources["TitleTextBlockStyle"];
-        value.FontSize = 24;
+        value.FontSize = stacked ? 20 : 24;
         detail.Style = (Style)resources["CaptionTextBlockStyle"];
         detail.Foreground = (Brush)resources["TextFillColorSecondaryBrush"];
+        // The text styles wrap; a tile's numbers must stay on one line and trim instead.
+        foreach (TextBlock block in new[] { caption, value, detail })
+        {
+            block.TextWrapping = TextWrapping.NoWrap;
+            block.TextTrimming = TextTrimming.CharacterEllipsis;
+        }
     }
 }

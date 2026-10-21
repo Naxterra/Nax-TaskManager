@@ -31,6 +31,8 @@ public sealed class AppSettings
     public bool DetailsSortDescending { get; set; }
     /// <summary>Processes page: false shows the grouped "by app" layout, true the flat "all processes" layout.</summary>
     public bool ProcessFlatView { get; set; }
+    /// <summary>The details card on the right of the Processes and Network pages.</summary>
+    public bool ShowDetailsPane { get; set; } = true;
     /// <summary>The user dismissed the limited-mode notice; do not show it again.</summary>
     public bool HideElevationNotice { get; set; }
     /// <summary>The user turned "Replace Windows Task Manager" on; used to notice when something removed it.</summary>

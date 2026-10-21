@@ -13,9 +13,13 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
 
-        <!-- Page header: title and summary, the view switch, then the actions with "End task" as the accent button. -->
-        <Grid Margin="4,0,0,12">
+        <!-- Page header: title and summary, then the actions with "End task" as the accent button. -->
+        <Grid Margin="4,0,0,12" Grid.ColumnSpan="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -25,10 +29,6 @@
                 <TextBlock x:Uid="ProcessesPage_1" Text="Processes" Style="{StaticResource PageTitleStyle}" />
                 <TextBlock x:Name="SummaryText" Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
-            <SelectorBar x:Name="ModeSelector" Grid.Column="1" VerticalAlignment="Center" Margin="24,0,0,0" SelectionChanged="ModeSelector_SelectionChanged">
-                <SelectorBarItem x:Uid="ProcessesPage_29" x:Name="ByAppMode" Text="By app" IsSelected="True" />
-                <SelectorBarItem x:Uid="ProcessesPage_30" x:Name="FlatMode" Text="All processes" />
-            </SelectorBar>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                 <Button x:Uid="ProcessesPage_33" x:Name="EndTaskButton" AutomationProperties.Name="End task" Style="{StaticResource AccentButtonStyle}" IsEnabled="False" Click="EndTask_Click" MinWidth="120">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -53,6 +53,11 @@
                     <AppBarToggleButton x:Uid="ProcessesPage_5" x:Name="PauseButton" Label="Pause" Click="Pause_Click">
                         <AppBarToggleButton.Icon>
                             <FontIcon Glyph="&#xE769;" />
+                        </AppBarToggleButton.Icon>
+                    </AppBarToggleButton>
+                    <AppBarToggleButton x:Uid="ProcessesPage_34" x:Name="DetailsToggle" Label="Details" Click="DetailsToggle_Click">
+                        <AppBarToggleButton.Icon>
+                            <FontIcon Glyph="&#xE8A0;" />
                         </AppBarToggleButton.Icon>
                     </AppBarToggleButton>
                     <CommandBar.SecondaryCommands>
@@ -97,15 +102,26 @@
             <controls:StatTile x:Name="GpuTile" Grid.Column="4" Stroke="{ThemeResource ChartGpuBrush}" />
         </Grid>
 
+        <controls:DetailPane x:Name="Details" Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Width="340" Margin="12,0,0,0" />
+
         <Border Grid.Row="2" Style="{StaticResource TableCardStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
+                <!-- The view switch lives in the card, like tabs over the table. -->
+                <Grid Padding="10,6,10,4" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="10,10,0,0">
+                    <SelectorBar x:Name="ModeSelector" VerticalAlignment="Center" SelectionChanged="ModeSelector_SelectionChanged">
+                        <SelectorBarItem x:Uid="ProcessesPage_29" x:Name="ByAppMode" Text="By app" IsSelected="True" />
+                        <SelectorBarItem x:Uid="ProcessesPage_30" x:Name="FlatMode" Text="All processes" />
+                    </SelectorBar>
+                </Grid>
+
                 <!-- ===== Grouped ("By app") layout ===== -->
-                <Grid x:Name="GroupedHeader" Height="52" Style="{StaticResource TableHeaderStyle}">
+                <Grid x:Name="GroupedHeader" Grid.Row="1" Height="52" Style="{StaticResource TableHeaderStyle}" CornerRadius="0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.Name, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.W1, Mode=OneWay}" />
@@ -204,7 +220,7 @@
 
                 <ListView
                     x:Name="RowList"
-                    Grid.Row="1"
+                    Grid.Row="2"
                     ItemsSource="{x:Bind ViewModel.Rows}"
                     SelectionMode="Single"
                     IsItemClickEnabled="False"
@@ -362,7 +378,7 @@
                 </ListView>
 
                 <!-- ===== Flat ("All processes") layout ===== -->
-                <Grid x:Name="FlatHeader" Height="40" Visibility="Collapsed" Style="{StaticResource TableHeaderStyle}">
+                <Grid x:Name="FlatHeader" Grid.Row="1" Height="40" Visibility="Collapsed" Style="{StaticResource TableHeaderStyle}" CornerRadius="0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.Name, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.W1, Mode=OneWay}" />
@@ -434,7 +450,7 @@
 
                 <ListView
                     x:Name="FlatList"
-                    Grid.Row="1"
+                    Grid.Row="2"
                     Visibility="Collapsed"
                     ItemsSource="{x:Bind FlatViewModel.Rows}"
                     SelectionMode="Single"
