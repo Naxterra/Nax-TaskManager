@@ -45,11 +45,13 @@ public sealed class ProcessSlot : RowSlot
     public string GpuText { get => gpuText; private set => Set(ref gpuText, value); }
     /// <summary>Busiest GPU engine, e.g. "GPU 0 - 3D"; shown as the GPU cell's tooltip.</summary>
     public string? GpuEngine { get => gpuEngine.Length == 0 ? null : gpuEngine; private set => Set(ref gpuEngine, value ?? ""); }
-    public Brush GpuHeat { get => gpuHeat; private set => Set(ref gpuHeat, value); }
-    public Brush CpuHeat { get => cpuHeat; private set => Set(ref cpuHeat, value); }
-    public Brush MemoryHeat { get => memoryHeat; private set => Set(ref memoryHeat, value); }
-    public Brush IoHeat { get => ioHeat; private set => Set(ref ioHeat, value); }
-    public Brush NetworkHeat { get => networkHeat; private set => Set(ref networkHeat, value); }
+    /// <summary>Bar meters behind the numbers: CPU and GPU over 100 %, memory over an eighth of RAM, disk over 10 MB/s, network over 50 Mbit/s, connections over 50.</summary>
+    public Meter Cpu { get; } = new();
+    public Meter Memory { get; } = new();
+    public Meter Io { get; } = new();
+    public Meter Network { get; } = new();
+    public Meter Bandwidth { get; } = new();
+    public Meter Gpu { get; } = new();
     public Visibility SectionVisibility { get => sectionVisibility; private set => Set(ref sectionVisibility, value); }
     public Visibility RowVisibility { get => rowVisibility; private set => Set(ref rowVisibility, value); }
     public Visibility ChevronVisibility { get => chevronVisibility; private set => Set(ref chevronVisibility, value); }
@@ -74,7 +76,7 @@ public sealed class ProcessSlot : RowSlot
             slot.Detail = slot.CpuText = slot.MemoryText = slot.IoText = slot.NetworkText = slot.BandwidthText = slot.GpuText = slot.Publisher = slot.Path = "";
             slot.GpuEngine = null;
             slot.ChevronVisibility = Visibility.Collapsed;
-            slot.CpuHeat = slot.MemoryHeat = slot.IoHeat = slot.NetworkHeat = slot.BandwidthHeat = slot.GpuHeat = Heat.Level(0);
+            foreach (Meter meter in new[] { slot.Cpu, slot.Memory, slot.Io, slot.Network, slot.Bandwidth, slot.Gpu }) meter.Set(0, 1);
             slot.Blocked = false;
             slot.EfficiencyVisibility = slot.SuspendedVisibility = Visibility.Collapsed;
             return;
@@ -92,16 +94,15 @@ public sealed class ProcessSlot : RowSlot
         // Real disk rates are mostly KB/s; one decimal of MB/s would show them all as 0.0.
         slot.IoText = context.RealDisk ? Format.ByteRate(row.Io) : Format.Rate(row.Io);
         slot.NetworkText = row.Connections == 0 ? "–" : Format.Count(row.Connections);
-        slot.CpuHeat = Heat.Level(Heat.Scale(row.Cpu, 0.5, 2, 5, 12, 25, 50));
+        slot.Cpu.Set(row.Cpu, 100);
         slot.BandwidthText = context.BandwidthAvailable ? Format.Mbps(row.NetworkRate) : "–";
-        slot.BandwidthHeat = Heat.Level(context.BandwidthAvailable ? Heat.Scale(row.NetworkRate * 8 / 1_000_000, 0.1, 0.5, 2, 10, 50, 200) : 0);
+        slot.Bandwidth.Set(context.BandwidthAvailable ? row.NetworkRate * 8 / 1_000_000 : 0, 50);
         slot.GpuText = context.GpuAvailable ? Format.Percent(row.Gpu) : "–";
         slot.GpuEngine = row.GpuEngine;
-        slot.GpuHeat = Heat.Level(Heat.Scale(row.Gpu, 0.5, 2, 5, 12, 25, 50));
-        double memoryShare = context.TotalMemory == 0 ? 0 : row.Memory * 100d / context.TotalMemory;
-        slot.MemoryHeat = Heat.Level(Heat.Scale(memoryShare, 0.2, 0.5, 1, 2, 4, 8));
-        slot.IoHeat = Heat.Level(Heat.Scale(row.Io / 1048576d, 0.1, 1, 5, 20, 50, 100));
-        slot.NetworkHeat = Heat.Level(Heat.Scale(row.Connections, 1, 5, 15, 30, 60, 120));
+        slot.Gpu.Set(row.Gpu, 100);
+        slot.Memory.Set(row.Memory, context.TotalMemory / 8d);
+        slot.Io.Set(row.Io, 10 * 1048576d);
+        slot.Network.Set(row.Connections, 50);
         slot.Blocked = row.Kind == RowKind.Group && context.IsBlocked(row.Path);
         slot.EfficiencyVisibility = row.Efficiency ? Visibility.Visible : Visibility.Collapsed;
         slot.SuspendedVisibility = row.Suspended ? Visibility.Visible : Visibility.Collapsed;

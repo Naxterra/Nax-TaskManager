@@ -123,8 +123,9 @@ public sealed class DetailSlot : RowSlot
     public string Description { get => description; private set => Set(ref description, value); }
     public string Path { get => path; private set => Set(ref path, value); }
     public ImageSource? Icon { get => icon; private set => Set(ref icon, value); }
-    public Brush CpuHeat { get => cpuHeat; private set => Set(ref cpuHeat, value); }
-    public Brush MemoryHeat { get => memoryHeat; private set => Set(ref memoryHeat, value); }
+    public Meter Cpu { get; } = new();
+    public Meter Memory { get; } = new();
+    public Meter Gpu { get; } = new();
     public string GpuText { get => gpuText; private set => Set(ref gpuText, value); }
     /// <summary>Busiest GPU engine, e.g. "GPU 0 - 3D"; shown as the GPU cell's tooltip.</summary>
     public string? GpuEngine { get => gpuEngine.Length == 0 ? null : gpuEngine; private set => Set(ref gpuEngine, value ?? ""); }
@@ -142,12 +143,11 @@ public sealed class DetailSlot : RowSlot
         slot.MemoryText = Format.Memory(process.PrivateWorkingSet);
         slot.GpuText = input.GpuAvailable ? Format.Percent(process.GpuPercent) : "–";
         slot.GpuEngine = process.GpuEngine;
-        slot.GpuHeat = Heat.Level(Heat.Scale(process.GpuPercent, 0.5, 2, 5, 12, 25, 50));
+        slot.Gpu.Set(process.GpuPercent, 100);
         slot.Description = process.Description;
         slot.Path = process.Path;
         slot.Icon = IconCache.Get(process.Path);
-        slot.CpuHeat = Heat.Level(Heat.Scale(process.CpuPercent, 0.5, 2, 5, 12, 25, 50));
-        double memoryShare = input.TotalMemory == 0 ? 0 : process.PrivateWorkingSet * 100d / input.TotalMemory;
-        slot.MemoryHeat = Heat.Level(Heat.Scale(memoryShare, 0.2, 0.5, 1, 2, 4, 8));
+        slot.Cpu.Set(process.CpuPercent, 100);
+        slot.Memory.Set(process.PrivateWorkingSet, input.TotalMemory / 8d);
     }
 }

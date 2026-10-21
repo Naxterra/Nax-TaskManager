@@ -15,8 +15,8 @@ namespace BetterTaskManager.Fluent.Controls;
 public sealed class TrendChart : Grid
 {
     private readonly Canvas canvas = new();
-    private readonly Polygon fill = new() { Opacity = 0.22 };
-    private readonly Polyline line = new() { StrokeThickness = 1.5, StrokeLineJoin = PenLineJoin.Round };
+    private readonly Polygon fill = new() { Opacity = 0.45 };
+    private readonly Polyline line = new() { StrokeThickness = 2, StrokeLineJoin = PenLineJoin.Round };
     private readonly Polyline secondLine = new() { StrokeThickness = 1.5, StrokeLineJoin = PenLineJoin.Round, Visibility = Visibility.Collapsed };
     private readonly Line[] gridLines = Enumerable.Range(0, 3).Select(_ => new Line { StrokeThickness = 1 }).ToArray();
     private HistoryBuffer? primary;
@@ -43,8 +43,19 @@ public sealed class TrendChart : Grid
         {
             var chart = (TrendChart)d;
             chart.line.Stroke = (Brush?)e.NewValue;
-            chart.fill.Fill = (Brush?)e.NewValue;
+            chart.fill.Fill = Gradient((Brush?)e.NewValue);
         }));
+
+    /// <summary>The area under the line fades from the line color at the top to nothing at the bottom.</summary>
+    private static Brush? Gradient(Brush? brush)
+    {
+        if (brush is not SolidColorBrush solid) return brush;
+        Windows.UI.Color color = solid.Color;
+        var gradient = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+        gradient.GradientStops.Add(new GradientStop { Color = Windows.UI.Color.FromArgb(200, color.R, color.G, color.B), Offset = 0 });
+        gradient.GradientStops.Add(new GradientStop { Color = Windows.UI.Color.FromArgb(0, color.R, color.G, color.B), Offset = 1 });
+        return gradient;
+    }
 
     public static readonly DependencyProperty SecondStrokeProperty = DependencyProperty.Register(
         nameof(SecondStroke), typeof(Brush), typeof(TrendChart), new PropertyMetadata(null, (d, e) =>

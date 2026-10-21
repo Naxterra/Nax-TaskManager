@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0-alpha.31 - 2026-10-22
+
+The first stage of the redesign toward the concept art: the app's own look instead of the Windows 11 Task Manager look.
+
+- **Own palette.** Navy surfaces in dark mode (slate in light mode), a blue accent of its own, and one color per resource used everywhere: CPU teal, memory purple, GPU blue, disk green, download cyan, upload violet. Mica is gone; the window is a flat, calm surface.
+- **Tiles with gradient sparklines.** The tiles under the page titles have a colored edge, larger numbers and a filled gradient chart.
+- **Bar meters in the cells.** The CPU, memory, GPU, disk, network and connection cells show a colored bar behind the number, proportional to the value (CPU and GPU over 100 %, memory over an eighth of RAM, disk over 10 MB/s, network over 50 Mbit/s, connections over 50). The amber tint is gone; the Disk page's active time and totals use the same bars.
+- **Status strip.** A line at the bottom says whether the numbers are live and when they were last updated, and whether they come from the History service, from the app's own measurement, or neither; the version sits at the right.
+- **Limited mode as a card in the pane.** The notice no longer pushes the content down; it sits at the bottom of the navigation pane with the "Run as administrator" button.
+- **State dots.** Network states and startup entries get a colored dot (green for established or enabled, gray for listening or disabled, amber in between).
+- **Ctrl+K** focuses the search box, as Ctrl+F did; the placeholder says so.
+
 ## 2.0.0-alpha.30 - 2026-10-22
 
 A pass over the whole interface, after the feedback that it was hard to navigate and looked like a text screen:

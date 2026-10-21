@@ -34,6 +34,7 @@ public sealed class NetworkSlot : RowSlot
     private string name = "", detail = "", local = "", remote = "", state = "", path = "", summary = "", transferred = "", scope = "", speed = "", remoteDetail = "";
     private ImageSource? icon;
     private Visibility chevronVisibility, iconVisibility, blockedVisibility = Visibility.Collapsed, rulesVisibility = Visibility.Collapsed, tunnelVisibility = Visibility.Collapsed;
+    private Brush stateBrush = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
     private double chevronAngle;
     private Thickness indent;
     private bool isGroup;
@@ -48,6 +49,9 @@ public sealed class NetworkSlot : RowSlot
     public string Local { get => local; private set => Set(ref local, value); }
     public string Remote { get => remote; private set => Set(ref remote, value); }
     public string State { get => state; private set => Set(ref state, value); }
+    /// <summary>A colored dot before the state: green for an open connection, gray for a listener, amber in between.</summary>
+    public Brush StateBrush { get => stateBrush; private set => Set(ref stateBrush, value); }
+    public Visibility StateDotVisibility => state.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
     public string Scope { get => scope; private set => Set(ref scope, value); }
     public string Path { get => path; private set => Set(ref path, value); }
     public string Summary { get => summary; private set => Set(ref summary, value); }
@@ -65,6 +69,21 @@ public sealed class NetworkSlot : RowSlot
     public Thickness Indent { get => indent; private set => Set(ref indent, value); }
     public Windows.UI.Text.FontWeight NameWeight => isGroup ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal;
 
+    private static readonly Dictionary<string, Brush> stateBrushes = new();
+
+    private static Brush StateBrushFor(string state)
+    {
+        string key = state == Loc.State("Established") ? "StateGoodBrush"
+            : state == Loc.State("Listening") || state.Length == 0 ? "StateIdleBrush"
+            : "StateWarnBrush";
+        if (!stateBrushes.TryGetValue(key, out Brush? brush))
+        {
+            brush = (Brush)Application.Current.Resources[key];
+            stateBrushes[key] = brush;
+        }
+        return brush;
+    }
+
     public static void Load(NetworkSlot slot, (NetworkRowData Row, Func<string, NetworkAccess> Access) input)
     {
         NetworkRowData row = input.Row;
@@ -75,6 +94,8 @@ public sealed class NetworkSlot : RowSlot
         slot.Local = row.Local;
         slot.Remote = row.Remote;
         slot.State = row.State;
+        slot.StateBrush = StateBrushFor(row.State);
+        slot.Raise(nameof(StateDotVisibility));
         slot.Scope = row.Scope;
         slot.Path = row.Path;
         slot.Summary = row.Summary;

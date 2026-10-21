@@ -118,9 +118,14 @@
                             <Run Text="{x:Bind Model, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </TextBlock>
                         <TextBlock Grid.Column="{x:Bind Layout.KindColumn, Mode=OneWay}" Text="{x:Bind Kind, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Border Grid.Column="{x:Bind Layout.ActiveColumn, Mode=OneWay}" Background="{x:Bind ActiveHeat, Mode=OneWay}">
-                            <TextBlock Text="{x:Bind ActiveText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                        </Border>
+                        <Grid Grid.Column="{x:Bind Layout.ActiveColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Active.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Active.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind ActiveText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
                         <TextBlock Grid.Column="{x:Bind Layout.ReadColumn, Mode=OneWay}" Text="{x:Bind ReadText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <TextBlock Grid.Column="{x:Bind Layout.WriteColumn, Mode=OneWay}" Text="{x:Bind WriteText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <TextBlock Grid.Column="{x:Bind Layout.ResponseColumn, Mode=OneWay}" Text="{x:Bind ResponseText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -235,9 +240,14 @@
                         <TextBlock Grid.Column="{x:Bind Layout.PidColumn, Mode=OneWay}" Text="{x:Bind PidText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <TextBlock Grid.Column="{x:Bind Layout.ReadColumn, Mode=OneWay}" Text="{x:Bind ReadText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <TextBlock Grid.Column="{x:Bind Layout.WriteColumn, Mode=OneWay}" Text="{x:Bind WriteText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                        <Border Grid.Column="{x:Bind Layout.TotalColumn, Mode=OneWay}" Background="{x:Bind TotalHeat, Mode=OneWay}">
-                            <TextBlock Text="{x:Bind TotalText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                        </Border>
+                        <Grid Grid.Column="{x:Bind Layout.TotalColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Total.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Total.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind TotalText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
                         <TextBlock Grid.Column="5" Text="{x:Bind Path, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <Button x:Uid="Common_RowMenu" Grid.Column="6" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />
                     </Grid>
@@ -358,9 +368,14 @@
                         <TextBlock Grid.Column="{x:Bind Layout.FileColumn, Mode=OneWay}" Text="{x:Bind File, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <TextBlock Grid.Column="{x:Bind Layout.ReadColumn, Mode=OneWay}" Text="{x:Bind ReadText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <TextBlock Grid.Column="{x:Bind Layout.WriteColumn, Mode=OneWay}" Text="{x:Bind WriteText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                        <Border Grid.Column="{x:Bind Layout.TotalColumn, Mode=OneWay}" Background="{x:Bind TotalHeat, Mode=OneWay}">
-                            <TextBlock Text="{x:Bind TotalText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                        </Border>
+                        <Grid Grid.Column="{x:Bind Layout.TotalColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Total.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Total.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind TotalText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
                         <TextBlock Grid.Column="{x:Bind Layout.PriorityColumn, Mode=OneWay}" Text="{x:Bind Priority, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock Grid.Column="{x:Bind Layout.ResponseColumn, Mode=OneWay}" Text="{x:Bind ResponseText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <Button x:Uid="Common_RowMenu" Grid.Column="9" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />

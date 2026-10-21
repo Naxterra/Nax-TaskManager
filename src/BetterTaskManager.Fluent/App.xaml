@@ -9,40 +9,113 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
+            <!-- The app's own palette: navy surfaces with one accent color per resource (CPU teal, memory purple,
+                 GPU blue, disk green, network cyan and violet). The same keys exist for the light theme in muted tones. -->
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
+                    <Color x:Key="SystemAccentColor">#4F8DFF</Color>
+                    <Color x:Key="SystemAccentColorLight1">#6AA0FF</Color>
+                    <Color x:Key="SystemAccentColorLight2">#86B3FF</Color>
+                    <Color x:Key="SystemAccentColorLight3">#A5C6FF</Color>
+                    <Color x:Key="SystemAccentColorDark1">#3D78E6</Color>
+                    <Color x:Key="SystemAccentColorDark2">#2E63C7</Color>
+                    <Color x:Key="SystemAccentColorDark3">#224EA3</Color>
+
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0B1220" />
+                    <SolidColorBrush x:Key="AppPaneBrush" Color="#0E1627" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#0E1627" />
+                    <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="#0E1627" />
+                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
+                    <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
+                    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#121B30" />
+                    <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#17213A" />
+                    <SolidColorBrush x:Key="CardStrokeColorDefaultBrush" Color="#1F2B47" />
+                    <SolidColorBrush x:Key="LayerFillColorDefaultBrush" Color="#121B30" />
+                    <SolidColorBrush x:Key="LayerFillColorAltBrush" Color="#17213A" />
+                    <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#14FFFFFF" />
+                    <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush" Color="#0AFFFFFF" />
+                    <SolidColorBrush x:Key="DividerStrokeColorDefaultBrush" Color="#1F2B47" />
+                    <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#182340" />
+                    <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="#1E2A4A" />
+                    <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#2A3858" />
+                    <SolidColorBrush x:Key="TextBoxBackground" Color="#182340" />
+                    <SolidColorBrush x:Key="TextControlBackground" Color="#182340" />
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#1E2A4A" />
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#0F172A" />
+
                     <Color x:Key="HeatColor">#FFB84D</Color>
-                    <SolidColorBrush x:Key="MemoryAppsBrush" Color="#60CDFF" />
-                    <SolidColorBrush x:Key="MemoryKernelBrush" Color="#B38CFF" />
-                    <SolidColorBrush x:Key="MemoryCacheBrush" Color="#2DE0B0" />
-                    <SolidColorBrush x:Key="MemoryDriversBrush" Color="#FF99A4" />
-                    <SolidColorBrush x:Key="MemoryOtherBrush" Color="#FFC263" />
-                    <SolidColorBrush x:Key="MemoryModifiedBrush" Color="#E86A6A" />
-                    <SolidColorBrush x:Key="MemoryStandbyBrush" Color="#5A6B80" />
-                    <SolidColorBrush x:Key="MemoryFreeBrush" Color="#2A3240" />
-                    <SolidColorBrush x:Key="ChartCpuBrush" Color="#60CDFF" />
-                    <SolidColorBrush x:Key="ChartMemoryBrush" Color="#B38CFF" />
-                    <SolidColorBrush x:Key="ChartReceiveBrush" Color="#2DE0B0" />
-                    <SolidColorBrush x:Key="ChartSendBrush" Color="#FFC263" />
-                    <SolidColorBrush x:Key="ChartDiskBrush" Color="#7FD6A2" />
-                    <SolidColorBrush x:Key="ChartGpuBrush" Color="#FF99A4" />
+                    <SolidColorBrush x:Key="MemoryAppsBrush" Color="#38BDF8" />
+                    <SolidColorBrush x:Key="MemoryKernelBrush" Color="#A78BFA" />
+                    <SolidColorBrush x:Key="MemoryCacheBrush" Color="#34D399" />
+                    <SolidColorBrush x:Key="MemoryDriversBrush" Color="#FB7185" />
+                    <SolidColorBrush x:Key="MemoryOtherBrush" Color="#FBBF24" />
+                    <SolidColorBrush x:Key="MemoryModifiedBrush" Color="#F87171" />
+                    <SolidColorBrush x:Key="MemoryStandbyBrush" Color="#4C5B7A" />
+                    <SolidColorBrush x:Key="MemoryFreeBrush" Color="#1F2B47" />
+                    <SolidColorBrush x:Key="ChartCpuBrush" Color="#22D3EE" />
+                    <SolidColorBrush x:Key="ChartMemoryBrush" Color="#A78BFA" />
+                    <SolidColorBrush x:Key="ChartGpuBrush" Color="#60A5FA" />
+                    <SolidColorBrush x:Key="ChartDiskBrush" Color="#34D399" />
+                    <SolidColorBrush x:Key="ChartReceiveBrush" Color="#2DD4BF" />
+                    <SolidColorBrush x:Key="ChartSendBrush" Color="#C084FC" />
+                    <SolidColorBrush x:Key="MeterCpuBrush" Color="#7322D3EE" />
+                    <SolidColorBrush x:Key="MeterMemoryBrush" Color="#73A78BFA" />
+                    <SolidColorBrush x:Key="MeterGpuBrush" Color="#7360A5FA" />
+                    <SolidColorBrush x:Key="MeterDiskBrush" Color="#7334D399" />
+                    <SolidColorBrush x:Key="MeterNetworkBrush" Color="#732DD4BF" />
+                    <SolidColorBrush x:Key="MeterConnectionsBrush" Color="#73C084FC" />
+                    <SolidColorBrush x:Key="StateGoodBrush" Color="#34D399" />
+                    <SolidColorBrush x:Key="StateIdleBrush" Color="#64748B" />
+                    <SolidColorBrush x:Key="StateWarnBrush" Color="#FBBF24" />
+                    <SolidColorBrush x:Key="StateBadBrush" Color="#F87171" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
+                    <Color x:Key="SystemAccentColor">#2F6FE0</Color>
+                    <Color x:Key="SystemAccentColorLight1">#4A84E8</Color>
+                    <Color x:Key="SystemAccentColorLight2">#6A9BEE</Color>
+                    <Color x:Key="SystemAccentColorLight3">#8FB4F3</Color>
+                    <Color x:Key="SystemAccentColorDark1">#2659BD</Color>
+                    <Color x:Key="SystemAccentColorDark2">#1E479A</Color>
+                    <Color x:Key="SystemAccentColorDark3">#173777</Color>
+
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F6FB" />
+                    <SolidColorBrush x:Key="AppPaneBrush" Color="#E9EEF7" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#E9EEF7" />
+                    <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="#E9EEF7" />
+                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
+                    <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
+                    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#F6F8FC" />
+                    <SolidColorBrush x:Key="CardStrokeColorDefaultBrush" Color="#D9E0EC" />
+                    <SolidColorBrush x:Key="DividerStrokeColorDefaultBrush" Color="#D9E0EC" />
+                    <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#0F1E3A8A" />
+                    <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush" Color="#081E3A8A" />
+
                     <Color x:Key="HeatColor">#F2A000</Color>
-                    <SolidColorBrush x:Key="MemoryAppsBrush" Color="#0067C0" />
-                    <SolidColorBrush x:Key="MemoryKernelBrush" Color="#6C3DC1" />
-                    <SolidColorBrush x:Key="MemoryCacheBrush" Color="#007B62" />
-                    <SolidColorBrush x:Key="MemoryDriversBrush" Color="#C4314B" />
-                    <SolidColorBrush x:Key="MemoryOtherBrush" Color="#9A5A00" />
-                    <SolidColorBrush x:Key="MemoryModifiedBrush" Color="#D13438" />
+                    <SolidColorBrush x:Key="MemoryAppsBrush" Color="#0369A1" />
+                    <SolidColorBrush x:Key="MemoryKernelBrush" Color="#6D28D9" />
+                    <SolidColorBrush x:Key="MemoryCacheBrush" Color="#047857" />
+                    <SolidColorBrush x:Key="MemoryDriversBrush" Color="#BE123C" />
+                    <SolidColorBrush x:Key="MemoryOtherBrush" Color="#B45309" />
+                    <SolidColorBrush x:Key="MemoryModifiedBrush" Color="#DC2626" />
                     <SolidColorBrush x:Key="MemoryStandbyBrush" Color="#A9B8C8" />
                     <SolidColorBrush x:Key="MemoryFreeBrush" Color="#E3E8EF" />
-                    <SolidColorBrush x:Key="ChartCpuBrush" Color="#0067C0" />
-                    <SolidColorBrush x:Key="ChartMemoryBrush" Color="#6C3DC1" />
-                    <SolidColorBrush x:Key="ChartReceiveBrush" Color="#007B62" />
-                    <SolidColorBrush x:Key="ChartSendBrush" Color="#9A5A00" />
-                    <SolidColorBrush x:Key="ChartDiskBrush" Color="#1E8A4F" />
-                    <SolidColorBrush x:Key="ChartGpuBrush" Color="#C4314B" />
+                    <SolidColorBrush x:Key="ChartCpuBrush" Color="#0891B2" />
+                    <SolidColorBrush x:Key="ChartMemoryBrush" Color="#7C3AED" />
+                    <SolidColorBrush x:Key="ChartGpuBrush" Color="#2563EB" />
+                    <SolidColorBrush x:Key="ChartDiskBrush" Color="#059669" />
+                    <SolidColorBrush x:Key="ChartReceiveBrush" Color="#0D9488" />
+                    <SolidColorBrush x:Key="ChartSendBrush" Color="#9333EA" />
+                    <SolidColorBrush x:Key="MeterCpuBrush" Color="#590891B2" />
+                    <SolidColorBrush x:Key="MeterMemoryBrush" Color="#597C3AED" />
+                    <SolidColorBrush x:Key="MeterGpuBrush" Color="#592563EB" />
+                    <SolidColorBrush x:Key="MeterDiskBrush" Color="#59059669" />
+                    <SolidColorBrush x:Key="MeterNetworkBrush" Color="#590D9488" />
+                    <SolidColorBrush x:Key="MeterConnectionsBrush" Color="#599333EA" />
+                    <SolidColorBrush x:Key="StateGoodBrush" Color="#059669" />
+                    <SolidColorBrush x:Key="StateIdleBrush" Color="#94A3B8" />
+                    <SolidColorBrush x:Key="StateWarnBrush" Color="#D97706" />
+                    <SolidColorBrush x:Key="StateBadBrush" Color="#DC2626" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -51,10 +124,10 @@
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
                 <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="CornerRadius" Value="10" />
             </Style>
 
-            <Style x:Key="PageTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource SubtitleTextBlockStyle}">
+            <Style x:Key="PageTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleTextBlockStyle}">
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
@@ -115,16 +188,25 @@
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
                 <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="CornerRadius" Value="10" />
                 <Setter Property="Padding" Value="0,0,0,4" />
             </Style>
 
             <Style x:Key="TableHeaderStyle" TargetType="Grid">
-                <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}" />
                 <Setter Property="BorderBrush" Value="{ThemeResource DividerStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="0,0,0,1" />
-                <Setter Property="CornerRadius" Value="8,8,0,0" />
+                <Setter Property="CornerRadius" Value="10,10,0,0" />
                 <Setter Property="Padding" Value="0,0,12,0" />
+            </Style>
+
+            <!-- A bar meter behind a number in a table cell: the bar grows from the left, the number stays right. -->
+            <Style x:Key="MeterBarStyle" TargetType="Rectangle">
+                <Setter Property="RadiusX" Value="3" />
+                <Setter Property="RadiusY" Value="3" />
+                <Setter Property="Height" Value="18" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="MinWidth" Value="0" />
             </Style>
 
             <!-- The "…" button at the end of a row; the row shows it while hovered or selected. -->

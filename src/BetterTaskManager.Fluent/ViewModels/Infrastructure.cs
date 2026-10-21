@@ -276,6 +276,28 @@ public sealed class ColumnLayout : ObservableObject
     }
 }
 
+/// <summary>
+/// A bar meter behind a cell's number: two star-sized grid columns whose ratio is the value's share of the scale, so
+/// the bar follows the column width without measuring anything.
+/// </summary>
+public sealed class Meter : ObservableObject
+{
+    private GridLength bar = new(0, GridUnitType.Star), rest = new(1, GridUnitType.Star);
+
+    public GridLength Bar { get => bar; private set => Set(ref bar, value); }
+    public GridLength Rest { get => rest; private set => Set(ref rest, value); }
+
+    /// <summary>Sets the bar to <paramref name="value"/> over <paramref name="scale"/>, clamped to the cell.</summary>
+    public void Set(double value, double scale)
+    {
+        double fraction = scale <= 0 ? 0 : Math.Clamp(value / scale, 0, 1);
+        fraction = Math.Round(fraction, 3);
+        if (fraction > 0 && fraction < 0.02) fraction = 0.02;
+        Bar = new GridLength(fraction, GridUnitType.Star);
+        Rest = new GridLength(1 - fraction, GridUnitType.Star);
+    }
+}
+
 /// <summary>Task Manager-style cell tint: stronger amber for heavier resource use.</summary>
 public static class Heat
 {

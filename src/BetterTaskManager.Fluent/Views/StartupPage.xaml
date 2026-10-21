@@ -136,7 +136,10 @@
                         </StackPanel>
                         <TextBlock Grid.Column="{x:Bind Layout.PublisherColumn, Mode=OneWay}" Text="{x:Bind Publisher}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Grid.Column="{x:Bind Layout.StatusColumn, Mode=OneWay}" Text="{x:Bind Status}" ToolTipService.ToolTip="{x:Bind StatusDetail}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis" />
+                        <StackPanel Grid.Column="{x:Bind Layout.StatusColumn, Mode=OneWay}" Orientation="Horizontal" Spacing="7" Margin="10,0,8,0" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind StatusDetail}">
+                            <Ellipse Width="8" Height="8" Fill="{x:Bind StatusBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Bind Status}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
                         <TextBlock Grid.Column="{x:Bind Layout.ScopeColumn, Mode=OneWay}" Text="{x:Bind Scope}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock Grid.Column="4" Text="{x:Bind Command}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"

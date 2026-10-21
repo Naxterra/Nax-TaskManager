@@ -292,24 +292,54 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <Border Grid.Column="{x:Bind Layout.CpuColumn, Mode=OneWay}" Background="{x:Bind CpuHeat, Mode=OneWay}">
-                                        <TextBlock Text="{x:Bind CpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                    </Border>
-                                    <Border Grid.Column="{x:Bind Layout.MemoryColumn, Mode=OneWay}" Background="{x:Bind MemoryHeat, Mode=OneWay}">
-                                        <TextBlock Text="{x:Bind MemoryText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                    </Border>
-                                    <Border Grid.Column="{x:Bind Layout.IoColumn, Mode=OneWay}" Background="{x:Bind IoHeat, Mode=OneWay}">
-                                        <TextBlock Text="{x:Bind IoText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                    </Border>
-                                    <Border Grid.Column="{x:Bind Layout.BandwidthColumn, Mode=OneWay}" Background="{x:Bind BandwidthHeat, Mode=OneWay}">
-                                        <TextBlock Text="{x:Bind BandwidthText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                    </Border>
-                                    <Border Grid.Column="{x:Bind Layout.NetworkColumn, Mode=OneWay}" Background="{x:Bind NetworkHeat, Mode=OneWay}">
-                                        <TextBlock Text="{x:Bind NetworkText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                    </Border>
-                                    <Border Grid.Column="{x:Bind Layout.GpuColumn, Mode=OneWay}" Background="{x:Bind GpuHeat, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind GpuEngine, Mode=OneWay}">
-                                        <TextBlock Text="{x:Bind GpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                    </Border>
+                                    <Grid Grid.Column="{x:Bind Layout.CpuColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Cpu.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Cpu.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterCpuBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind CpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <Grid Grid.Column="{x:Bind Layout.MemoryColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Memory.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Memory.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterMemoryBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind MemoryText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <Grid Grid.Column="{x:Bind Layout.IoColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Io.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Io.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind IoText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <Grid Grid.Column="{x:Bind Layout.BandwidthColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Bandwidth.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Bandwidth.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterNetworkBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind BandwidthText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <Grid Grid.Column="{x:Bind Layout.NetworkColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Network.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Network.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterConnectionsBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind NetworkText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <Grid Grid.Column="{x:Bind Layout.GpuColumn, Mode=OneWay}" Margin="6,0,10,0" ToolTipService.ToolTip="{x:Bind GpuEngine, Mode=OneWay}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Gpu.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Gpu.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterGpuBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind GpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
                                     <TextBlock
                                         Grid.Column="{x:Bind Layout.PublisherColumn, Mode=OneWay}"
                                         Margin="10,0,8,0"
@@ -435,15 +465,30 @@
                                 <TextBlock Grid.Column="{x:Bind Layout.PidColumn, Mode=OneWay}" Text="{x:Bind PidText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                                 <TextBlock Grid.Column="{x:Bind Layout.StatusColumn, Mode=OneWay}" Text="{x:Bind Status, Mode=OneWay}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis" />
                                 <TextBlock Grid.Column="{x:Bind Layout.UserColumn, Mode=OneWay}" Text="{x:Bind User, Mode=OneWay}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis" />
-                                <Border Grid.Column="{x:Bind Layout.CpuColumn, Mode=OneWay}" Background="{x:Bind CpuHeat, Mode=OneWay}">
-                                    <TextBlock Text="{x:Bind CpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                </Border>
-                                <Border Grid.Column="{x:Bind Layout.MemoryColumn, Mode=OneWay}" Background="{x:Bind MemoryHeat, Mode=OneWay}">
-                                    <TextBlock Text="{x:Bind MemoryText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                </Border>
-                                <Border Grid.Column="{x:Bind Layout.GpuColumn, Mode=OneWay}" Background="{x:Bind GpuHeat, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind GpuEngine, Mode=OneWay}">
-                                    <TextBlock Text="{x:Bind GpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                </Border>
+                                <Grid Grid.Column="{x:Bind Layout.CpuColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Cpu.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Cpu.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterCpuBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind CpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                <Grid Grid.Column="{x:Bind Layout.MemoryColumn, Mode=OneWay}" Margin="6,0,10,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Memory.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Memory.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterMemoryBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind MemoryText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                <Grid Grid.Column="{x:Bind Layout.GpuColumn, Mode=OneWay}" Margin="6,0,10,0" ToolTipService.ToolTip="{x:Bind GpuEngine, Mode=OneWay}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{x:Bind Gpu.Bar, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Gpu.Rest, Mode=OneWay}" />
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterGpuBrush}" />
+                                        <TextBlock Grid.ColumnSpan="2" Text="{x:Bind GpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
                                 <TextBlock Grid.Column="7" Text="{x:Bind Description, Mode=OneWay}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 <Button x:Uid="Common_RowMenu" Grid.Column="8" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />

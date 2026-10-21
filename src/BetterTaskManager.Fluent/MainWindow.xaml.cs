@@ -6,7 +6,9 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using System.Reflection;
 using Windows.Graphics;
 using Windows.System;
 
@@ -45,7 +47,13 @@ public sealed partial class MainWindow : Window
             }
         };
 
-        ElevationBar.IsOpen = !App.Monitor.IsElevated && !App.Settings.HideElevationNotice;
+        // Limited mode lives in the pane footer card; the old bar across the top stays closed.
+        ElevationBar.IsOpen = false;
+        LimitedCard.Visibility = App.Monitor.IsElevated ? Visibility.Collapsed : Visibility.Visible;
+        LimitedText.Text = ElevationBar.Message;
+        VersionText.Text = "v" + (System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "").Split('+')[0];
+        LiveText.Text = Loc.Get("Status_Waiting");
+        SourceText.Text = Loc.Get("Status_SourceUnknown");
         // "Replace Windows Task Manager" was on and the redirect is gone: say so instead of silently opening Windows'.
         TaskManagerSwitch.RememberExistingChoice();
         ReplaceLostBar.IsOpen = TaskManagerSwitch.WasRemoved;
@@ -71,6 +79,8 @@ public sealed partial class MainWindow : Window
             ElevationBar.Message = snapshot.System.PerProcessNetworkFromService
                 ? Loc.Get("Limited_FeedMessage")
                 : limitedMessage;
+            LimitedText.Text = ElevationBar.Message;
+            UpdateStatusStrip(snapshot);
         };
         ApplyTheme(App.Settings.Theme);
         WindowRoot.ActualThemeChanged += (_, _) => UpdateCaptionButtons();
@@ -84,6 +94,7 @@ public sealed partial class MainWindow : Window
         AddAccelerator(VirtualKey.Number5, () => Navigate("History"));
         AddAccelerator(VirtualKey.Number6, () => Navigate("Startup"));
         AddAccelerator(VirtualKey.F, () => SearchBox.Focus(FocusState.Keyboard));
+        AddAccelerator(VirtualKey.K, () => SearchBox.Focus(FocusState.Keyboard));
 
         string[] args = Environment.GetCommandLineArgs();
         int pageIndex = Array.IndexOf(args, "--page");
@@ -95,6 +106,17 @@ public sealed partial class MainWindow : Window
             Navigation.SelectedItem = Navigation.MenuItems[0];
             Navigate(startPage);
         }
+    }
+
+    /// <summary>The strip at the bottom: whether the numbers are live and which process measures them.</summary>
+    private void UpdateStatusStrip(Core.Monitoring.MonitorSnapshot snapshot)
+    {
+        bool paused = App.Monitor.Paused;
+        LiveDot.Fill = (Brush)Application.Current.Resources[paused ? "StateWarnBrush" : "StateGoodBrush"];
+        LiveText.Text = paused ? Loc.Get("Status_Paused") : Loc.F("Status_Live", snapshot.Timestamp.ToLocalTime().ToString("T", System.Globalization.CultureInfo.CurrentCulture));
+        SourceText.Text = snapshot.System.PerProcessNetworkFromService ? Loc.Get("Status_SourceService")
+            : App.Monitor.IsElevated ? Loc.Get("Status_SourceOwn")
+            : Loc.Get("Status_SourceNone");
     }
 
     public void ApplyTheme(string theme)

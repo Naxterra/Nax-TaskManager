@@ -197,7 +197,10 @@
                                 <TextBlock Grid.Column="{x:Bind Layout.LocalColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Local, Mode=OneWay}" />
                                 <TextBlock Grid.Column="{x:Bind Layout.RemoteColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind Remote, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind RemoteDetail, Mode=OneWay}" />
                                 <TextBlock Grid.Column="{x:Bind Layout.ScopeColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Scope, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <TextBlock Grid.Column="{x:Bind Layout.StateColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind State, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <StackPanel Grid.Column="{x:Bind Layout.StateColumn, Mode=OneWay}" Orientation="Horizontal" Spacing="7" Margin="10,0,8,0" VerticalAlignment="Center">
+                                    <Ellipse Width="8" Height="8" Fill="{x:Bind StateBrush, Mode=OneWay}" Visibility="{x:Bind StateDotVisibility, Mode=OneWay}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{x:Bind State, Mode=OneWay}" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
                                 <TextBlock Grid.Column="{x:Bind Layout.DataColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Transferred, Mode=OneWay}" />
                                 <TextBlock Grid.Column="{x:Bind Layout.SpeedColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Speed, Mode=OneWay}" />
                                 <Button x:Uid="Common_RowMenu" Grid.Column="8" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />

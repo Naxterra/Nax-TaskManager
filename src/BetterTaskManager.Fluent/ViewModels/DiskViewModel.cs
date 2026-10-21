@@ -273,7 +273,7 @@ public sealed class DiskSlot : ObservableObject
     public string ResponseText { get => responseText; private set => Set(ref responseText, value); }
     public string QueueText { get => queueText; private set => Set(ref queueText, value); }
     public string SpaceText { get => spaceText; private set => Set(ref spaceText, value); }
-    public Brush ActiveHeat { get => activeHeat; private set => Set(ref activeHeat, value); }
+    public Meter Active { get; } = new();
 
     public static void Load(DiskSlot slot, DiskSample disk)
     {
@@ -282,7 +282,7 @@ public sealed class DiskSlot : ObservableObject
         slot.Model = disk.Model;
         slot.Kind = disk.Kind;
         slot.ActiveText = Format.Percent(disk.ActivePercent);
-        slot.ActiveHeat = Heat.Level(Heat.Scale(disk.ActivePercent, 1, 5, 15, 30, 60, 90));
+        slot.Active.Set(disk.ActivePercent, 100);
         slot.ReadText = Format.ByteRate(disk.ReadPerSecond);
         slot.WriteText = Format.ByteRate(disk.WritePerSecond);
         slot.ResponseText = disk.ResponseMilliseconds.ToString("0.0", CultureInfo.CurrentCulture) + " ms";
@@ -298,7 +298,6 @@ public sealed class DiskProcessSlot : RowSlot
 {
     private string name = "", pidText = "", readText = "", writeText = "", totalText = "", path = "";
     private ImageSource? icon;
-    private Brush totalHeat = Heat.Level(0);
 
     public static ColumnLayout? SharedLayout { get; set; }
     public ColumnLayout Layout => SharedLayout!;
@@ -312,7 +311,7 @@ public sealed class DiskProcessSlot : RowSlot
     public string TotalText { get => totalText; private set => Set(ref totalText, value); }
     public string Path { get => path; private set => Set(ref path, value); }
     public ImageSource? Icon { get => icon; private set => Set(ref icon, value); }
-    public Brush TotalHeat { get => totalHeat; private set => Set(ref totalHeat, value); }
+    public Meter Total { get; } = new();
 
     public static void Load(DiskProcessSlot slot, DiskProcessRow row)
     {
@@ -322,7 +321,7 @@ public sealed class DiskProcessSlot : RowSlot
         slot.ReadText = Format.ByteRate(row.Read);
         slot.WriteText = Format.ByteRate(row.Write);
         slot.TotalText = Format.ByteRate(row.Total);
-        slot.TotalHeat = Heat.Level(Heat.Scale(row.Total / 1048576d, 0.1, 1, 5, 20, 50, 100));
+        slot.Total.Set(row.Total, 10 * 1048576d);
         slot.Path = row.Path;
         slot.Icon = IconCache.Get(row.Path);
     }
@@ -333,7 +332,6 @@ public sealed class DiskFileSlot : RowSlot
 {
     private string name = "", pidText = "", file = "", readText = "", writeText = "", totalText = "", priority = "", responseText = "";
     private ImageSource? icon;
-    private Brush totalHeat = Heat.Level(0);
 
     public static ColumnLayout? SharedLayout { get; set; }
     public ColumnLayout Layout => SharedLayout!;
@@ -349,7 +347,7 @@ public sealed class DiskFileSlot : RowSlot
     public string Priority { get => priority; private set => Set(ref priority, value); }
     public string ResponseText { get => responseText; private set => Set(ref responseText, value); }
     public ImageSource? Icon { get => icon; private set => Set(ref icon, value); }
-    public Brush TotalHeat { get => totalHeat; private set => Set(ref totalHeat, value); }
+    public Meter Total { get; } = new();
 
     public static void Load(DiskFileSlot slot, DiskFileRow row)
     {
@@ -360,7 +358,7 @@ public sealed class DiskFileSlot : RowSlot
         slot.ReadText = Format.ByteRate(row.Read);
         slot.WriteText = Format.ByteRate(row.Write);
         slot.TotalText = Format.ByteRate(row.Total);
-        slot.TotalHeat = Heat.Level(Heat.Scale(row.Total / 1048576d, 0.1, 1, 5, 20, 50, 100));
+        slot.Total.Set(row.Total, 10 * 1048576d);
         slot.Priority = DiskViewModel.PriorityName(row.Priority);
         slot.ResponseText = row.Response.ToString("0.0", CultureInfo.CurrentCulture) + " ms";
         slot.Icon = IconCache.Get(row.ProcessPath);

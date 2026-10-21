@@ -2,6 +2,7 @@ using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
 
 namespace BetterTaskManager.Fluent.Controls;
 
@@ -14,23 +15,27 @@ public sealed class StatTile : Grid
     private readonly TextBlock caption = new();
     private readonly TextBlock value = new();
     private readonly TextBlock detail = new() { TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly TrendChart chart = new() { Compact = true, Height = 34, Width = 96, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TrendChart chart = new() { Compact = true, Height = 44, Width = 130, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Rectangle edge = new() { Width = 3, RadiusX = 1.5, RadiusY = 1.5, VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(0, 2, 0, 2) };
 
     public StatTile()
     {
-        Padding = new Thickness(14, 10, 14, 10);
+        Padding = new Thickness(12, 10, 14, 10);
         MinWidth = 190;
-        CornerRadius = new CornerRadius(8);
+        CornerRadius = new CornerRadius(10);
         BorderThickness = new Thickness(1);
-        var grid = new Grid { ColumnSpacing = 12 };
+        var grid = new Grid { ColumnSpacing = 10 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var text = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
+        grid.Children.Add(edge);
+        var text = new StackPanel { Spacing = 0, VerticalAlignment = VerticalAlignment.Center };
         text.Children.Add(caption);
         text.Children.Add(value);
         text.Children.Add(detail);
+        Grid.SetColumn(text, 1);
         grid.Children.Add(text);
-        Grid.SetColumn(chart, 1);
+        Grid.SetColumn(chart, 2);
         grid.Children.Add(chart);
         Children.Add(grid);
         Loaded += (_, _) => ApplyResources();
@@ -41,7 +46,12 @@ public sealed class StatTile : Grid
         nameof(Caption), typeof(string), typeof(StatTile), new PropertyMetadata("", (d, e) => ((StatTile)d).caption.Text = (string?)e.NewValue ?? ""));
 
     public static readonly DependencyProperty StrokeProperty = DependencyProperty.Register(
-        nameof(Stroke), typeof(Brush), typeof(StatTile), new PropertyMetadata(null, (d, e) => ((StatTile)d).chart.Stroke = (Brush?)e.NewValue));
+        nameof(Stroke), typeof(Brush), typeof(StatTile), new PropertyMetadata(null, (d, e) =>
+        {
+            var tile = (StatTile)d;
+            tile.chart.Stroke = (Brush?)e.NewValue;
+            tile.edge.Fill = (Brush?)e.NewValue;
+        }));
 
     public static readonly DependencyProperty SecondStrokeProperty = DependencyProperty.Register(
         nameof(SecondStroke), typeof(Brush), typeof(StatTile), new PropertyMetadata(null, (d, e) => ((StatTile)d).chart.SecondStroke = (Brush?)e.NewValue));
@@ -89,7 +99,8 @@ public sealed class StatTile : Grid
         BorderBrush = (Brush)resources["CardStrokeColorDefaultBrush"];
         caption.Style = (Style)resources["CaptionTextBlockStyle"];
         caption.Foreground = (Brush)resources["TextFillColorSecondaryBrush"];
-        value.Style = (Style)resources["SubtitleTextBlockStyle"];
+        value.Style = (Style)resources["TitleTextBlockStyle"];
+        value.FontSize = 24;
         detail.Style = (Style)resources["CaptionTextBlockStyle"];
         detail.Foreground = (Brush)resources["TextFillColorSecondaryBrush"];
     }

@@ -4,7 +4,7 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="MainWindow_1.PlaceholderText" xml:space="preserve"><value>Nach Name, Herausgeber oder PID suchen</value></data>
+  <data name="MainWindow_1.PlaceholderText" xml:space="preserve"><value>Nach Name, Herausgeber oder PID suchen (Strg+K)</value></data>
   <data name="MainWindow_2.Content" xml:space="preserve"><value>Prozesse</value></data>
   <data name="MainWindow_2.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Prozesse (Strg+1)</value></data>
   <data name="MainWindow_3.Content" xml:space="preserve"><value>Leistung</value></data>
@@ -555,4 +555,13 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="Rules_NoRules" xml:space="preserve"><value>Noch keine Regeln: Alles ist erlaubt, sofern kein Schalter oben es sperrt. Regeln gelten in ihrer Reihenfolge, die erste passende entscheidet.</value></data>
   <data name="NetworkPage_25.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Regeln</value></data>
   <data name="ProcessesPage_33.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Task beenden</value></data>
+  <data name="MainWindow_14.Text" xml:space="preserve"><value>Eingeschränkter Zugriff</value></data>
+  <data name="MainWindow_16.Text" xml:space="preserve"><value>Als Administrator ausführen</value></data>
+  <data name="Status_Waiting" xml:space="preserve"><value>Messung läuft…</value></data>
+  <data name="Status_Live" xml:space="preserve"><value>Live · aktualisiert {0}</value></data>
+  <data name="Status_Paused" xml:space="preserve"><value>Angehalten</value></data>
+  <data name="Status_SourceService" xml:space="preserve"><value>Verlaufsdienst verbunden</value></data>
+  <data name="Status_SourceOwn" xml:space="preserve"><value>Eigene Messung (Administrator)</value></data>
+  <data name="Status_SourceNone" xml:space="preserve"><value>Verlaufsdienst nicht verbunden</value></data>
+  <data name="Status_SourceUnknown" xml:space="preserve"><value>Verbindung wird hergestellt…</value></data>
 </root>

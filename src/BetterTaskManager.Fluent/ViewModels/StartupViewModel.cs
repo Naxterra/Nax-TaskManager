@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using BetterTaskManager.Core.Startup;
 using BetterTaskManager.Fluent.Services;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 
 namespace BetterTaskManager.Fluent.ViewModels;
@@ -96,6 +97,8 @@ public sealed class StartupRow : RowSlot
     public string Scope { get; }
     public ImageSource? Icon { get; }
     public double Opacity => App.Enabled ? 1 : 0.6;
+    /// <summary>Green for an entry that runs at sign-in, gray for a disabled one.</summary>
+    public Brush StatusBrush => (Brush)Application.Current.Resources[App.Enabled ? "StateGoodBrush" : "StateIdleBrush"];
 
     /// <summary>What UI Automation and screen readers announce for the row.</summary>
     public override string ToString() => $"{Name}, {Status}";

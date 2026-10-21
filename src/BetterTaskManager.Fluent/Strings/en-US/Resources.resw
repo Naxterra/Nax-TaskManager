@@ -4,7 +4,7 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="MainWindow_1.PlaceholderText" xml:space="preserve"><value>Search by name, publisher or PID</value></data>
+  <data name="MainWindow_1.PlaceholderText" xml:space="preserve"><value>Search by name, publisher or PID (Ctrl+K)</value></data>
   <data name="MainWindow_2.Content" xml:space="preserve"><value>Processes</value></data>
   <data name="MainWindow_2.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Processes (Ctrl+1)</value></data>
   <data name="MainWindow_3.Content" xml:space="preserve"><value>Performance</value></data>
@@ -555,4 +555,13 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="Rules_NoRules" xml:space="preserve"><value>No rules yet: everything is allowed unless a switch above blocks it. Rules apply in their order, the first match decides.</value></data>
   <data name="NetworkPage_25.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Rules</value></data>
   <data name="ProcessesPage_33.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>End task</value></data>
+  <data name="MainWindow_14.Text" xml:space="preserve"><value>Limited access</value></data>
+  <data name="MainWindow_16.Text" xml:space="preserve"><value>Run as administrator</value></data>
+  <data name="Status_Waiting" xml:space="preserve"><value>Measuring…</value></data>
+  <data name="Status_Live" xml:space="preserve"><value>Live · updated {0}</value></data>
+  <data name="Status_Paused" xml:space="preserve"><value>Paused</value></data>
+  <data name="Status_SourceService" xml:space="preserve"><value>History service connected</value></data>
+  <data name="Status_SourceOwn" xml:space="preserve"><value>Own measurement (administrator)</value></data>
+  <data name="Status_SourceNone" xml:space="preserve"><value>History service not connected</value></data>
+  <data name="Status_SourceUnknown" xml:space="preserve"><value>Connecting…</value></data>
 </root>
