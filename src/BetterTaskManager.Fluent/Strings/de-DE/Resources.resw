@@ -895,4 +895,14 @@ Erstmals {2}, zuletzt {3}</value></data>
   <data name="HistoryPage_30.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Gesperrte Verbindungen</value></data>
   <data name="HistoryPage_30.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Verbindungen, die Ihre Regeln oder eine andere Firewall gesperrt haben</value></data>
   <data name="HistoryPage_31.Text" xml:space="preserve"><value>Gesperrte Verbindungen</value></data>
+  <data name="RulesPage_HelperCount" xml:space="preserve"><value>+{0} Hilfsprogramme</value></data>
+  <data name="RulesPage_Helpers" xml:space="preserve"><value>Hilfsprogramme</value></data>
+  <data name="RulesPage_HelpersNote" xml:space="preserve"><value>Diese App zeigt ihr Fenster mit einem Browser-Programm, und die Verbindungen kommen von dort. Eine Firewall-Regel gilt nur für eine Programmdatei. Haken Sie ein Hilfsprogramm an, damit Sperre und Regeln dieser App auch für das Hilfsprogramm gelten.</value></data>
+  <data name="RulesPage_HelperOwn" xml:space="preserve"><value>Nur von dieser App genutzt</value></data>
+  <data name="RulesPage_HelperSharedBy" xml:space="preserve"><value>Auch genutzt von: {0}</value></data>
+  <data name="RulesPage_HelperRuntime" xml:space="preserve"><value>Gemeinsame WebView2-Laufzeit</value></data>
+  <data name="RulesPage_HelperNotRunning" xml:space="preserve"><value>läuft gerade nicht</value></data>
+  <data name="RulesPage_HelperMissing" xml:space="preserve"><value>Datei nicht mehr vorhanden</value></data>
+  <data name="RulesPage_HelperRuntimeNote" xml:space="preserve"><value>Viele Apps teilen sich die WebView2-Laufzeit von Windows, zum Beispiel die Widgets, Teams oder Outlook. Eine Sperre oder Regel gilt dann für alle diese Apps. Nach einem WebView2-Update liegt das Programm in einem neuen Ordner, dann haken Sie den neuen Eintrag an und speichern erneut.</value></data>
+  <data name="RulesPage_HelperSharedNote" xml:space="preserve"><value>Andere Apps nutzen dieses Programm ebenfalls. Eine Sperre oder Regel gilt dann auch für sie.</value></data>
 </root>

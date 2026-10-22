@@ -96,16 +96,35 @@ public static partial class FirewallRules
         NetworkRule.ParseList(string.Join('\n', policy.Outgoing), errors);
         NetworkRule.ParseList(string.Join('\n', policy.Incoming), errors);
         if (errors.Count > 0) return new CommandResult(87, "", "Invalid rule: " + string.Join("; ", errors), false);
+        List<string> helpers = policy.Helpers.Where(helper => Path.IsPathFullyQualified(helper) && !string.Equals(helper, policy.Path, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        policy.Helpers = helpers;
         try
         {
+            AppNetworkPolicy? previous = NetworkPolicyStore.Find(policy.Path);
             WfpBlocker.ApplyPolicy(policy);
             NetworkPolicyStore.Save(policy);
+            // Each helper gets the app's switches and rules as its own filters, marked as the app's helper.
+            foreach (string helper in helpers)
+            {
+                AppNetworkPolicy derived = policy.ForHelper(helper);
+                WfpBlocker.ApplyPolicy(derived);
+                NetworkPolicyStore.Save(derived.HasFilters ? derived : new AppNetworkPolicy { Path = helper });
+            }
+            // A helper the app no longer lists loses the rules it had from the app, never rules of its own.
+            foreach (string dropped in previous?.Helpers.Except(helpers, StringComparer.OrdinalIgnoreCase) ?? [])
+            {
+                if (NetworkPolicyStore.Find(dropped) is { } own && !string.Equals(own.HelperOf, policy.Path, StringComparison.OrdinalIgnoreCase)) continue;
+                var empty = new AppNetworkPolicy { Path = dropped };
+                WfpBlocker.ApplyPolicy(empty);
+                NetworkPolicyStore.Save(empty);
+            }
         }
         catch (Exception ex) when (ex is WfpException or IOException or UnauthorizedAccessException)
         {
             return new CommandResult(ex is WfpException wfp ? (int)wfp.Code : 1, "", ex.Message, false);
         }
-        TryCut(policy.Path, (inbound, remote, port) => policy.Evaluate(inbound, remote, 6, port) is not null);
+        foreach (string path in helpers.Prepend(policy.Path)) TryCut(path, (inbound, remote, port) => policy.Evaluate(inbound, remote, 6, port) is not null);
         return new CommandResult(0, "", "", false);
     }
 

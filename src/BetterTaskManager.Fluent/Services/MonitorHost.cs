@@ -161,7 +161,12 @@ public sealed class MonitorHost : IDisposable
     public bool IsBlocked(string path) =>
         !string.IsNullOrWhiteSpace(path) && BlockRules.Contains(FirewallRules.RuleNameForPath(path));
 
-    public bool HasRules(string path) => !string.IsNullOrWhiteSpace(path) && Policies.ContainsKey(path);
+    public bool HasRules(string path) => !string.IsNullOrWhiteSpace(path) && Policies.TryGetValue(path, out AppNetworkPolicy? policy) && policy.HasFilters;
+
+    /// <summary>The app whose rules a helper program follows, or null when the program is nobody's helper.</summary>
+    public string? HelperOwner(string path) =>
+        Policies.Values.FirstOrDefault(policy => policy.Helpers.Contains(path, StringComparer.OrdinalIgnoreCase))?.Path
+        ?? (Policies.TryGetValue(path, out AppNetworkPolicy? own) ? own.HelperOf : null);
 
     public NetworkAccess AccessOf(string path) => IsBlocked(path) ? NetworkAccess.Blocked : HasRules(path) ? NetworkAccess.Rules : NetworkAccess.Open;
 
@@ -177,7 +182,9 @@ public sealed class MonitorHost : IDisposable
             BlockLocalhost = policy.BlockLocalhost,
             BlockInbound = policy.BlockInbound,
             Outgoing = [.. policy.Outgoing],
-            Incoming = [.. policy.Incoming]
+            Incoming = [.. policy.Incoming],
+            Helpers = [.. policy.Helpers],
+            HelperOf = policy.HelperOf
         };
     }
 
@@ -199,7 +206,7 @@ public sealed class MonitorHost : IDisposable
         }
         else
         {
-            error = await ElevatedHelper.RunAsync(Program.RulesApplyArgument, Convert.ToBase64String(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(change)));
+            error = await ElevatedHelper.RunAsync([Program.RulesApplyArgument, Convert.ToBase64String(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(change))], withResultFile: true);
         }
         await RefreshFirewallAsync();
         return error;

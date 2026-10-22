@@ -25,10 +25,28 @@ public sealed class RuleChange
             return Invalid;
         }
         int code = 0;
+        // The whole-app block covers the app's helper programs too: the ones it lists after this change, and helpers
+        // it no longer lists are unblocked again.
+        List<string> before = NetworkPolicyStore.Find(Path)?.Helpers ?? [];
+        List<string> after = Network?.Helpers ?? before;
+        bool blocked = Blocked ?? WfpBlocker.ReadBlockedPaths().Contains(Path);
+        void SetBlock(string path, bool block)
+        {
+            CommandResult result = FirewallRules.Apply(path, block);
+            if (!result.Succeeded) { code |= BlockFailed; details?.Add(result.FailureSummary()); }
+        }
         if (Blocked is { } block)
         {
-            CommandResult result = FirewallRules.Apply(Path, block);
-            if (!result.Succeeded) { code |= BlockFailed; details?.Add(result.FailureSummary()); }
+            SetBlock(Path, block);
+            foreach (string helper in after) SetBlock(helper, block);
+        }
+        else if (blocked)
+        {
+            foreach (string helper in after.Except(before, StringComparer.OrdinalIgnoreCase)) SetBlock(helper, true);
+        }
+        if (Blocked is not null || blocked)
+        {
+            foreach (string helper in before.Except(after, StringComparer.OrdinalIgnoreCase)) SetBlock(helper, false);
         }
         if (Network is not null)
         {

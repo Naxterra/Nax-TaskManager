@@ -366,9 +366,33 @@ public sealed class AppNetworkPolicy
     public List<string> Outgoing { get; set; } = [];
     /// <summary>Rule lines for connections other computers start to the program, first match wins.</summary>
     public List<string> Incoming { get; set; } = [];
+    /// <summary>
+    /// Helper programs that follow this app's rules and block: the browser engines some apps draw their window with
+    /// (Steam's web helper, WebView2, CefSharp), which make the app's connections from their own program file.
+    /// </summary>
+    public List<string> Helpers { get; set; } = [];
+    /// <summary>Set on a helper's own entry: the app whose rules it follows.</summary>
+    public string? HelperOf { get; set; }
+
+    /// <summary>True when switches or rules need filters; helpers alone do not.</summary>
+    [JsonIgnore]
+    public bool HasFilters => BlockInternet || BlockLan || BlockLocalhost || BlockInbound || Outgoing.Count > 0 || Incoming.Count > 0;
 
     [JsonIgnore]
-    public bool IsEmpty => !BlockInternet && !BlockLan && !BlockLocalhost && !BlockInbound && Outgoing.Count == 0 && Incoming.Count == 0;
+    public bool IsEmpty => !HasFilters && Helpers.Count == 0;
+
+    /// <summary>The same switches and rules for one of the app's helper programs.</summary>
+    public AppNetworkPolicy ForHelper(string helper) => new()
+    {
+        Path = helper,
+        BlockInternet = BlockInternet,
+        BlockLan = BlockLan,
+        BlockLocalhost = BlockLocalhost,
+        BlockInbound = BlockInbound,
+        Outgoing = [.. Outgoing],
+        Incoming = [.. Incoming],
+        HelperOf = Path
+    };
 
     public List<NetworkRule> ParsedOutgoing() => Outgoing.Select(line => NetworkRule.TryParse(line, out NetworkRule? rule, out _) ? rule : null).OfType<NetworkRule>().ToList();
 

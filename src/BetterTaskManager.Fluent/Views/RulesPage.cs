@@ -197,6 +197,9 @@ public sealed partial class RulesPage : Page
         paths.UnionWith(App.Monitor.Policies.Keys);
         paths.UnionWith(App.Monitor.MemoryRules.Keys);
         if (editor is not null) paths.Add(editor.Path);
+        // A helper program that follows an app's rules shows as part of that app, not as an app of its own.
+        paths.RemoveWhere(path => App.Monitor.HelperOwner(path) is { } owner && !string.Equals(owner, path, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(editor?.Path, path, StringComparison.OrdinalIgnoreCase));
         return paths.Select(path => new Entry(path, DisplayName(path), Describe(path), !File.Exists(path)))
             .OrderBy(entry => entry.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
@@ -212,6 +215,7 @@ public sealed partial class RulesPage : Page
             if (switches > 0) parts.Add((Loc.F("RulesPage_Switches", switches), "Warn"));
             int rules = policy.Outgoing.Count + policy.Incoming.Count;
             if (rules > 0) parts.Add((Loc.F("RulesPage_RuleCount", rules), "Receive"));
+            if (policy.Helpers.Count > 0) parts.Add((Loc.F("RulesPage_HelperCount", policy.Helpers.Count), "Gpu"));
         }
         if (App.Monitor.MemoryRules.TryGetValue(path, out AppMemoryRule? memory))
         {
@@ -328,7 +332,7 @@ public sealed partial class RulesPage : Page
     /// <summary>Lets the user pick a running app, or type the path of a program file.</summary>
     private async Task<string?> PickAppAsync()
     {
-        var running = (App.Monitor.Latest?.Processes ?? []).Where(process => process.Path.Length > 0 && process.Pid > 4)
+        var running = (App.Monitor.Latest?.Processes ?? []).Where(process => process.Path.Length > 0 && process.Pid > 4 && !AppIdentityRules.IsEmbeddedHost(process))
             .GroupBy(process => process.Path, StringComparer.OrdinalIgnoreCase)
             .Select(group => (Path: group.Key, Name: Loc.AppName(group.First().DisplayName), Count: group.Count()))
             .OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -465,7 +469,8 @@ public sealed partial class RulesPage : Page
         private readonly bool loadedBlocked;
         private readonly AppNetworkPolicy loadedPolicy;
         private readonly AppMemoryRule loadedMemory;
-        private readonly string loadedNetworkKey, loadedMemoryKey;
+        private readonly string loadedNetworkKey, storedNetworkKey, loadedMemoryKey;
+        private readonly List<(string Path, CheckBox Box)> helperBoxes = new();
         private readonly ToggleSwitch blockAll, internet, lan, localhost, inbound, limitOn;
         private readonly RuleListEditor outgoing, incoming;
         private readonly NumberBox limit;
@@ -486,7 +491,7 @@ public sealed partial class RulesPage : Page
             loadedMemory = App.Monitor.MemoryRules.TryGetValue(path, out AppMemoryRule? memory)
                 ? new AppMemoryRule { Path = path, LimitMegabytes = memory.LimitMegabytes, Priority = memory.Priority }
                 : new AppMemoryRule { Path = path };
-            loadedNetworkKey = Key(loadedPolicy);
+            storedNetworkKey = Key(loadedPolicy);
             loadedMemoryKey = Key(loadedMemory);
 
             var content = new StackPanel { Spacing = 14, Padding = new Thickness(24, 20, 30, 24) };
@@ -515,6 +520,7 @@ public sealed partial class RulesPage : Page
             content.Children.Add(Section("", "Receive", Loc.Get("RulesPage_Network")));
             blockAll = Switch(loadedBlocked, Loc.Get("RulesPage_BlockAll"));
             content.Children.Add(SettingRow(Loc.Get("RulesPage_BlockAll"), Loc.Get("RulesPage_BlockAllNote"), blockAll));
+            if (BuildHelpers() is { } helpers) content.Children.Add(helpers);
             internet = Switch(loadedPolicy.BlockInternet, Loc.Get("Rules_BlockInternet"));
             lan = Switch(loadedPolicy.BlockLan, Loc.Get("Rules_BlockLan"));
             localhost = Switch(loadedPolicy.BlockLocalhost, Loc.Get("Rules_BlockLocalhost"));
@@ -613,6 +619,7 @@ public sealed partial class RulesPage : Page
             Root.Children.Add(footer);
 
             foreach (ToggleSwitch toggle in new[] { blockAll, internet, lan, localhost, inbound, limitOn }) toggle.Toggled += (_, _) => Validate();
+            loadedNetworkKey = Key(CurrentPolicy());
             limit.ValueChanged += (_, _) => Validate();
             priority.SelectionChanged += (_, _) => Validate();
             outgoing.Changed = Validate;
@@ -637,7 +644,16 @@ public sealed partial class RulesPage : Page
             if (DateTime.UtcNow - recentReadAt < TimeSpan.FromSeconds(5)) return;
             recentReadAt = DateTime.UtcNow;
             string path = Path;
-            List<Core.History.BlockedRecord>? records = await Task.Run(() => BlockedLogView.Read(DateTime.UtcNow.AddDays(-1), path, 6, oursOnly: false));
+            List<string> paths = [path, .. helperBoxes.Where(helper => helper.Box.IsChecked == true).Select(helper => helper.Path)];
+            List<Core.History.BlockedRecord>? records = await Task.Run(() =>
+            {
+                List<Core.History.BlockedRecord>? all = null;
+                foreach (string one in paths)
+                {
+                    if (BlockedLogView.Read(DateTime.UtcNow.AddDays(-1), one, 6, oursOnly: false) is { } part) (all ??= []).AddRange(part);
+                }
+                return all?.OrderByDescending(record => record.LastSeen).Take(6).ToList();
+            });
             recent.Children.Clear();
             if (records is null || records.Count == 0)
             {
@@ -650,7 +666,9 @@ public sealed partial class RulesPage : Page
         public void ShowUsage(MonitorSnapshot snapshot)
         {
             _ = ShowRecentAsync();
-            List<ProcessSample> processes = snapshot.Processes.Where(p => string.Equals(p.Path, Path, StringComparison.OrdinalIgnoreCase)).ToList();
+            // The app's own processes and the helpers it started, as the Processes page counts them.
+            Dictionary<int, ProcessSample> byPid = snapshot.Processes.GroupBy(p => p.Pid).ToDictionary(g => g.Key, g => g.First());
+            List<ProcessSample> processes = snapshot.Processes.Where(p => string.Equals(AppIdentityRules.Owner(p, byPid).Path, Path, StringComparison.OrdinalIgnoreCase)).ToList();
             if (processes.Count == 0)
             {
                 usage.Text = Loc.Get("RulesPage_NotRunning");
@@ -669,7 +687,8 @@ public sealed partial class RulesPage : Page
             BlockLocalhost = localhost.IsOn,
             BlockInbound = inbound.IsOn,
             Outgoing = outgoing.Lines(),
-            Incoming = incoming.Lines()
+            Incoming = incoming.Lines(),
+            Helpers = helperBoxes.Where(helper => helper.Box.IsChecked == true).Select(helper => helper.Path).ToList()
         };
 
         private AppMemoryRule CurrentMemory() => new()
@@ -680,7 +699,71 @@ public sealed partial class RulesPage : Page
         };
 
         private static string Key(AppNetworkPolicy policy) => string.Join("|", policy.BlockInternet, policy.BlockLan, policy.BlockLocalhost, policy.BlockInbound,
-            string.Join("\n", policy.Outgoing), string.Join("\n", policy.Incoming));
+            string.Join("\n", policy.Outgoing), string.Join("\n", policy.Incoming),
+            string.Join("\n", policy.Helpers.Select(helper => helper.ToLowerInvariant()).Order(StringComparer.Ordinal)));
+
+        /// <summary>
+        /// The app's helper programs: the browser-engine processes it started (running now) plus the ones its rules
+        /// already cover. Each is a check box; a helper only this app uses is checked for new rules, a shared one
+        /// (the WebView2 runtime, or a program other apps use too) only when the user checks it.
+        /// </summary>
+        private FrameworkElement? BuildHelpers()
+        {
+            var found = new Dictionary<string, (string Name, HashSet<string> Others, bool Running)>(StringComparer.OrdinalIgnoreCase);
+            if (App.Monitor.Latest is { } snapshot)
+            {
+                Dictionary<int, ProcessSample> byPid = snapshot.Processes.GroupBy(p => p.Pid).ToDictionary(g => g.Key, g => g.First());
+                foreach (ProcessSample process in snapshot.Processes.Where(p => p.Path.Length > 0 && AppIdentityRules.IsEmbeddedHost(p)))
+                {
+                    ProcessSample owner = AppIdentityRules.Owner(process, byPid);
+                    if (!string.Equals(owner.Path, Path, StringComparison.OrdinalIgnoreCase)) continue;
+                    found.TryAdd(process.Path, (Loc.AppName(process.DisplayName), new HashSet<string>(StringComparer.CurrentCultureIgnoreCase), true));
+                }
+                foreach (ProcessSample process in snapshot.Processes.Where(p => found.ContainsKey(p.Path)))
+                {
+                    ProcessSample owner = AppIdentityRules.Owner(process, byPid);
+                    if (!string.Equals(owner.Path, Path, StringComparison.OrdinalIgnoreCase)) found[process.Path].Others.Add(Loc.AppName(owner.DisplayName));
+                }
+            }
+            foreach (string saved in loadedPolicy.Helpers)
+            {
+                found.TryAdd(saved, (BlockedLogView.AppName(saved), new HashSet<string>(StringComparer.CurrentCultureIgnoreCase), false));
+            }
+            if (found.Count == 0) return null;
+
+            bool nothingSaved = loadedPolicy.IsEmpty && !loadedBlocked;
+            var panel = new StackPanel { Spacing = 10 };
+            panel.Children.Add(SettingRow(Loc.Get("RulesPage_Helpers"), Loc.Get("RulesPage_HelpersNote"), new Border()));
+            foreach (var (helperPath, (name, others, running)) in found.OrderBy(pair => pair.Value.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                bool runtime = helperPath.Contains(@"\Microsoft\EdgeWebView\", StringComparison.OrdinalIgnoreCase);
+                bool shared = runtime || others.Count > 0;
+                bool saved = loadedPolicy.Helpers.Contains(helperPath, StringComparer.OrdinalIgnoreCase);
+                var chips = new List<(string, string)>();
+                if (others.Count > 0) chips.Add((Loc.F("RulesPage_HelperSharedBy", string.Join(", ", others.Order())), "Warn"));
+                else if (runtime) chips.Add((Loc.Get("RulesPage_HelperRuntime"), "Warn"));
+                else chips.Add((Loc.Get("RulesPage_HelperOwn"), "Good"));
+                if (!running) chips.Add((Loc.Get(File.Exists(helperPath) ? "RulesPage_HelperNotRunning" : "RulesPage_HelperMissing"), "Idle"));
+
+                var texts = new StackPanel { Spacing = 3 };
+                var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                title.Children.Add(Text(name, 13, strong: true));
+                title.Children.Add(Ui.Chips(chips));
+                texts.Children.Add(title);
+                texts.Children.Add(Note(helperPath));
+                if (shared) texts.Children.Add(Note(Loc.Get(runtime ? "RulesPage_HelperRuntimeNote" : "RulesPage_HelperSharedNote")));
+                var box = new CheckBox { Content = texts, IsChecked = saved || (nothingSaved && !shared) };
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, name);
+                box.Checked += (_, _) => Validate();
+                box.Unchecked += (_, _) => Validate();
+                helperBoxes.Add((helperPath, box));
+                panel.Children.Add(box);
+            }
+            var card = new Border { Child = panel, Padding = new Thickness(14, 12, 14, 12), CornerRadius = new CornerRadius(10), BorderThickness = new Thickness(1) };
+            card.SetResourceReference(Border.BackgroundProperty, "SurfaceRaisedBrush");
+            card.SetResourceReference(Border.BorderBrushProperty, "SurfaceStrokeBrush");
+            return card;
+        }
 
         private static string Key(AppMemoryRule rule) => rule.LimitMegabytes + "|" + rule.Priority;
 
@@ -724,7 +807,7 @@ public sealed partial class RulesPage : Page
             {
                 Path = Path,
                 Blocked = blocked != loadedBlocked ? blocked : null,
-                Network = Key(policy) != loadedNetworkKey || (remove && !loadedPolicy.IsEmpty) ? policy : null,
+                Network = Key(policy) != storedNetworkKey || (remove && !loadedPolicy.IsEmpty) ? policy : null,
                 Memory = Key(memory) != loadedMemoryKey ? memory : null
             };
             Saving = true;

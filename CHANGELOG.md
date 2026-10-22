@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0-alpha.39 - 2026-10-22
+
+- **Rules cover an app's helper programs.** Apps that draw their window with a browser engine connect from the engine's program file, which a firewall rule for the app does not cover. An app's rules now list these helper programs under "Helper programs". A helper only this app uses (for example Steam's web helper) is checked for new rules; a shared one (the Windows WebView2 runtime that WhatsApp, the Widgets, Teams and Nax-Notepad use) only when you check it, with a note which other apps a rule would also affect. A checked helper gets the app's block, switches and rules as its own filters; unchecking it gives it its connections back, and rules a helper has of its own are never touched. The Rules list shows helpers as part of their app ("+1 helper programs"), "Recently blocked" includes them, and the app picker no longer offers them as apps.
+- The usage line in the rule editor counts the helpers, like the Processes page.
+- When saving rules fails, the message now says what failed instead of only an exit code.
+- Tested elevated with two program copies as app and helper: "Block Internet" and the whole-app block reached the helper, removing the helper restored its access while the app stayed blocked, and removing everything left no filter behind. This also verified saving through the one-prompt helper for the first time.
+
 ## 2.0.0-alpha.38 - 2026-10-22
 
 - **Steam is an app again.** Steam draws its window with its own browser engine, steamwebhelper.exe, so steam.exe itself has no window and was listed under background processes while "Steam Client WebHelper" showed as a separate app. The web helpers now count toward the program that started them, like WebView2 since alpha.37: Steam shows as one app with all its processes, memory and connections. The same applies to the Epic Games Launcher's web helper, Unreal's CEF helper and Qt WebEngine.

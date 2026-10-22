@@ -895,4 +895,14 @@ First {2}, last {3}</value></data>
   <data name="HistoryPage_30.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Blocked connections</value></data>
   <data name="HistoryPage_30.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Connections your rules or another firewall blocked</value></data>
   <data name="HistoryPage_31.Text" xml:space="preserve"><value>Blocked connections</value></data>
+  <data name="RulesPage_HelperCount" xml:space="preserve"><value>+{0} helper programs</value></data>
+  <data name="RulesPage_Helpers" xml:space="preserve"><value>Helper programs</value></data>
+  <data name="RulesPage_HelpersNote" xml:space="preserve"><value>This app draws its window with a browser program, and its connections come from there. A firewall rule applies to one program file only. Check a helper so this app's block and rules apply to it too.</value></data>
+  <data name="RulesPage_HelperOwn" xml:space="preserve"><value>Used only by this app</value></data>
+  <data name="RulesPage_HelperSharedBy" xml:space="preserve"><value>Also used by: {0}</value></data>
+  <data name="RulesPage_HelperRuntime" xml:space="preserve"><value>Shared WebView2 runtime</value></data>
+  <data name="RulesPage_HelperNotRunning" xml:space="preserve"><value>not running</value></data>
+  <data name="RulesPage_HelperMissing" xml:space="preserve"><value>file no longer exists</value></data>
+  <data name="RulesPage_HelperRuntimeNote" xml:space="preserve"><value>Many apps share Windows' WebView2 runtime, for example the Widgets, Teams or Outlook. A block or rule then applies to all of them. After a WebView2 update the program lives in a new folder, so check the new entry and save again.</value></data>
+  <data name="RulesPage_HelperSharedNote" xml:space="preserve"><value>Other apps use this program too. A block or rule then applies to them as well.</value></data>
 </root>

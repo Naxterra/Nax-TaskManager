@@ -2,6 +2,7 @@
 #:property TargetFramework=net11.0-windows10.0.26100.0
 #:project ../src/BetterTaskManager.Core/BetterTaskManager.Core.csproj
 // App identity: WebView2 and CefSharp helpers belong to the app that started them. Pure fixtures.
+using BetterTaskManager.Core.Firewall;
 using BetterTaskManager.Core.Monitoring;
 
 int failures = 0;
@@ -39,6 +40,13 @@ Check("a parent that started later is a reused PID", AppIdentityRules.Owner(reus
 Check("a CefSharp helper belongs to its app", AppIdentityRules.Owner(cef, byPid) == deepl);
 Check("Steam's web helpers belong to Steam", AppIdentityRules.Owner(steamUi, byPid) == steam && AppIdentityRules.Owner(steamRenderer, byPid) == steam);
 Check("the history key of a helper is the app's", AppIdentityRules.AppKey(AppIdentityRules.Owner(renderer, byPid)) == AppIdentityRules.AppKey(whatsapp));
+
+var policy = new AppNetworkPolicy { Path = steam.Path, BlockInternet = true, Outgoing = ["+ LAN", "- *"], Helpers = [steamUi.Path] };
+AppNetworkPolicy derived = policy.ForHelper(steamUi.Path);
+Check("a helper gets the app's switches and rules", derived.Path == steamUi.Path && derived.BlockInternet && derived.Outgoing.SequenceEqual(policy.Outgoing) && derived.HelperOf == steam.Path && derived.Helpers.Count == 0);
+Check("helpers alone keep a policy but need no filters", new AppNetworkPolicy { Path = steam.Path, Helpers = [steamUi.Path] } is { IsEmpty: false, HasFilters: false });
+var roundTrip = System.Text.Json.JsonSerializer.Deserialize<AppNetworkPolicy>(System.Text.Json.JsonSerializer.Serialize(derived))!;
+Check("helpers and owner survive JSON", roundTrip.HelperOf == steam.Path && System.Text.Json.JsonSerializer.Deserialize<AppNetworkPolicy>(System.Text.Json.JsonSerializer.Serialize(policy))!.Helpers.SequenceEqual(policy.Helpers));
 
 Console.WriteLine(failures == 0 ? "All checks passed." : $"{failures} check(s) failed.");
 return failures == 0 ? 0 : 1;

@@ -187,20 +187,34 @@ public static class Program
             }
         }
 
-        // Elevated helper mode: save one app's rules from the Rules page (JSON, Base64) in one step, then exit.
-        if (args.Length == 2 && args[0] == RulesApplyArgument)
+        // Elevated helper mode: save one app's rules from the Rules page (JSON, Base64) in one step, then exit. With a
+        // third argument, what failed is written to that file for the window that started the helper.
+        if ((args.Length == 2 || args.Length == 3) && args[0] == RulesApplyArgument)
         {
             if (!FirewallRules.IsElevated) return 5;
-            RuleChange? change;
+            var details = new List<string>();
+            int code;
             try
             {
-                change = System.Text.Json.JsonSerializer.Deserialize<RuleChange>(Convert.FromBase64String(args[1]));
+                RuleChange? change = System.Text.Json.JsonSerializer.Deserialize<RuleChange>(Convert.FromBase64String(args[1]));
+                code = change?.Apply(details) ?? RuleChange.Invalid;
             }
             catch (Exception ex) when (ex is FormatException or System.Text.Json.JsonException)
             {
-                return RuleChange.Invalid;
+                details.Add(ex.Message);
+                code = RuleChange.Invalid;
             }
-            return change?.Apply() ?? RuleChange.Invalid;
+            if (args.Length == 3 && code != 0)
+            {
+                try
+                {
+                    File.WriteAllText(args[2], string.Join(Environment.NewLine, details));
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                }
+            }
+            return code;
         }
 
         // Elevated helper mode: switch one of Windows' memory manager features on or off, then exit.
