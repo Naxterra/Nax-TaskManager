@@ -42,7 +42,14 @@ public sealed partial class OverviewPage : Page
 
         StatTile[] tiles = [cpu, memory, down, up];
         string[] captions = ["Tile_Cpu", "Tile_Memory", "Tile_Download", "Tile_Upload"], colors = ["ChartCpuBrush", "ChartMemoryBrush", "ChartReceiveBrush", "ChartSendBrush"];
-        for (int i = 0; i < tiles.Length; i++) { tiles[i].Caption = Loc.Get(captions[i]); tiles[i].SetResourceReference(StatTile.StrokeProperty, colors[i]); metrics.Children.Add(tiles[i]); }
+        // Each tile opens what lies behind its number: the apps using the CPU, the RAM breakdown, the busiest connections.
+        string[] hints = ["Overview_CpuHint", "Overview_MemoryHint", "Overview_NetworkHint", "Overview_NetworkHint"];
+        Action[] opens = [() => App.Window.ShowProcessesSorted(ViewModels.ProcessTree.SortCpu), () => App.Window.NavigatePage("Memory"), () => App.Window.ShowNetworkBusiest(), () => App.Window.ShowNetworkBusiest()];
+        for (int i = 0; i < tiles.Length; i++)
+        {
+            tiles[i].Caption = Loc.Get(captions[i]); tiles[i].SetResourceReference(StatTile.StrokeProperty, colors[i]);
+            metrics.Children.Add(TileButton(tiles[i], Loc.Get(hints[i]), opens[i]));
+        }
         root.Children.Add(metrics);
         var plot = new StackPanel { Spacing = 12 }; plot.Children.Add(Heading(Loc.Get("Design_Activity"), Loc.Get("Design_LastSamples")));
         activity.SetResourceReference(TrendChart.StrokeProperty, "ChartCpuBrush"); activity.SetResourceReference(TrendChart.SecondStrokeProperty, "ChartMemoryBrush"); plot.Children.Add(activity);
@@ -166,6 +173,20 @@ public sealed partial class OverviewPage : Page
         button = RowButton(row, () => { App.Window.SetSearch((string?)button!.Tag ?? ""); App.Window.NavigatePage("Network"); }, "");
         return button;
     }
+    /// <summary>A tile as a button: the border lights up in the tile's color while the pointer is over it.</summary>
+    private static Button TileButton(StatTile tile, string hint, Action open)
+    {
+        var button = new Button { Content = tile, Padding = new Thickness(0), BorderThickness = new Thickness(0), CornerRadius = new CornerRadius(12),
+            HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch,
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
+        ToolTipService.SetToolTip(button, hint);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, tile.Caption + ": " + hint);
+        button.PointerEntered += (_, _) => tile.BorderBrush = tile.Stroke;
+        button.PointerExited += (_, _) => tile.SetResourceReference(Grid.BorderBrushProperty, "SurfaceStrokeBrush");
+        button.Click += (_, _) => open();
+        return button;
+    }
+
     private static Ellipse Dot(string brush) { var dot = new Ellipse { Width = 6, Height = 6, VerticalAlignment = VerticalAlignment.Center }; dot.SetResourceReference(Shape.FillProperty, brush); return dot; }
     private static Border Card(UIElement content) { var border = new Border { Child = content, Padding = new Thickness(20), CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1) }; border.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush"); border.SetResourceReference(Border.BorderBrushProperty, "SurfaceStrokeBrush"); return border; }
     private static Grid Heading(string title, string hint) { var grid = new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); grid.Children.Add(Text(title, 14, strong: true)); var secondary = Text(hint, 11, secondary: true); Grid.SetColumn(secondary, 1); grid.Children.Add(secondary); return grid; }

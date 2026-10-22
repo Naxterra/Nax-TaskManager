@@ -33,6 +33,8 @@ public sealed class AppSettings
     public bool ProcessFlatView { get; set; }
     /// <summary>The details card on the right of the Processes and Network pages.</summary>
     public bool ShowDetailsPane { get; set; } = true;
+    /// <summary>The section the Performance page shows: Cpu, Memory or Tuning.</summary>
+    public string PerformanceSection { get; set; } = "Memory";
     /// <summary>The user dismissed the limited-mode notice; do not show it again.</summary>
     public bool HideElevationNotice { get; set; }
     /// <summary>The user turned "Replace Windows Task Manager" on; used to notice when something removed it.</summary>

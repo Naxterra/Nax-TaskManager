@@ -14,6 +14,7 @@ public sealed class HistoryWorker : IDisposable
     private readonly BootMemoryReport? bootReport;
     private readonly BetterTaskManager.Core.Disk.CacheTrimmer? cacheTrimmer;
     private readonly BetterTaskManager.Core.Native.StandbyLimiter? standbyLimiter;
+    private readonly BetterTaskManager.Core.Native.MemoryRuleEnforcer? memoryRules;
     private readonly Action<string> log;
     private readonly object gate = new();
     private DateTime lastError;
@@ -21,7 +22,7 @@ public sealed class HistoryWorker : IDisposable
 
     /// <param name="publishFeed">Serve live traffic to non-elevated app windows (the real service; off for console tests).</param>
     /// <param name="bootReport">Writes the memory breakdown shortly after startup (the real service at boot; console tests).</param>
-    /// <param name="trimCache">Keep big files out of RAM after they were written (the real service; console tests opt in).</param>
+    /// <param name="trimCache">Keep big files out of RAM after they were written, enforce the standby limit and the per-app memory rules (the real service; console tests opt in).</param>
     public HistoryWorker(string databasePath, string sessionPrefix, Action<string> log, bool publishFeed = false, BootMemoryReport? bootReport = null,
         bool trimCache = false)
     {
@@ -29,6 +30,7 @@ public sealed class HistoryWorker : IDisposable
         {
             cacheTrimmer = new BetterTaskManager.Core.Disk.CacheTrimmer(log);
             standbyLimiter = new BetterTaskManager.Core.Native.StandbyLimiter(log);
+            memoryRules = new BetterTaskManager.Core.Native.MemoryRuleEnforcer(log);
         }
         this.bootReport = bootReport;
         if (publishFeed) feed = new NetworkFeedServer(log);
@@ -62,6 +64,7 @@ public sealed class HistoryWorker : IDisposable
             recorder.Record(snapshot);
         }
         bootReport?.Offer(snapshot);
+        memoryRules?.Apply(snapshot);
         if (feed is not null)
         {
             feed.Publish(NetworkFeedMessage.From(snapshot));

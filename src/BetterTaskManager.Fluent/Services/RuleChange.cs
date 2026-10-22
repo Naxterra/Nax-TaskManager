@@ -1,0 +1,52 @@
+using BetterTaskManager.Core.Firewall;
+using BetterTaskManager.Core.Native;
+
+namespace BetterTaskManager.Fluent.Services;
+
+/// <summary>
+/// Everything the Rules page saves for one app in one step: the whole-app network block, the network rules and the
+/// memory rule. A part that is null stays as it is. Applied directly when elevated, otherwise by one elevated helper.
+/// </summary>
+public sealed class RuleChange
+{
+    public string Path { get; set; } = "";
+    public bool? Blocked { get; set; }
+    public AppNetworkPolicy? Network { get; set; }
+    public AppMemoryRule? Memory { get; set; }
+
+    public const int BlockFailed = 1, NetworkFailed = 2, MemoryFailed = 4, Invalid = 87;
+
+    /// <summary>Applies every part, even after one failed; the result has one bit per failed part.</summary>
+    public int Apply(List<string>? details = null)
+    {
+        if (Path.Length == 0 || Network is { } n && !string.Equals(n.Path, Path, StringComparison.OrdinalIgnoreCase)
+            || Memory is { } m && (!string.Equals(m.Path, Path, StringComparison.OrdinalIgnoreCase) || !(m.IsEmpty || m.IsValid)))
+        {
+            return Invalid;
+        }
+        int code = 0;
+        if (Blocked is { } block)
+        {
+            CommandResult result = FirewallRules.Apply(Path, block);
+            if (!result.Succeeded) { code |= BlockFailed; details?.Add(result.FailureSummary()); }
+        }
+        if (Network is not null)
+        {
+            CommandResult result = FirewallRules.ApplyPolicy(Network);
+            if (!result.Succeeded) { code |= NetworkFailed; details?.Add(result.FailureSummary()); }
+        }
+        if (Memory is not null)
+        {
+            try
+            {
+                MemoryRuleStore.Save(Memory);
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                code |= MemoryFailed;
+                details?.Add(ex.Message);
+            }
+        }
+        return code;
+    }
+}

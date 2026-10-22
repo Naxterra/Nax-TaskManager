@@ -39,7 +39,7 @@ public sealed partial class NetworkPage : Page
         Details.Tile1.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartReceiveBrush"];
         Details.Tile2.Caption = Loc.Get("Tile_Upload");
         Details.Tile2.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartSendBrush"];
-        detailRules = Controls.DetailPane.ActionButton("", Loc.Get("Rules_Menu"), (_, _) => { if (Selected is { Path.Length: > 0 } slot) _ = EditRulesAsync(slot); });
+        detailRules = Controls.DetailPane.ActionButton("", Loc.Get("Rules_Menu"), (_, _) => { if (Selected is { Path.Length: > 0 } slot) EditRules(slot); });
         detailFirewall = Controls.DetailPane.ActionButton("", Loc.Get("Firewall_Block"), Firewall_Click);
         detailOpen = Controls.DetailPane.ActionButton("", Loc.Get("Menu_OpenLocation"), (_, _) => { if (Selected is { Path.Length: > 0 } slot) ProcessActions.OpenFileLocation(slot.Path); });
         detailCopy = Controls.DetailPane.ActionButton("", Loc.Get("Menu_CopyRemoteAddress"), (_, _) => { if (Selected is { } slot) ProcessActions.CopyText(slot.Remote); });
@@ -55,6 +55,20 @@ public sealed partial class NetworkPage : Page
     }
 
     public NetworkViewModel ViewModel { get; }
+
+    /// <summary>All apps, the busiest first, with every connection (the Overview's download and upload tiles).</summary>
+    public void ShowBusiest()
+    {
+        ViewModel.SelectedAppKey = NetworkViewModel.AllAppsKey;
+        ViewModel.SortApps(NetworkViewModel.SortSpeed);
+        ViewModel.EstablishedOnly = false;
+        EstablishedOnlyButton.IsChecked = false;
+        connectionKey = null;
+        SyncSortBox();
+        UpdateSortIndicators();
+        Refresh();
+        if (AppList.Items.Count > 0) AppList.ScrollIntoView(AppList.Items[0]);
+    }
 
     public void ShowApp(ProcessSample process)
     {
@@ -74,7 +88,7 @@ public sealed partial class NetworkPage : Page
         if (process is not null) App.Window.ShowProcess(process);
     }
 
-    private void AllRules_Click(object sender, RoutedEventArgs e) => _ = RulesOverviewDialog.ShowAsync(XamlRoot);
+    private void AllRules_Click(object sender, RoutedEventArgs e) => App.Window.NavigatePage("Rules");
 
     private void Page_Loaded(object sender, RoutedEventArgs e)
     {
@@ -427,7 +441,7 @@ public sealed partial class NetworkPage : Page
         firewall.Click += (_, _) => _ = ToggleFirewallAsync(slot.Path);
         menu.Items.Add(firewall);
         var rules = new MenuFlyoutItem { Text = Loc.Get("Rules_Menu"), Icon = new FontIcon { Glyph = "" }, IsEnabled = hasPath };
-        rules.Click += (_, _) => _ = EditRulesAsync(slot);
+        rules.Click += (_, _) => EditRules(slot);
         menu.Items.Add(rules);
         var location = new MenuFlyoutItem { Text = Loc.Get("Menu_OpenLocation"), Icon = new FontIcon { Glyph = "" }, IsEnabled = hasPath };
         location.Click += (_, _) => ProcessActions.OpenFileLocation(slot.Path);
@@ -450,16 +464,11 @@ public sealed partial class NetworkPage : Page
 
     private void Rules_Click(object sender, RoutedEventArgs e)
     {
-        if (Selected is { Path.Length: > 0 } slot) _ = EditRulesAsync(slot);
+        if (Selected is { Path.Length: > 0 } slot) EditRules(slot);
     }
 
-    private async Task EditRulesAsync(NetworkSlot slot)
-    {
-        // Connection rows carry their app's path; the dialog is titled with the app, not the connection.
-        string name = slot.Data?.Kind == RowKind.Group ? slot.Name : (slot.Data?.AppName is { Length: > 0 } app ? app : System.IO.Path.GetFileName(slot.Path));
-        await AppRulesDialog.ShowAsync(XamlRoot, slot.Path, name);
-        UpdateCommands();
-    }
+    /// <summary>Connection rows carry their app's path, so the Rules page opens the app, not the connection.</summary>
+    private static void EditRules(NetworkSlot slot) => App.Window.ShowRules(slot.Path);
 
     private async Task ToggleFirewallAsync(string path)
     {

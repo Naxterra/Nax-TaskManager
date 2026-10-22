@@ -69,6 +69,15 @@ public sealed class ProcessesViewModel : ObservableObject
         Rows.Apply(rows.Select(row => (row, context)).ToList());
     }
 
+    /// <summary>Sets the order without flipping it; used when another page opens this one sorted.</summary>
+    public void SortBy(string column, bool descending)
+    {
+        settings.ProcessSortColumn = column;
+        settings.ProcessSortDescending = descending;
+        Raise(nameof(SortColumn));
+        Refresh();
+    }
+
     public void Sort(string column)
     {
         if (settings.ProcessSortColumn == column)

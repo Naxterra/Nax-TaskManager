@@ -474,7 +474,7 @@ Diesen Namen hat eine andere App abgefragt, nicht diese. Die Adresse kann auch z
   <data name="NetworkPage_21.Label" xml:space="preserve"><value>Regeln</value></data>
   <data name="NetworkPage_22.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Diese App hat eigene Netzwerkregeln.</value></data>
   <data name="NetworkPage_23.Text" xml:space="preserve"><value>Regeln</value></data>
-  <data name="Rules_Menu" xml:space="preserve"><value>Netzwerkregeln…</value></data>
+  <data name="Rules_Menu" xml:space="preserve"><value>Regeln…</value></data>
   <data name="Rules_Title" xml:space="preserve"><value>Netzwerkregeln: {0}</value></data>
   <data name="Rules_BlockedNote" xml:space="preserve"><value>Der Netzwerkzugriff dieser App ist vollständig gesperrt. Die Regeln wirken, sobald er wieder erlaubt ist.</value></data>
   <data name="Rules_SwitchesTitle" xml:space="preserve"><value>Sperren</value></data>
@@ -500,7 +500,7 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="Rules_UacNote" xml:space="preserve"><value>Beim Speichern fragt Windows einmal nach der Administratorfreigabe.</value></data>
   <data name="Rules_Save" xml:space="preserve"><value>Speichern</value></data>
   <data name="Rules_RemoveAll" xml:space="preserve"><value>Alle Regeln entfernen</value></data>
-  <data name="Rules_NotSaved" xml:space="preserve"><value>Netzwerkregeln nicht gespeichert</value></data>
+  <data name="Rules_NotSaved" xml:space="preserve"><value>Die Regeln wurden nicht gespeichert</value></data>
   <data name="Rules_Failed" xml:space="preserve"><value>Das Speichern der Netzwerkregeln ist fehlgeschlagen (Code {0}).</value></data>
   <data name="Uac_CancelledRules" xml:space="preserve"><value>Die Administratorfreigabe wurde abgebrochen. Die Netzwerkregeln wurden nicht geändert.</value></data>
   <data name="Rules_ErrLineOut" xml:space="preserve"><value>Ausgehend, Zeile {0}: {1}</value></data>
@@ -680,8 +680,6 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="Design_Uptime" xml:space="preserve">
     <value>Betriebszeit  {0}</value>
   </data>
-  <data name="Memory_Nav.Content" xml:space="preserve"><value>Arbeitsspeicher</value></data>
-  <data name="Memory_Nav.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Arbeitsspeicher (Strg+7)</value></data>
   <data name="Memory_Title" xml:space="preserve"><value>Arbeitsspeicher</value></data>
   <data name="Memory_Subtitle" xml:space="preserve"><value>RAM-Verwendung und sofort verfügbarer Speicher im Überblick.</value></data>
   <data name="Memory_Cached" xml:space="preserve"><value>Im Cache</value></data>
@@ -750,4 +748,110 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="SettingsPage_37.Text" xml:space="preserve"><value>Windows kann seinen Standby-Cache nicht abschalten; es füllt ihn mit jeder gelesenen oder geschriebenen Datei neu. Mit einer Grenze prüft der Verlaufsdienst alle 10 Sekunden und leert den Cache, sobald er größer ist, sodass der RAM als frei erscheint. Programme und Dateien, die Sie erneut verwenden, werden dann von der Festplatte statt aus dem RAM gelesen, wodurch ihr nächster Start langsamer ist. Benötigt den Verlaufsdienst; eine Änderung erfordert die Administratorfreigabe.</value></data>
   <data name="Standby_On" xml:space="preserve"><value>An: Der Verlaufsdienst leert den Standby-Cache, sobald er größer als {0} wird.</value></data>
   <data name="Standby_Off" xml:space="preserve"><value>Aus: Windows behält Dateiinhalte im Standby-Cache, bis Programme den RAM brauchen.</value></data>
+  <data name="RulesPage_Nav.Content" xml:space="preserve"><value>Regeln</value></data>
+  <data name="RulesPage_Nav.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Regeln (Strg+7)</value></data>
+  <data name="RulesPage_Title" xml:space="preserve"><value>Regeln</value></data>
+  <data name="RulesPage_Summary" xml:space="preserve"><value>{0} Apps mit Regeln. Hier stehen die Netzwerk- und Speicherregeln aller Apps an einem Ort.</value></data>
+  <data name="RulesPage_AddApp" xml:space="preserve"><value>App hinzufügen</value></data>
+  <data name="RulesPage_ListTitle" xml:space="preserve"><value>Apps mit Regeln</value></data>
+  <data name="RulesPage_Empty" xml:space="preserve"><value>Noch keine Regeln. Fügen Sie oben eine App hinzu, oder wählen Sie unter Prozesse oder Netzwerk bei einer App „Regeln…“.</value></data>
+  <data name="RulesPage_Choose" xml:space="preserve"><value>Wählen Sie links eine App, um ihre Regeln zu sehen und zu ändern.</value></data>
+  <data name="RulesPage_Back" xml:space="preserve"><value>Zurück zur Liste</value></data>
+  <data name="RulesPage_Switches" xml:space="preserve"><value>{0} Sperrschalter an</value></data>
+  <data name="RulesPage_RuleCount" xml:space="preserve"><value>{0} Netzwerkregeln</value></data>
+  <data name="RulesPage_LimitShort" xml:space="preserve"><value>RAM bis {0}</value></data>
+  <data name="RulesPage_PriorityShort" xml:space="preserve"><value>Priorität: {0}</value></data>
+  <data name="RulesPage_NoRulesYet" xml:space="preserve"><value>Noch keine Regeln</value></data>
+  <data name="RulesPage_Priority1" xml:space="preserve"><value>Sehr niedrig (1)</value></data>
+  <data name="RulesPage_Priority2" xml:space="preserve"><value>Niedrig (2)</value></data>
+  <data name="RulesPage_Priority3" xml:space="preserve"><value>Mittel (3)</value></data>
+  <data name="RulesPage_Priority4" xml:space="preserve"><value>Unter normal (4)</value></data>
+  <data name="RulesPage_Priority5" xml:space="preserve"><value>Normal (5)</value></data>
+  <data name="RulesPage_PriorityDefault" xml:space="preserve"><value>Windows entscheidet</value></data>
+  <data name="RulesPage_DiscardTitle" xml:space="preserve"><value>Änderungen verwerfen?</value></data>
+  <data name="RulesPage_DiscardText" xml:space="preserve"><value>Die Regeln für {0} haben Änderungen, die noch nicht gespeichert sind.</value></data>
+  <data name="RulesPage_Discard" xml:space="preserve"><value>Verwerfen</value></data>
+  <data name="RulesPage_PickFilter" xml:space="preserve"><value>Laufende Apps durchsuchen</value></data>
+  <data name="RulesPage_PickPath" xml:space="preserve"><value>C:\Pfad\zum\Programm.exe</value></data>
+  <data name="RulesPage_PickRunning" xml:space="preserve"><value>Eine laufende App</value></data>
+  <data name="RulesPage_PickOr" xml:space="preserve"><value>Oder der Pfad einer Programmdatei</value></data>
+  <data name="RulesPage_PickOpen" xml:space="preserve"><value>Regeln öffnen</value></data>
+  <data name="RulesPage_Network" xml:space="preserve"><value>Netzwerk</value></data>
+  <data name="RulesPage_BlockAll" xml:space="preserve"><value>Gesamten Netzwerkzugriff sperren</value></data>
+  <data name="RulesPage_BlockAllNote" xml:space="preserve"><value>Sperrt jede Verbindung, die diese App aufbaut, und trennt ihre offenen Verbindungen. Solange diese Sperre an ist, spielen die Schalter und Regeln darunter keine Rolle.</value></data>
+  <data name="RulesPage_OrderNote" xml:space="preserve"><value>Die erste passende Regel entscheidet. Eine Verbindung, zu der keine Regel passt, ist erlaubt.</value></data>
+  <data name="RulesPage_IncomingNote" xml:space="preserve"><value>Diese Regeln gelten für Verbindungen, die andere Geräte zu dieser App aufbauen. Der Port ist der Port auf diesem PC.</value></data>
+  <data name="RulesPage_Memory" xml:space="preserve"><value>Arbeitsspeicher</value></data>
+  <data name="RulesPage_Limit" xml:space="preserve"><value>Speichergrenze</value></data>
+  <data name="RulesPage_LimitUnit" xml:space="preserve"><value>MB</value></data>
+  <data name="RulesPage_LimitNote" xml:space="preserve"><value>Hält den privaten Arbeitsspeicher aller Prozesse dieser App zusammen unter der Grenze, ähnlich wie memory.high bei Linux-cgroups. Wird sie überschritten, nimmt der Verlaufsdienst der App Seiten aus dem RAM, die größten Prozesse zuerst. Die Seiten wandern in den Standby-Cache und von dort auf die Festplatte, wenn Windows den Platz braucht. Die App läuft weiter und holt sich die Daten bei Bedarf zurück, deshalb macht eine zu kleine Grenze sie langsam. Die Grenze gilt für den RAM, nicht für den zugesicherten Speicher.</value></data>
+  <data name="RulesPage_LimitTooLow" xml:space="preserve"><value>Die Speichergrenze muss mindestens {0} MB betragen.</value></data>
+  <data name="RulesPage_Priority" xml:space="preserve"><value>Speicherpriorität</value></data>
+  <data name="RulesPage_PriorityNote" xml:space="preserve"><value>Braucht Windows Speicher, nimmt es zuerst Seiten mit niedriger Priorität aus dem Standby-Cache. Mit einer niedrigen Priorität für Hintergrund-Apps behalten Ihre wichtigen Apps ihre Daten länger im RAM. Die Priorität gilt für laufende und neu gestartete Prozesse.</value></data>
+  <data name="RulesPage_NeedsService" xml:space="preserve"><value>Der Verlaufsdienst setzt die Speicherregeln durch, und er läuft gerade nicht. Schalten Sie ihn unter Einstellungen &gt; Verlauf ein. Netzwerkregeln wirken auch ohne ihn.</value></data>
+  <data name="RulesPage_NotRunning" xml:space="preserve"><value>Die App läuft gerade nicht.</value></data>
+  <data name="RulesPage_Usage" xml:space="preserve"><value>{0} Prozesse laufen · {1} privater Arbeitsspeicher · {2} Verbindungen</value></data>
+  <data name="RulesPage_Unsaved" xml:space="preserve"><value>Es gibt ungespeicherte Änderungen.</value></data>
+  <data name="RulesPage_UnsavedUac" xml:space="preserve"><value>Es gibt ungespeicherte Änderungen. Beim Speichern fragt Windows einmal nach der Administratorfreigabe.</value></data>
+  <data name="RulesPage_Saving" xml:space="preserve"><value>Wird gespeichert…</value></data>
+  <data name="RulesPage_Saved" xml:space="preserve"><value>Die Regeln sind gespeichert.</value></data>
+  <data name="RulesPage_Removed" xml:space="preserve"><value>Alle Regeln dieser App wurden entfernt.</value></data>
+  <data name="RulesPage_RemoveTitle" xml:space="preserve"><value>Alle Regeln für {0} entfernen?</value></data>
+  <data name="RulesPage_RemoveText" xml:space="preserve"><value>Das hebt die Netzwerksperre auf und entfernt die Netzwerkregeln und die Speicherregel dieser App.</value></data>
+  <data name="RulesPage_ColAction" xml:space="preserve"><value>Aktion</value></data>
+  <data name="RulesPage_ColTarget" xml:space="preserve"><value>Ziel</value></data>
+  <data name="RulesPage_ColProtocol" xml:space="preserve"><value>Protokoll</value></data>
+  <data name="RulesPage_ColPorts" xml:space="preserve"><value>Ports</value></data>
+  <data name="RulesPage_ColComment" xml:space="preserve"><value>Kommentar</value></data>
+  <data name="Perf_Title" xml:space="preserve"><value>Leistung</value></data>
+  <data name="Perf_SectionCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="Perf_SectionMemory" xml:space="preserve"><value>Arbeitsspeicher</value></data>
+  <data name="Perf_SectionTuning" xml:space="preserve"><value>Speicher-Tuning</value></data>
+  <data name="Perf_Processes" xml:space="preserve"><value>Prozesse</value></data>
+  <data name="Perf_Threads" xml:space="preserve"><value>Threads</value></data>
+  <data name="Perf_Handles" xml:space="preserve"><value>Handles</value></data>
+  <data name="Perf_Uptime" xml:space="preserve"><value>Betriebszeit {0}</value></data>
+  <data name="Perf_CpuHistory" xml:space="preserve"><value>CPU-Auslastung, letzte 60 Messwerte</value></data>
+  <data name="Perf_AllByCpu" xml:space="preserve"><value>Alle Prozesse nach CPU</value></data>
+  <data name="Perf_CpuApps" xml:space="preserve"><value>Was die CPU gerade nutzt</value></data>
+  <data name="Perf_CpuAppsNote" xml:space="preserve"><value>Apps mit allen ihren Prozessen, nach CPU-Last sortiert. Ein Klick zeigt die App unter Prozesse.</value></data>
+  <data name="Perf_FreeUp" xml:space="preserve"><value>Arbeitsspeicher freigeben</value></data>
+  <data name="Perf_Trim" xml:space="preserve"><value>App-Arbeitsspeicher trimmen</value></data>
+  <data name="Perf_ClearStandby" xml:space="preserve"><value>Standby-Cache leeren</value></data>
+  <data name="Perf_EmptyAll" xml:space="preserve"><value>Alle Arbeitssätze leeren</value></data>
+  <data name="Tuning_Intro" xml:space="preserve"><value>Hier stellen Sie ein, wie Windows mit dem Arbeitsspeicher umgeht, ähnlich wie mit sysctl und cgroups unter Linux. Jede Änderung braucht die Administratorfreigabe.</value></data>
+  <data name="Tuning_CacheTitle" xml:space="preserve"><value>Cache</value></data>
+  <data name="Tuning_Off" xml:space="preserve"><value>Aus</value></data>
+  <data name="Tuning_Standby" xml:space="preserve"><value>Standby-Cache klein halten</value></data>
+  <data name="Tuning_StandbyNote" xml:space="preserve"><value>Windows kann seinen Standby-Cache nicht abschalten, es füllt ihn mit jeder gelesenen oder geschriebenen Datei neu. Mit einer Grenze prüft der Verlaufsdienst alle 10 Sekunden und leert den Cache, sobald er größer ist, sodass der RAM als frei erscheint. Programme und Dateien, die Sie erneut verwenden, werden dann von der Festplatte statt aus dem RAM gelesen, was ihren nächsten Start verlangsamt.</value></data>
+  <data name="Tuning_CacheTrim" xml:space="preserve"><value>Geschriebene Dateien aus dem RAM entfernen</value></data>
+  <data name="Tuning_CacheTrimNote" xml:space="preserve"><value>Windows behält alles, was auf einen Datenträger geschrieben wurde, im Dateicache. Der Verlaufsdienst entfernt Dateien ab 256 MB (Spiel-Updates, Installationsprogramme, Downloads) 30 Sekunden nach dem Schreiben aus dem RAM und nach 5 Minuten noch einmal. Dateien, die ein laufendes Programm noch nutzt, bleiben im RAM.</value></data>
+  <data name="Tuning_NoService" xml:space="preserve"><value>Der Verlaufsdienst läuft nicht. Schalten Sie ihn unter Einstellungen &gt; Verlauf ein, damit diese Einstellung wirkt.</value></data>
+  <data name="Tuning_ManagerTitle" xml:space="preserve"><value>Windows-Speicherverwaltung</value></data>
+  <data name="Tuning_StateUnknown" xml:space="preserve"><value>Der aktuelle Zustand ist unbekannt, weil ihn nur ein Administrator lesen kann. Starten Sie die App als Administrator, oder schalten Sie den Verlaufsdienst ein, der ihn alle 10 Minuten festhält.</value></data>
+  <data name="Tuning_StateAsOf" xml:space="preserve"><value>Stand: {0}. Der Dienst SysMain {1}.</value></data>
+  <data name="Tuning_SysMainRunning" xml:space="preserve"><value>läuft</value></data>
+  <data name="Tuning_SysMainStopped" xml:space="preserve"><value>läuft nicht</value></data>
+  <data name="Tuning_Compression" xml:space="preserve"><value>Speicherkomprimierung</value></data>
+  <data name="Tuning_CompressionNote" xml:space="preserve"><value>Windows komprimiert selten genutzte Seiten im RAM, statt sie auf die Festplatte auszulagern. Das spart RAM und kostet etwas CPU-Zeit. Wie viel gerade komprimiert ist, zeigt der Prozess „Memory Compression“. Ausgeschaltet lagert Windows mehr auf die Festplatte aus.</value></data>
+  <data name="Tuning_PageCombining" xml:space="preserve"><value>Seitenzusammenführung</value></data>
+  <data name="Tuning_PageCombiningNote" xml:space="preserve"><value>Windows sucht gleiche Speicherseiten verschiedener Programme und behält nur eine Kopie davon. Das spart etwas RAM und kostet ab und zu CPU-Zeit.</value></data>
+  <data name="Tuning_Prefetch" xml:space="preserve"><value>Vorabladen beim Programmstart (Prefetch)</value></data>
+  <data name="Tuning_PrefetchNote" xml:space="preserve"><value>Windows merkt sich, welche Dateien ein Programm beim Start liest, und lädt sie beim nächsten Start vorab. Programme starten dadurch schneller, und der Standby-Cache wird voller.</value></data>
+  <data name="Tuning_PreLaunch" xml:space="preserve"><value>App-Vorstart</value></data>
+  <data name="Tuning_PreLaunchNote" xml:space="preserve"><value>Windows startet Store-Apps, die Sie oft verwenden, vorab im Hintergrund, damit sie sofort bereit sind. Ausgeschaltet starten sie erst, wenn Sie sie öffnen.</value></data>
+  <data name="Tuning_SysMain" xml:space="preserve"><value>SysMain (früher Superfetch)</value></data>
+  <data name="Tuning_SysMainNote" xml:space="preserve"><value>Dieser Windows-Dienst sagt voraus, welche Programme Sie bald verwenden, und lädt ihre Dateien vorab in den Standby-Cache. Ausgeschaltet bleibt mehr RAM frei, und Programme starten etwas langsamer. Das Vorabladen beim Programmstart braucht diesen Dienst.</value></data>
+  <data name="Tuning_RestartNote" xml:space="preserve"><value>Speicherkomprimierung, Seitenzusammenführung und das Vorabladen ändern sich vollständig erst nach einem Neustart. SysMain stoppt oder startet sofort.</value></data>
+  <data name="Tuning_RulesTitle" xml:space="preserve"><value>Speicherregeln pro App</value></data>
+  <data name="Tuning_RulesNote" xml:space="preserve"><value>Eine Speichergrenze und eine Speicherpriorität für eine App, wie eine cgroup unter Linux. Sie stellen sie auf der Seite Regeln ein, zusammen mit den Netzwerkregeln der App.</value></data>
+  <data name="Tuning_OpenRules" xml:space="preserve"><value>Regeln öffnen</value></data>
+  <data name="Tuning_NoRules" xml:space="preserve"><value>Es gibt noch keine Speicherregeln.</value></data>
+  <data name="Overview_CpuHint" xml:space="preserve"><value>Zeigt, welche Apps die CPU gerade nutzen</value></data>
+  <data name="Overview_MemoryHint" xml:space="preserve"><value>Zeigt, wofür der Arbeitsspeicher verwendet wird</value></data>
+  <data name="Overview_NetworkHint" xml:space="preserve"><value>Zeigt, welche Apps gerade Daten übertragen</value></data>
+  <data name="SettingsPage_38.Text" xml:space="preserve"><value>Die Standby-Grenze, das Entfernen geschriebener Dateien aus dem RAM und die Schalter der Windows-Speicherverwaltung finden Sie jetzt unter Leistung &gt; Speicher-Tuning. Speichergrenzen pro App stehen auf der Seite Regeln.</value></data>
+  <data name="SettingsPage_39.Content" xml:space="preserve"><value>Speicher-Tuning öffnen</value></data>
+  <data name="RulesPage_NoRules" xml:space="preserve"><value>Noch keine Regeln. Erlaubt ist alles, was die Schalter oben nicht sperren.</value></data>
+  <data name="RulesPage_UsageOne" xml:space="preserve"><value>1 Prozess läuft · {1} privater Arbeitsspeicher · {2} Verbindungen</value></data>
 </root>

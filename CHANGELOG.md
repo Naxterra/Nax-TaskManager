@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0-alpha.35 - 2026-10-22
+
+Memory tuning, a Rules page, Performance and Memory in one page, and clickable Overview tiles.
+
+- **Rules page (Ctrl+7).** Every rule now has one place. The left side lists each app with a network block, network rules or a memory rule, with a short summary. The right side is the selected app's editor, part of the page instead of a dialog, so it follows the window's size, scrolls on its own and keeps Save and Discard visible at the bottom. "Add app" picks a running app or takes the path of a program file. "Rules…" on the Processes and Network pages and "All rules" open this page. Saving applies the block, the network rules and the memory rule of an app together, with one UAC prompt when the app runs without administrator rights. Switching to another app with unsaved changes asks first.
+- **Clearer rule editor.** The switches are toggle rows with their explanation, the rule rows have column labels and share the width they get, and in a narrow window the comment moves to a second line. "Block all network access" is part of the editor.
+- **Memory rules per app, like cgroups.** An app can get a memory limit for the private memory of all its processes together and a memory priority from 1 (very low) to 5 (normal). The History service enforces both every 2 seconds. When an app goes over its limit, the service takes pages out of the largest processes' RAM until the app is below it again (like memory.high on Linux). The app keeps running and reads its data back when it needs it, so a limit that is too small makes it slow. A memory priority makes Windows reuse that app's cached pages first when memory runs short. Removing a rule gives the processes their normal priority back.
+- **Performance and Memory combined.** The Performance page (Ctrl+2) has three sections. "CPU" shows the CPU, processes, threads and handles with their history and the apps using the most CPU. "Memory" is the former Memory page with "Free up memory". "Memory tuning" holds the standby limit and the removal of written files from RAM (both moved here from Settings), the list of memory rules, and new switches for Windows' memory manager: memory compression, page combining, application launch prefetching, application prelaunch and the SysMain service. Each switch says what it does. The History service records their state every 10 minutes, so the page can show it without administrator rights.
+- **Clickable Overview tiles.** CPU opens the Processes page sorted by CPU, Memory opens the memory section, and Download and Upload open the Network page with all apps, the busiest first.
+
 ## 2.0.0-alpha.34 - 2026-10-22
 
 Redesign stage 4 (Overview and Memory pages), plus a standby limit.

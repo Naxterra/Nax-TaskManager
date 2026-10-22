@@ -17,13 +17,14 @@ namespace BetterTaskManager.Fluent;
 public sealed partial class MainWindow : Window
 {
     private OverviewPage? overview;
-    private MemoryPage? memoryPage;
+    private PerformancePage? performancePage;
+    private RulesPage? rulesPage;
     private static readonly Dictionary<string, Type> Pages = new()
     {
         ["Overview"] = typeof(OverviewPage),
         ["Processes"] = typeof(ProcessesPage),
         ["Performance"] = typeof(PerformancePage),
-        ["Memory"] = typeof(MemoryPage),
+        ["Rules"] = typeof(RulesPage),
         ["Network"] = typeof(NetworkPage),
         ["Disk"] = typeof(DiskPage),
         ["History"] = typeof(HistoryPage),
@@ -104,13 +105,19 @@ public sealed partial class MainWindow : Window
         AddAccelerator(VirtualKey.Number4, () => Navigate("Disk"));
         AddAccelerator(VirtualKey.Number5, () => Navigate("History"));
         AddAccelerator(VirtualKey.Number6, () => Navigate("Startup"));
-        AddAccelerator(VirtualKey.Number7, () => Navigate("Memory"));
+        AddAccelerator(VirtualKey.Number7, () => Navigate("Rules"));
         AddAccelerator(VirtualKey.F, () => SearchBox.Focus(FocusState.Keyboard));
         AddAccelerator(VirtualKey.K, () => SearchBox.Focus(FocusState.Keyboard));
 
         string[] args = Environment.GetCommandLineArgs();
         int pageIndex = Array.IndexOf(args, "--page");
         string startPage = pageIndex >= 0 && pageIndex + 1 < args.Length ? args[pageIndex + 1] : "Overview";
+        // The Memory page is now a section of the Performance page.
+        if (startPage == "Memory")
+        {
+            App.Settings.PerformanceSection = PerformancePage.MemorySection;
+            startPage = "Performance";
+        }
         // The settings entry only exists once the NavigationView template has loaded.
         if (startPage == "Settings") Navigation.Loaded += (_, _) => Navigation.SelectedItem = Navigation.SettingsItem;
         else
@@ -150,7 +157,40 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.ButtonHoverBackgroundColor = dark ? Windows.UI.Color.FromArgb(24, 255, 255, 255) : Windows.UI.Color.FromArgb(24, 0, 0, 0);
     }
 
-    public void NavigatePage(string tag) => Navigate(tag);
+    /// <summary>Opens a page by its tag; "Memory" and "Tuning" open those sections of the Performance page.</summary>
+    public void NavigatePage(string tag)
+    {
+        if (tag is "Memory" or "Tuning" or "Cpu")
+        {
+            Navigate("Performance");
+            if (ContentFrame.Content is PerformancePage page) page.ShowSection(tag);
+            return;
+        }
+        Navigate(tag);
+    }
+
+    /// <summary>Opens the Rules page with one app's rules.</summary>
+    public void ShowRules(string path)
+    {
+        Navigate("Rules");
+        if (ContentFrame.Content is RulesPage page) page.ShowApp(path);
+    }
+
+    /// <summary>Opens the Processes page with every app, largest first by the given column.</summary>
+    public void ShowProcessesSorted(string column)
+    {
+        SetSearch("");
+        Navigate("Processes");
+        if (ContentFrame.Content is ProcessesPage page) page.ShowSorted(column);
+    }
+
+    /// <summary>Opens the Network page with all apps, the busiest first.</summary>
+    public void ShowNetworkBusiest()
+    {
+        SetSearch("");
+        Navigate("Network");
+        if (ContentFrame.Content is NetworkPage page) page.ShowBusiest();
+    }
 
     private void UpdateNavigationChrome()
     {
@@ -195,7 +235,8 @@ public sealed partial class MainWindow : Window
             try
             {
                 if (tag == "Overview") ContentFrame.Content = overview ??= new OverviewPage();
-                else if (tag == "Memory") ContentFrame.Content = memoryPage ??= new MemoryPage();
+                else if (tag == "Performance") ContentFrame.Content = performancePage ??= new PerformancePage();
+                else if (tag == "Rules") ContentFrame.Content = rulesPage ??= new RulesPage();
                 else ContentFrame.Navigate(page, null, new EntranceNavigationTransitionInfo());
             }
             catch (Exception ex)

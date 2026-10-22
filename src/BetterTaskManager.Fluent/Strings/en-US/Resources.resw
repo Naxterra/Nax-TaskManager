@@ -474,7 +474,7 @@ Name looked up by another app, not by this one. This address can also serve othe
   <data name="NetworkPage_21.Label" xml:space="preserve"><value>Rules</value></data>
   <data name="NetworkPage_22.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>This app has its own network rules.</value></data>
   <data name="NetworkPage_23.Text" xml:space="preserve"><value>Rules</value></data>
-  <data name="Rules_Menu" xml:space="preserve"><value>Network rules…</value></data>
+  <data name="Rules_Menu" xml:space="preserve"><value>Rules…</value></data>
   <data name="Rules_Title" xml:space="preserve"><value>Network rules: {0}</value></data>
   <data name="Rules_BlockedNote" xml:space="preserve"><value>Network access of this app is blocked completely. The rules take effect once it is allowed again.</value></data>
   <data name="Rules_SwitchesTitle" xml:space="preserve"><value>Block</value></data>
@@ -500,7 +500,7 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="Rules_UacNote" xml:space="preserve"><value>Saving asks once for administrator approval.</value></data>
   <data name="Rules_Save" xml:space="preserve"><value>Save</value></data>
   <data name="Rules_RemoveAll" xml:space="preserve"><value>Remove all rules</value></data>
-  <data name="Rules_NotSaved" xml:space="preserve"><value>Network rules not saved</value></data>
+  <data name="Rules_NotSaved" xml:space="preserve"><value>The rules were not saved</value></data>
   <data name="Rules_Failed" xml:space="preserve"><value>Saving the network rules failed (code {0}).</value></data>
   <data name="Uac_CancelledRules" xml:space="preserve"><value>Administrator approval was cancelled. The network rules were not changed.</value></data>
   <data name="Rules_ErrLineOut" xml:space="preserve"><value>Outgoing, line {0}: {1}</value></data>
@@ -680,8 +680,6 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="Design_Uptime" xml:space="preserve">
     <value>Uptime  {0}</value>
   </data>
-  <data name="Memory_Nav.Content" xml:space="preserve"><value>Memory</value></data>
-  <data name="Memory_Nav.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Memory (Ctrl+7)</value></data>
   <data name="Memory_Title" xml:space="preserve"><value>Memory</value></data>
   <data name="Memory_Subtitle" xml:space="preserve"><value>See what uses your RAM, and what Windows can make available.</value></data>
   <data name="Memory_Cached" xml:space="preserve"><value>Cached</value></data>
@@ -750,4 +748,110 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="SettingsPage_37.Text" xml:space="preserve"><value>Windows cannot switch its standby cache off; it refills it with every file that is read or written. With a limit, the History service checks every 10 seconds and empties the cache when it is larger, so the RAM shows as free. Programs and files you use again are then read from disk instead of RAM, which makes their next start slower. Needs the History service; changing it needs administrator approval.</value></data>
   <data name="Standby_On" xml:space="preserve"><value>On: the History service empties the standby cache whenever it grows above {0}.</value></data>
   <data name="Standby_Off" xml:space="preserve"><value>Off: Windows keeps file contents in the standby cache until programs need the RAM.</value></data>
+  <data name="RulesPage_Nav.Content" xml:space="preserve"><value>Rules</value></data>
+  <data name="RulesPage_Nav.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Rules (Ctrl+7)</value></data>
+  <data name="RulesPage_Title" xml:space="preserve"><value>Rules</value></data>
+  <data name="RulesPage_Summary" xml:space="preserve"><value>{0} apps with rules. The network and memory rules of every app are in one place here.</value></data>
+  <data name="RulesPage_AddApp" xml:space="preserve"><value>Add app</value></data>
+  <data name="RulesPage_ListTitle" xml:space="preserve"><value>Apps with rules</value></data>
+  <data name="RulesPage_Empty" xml:space="preserve"><value>No rules yet. Add an app above, or choose “Rules…” for an app on the Processes or Network page.</value></data>
+  <data name="RulesPage_Choose" xml:space="preserve"><value>Choose an app on the left to see and change its rules.</value></data>
+  <data name="RulesPage_Back" xml:space="preserve"><value>Back to the list</value></data>
+  <data name="RulesPage_Switches" xml:space="preserve"><value>{0} block switches on</value></data>
+  <data name="RulesPage_RuleCount" xml:space="preserve"><value>{0} network rules</value></data>
+  <data name="RulesPage_LimitShort" xml:space="preserve"><value>RAM up to {0}</value></data>
+  <data name="RulesPage_PriorityShort" xml:space="preserve"><value>Priority: {0}</value></data>
+  <data name="RulesPage_NoRulesYet" xml:space="preserve"><value>No rules yet</value></data>
+  <data name="RulesPage_Priority1" xml:space="preserve"><value>Very low (1)</value></data>
+  <data name="RulesPage_Priority2" xml:space="preserve"><value>Low (2)</value></data>
+  <data name="RulesPage_Priority3" xml:space="preserve"><value>Medium (3)</value></data>
+  <data name="RulesPage_Priority4" xml:space="preserve"><value>Below normal (4)</value></data>
+  <data name="RulesPage_Priority5" xml:space="preserve"><value>Normal (5)</value></data>
+  <data name="RulesPage_PriorityDefault" xml:space="preserve"><value>Windows decides</value></data>
+  <data name="RulesPage_DiscardTitle" xml:space="preserve"><value>Discard changes?</value></data>
+  <data name="RulesPage_DiscardText" xml:space="preserve"><value>The rules for {0} have changes that are not saved yet.</value></data>
+  <data name="RulesPage_Discard" xml:space="preserve"><value>Discard</value></data>
+  <data name="RulesPage_PickFilter" xml:space="preserve"><value>Search running apps</value></data>
+  <data name="RulesPage_PickPath" xml:space="preserve"><value>C:\Path\to\Program.exe</value></data>
+  <data name="RulesPage_PickRunning" xml:space="preserve"><value>A running app</value></data>
+  <data name="RulesPage_PickOr" xml:space="preserve"><value>Or the path of a program file</value></data>
+  <data name="RulesPage_PickOpen" xml:space="preserve"><value>Open rules</value></data>
+  <data name="RulesPage_Network" xml:space="preserve"><value>Network</value></data>
+  <data name="RulesPage_BlockAll" xml:space="preserve"><value>Block all network access</value></data>
+  <data name="RulesPage_BlockAllNote" xml:space="preserve"><value>Blocks every connection this app makes and closes its open connections. While this block is on, the switches and rules below do not matter.</value></data>
+  <data name="RulesPage_OrderNote" xml:space="preserve"><value>The first matching rule decides. A connection that no rule matches is allowed.</value></data>
+  <data name="RulesPage_IncomingNote" xml:space="preserve"><value>These rules apply to connections that other devices make to this app. The port is the port on this PC.</value></data>
+  <data name="RulesPage_Memory" xml:space="preserve"><value>Memory</value></data>
+  <data name="RulesPage_Limit" xml:space="preserve"><value>Memory limit</value></data>
+  <data name="RulesPage_LimitUnit" xml:space="preserve"><value>MB</value></data>
+  <data name="RulesPage_LimitNote" xml:space="preserve"><value>Keeps the private memory of all of this app's processes together below the limit, much like memory.high in Linux cgroups. When the app goes over it, the History service takes pages out of the app's RAM, largest processes first. The pages move to the standby cache, and from there to disk when Windows needs the room. The app keeps running and reads the data back when it needs it, so a limit that is too small makes it slow. The limit applies to RAM, not to committed memory.</value></data>
+  <data name="RulesPage_LimitTooLow" xml:space="preserve"><value>The memory limit must be at least {0} MB.</value></data>
+  <data name="RulesPage_Priority" xml:space="preserve"><value>Memory priority</value></data>
+  <data name="RulesPage_PriorityNote" xml:space="preserve"><value>When Windows needs memory, it takes low-priority pages out of the standby cache first. With a low priority for background apps, your important apps keep their data in RAM longer. The priority applies to running and newly started processes.</value></data>
+  <data name="RulesPage_NeedsService" xml:space="preserve"><value>The History service enforces memory rules, and it is not running. Turn it on under Settings &gt; History. Network rules work without it.</value></data>
+  <data name="RulesPage_NotRunning" xml:space="preserve"><value>The app is not running.</value></data>
+  <data name="RulesPage_Usage" xml:space="preserve"><value>{0} processes running · {1} private memory · {2} connections</value></data>
+  <data name="RulesPage_Unsaved" xml:space="preserve"><value>There are unsaved changes.</value></data>
+  <data name="RulesPage_UnsavedUac" xml:space="preserve"><value>There are unsaved changes. Windows asks once for administrator approval when you save.</value></data>
+  <data name="RulesPage_Saving" xml:space="preserve"><value>Saving…</value></data>
+  <data name="RulesPage_Saved" xml:space="preserve"><value>The rules are saved.</value></data>
+  <data name="RulesPage_Removed" xml:space="preserve"><value>All rules of this app were removed.</value></data>
+  <data name="RulesPage_RemoveTitle" xml:space="preserve"><value>Remove all rules for {0}?</value></data>
+  <data name="RulesPage_RemoveText" xml:space="preserve"><value>This lifts the network block and removes this app's network rules and memory rule.</value></data>
+  <data name="RulesPage_ColAction" xml:space="preserve"><value>Action</value></data>
+  <data name="RulesPage_ColTarget" xml:space="preserve"><value>Target</value></data>
+  <data name="RulesPage_ColProtocol" xml:space="preserve"><value>Protocol</value></data>
+  <data name="RulesPage_ColPorts" xml:space="preserve"><value>Ports</value></data>
+  <data name="RulesPage_ColComment" xml:space="preserve"><value>Comment</value></data>
+  <data name="Perf_Title" xml:space="preserve"><value>Performance</value></data>
+  <data name="Perf_SectionCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="Perf_SectionMemory" xml:space="preserve"><value>Memory</value></data>
+  <data name="Perf_SectionTuning" xml:space="preserve"><value>Memory tuning</value></data>
+  <data name="Perf_Processes" xml:space="preserve"><value>Processes</value></data>
+  <data name="Perf_Threads" xml:space="preserve"><value>Threads</value></data>
+  <data name="Perf_Handles" xml:space="preserve"><value>Handles</value></data>
+  <data name="Perf_Uptime" xml:space="preserve"><value>Up for {0}</value></data>
+  <data name="Perf_CpuHistory" xml:space="preserve"><value>CPU usage, last 60 samples</value></data>
+  <data name="Perf_AllByCpu" xml:space="preserve"><value>All processes by CPU</value></data>
+  <data name="Perf_CpuApps" xml:space="preserve"><value>What is using the CPU</value></data>
+  <data name="Perf_CpuAppsNote" xml:space="preserve"><value>Apps with all their processes, sorted by CPU load. Click one to see it on the Processes page.</value></data>
+  <data name="Perf_FreeUp" xml:space="preserve"><value>Free up memory</value></data>
+  <data name="Perf_Trim" xml:space="preserve"><value>Trim app memory</value></data>
+  <data name="Perf_ClearStandby" xml:space="preserve"><value>Clear standby cache</value></data>
+  <data name="Perf_EmptyAll" xml:space="preserve"><value>Empty all working sets</value></data>
+  <data name="Tuning_Intro" xml:space="preserve"><value>Here you set how Windows handles memory, much like sysctl and cgroups on Linux. Every change needs administrator approval.</value></data>
+  <data name="Tuning_CacheTitle" xml:space="preserve"><value>Cache</value></data>
+  <data name="Tuning_Off" xml:space="preserve"><value>Off</value></data>
+  <data name="Tuning_Standby" xml:space="preserve"><value>Keep the standby cache small</value></data>
+  <data name="Tuning_StandbyNote" xml:space="preserve"><value>Windows cannot switch its standby cache off, because it refills it with every file that is read or written. With a limit, the History service checks every 10 seconds and empties the cache when it is larger, so the RAM shows as free. Programs and files you use again are then read from disk instead of RAM, which makes their next start slower.</value></data>
+  <data name="Tuning_CacheTrim" xml:space="preserve"><value>Remove written files from RAM</value></data>
+  <data name="Tuning_CacheTrimNote" xml:space="preserve"><value>Windows keeps everything written to disk in its file cache. The History service removes files of 256 MB or more (game updates, installers, downloads) from RAM 30 seconds after they were written, and again after 5 minutes. Files a running program still uses stay in RAM.</value></data>
+  <data name="Tuning_NoService" xml:space="preserve"><value>The History service is not running. Turn it on under Settings &gt; History so this setting takes effect.</value></data>
+  <data name="Tuning_ManagerTitle" xml:space="preserve"><value>Windows memory manager</value></data>
+  <data name="Tuning_StateUnknown" xml:space="preserve"><value>The current state is unknown, because only an administrator can read it. Run the app as administrator, or turn on the History service, which records it every 10 minutes.</value></data>
+  <data name="Tuning_StateAsOf" xml:space="preserve"><value>As of {0}. The SysMain service is {1}.</value></data>
+  <data name="Tuning_SysMainRunning" xml:space="preserve"><value>running</value></data>
+  <data name="Tuning_SysMainStopped" xml:space="preserve"><value>not running</value></data>
+  <data name="Tuning_Compression" xml:space="preserve"><value>Memory compression</value></data>
+  <data name="Tuning_CompressionNote" xml:space="preserve"><value>Windows compresses rarely used pages in RAM instead of writing them to disk. This saves RAM and costs some CPU time. The “Memory Compression” process shows how much is compressed. When it is off, Windows writes more to disk.</value></data>
+  <data name="Tuning_PageCombining" xml:space="preserve"><value>Page combining</value></data>
+  <data name="Tuning_PageCombiningNote" xml:space="preserve"><value>Windows looks for identical memory pages in different programs and keeps only one copy. This saves some RAM and costs CPU time now and then.</value></data>
+  <data name="Tuning_Prefetch" xml:space="preserve"><value>Application launch prefetching</value></data>
+  <data name="Tuning_PrefetchNote" xml:space="preserve"><value>Windows remembers which files a program reads when it starts and loads them ahead of the next start. Programs start faster, and the standby cache fills up more.</value></data>
+  <data name="Tuning_PreLaunch" xml:space="preserve"><value>Application prelaunch</value></data>
+  <data name="Tuning_PreLaunchNote" xml:space="preserve"><value>Windows starts Store apps you use often in the background ahead of time, so they are ready at once. When it is off, they start only when you open them.</value></data>
+  <data name="Tuning_SysMain" xml:space="preserve"><value>SysMain (formerly Superfetch)</value></data>
+  <data name="Tuning_SysMainNote" xml:space="preserve"><value>This Windows service predicts which programs you will use soon and loads their files into the standby cache ahead of time. When it is off, more RAM stays free and programs start a little slower. Application launch prefetching needs this service.</value></data>
+  <data name="Tuning_RestartNote" xml:space="preserve"><value>Memory compression, page combining and prefetching change completely only after a restart. SysMain stops or starts at once.</value></data>
+  <data name="Tuning_RulesTitle" xml:space="preserve"><value>Memory rules per app</value></data>
+  <data name="Tuning_RulesNote" xml:space="preserve"><value>A memory limit and a memory priority for one app, like a cgroup on Linux. You set them on the Rules page, together with the app's network rules.</value></data>
+  <data name="Tuning_OpenRules" xml:space="preserve"><value>Open rules</value></data>
+  <data name="Tuning_NoRules" xml:space="preserve"><value>There are no memory rules yet.</value></data>
+  <data name="Overview_CpuHint" xml:space="preserve"><value>Shows which apps are using the CPU</value></data>
+  <data name="Overview_MemoryHint" xml:space="preserve"><value>Shows what the memory is used for</value></data>
+  <data name="Overview_NetworkHint" xml:space="preserve"><value>Shows which apps are transferring data</value></data>
+  <data name="SettingsPage_38.Text" xml:space="preserve"><value>The standby limit, removing written files from RAM and the Windows memory manager switches are now under Performance &gt; Memory tuning. Per-app memory limits are on the Rules page.</value></data>
+  <data name="SettingsPage_39.Content" xml:space="preserve"><value>Open memory tuning</value></data>
+  <data name="RulesPage_NoRules" xml:space="preserve"><value>No rules yet. Everything the switches above do not block is allowed.</value></data>
+  <data name="RulesPage_UsageOne" xml:space="preserve"><value>1 process running · {1} private memory · {2} connections</value></data>
 </root>

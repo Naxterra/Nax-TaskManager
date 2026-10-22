@@ -45,7 +45,7 @@ public sealed partial class ProcessesPage : Page
         Details.Tile2.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartMemoryBrush"];
         detailOpen = Controls.DetailPane.ActionButton("\uE838", Loc.Get("Menu_OpenLocation"), OpenLocation_Click);
         detailFirewall = Controls.DetailPane.ActionButton("\uE785", Loc.Get("Firewall_Block"), Firewall_Click);
-        detailRules = Controls.DetailPane.ActionButton("\uE8D7", Loc.Get("Rules_Menu"), (_, _) => { if (CurrentTarget() is { Path.Length: > 0 } target) _ = AppRulesDialog.ShowAsync(XamlRoot, target.Path, target.Name); });
+        detailRules = Controls.DetailPane.ActionButton("\uE8D7", Loc.Get("Rules_Menu"), (_, _) => { if (CurrentTarget() is { Path.Length: > 0 } target) App.Window.ShowRules(target.Path); });
         detailEnd = Controls.DetailPane.ActionButton("\uE711", Loc.Get("Proc_EndTask"), EndTask_Click);
         Controls.DetailPane.MakeDanger(detailEnd);
         detailNetwork = Controls.DetailPane.ActionButton("\uE968", Loc.Get("Workflow_Connections"), (_, _) => ShowNetwork());
@@ -61,6 +61,19 @@ public sealed partial class ProcessesPage : Page
 
     public ProcessesViewModel ViewModel { get; }
     public DetailsViewModel FlatViewModel { get; }
+
+    /// <summary>Shows every app, largest first by <paramref name="column"/> (the Overview's tiles open this).</summary>
+    public void ShowSorted(string column)
+    {
+        selectedKey = null;
+        ViewModel.SortBy(column, descending: true);
+        if (column == ProcessTree.SortCpu) FlatViewModel.SortBy(DetailsViewModel.SortCpu, descending: true);
+        else if (column == ProcessTree.SortMemory) FlatViewModel.SortBy(DetailsViewModel.SortMemory, descending: true);
+        UpdateSortIndicators();
+        UpdateFlatSortIndicators();
+        if (RowList.Items.Count > 0) RowList.ScrollIntoView(RowList.Items[0]);
+        if (FlatList.Items.Count > 0) FlatList.ScrollIntoView(FlatList.Items[0]);
+    }
 
     public void ShowProcess(ProcessSample process)
     {
@@ -477,7 +490,7 @@ public sealed partial class ProcessesPage : Page
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(MenuItem(blocked ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"), FirewallGlyph,
             (_, _) => _ = ToggleFirewallAsync(target.Path), hasPath));
-        menu.Items.Add(MenuItem(Loc.Get("Rules_Menu"), "", (_, _) => _ = AppRulesDialog.ShowAsync(XamlRoot, target.Path, target.Name), hasPath));
+        menu.Items.Add(MenuItem(Loc.Get("Rules_Menu"), "", (_, _) => App.Window.ShowRules(target.Path), hasPath));
         return menu;
     }
 

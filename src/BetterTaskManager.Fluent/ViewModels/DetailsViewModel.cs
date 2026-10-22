@@ -55,6 +55,15 @@ public sealed class DetailsViewModel : ObservableObject
             Format.Count(snapshot.Processes.Count(process => process.Suspended)));
     }
 
+    /// <summary>Sets the order without flipping it; used when another page opens this one sorted.</summary>
+    public void SortBy(string column, bool descending)
+    {
+        settings.DetailsSortColumn = column;
+        settings.DetailsSortDescending = descending;
+        Raise(nameof(SortColumn));
+        Refresh();
+    }
+
     public void Sort(string column)
     {
         if (settings.DetailsSortColumn == column) settings.DetailsSortDescending = !settings.DetailsSortDescending;

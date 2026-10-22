@@ -24,6 +24,8 @@ public static class Program
     internal const string CacheTrimOffArgument = "--cache-trim-off";
     internal const string StandbyLimitArgument = "--standby-limit";
     internal const string PolicyApplyArgument = "--policy-apply";
+    internal const string RulesApplyArgument = "--rules-apply";
+    internal const string MemoryFeatureArgument = "--memory-feature";
 
     private static Mutex? s_singleInstance;
 
@@ -180,6 +182,39 @@ public static class Program
                 return 0;
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                return 1;
+            }
+        }
+
+        // Elevated helper mode: save one app's rules from the Rules page (JSON, Base64) in one step, then exit.
+        if (args.Length == 2 && args[0] == RulesApplyArgument)
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            RuleChange? change;
+            try
+            {
+                change = System.Text.Json.JsonSerializer.Deserialize<RuleChange>(Convert.FromBase64String(args[1]));
+            }
+            catch (Exception ex) when (ex is FormatException or System.Text.Json.JsonException)
+            {
+                return RuleChange.Invalid;
+            }
+            return change?.Apply() ?? RuleChange.Invalid;
+        }
+
+        // Elevated helper mode: switch one of Windows' memory manager features on or off, then exit.
+        if (args.Length == 3 && args[0] == MemoryFeatureArgument && (args[2] == "on" || args[2] == "off"))
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            if (!Core.Native.MemoryManager.Features.Contains(args[1])) return 87;
+            try
+            {
+                Core.Native.MemoryManager.Set(args[1], args[2] == "on");
+                return 0;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or InvalidOperationException
+                or System.Management.ManagementException or System.Runtime.InteropServices.COMException or System.ServiceProcess.TimeoutException)
             {
                 return 1;
             }

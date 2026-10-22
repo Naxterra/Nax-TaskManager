@@ -70,9 +70,6 @@
                         <FontIcon Glyph="&#xE968;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="Memory_Nav" Content="Memory" Tag="Memory" ToolTipService.ToolTip="Memory (Ctrl+7)">
-                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE964;" /></NavigationViewItem.Icon>
-                </NavigationViewItem>
                 <NavigationViewItem x:Uid="MainWindow_10" Content="Disk" Tag="Disk" ToolTipService.ToolTip="Disk (Ctrl+4)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xEDA2;" />
@@ -87,6 +84,9 @@
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE7B5;" />
                     </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="RulesPage_Nav" Content="Rules" Tag="Rules" ToolTipService.ToolTip="Rules (Ctrl+7)">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE8D7;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 

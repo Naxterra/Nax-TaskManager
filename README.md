@@ -7,9 +7,10 @@ Built with WinUI 3 (Fluent design) on .NET 11. Formerly *Better Task Manager*.
 ## Features
 
 - **Overview**: CPU, memory and network at a glance with their last minute, the apps using the most memory and the active network destinations, each one click away from its details.
-- **Memory**: where the RAM goes (programs, Windows pools, cache, loaded program files, standby, free), the biggest apps, and an optional standby limit that keeps the cache small.
+- **Performance**: CPU, processes, threads and handles with the apps using the most CPU; where the RAM goes (programs, Windows pools, cache, loaded program files, standby, free) with the biggest apps; and memory tuning: a standby limit, removal of written files from RAM, and switches for Windows' memory compression, page combining, prefetching, prelaunch and SysMain.
+- **Rules**: one page for every app's rules. Network blocks and rules, plus memory rules like Linux cgroups: a limit for an app's combined private memory, enforced by trimming its processes, and a memory priority.
 - **Processes** — apps and background processes grouped like Task Manager, with icons, CPU, memory, disk I/O, per-app network speed, connection count, GPU, publisher and path. End task (creation-time checked, so a reused PID is never killed by mistake), end process tree, open file location, properties, per-app outbound firewall blocking, and per-app network rules (block the Internet, the LAN, this PC or inbound connections, plus ordered allow and block rules by address, range, scope, protocol and port, enforced as Windows Filtering Platform filters).
-- **Memory that reconciles** — the Memory column is the private working set, the same figure Task Manager shows. The Performance page splits "In use" into apps, kernel, file cache, drivers and shared memory so the parts add up, and offers *Free up memory* (trim app memory, clear standby cache, empty all working sets) as troubleshooting tools.
+- **Memory that reconciles** — the Memory column is the private working set, the same figure Task Manager shows. The Performance page's memory section splits "In use" into apps, kernel, file cache, drivers and loaded program files so the parts add up, and offers *Free up memory* (trim app memory, clear standby cache, empty all working sets) as troubleshooting tools.
 - **Network** — every connection grouped by app with remote host names (from the Windows DNS cache, live DNS events, or reverse DNS), per-connection speed, total data per app, sorting, search and pause.
 - The Processes page has two layouts you switch at the top: **by app** (grouped, resource columns) and **all processes** (flat, one row per process with PID, status, owner, GPU and efficiency mode).
 - Columns on the Processes, Network and Startup apps pages can be resized and moved (drag a header, or right-click it); widths and order are remembered.
@@ -18,7 +19,7 @@ Built with WinUI 3 (Fluent design) on .NET 11. Formerly *Better Task Manager*.
 - **Disk**: like Resource Monitor's Disk tab: every disk with active time, throughput, response time, queue and free space; processes with disk activity (via the History service without administrator rights); and, as administrator, disk activity per file with I/O priority and response time.
 - **History** — an optional background service records connections and traffic per app for 30 days, and lets the app show per-app network speed without administrator rights.
 - **Keeps written files out of RAM**: the History service removes files of 256 MB or more from the Windows file cache shortly after they were written (game updates, installers, downloads), so they do not occupy memory nobody asked for.
-- English and German interface (follows Windows, or chosen in Settings), light and dark theme, Mica, keyboard shortcuts (Ctrl+1 to Ctrl+6 for the pages, Ctrl+F search).
+- English and German interface (follows Windows, or chosen in Settings), light and dark theme, Mica, keyboard shortcuts (Ctrl+0 to Ctrl+7 for the pages, Ctrl+F search).
 
 ## Requirements
 

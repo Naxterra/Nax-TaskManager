@@ -180,6 +180,30 @@ public sealed class MonitorHost : IDisposable
         };
     }
 
+    /// <summary>The memory rules the History service enforces, by executable path.</summary>
+    public Dictionary<string, Core.Native.AppMemoryRule> MemoryRules { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Saves one app's block, network rules and memory rule together (the Rules page). Without elevation this starts
+    /// one elevated copy of the app for all parts, so Windows shows a single UAC prompt.
+    /// </summary>
+    public async Task<string?> ApplyRulesAsync(RuleChange change)
+    {
+        string? error = null;
+        if (IsElevated)
+        {
+            var details = new List<string>();
+            int code = await Task.Run(() => change.Apply(details));
+            if (code != 0) error = details.Count > 0 ? string.Join(Environment.NewLine, details) : Loc.F("Rules_Failed", code);
+        }
+        else
+        {
+            error = await ElevatedHelper.RunAsync(Program.RulesApplyArgument, Convert.ToBase64String(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(change)));
+        }
+        await RefreshFirewallAsync();
+        return error;
+    }
+
     /// <summary>Executable paths with a whole-app block, for the rules overview.</summary>
     public HashSet<string> BlockedPaths { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -205,6 +229,8 @@ public sealed class MonitorHost : IDisposable
             List<AppNetworkPolicy> policies = await Task.Run(() => NetworkPolicyStore.Read());
             Policies = policies.Where(policy => policy.Path.Length > 0).GroupBy(policy => policy.Path, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);
+            MemoryRules = (await Task.Run(Core.Native.MemoryRuleStore.Load)).Where(rule => rule.Path.Length > 0)
+                .GroupBy(rule => rule.Path, StringComparer.OrdinalIgnoreCase).ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);
             FirewallReadAt = DateTime.Now;
             FirewallStateKnown = true;
         }
