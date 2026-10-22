@@ -19,12 +19,17 @@ public static partial class AppIdentityRules
         process.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Programs that run another app's web content: Microsoft Edge WebView2 (WhatsApp, Teams, the Widgets) and
-    /// CefSharp. Their connections, memory and CPU belong to the app that started them, as in Task Manager.
+    /// Programs that draw another app's window with a browser engine: Microsoft Edge WebView2 (WhatsApp, Teams, the
+    /// Widgets), CefSharp, Steam's and Epic's web helpers, Unreal's CEF helper and Qt WebEngine. Their window,
+    /// connections, memory and CPU belong to the app that started them, as in Task Manager.
     /// </summary>
-    public static bool IsEmbeddedHost(ProcessSample process) =>
-        process.ImageName.Equals("msedgewebview2.exe", StringComparison.OrdinalIgnoreCase) ||
-        process.ImageName.Equals("CefSharp.BrowserSubprocess.exe", StringComparison.OrdinalIgnoreCase);
+    private static readonly HashSet<string> EmbeddedHosts = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "msedgewebview2.exe", "CefSharp.BrowserSubprocess.exe", "steamwebhelper.exe", "EpicWebHelper.exe",
+        "UnrealCEFSubProcess.exe", "QtWebEngineProcess.exe"
+    };
+
+    public static bool IsEmbeddedHost(ProcessSample process) => EmbeddedHosts.Contains(process.ImageName);
 
     /// <summary>
     /// The process an embedded host works for: up the parent chain past other hosts to the first program that

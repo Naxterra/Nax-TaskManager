@@ -26,7 +26,10 @@ var reused = P(600, 700, "msedgewebview2.exe", WebView, 50);
 var newerParent = P(700, 1, "Late.exe", @"C:\Late.exe", 60);
 var cef = P(800, 900, "CefSharp.BrowserSubprocess.exe", @"C:\Program Files\DeepL\CefSharp.BrowserSubprocess.exe", 80);
 var deepl = P(900, 1, "DeepL.exe", @"C:\Program Files\DeepL\DeepL.exe", 70);
-var byPid = new[] { whatsapp, browser, renderer, service, serviceWebView, reused, newerParent, cef, deepl }.ToDictionary(p => p.Pid);
+var steam = P(1000, 17208, "steam.exe", @"E:\Steam\steam.exe", 90);
+var steamUi = P(1100, 1000, "steamwebhelper.exe", @"E:\Steam\bin\cef\cef.win64\steamwebhelper.exe", 95);
+var steamRenderer = P(1200, 1100, "steamwebhelper.exe", @"E:\Steam\bin\cef\cef.win64\steamwebhelper.exe", 96);
+var byPid = new[] { whatsapp, browser, renderer, service, serviceWebView, reused, newerParent, cef, deepl, steam, steamUi, steamRenderer }.ToDictionary(p => p.Pid);
 
 Check("a WebView2 child belongs to its app", AppIdentityRules.Owner(browser, byPid) == whatsapp);
 Check("a WebView2 grandchild belongs to the same app", AppIdentityRules.Owner(renderer, byPid) == whatsapp);
@@ -34,6 +37,7 @@ Check("the app itself is its own owner", AppIdentityRules.Owner(whatsapp, byPid)
 Check("a WebView2 started by a service stays its own app", AppIdentityRules.Owner(serviceWebView, byPid) == serviceWebView);
 Check("a parent that started later is a reused PID", AppIdentityRules.Owner(reused, byPid) == reused);
 Check("a CefSharp helper belongs to its app", AppIdentityRules.Owner(cef, byPid) == deepl);
+Check("Steam's web helpers belong to Steam", AppIdentityRules.Owner(steamUi, byPid) == steam && AppIdentityRules.Owner(steamRenderer, byPid) == steam);
 Check("the history key of a helper is the app's", AppIdentityRules.AppKey(AppIdentityRules.Owner(renderer, byPid)) == AppIdentityRules.AppKey(whatsapp));
 
 Console.WriteLine(failures == 0 ? "All checks passed." : $"{failures} check(s) failed.");

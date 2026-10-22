@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.38 - 2026-10-22
+
+- **Steam is an app again.** Steam draws its window with its own browser engine, steamwebhelper.exe, so steam.exe itself has no window and was listed under background processes while "Steam Client WebHelper" showed as a separate app. The web helpers now count toward the program that started them, like WebView2 since alpha.37: Steam shows as one app with all its processes, memory and connections. The same applies to the Epic Games Launcher's web helper, Unreal's CEF helper and Qt WebEngine.
+
 ## 2.0.0-alpha.37 - 2026-10-22
 
 Alignment fixes, and apps built on WebView2 now show their own traffic.
