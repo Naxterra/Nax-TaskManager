@@ -39,6 +39,8 @@ public sealed partial class ProcessesPage : Page
         DiskTile.Caption = Loc.Get("Tile_Disk");
         NetworkTile.Caption = Loc.Get("Tile_Network");
         GpuTile.Caption = Loc.Get("Tile_Gpu");
+        (CpuTile.Tone, MemoryTile.Tone, DiskTile.Tone, NetworkTile.Tone, GpuTile.Tone) = ("Cpu", "Memory", "Disk", "Receive", "Gpu");
+        (Details.Tile1.Tone, Details.Tile2.Tone) = ("Cpu", "Memory");
         Details.Tile1.Caption = "CPU";
         Details.Tile1.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartCpuBrush"];
         Details.Tile2.Caption = Loc.Get("Tile_Memory");

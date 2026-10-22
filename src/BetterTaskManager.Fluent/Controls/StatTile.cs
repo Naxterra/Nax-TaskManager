@@ -14,6 +14,7 @@ public sealed class StatTile : Grid
     private readonly TextBlock detail = new() { FontSize = 11, Margin = new Thickness(0, 3, 0, 0) };
     private readonly TrendChart chart = new() { Compact = true, Height = 25, Margin = new Thickness(0, 8, 0, 0) };
     private readonly Ellipse dot = new() { Width = 6, Height = 6, VerticalAlignment = VerticalAlignment.Center };
+    private Border? wash;
     public StatTile()
     {
         Padding = new Thickness(16, 12, 16, 10);
@@ -27,7 +28,29 @@ public sealed class StatTile : Grid
         caption.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush"); detail.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
     }
     private bool stacked;
-    public bool Stacked { get => stacked; set { stacked = value; Padding = value ? new Thickness(12, 10, 12, 8) : new Thickness(16, 12, 16, 10); this.value.FontSize = value ? 20 : 28; chart.Height = value ? 22 : 25; } }
+    public bool Stacked { get => stacked; set { stacked = value; Padding = value ? new Thickness(12, 10, 12, 8) : new Thickness(16, 12, 16, 10); this.value.FontSize = value ? 20 : 28; chart.Height = value ? 22 : 25; FitWash(); } }
+
+    /// <summary>The tile's area color (see <see cref="Ui"/>): a soft tint from the top left corner behind the content.</summary>
+    public string Tone
+    {
+        set
+        {
+            if (wash is null)
+            {
+                wash = new Border { CornerRadius = new CornerRadius(11), IsHitTestVisible = false };
+                SetRowSpan(wash, 4);
+                Children.Insert(0, wash);
+                FitWash();
+            }
+            wash.SetWash(value);
+        }
+    }
+
+    /// <summary>The tint covers the whole tile, padding included.</summary>
+    private void FitWash()
+    {
+        if (wash is not null) wash.Margin = new Thickness(-Padding.Left, -Padding.Top, -Padding.Right, -Padding.Bottom);
+    }
     public static readonly DependencyProperty CaptionProperty = DependencyProperty.Register(nameof(Caption), typeof(string), typeof(StatTile), new PropertyMetadata("", (d, e) => ((StatTile)d).caption.Text = (string?)e.NewValue ?? ""));
     public static readonly DependencyProperty StrokeProperty = DependencyProperty.Register(nameof(Stroke), typeof(Brush), typeof(StatTile), new PropertyMetadata(null, (d, e) => { var tile = (StatTile)d; tile.chart.Stroke = (Brush?)e.NewValue; tile.dot.Fill = (Brush?)e.NewValue; }));
     public static readonly DependencyProperty SecondStrokeProperty = DependencyProperty.Register(nameof(SecondStroke), typeof(Brush), typeof(StatTile), new PropertyMetadata(null, (d, e) => ((StatTile)d).chart.SecondStroke = (Brush?)e.NewValue));

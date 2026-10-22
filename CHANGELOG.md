@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0-alpha.36 - 2026-10-22
+
+The blocked log, and a more colorful, clearer interface.
+
+- **Blocked connections.** The History service now records every connection a firewall filter dropped, with the reason: the whole-app block, one of the switches (Internet, LAN, this PC, incoming) or the exact rule. Repeats of the same app, remote end and reason within 10 minutes are counted in one entry. Remote host names come from the app's DNS lookups. Drops by other firewalls are recorded for outgoing connections of programs and can be shown with "Other firewalls too". Entries are kept for 30 days like the rest of the history.
+- **Where to see it.** The Rules page has a second section, "Blocked connections", with the time range, a search and the list, newest first. Each row shows the app, the remote end with port and protocol, the reason as a colored chip, how often and when. Clicking a row opens that app's rules. Every app's editor shows what was blocked for it in the last 24 hours under "Recently blocked", right below its network rules. The History page has a "Blocked connections" button.
+- **Colors.** Every area has its own color: CPU teal, memory purple, network cyan, disk green, history blue, startup apps amber and rules rose. The navigation icons, a badge next to every page title, the badges on card titles and a soft tint on the stat tiles use it, in the dark and the light theme.
+- **Clearer at a glance.** The Rules page lists what each app's rules do as colored chips (red for a block, amber for switches, teal for network rules, purple for memory). Empty pages and lists explain what will appear there and offer the next step, for example "Add app".
+- Tested: the service recorded the drops of two curl copies (one fully blocked, one with "Block Internet"), each with the right reason and host name, and nothing for the connection the rule allowed.
+
 ## 2.0.0-alpha.35 - 2026-10-22
 
 Memory tuning, a Rules page, Performance and Memory in one page, and clickable Overview tiles.

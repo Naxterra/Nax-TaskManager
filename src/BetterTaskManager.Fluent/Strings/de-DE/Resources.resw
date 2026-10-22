@@ -754,7 +754,7 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="RulesPage_Summary" xml:space="preserve"><value>{0} Apps mit Regeln. Hier stehen die Netzwerk- und Speicherregeln aller Apps an einem Ort.</value></data>
   <data name="RulesPage_AddApp" xml:space="preserve"><value>App hinzufügen</value></data>
   <data name="RulesPage_ListTitle" xml:space="preserve"><value>Apps mit Regeln</value></data>
-  <data name="RulesPage_Empty" xml:space="preserve"><value>Noch keine Regeln. Fügen Sie oben eine App hinzu, oder wählen Sie unter Prozesse oder Netzwerk bei einer App „Regeln…“.</value></data>
+  <data name="RulesPage_Empty" xml:space="preserve"><value>Fügen Sie oben eine App hinzu, oder wählen Sie unter Prozesse oder Netzwerk bei einer App „Regeln…“.</value></data>
   <data name="RulesPage_Choose" xml:space="preserve"><value>Wählen Sie links eine App, um ihre Regeln zu sehen und zu ändern.</value></data>
   <data name="RulesPage_Back" xml:space="preserve"><value>Zurück zur Liste</value></data>
   <data name="RulesPage_Switches" xml:space="preserve"><value>{0} Sperrschalter an</value></data>
@@ -854,4 +854,45 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="SettingsPage_39.Content" xml:space="preserve"><value>Speicher-Tuning öffnen</value></data>
   <data name="RulesPage_NoRules" xml:space="preserve"><value>Noch keine Regeln. Erlaubt ist alles, was die Schalter oben nicht sperren.</value></data>
   <data name="RulesPage_UsageOne" xml:space="preserve"><value>1 Prozess läuft · {1} privater Arbeitsspeicher · {2} Verbindungen</value></data>
+  <data name="RulesPage_EmptyTitle" xml:space="preserve"><value>Noch keine Regeln</value></data>
+  <data name="RulesPage_ChooseTitle" xml:space="preserve"><value>Regeln für eine App</value></data>
+  <data name="RulesPage_TabRules" xml:space="preserve"><value>Apps und Regeln</value></data>
+  <data name="RulesPage_TabBlocked" xml:space="preserve"><value>Gesperrte Verbindungen</value></data>
+  <data name="RulesPage_Recent" xml:space="preserve"><value>Zuletzt gesperrt</value></data>
+  <data name="RulesPage_RecentAll" xml:space="preserve"><value>Alle anzeigen</value></data>
+  <data name="RulesPage_RecentNone" xml:space="preserve"><value>In den letzten 24 Stunden wurde für diese App nichts gesperrt.</value></data>
+  <data name="RulesPage_RecentNoService" xml:space="preserve"><value>Gesperrte Verbindungen zeichnet der Verlaufsdienst auf. Er läuft gerade nicht.</value></data>
+  <data name="Blocked_Range" xml:space="preserve"><value>Zeitraum</value></data>
+  <data name="Blocked_RangeHour" xml:space="preserve"><value>Letzte Stunde</value></data>
+  <data name="Blocked_RangeDay" xml:space="preserve"><value>Letzte 24 Stunden</value></data>
+  <data name="Blocked_RangeWeek" xml:space="preserve"><value>Letzte 7 Tage</value></data>
+  <data name="Blocked_RangeMonth" xml:space="preserve"><value>Letzte 30 Tage</value></data>
+  <data name="Blocked_Search" xml:space="preserve"><value>App oder Gegenstelle suchen</value></data>
+  <data name="Blocked_Others" xml:space="preserve"><value>Auch andere Firewalls</value></data>
+  <data name="Blocked_Summary" xml:space="preserve"><value>{0} gesperrte Versuche von {1} Apps. Ein Klick auf eine Zeile öffnet die Regeln der App.</value></data>
+  <data name="Blocked_OpenSettings" xml:space="preserve"><value>Einstellungen öffnen</value></data>
+  <data name="Blocked_NoServiceTitle" xml:space="preserve"><value>Der Verlaufsdienst läuft nicht</value></data>
+  <data name="Blocked_NoServiceText" xml:space="preserve"><value>Gesperrte Verbindungen zeichnet der Verlaufsdienst auf, auch wenn dieses Fenster geschlossen ist. Schalten Sie ihn unter Einstellungen &gt; Verlauf ein.</value></data>
+  <data name="Blocked_NoMatchTitle" xml:space="preserve"><value>Keine Treffer</value></data>
+  <data name="Blocked_NoMatchText" xml:space="preserve"><value>Keine gesperrte Verbindung passt zur Suche in diesem Zeitraum.</value></data>
+  <data name="Blocked_NothingTitle" xml:space="preserve"><value>Nichts gesperrt</value></data>
+  <data name="Blocked_NothingText" xml:space="preserve"><value>Hier erscheint jede Verbindung, die eine Ihrer Regeln gesperrt hat, mit der Regel, die es war. In diesem Zeitraum wurde nichts gesperrt.</value></data>
+  <data name="Blocked_Inbound" xml:space="preserve"><value>Eingehend</value></data>
+  <data name="Blocked_Outbound" xml:space="preserve"><value>Ausgehend</value></data>
+  <data name="Blocked_Tip" xml:space="preserve"><value>{0}
+{1}
+Erstmals {2}, zuletzt {3}</value></data>
+  <data name="Blocked_RemoteIn" xml:space="preserve"><value>von {0} an Port {1} {2}</value></data>
+  <data name="Blocked_OtherFirewall" xml:space="preserve"><value>Andere Firewall: {0}</value></data>
+  <data name="Blocked_WholeApp" xml:space="preserve"><value>Ganze App gesperrt</value></data>
+  <data name="Blocked_Internet" xml:space="preserve"><value>Internet gesperrt</value></data>
+  <data name="Blocked_Lan" xml:space="preserve"><value>LAN gesperrt</value></data>
+  <data name="Blocked_Localhost" xml:space="preserve"><value>Dieser PC gesperrt</value></data>
+  <data name="Blocked_InboundSwitch" xml:space="preserve"><value>Eingehende gesperrt</value></data>
+  <data name="Blocked_Rule" xml:space="preserve"><value>Regel {0}</value></data>
+  <data name="Blocked_JustNow" xml:space="preserve"><value>gerade eben</value></data>
+  <data name="Blocked_MinutesAgo" xml:space="preserve"><value>vor {0} Min.</value></data>
+  <data name="HistoryPage_30.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Gesperrte Verbindungen</value></data>
+  <data name="HistoryPage_30.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Verbindungen, die Ihre Regeln oder eine andere Firewall gesperrt haben</value></data>
+  <data name="HistoryPage_31.Text" xml:space="preserve"><value>Gesperrte Verbindungen</value></data>
 </root>

@@ -43,26 +43,27 @@ public sealed partial class OverviewPage : Page
         StatTile[] tiles = [cpu, memory, down, up];
         string[] captions = ["Tile_Cpu", "Tile_Memory", "Tile_Download", "Tile_Upload"], colors = ["ChartCpuBrush", "ChartMemoryBrush", "ChartReceiveBrush", "ChartSendBrush"];
         // Each tile opens what lies behind its number: the apps using the CPU, the RAM breakdown, the busiest connections.
+        string[] tones = ["Cpu", "Memory", "Receive", "Send"];
         string[] hints = ["Overview_CpuHint", "Overview_MemoryHint", "Overview_NetworkHint", "Overview_NetworkHint"];
         Action[] opens = [() => App.Window.ShowProcessesSorted(ViewModels.ProcessTree.SortCpu), () => App.Window.NavigatePage("Memory"), () => App.Window.ShowNetworkBusiest(), () => App.Window.ShowNetworkBusiest()];
         for (int i = 0; i < tiles.Length; i++)
         {
-            tiles[i].Caption = Loc.Get(captions[i]); tiles[i].SetResourceReference(StatTile.StrokeProperty, colors[i]);
+            tiles[i].Caption = Loc.Get(captions[i]); tiles[i].SetResourceReference(StatTile.StrokeProperty, colors[i]); tiles[i].Tone = tones[i];
             metrics.Children.Add(TileButton(tiles[i], Loc.Get(hints[i]), opens[i]));
         }
         root.Children.Add(metrics);
-        var plot = new StackPanel { Spacing = 12 }; plot.Children.Add(Heading(Loc.Get("Design_Activity"), Loc.Get("Design_LastSamples")));
+        var plot = new StackPanel { Spacing = 12 }; plot.Children.Add(Heading(Loc.Get("Design_Activity"), Loc.Get("Design_LastSamples"), "\uE9D9", "Cpu"));
         activity.SetResourceReference(TrendChart.StrokeProperty, "ChartCpuBrush"); activity.SetResourceReference(TrendChart.SecondStrokeProperty, "ChartMemoryBrush"); plot.Children.Add(activity);
         var legend = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 18 }; legend.Children.Add(Legend("CPU", "ChartCpuBrush")); legend.Children.Add(Legend(Loc.Get("Tile_Memory"), "ChartMemoryBrush")); plot.Children.Add(legend);
         activityCard = Card(plot); charts.Children.Add(activityCard);
-        var mem = new StackPanel { Spacing = 6 }; mem.Children.Add(Text(Loc.Get("Design_MemoryFootprint"), 14, strong: true)); mem.Children.Add(memoryValue); mem.Children.Add(memoryDetail);
+        var mem = new StackPanel { Spacing = 6 }; mem.Children.Add(Titled("\uE964", "Memory", Loc.Get("Design_MemoryFootprint"))); mem.Children.Add(memoryValue); mem.Children.Add(memoryDetail);
         memoryBar.SetResourceReference(Control.ForegroundProperty, "ChartMemoryBrush"); mem.Children.Add(memoryBar); mem.Children.Add(Fact(Loc.Get("Design_Available"), availableValue)); mem.Children.Add(Fact(Loc.Get("Design_Committed"), committedValue));
         var memoryLink = new HyperlinkButton { Content = Loc.Get("Memory_Open"), Padding = new Thickness(0), HorizontalAlignment = HorizontalAlignment.Left };
         memoryLink.Click += (_, _) => App.Window.NavigatePage("Memory"); mem.Children.Add(memoryLink);
         memoryCard = Card(mem); charts.Children.Add(memoryCard); root.Children.Add(charts);
-        var appContent = new StackPanel { Spacing = 8 }; appContent.Children.Add(HeadingLink(Loc.Get("Design_ResourceLeaders"), "Processes")); appContent.Children.Add(processCount);
+        var appContent = new StackPanel { Spacing = 8 }; appContent.Children.Add(HeadingLink(Loc.Get("Design_ResourceLeaders"), "Processes", "\uE9F5", "Brand")); appContent.Children.Add(processCount);
         appContent.Children.Add(ColumnLabels(Loc.Get("Design_Application"), "CPU", Loc.Get("Tile_Memory"))); appContent.Children.Add(apps); appsCard = Card(appContent); lists.Children.Add(appsCard);
-        var networkContent = new StackPanel { Spacing = 8 }; networkContent.Children.Add(HeadingLink(Loc.Get("Design_Destinations"), "Network")); networkContent.Children.Add(connectionCount); networkContent.Children.Add(destinations);
+        var networkContent = new StackPanel { Spacing = 8 }; networkContent.Children.Add(HeadingLink(Loc.Get("Design_Destinations"), "Network", "\uE968", "Receive")); networkContent.Children.Add(connectionCount); networkContent.Children.Add(destinations);
         noConnections.Text = Loc.Get("Design_NoConnections"); networkContent.Children.Add(noConnections); networkCard = Card(networkContent); lists.Children.Add(networkCard); root.Children.Add(lists);
         Content = new ScrollViewer { Content = root, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         SizeChanged += (_, e) => Layout(e.NewSize.Width);
@@ -189,10 +190,19 @@ public sealed partial class OverviewPage : Page
 
     private static Ellipse Dot(string brush) { var dot = new Ellipse { Width = 6, Height = 6, VerticalAlignment = VerticalAlignment.Center }; dot.SetResourceReference(Shape.FillProperty, brush); return dot; }
     private static Border Card(UIElement content) { var border = new Border { Child = content, Padding = new Thickness(20), CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1) }; border.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush"); border.SetResourceReference(Border.BorderBrushProperty, "SurfaceStrokeBrush"); return border; }
-    private static Grid Heading(string title, string hint) { var grid = new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); grid.Children.Add(Text(title, 14, strong: true)); var secondary = Text(hint, 11, secondary: true); Grid.SetColumn(secondary, 1); grid.Children.Add(secondary); return grid; }
-    private static Grid HeadingLink(string title, string page)
+    private static Grid Heading(string title, string hint, string glyph, string tone) { var grid = new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); grid.Children.Add(Titled(glyph, tone, title)); var secondary = Text(hint, 11, secondary: true); Grid.SetColumn(secondary, 1); grid.Children.Add(secondary); return grid; }
+
+    /// <summary>A card title with a small colored badge in front.</summary>
+    private static StackPanel Titled(string glyph, string tone, string title)
     {
-        var grid = Heading(title, ""); var button = new Button { Content = new FontIcon { Glyph = "\uE76C", FontSize = 12 }, MinWidth = 0, Padding = new Thickness(8, 4, 8, 4), Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0) }; button.SetResourceReference(Control.ForegroundProperty, "BrandBrush");
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        row.Children.Add(Ui.IconBadge(glyph, tone, 28));
+        row.Children.Add(Text(title, 14, strong: true));
+        return row;
+    }
+    private static Grid HeadingLink(string title, string page, string glyph, string tone)
+    {
+        var grid = Heading(title, "", glyph, tone); var button = new Button { Content = new FontIcon { Glyph = "\uE76C", FontSize = 12 }, MinWidth = 0, Padding = new Thickness(8, 4, 8, 4), Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0) }; button.SetResourceReference(Control.ForegroundProperty, "BrandBrush");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, Loc.Get("Design_Open") + " " + title); button.Click += (_, _) => { App.Window.SetSearch(""); App.Window.NavigatePage(page); }; Grid.SetColumn(button, 1); grid.Children.Add(button); return grid;
     }
     private static UIElement Legend(string label, string brush) { var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 }; panel.Children.Add(Dot(brush)); panel.Children.Add(Text(label, 11, secondary: true)); return panel; }

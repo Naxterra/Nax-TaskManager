@@ -34,6 +34,25 @@ public sealed record ConnectionRecord(
     bool RemoteHostFromOtherApp = false);
 
 /// <summary>
+/// Connections the firewall dropped, grouped: the same app, direction, protocol, remote end and reason within a few
+/// minutes is one record with a count.
+/// </summary>
+public sealed record BlockedRecord(
+    long Id,
+    DateTime FirstSeen,
+    DateTime LastSeen,
+    string AppPath,
+    bool Inbound,
+    int Protocol,
+    string RemoteAddress,
+    string? RemoteHost,
+    int RemotePort,
+    int LocalPort,
+    bool Ours,
+    string Reason,
+    int Count);
+
+/// <summary>
 /// SQLite history of connections and daily per-app traffic. The background service is the only writer; the UI
 /// opens the file read-only. Rollback-journal mode (not WAL) because WAL readers need write access to the -shm
 /// file, and standard users only get read access to the data folder.
@@ -42,10 +61,11 @@ public sealed class HistoryStore : IDisposable
 {
     /// <summary>2: app keys follow <see cref="AppIdentityRules"/> (Store apps by package, service suffixes removed).</summary>
     /// <summary>3: connections record scope (Internet, LAN…) and direction.</summary>
-    private const int SchemaVersion = 4;
+    /// <summary>5: the blocked table (firewall drops with the filter's reason).</summary>
+    private const int SchemaVersion = 5;
 
     private readonly SqliteConnection connection;
-    private SqliteCommand? insertConnection, updateConnection, addUsage;
+    private SqliteCommand? insertConnection, updateConnection, addUsage, insertBlocked, updateBlocked;
 
     public static string DataFolder => BetterTaskManager.Core.DataFolder.Path;
     public static string DefaultPath => Path.Combine(DataFolder, "history.db");
@@ -120,6 +140,22 @@ public sealed class HistoryStore : IDisposable
                 bytes_out INTEGER NOT NULL DEFAULT 0,
                 tunnel INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (day, app_key));
+            CREATE TABLE IF NOT EXISTS blocked (
+                id INTEGER PRIMARY KEY,
+                first_seen INTEGER NOT NULL,
+                last_seen INTEGER NOT NULL,
+                app_path TEXT NOT NULL,
+                inbound INTEGER NOT NULL,
+                protocol INTEGER NOT NULL,
+                remote_address TEXT NOT NULL,
+                remote_host TEXT,
+                remote_port INTEGER NOT NULL,
+                local_port INTEGER NOT NULL,
+                ours INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                count INTEGER NOT NULL);
+            CREATE INDEX IF NOT EXISTS blocked_last_seen ON blocked(last_seen);
+            CREATE INDEX IF NOT EXISTS blocked_app ON blocked(app_path, last_seen);
             """);
         int version = ReadSchemaVersion();
         if (version < 2) RekeyApps();
@@ -242,7 +278,7 @@ public sealed class HistoryStore : IDisposable
     {
         DateTime cutoff = nowUtc - retention;
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM connections WHERE last_seen < $cut; DELETE FROM app_usage WHERE day < $day;";
+        command.CommandText = "DELETE FROM connections WHERE last_seen < $cut; DELETE FROM app_usage WHERE day < $day; DELETE FROM blocked WHERE last_seen < $cut;";
         command.Parameters.AddWithValue("$cut", ToUnixMs(cutoff));
         command.Parameters.AddWithValue("$day", Day(cutoff.ToLocalTime()));
         command.ExecuteNonQuery();
@@ -346,6 +382,68 @@ public sealed class HistoryStore : IDisposable
         return records;
     }
 
+    /// <summary>
+    /// Inserts new drop groups (id 0) and updates the count and last time of known ones, in one transaction. New ids
+    /// are returned in the same order as the groups that had none.
+    /// </summary>
+    public List<long> WriteBlocked(IReadOnlyList<BlockedRecord> groups)
+    {
+        var ids = new List<long>();
+        if (groups.Count == 0) return ids;
+        using SqliteTransaction transaction = connection.BeginTransaction();
+        insertBlocked ??= Prepare("""
+            INSERT INTO blocked (first_seen, last_seen, app_path, inbound, protocol, remote_address, remote_host, remote_port, local_port, ours, reason, count)
+            VALUES ($first, $last, $path, $inbound, $protocol, $raddr, $host, $rport, $lport, $ours, $reason, $count) RETURNING id
+            """, "$first", "$last", "$path", "$inbound", "$protocol", "$raddr", "$host", "$rport", "$lport", "$ours", "$reason", "$count");
+        updateBlocked ??= Prepare("UPDATE blocked SET last_seen = $last, count = $count, remote_host = coalesce($host, remote_host) WHERE id = $id",
+            "$last", "$count", "$host", "$id");
+        insertBlocked.Transaction = updateBlocked.Transaction = transaction;
+        foreach (BlockedRecord group in groups)
+        {
+            object host = (object?)group.RemoteHost ?? DBNull.Value;
+            if (group.Id == 0)
+            {
+                Bind(insertBlocked, ToUnixMs(group.FirstSeen), ToUnixMs(group.LastSeen), group.AppPath, group.Inbound ? 1 : 0, group.Protocol,
+                    group.RemoteAddress, host, group.RemotePort, group.LocalPort, group.Ours ? 1 : 0, group.Reason, group.Count);
+                ids.Add((long)insertBlocked.ExecuteScalar()!);
+            }
+            else
+            {
+                Bind(updateBlocked, ToUnixMs(group.LastSeen), group.Count, host, group.Id);
+                updateBlocked.ExecuteNonQuery();
+            }
+        }
+        transaction.Commit();
+        return ids;
+    }
+
+    /// <summary>Drop groups seen since <paramref name="sinceUtc"/>, newest first; optionally one app's only.</summary>
+    public List<BlockedRecord> ReadBlocked(DateTime sinceUtc, string? appPath, int limit, bool oursOnly = false)
+    {
+        var records = new List<BlockedRecord>();
+        using (SqliteCommand check = connection.CreateCommand())
+        {
+            check.CommandText = "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'blocked'";
+            if (Convert.ToInt64(check.ExecuteScalar(), CultureInfo.InvariantCulture) == 0) return records;
+        }
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, first_seen, last_seen, app_path, inbound, protocol, remote_address, remote_host, remote_port, local_port, ours, reason, count
+            FROM blocked WHERE last_seen >= $since
+            """ + (appPath is null ? "" : " AND app_path = $path COLLATE NOCASE") + (oursOnly ? " AND ours = 1" : "") + " ORDER BY last_seen DESC LIMIT $limit";
+        command.Parameters.AddWithValue("$since", ToUnixMs(sinceUtc));
+        if (appPath is not null) command.Parameters.AddWithValue("$path", appPath);
+        command.Parameters.AddWithValue("$limit", limit);
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            records.Add(new BlockedRecord(reader.GetInt64(0), FromUnixMs(reader.GetInt64(1)), FromUnixMs(reader.GetInt64(2)), reader.GetString(3),
+                reader.GetInt64(4) != 0, (int)reader.GetInt64(5), reader.GetString(6), reader.IsDBNull(7) ? null : reader.GetString(7),
+                (int)reader.GetInt64(8), (int)reader.GetInt64(9), reader.GetInt64(10) != 0, reader.GetString(11), (int)reader.GetInt64(12)));
+        }
+        return records;
+    }
+
     /// <summary>When the service last wrote, or null if it never has.</summary>
     public DateTime? ReadLastWrite()
     {
@@ -395,6 +493,8 @@ public sealed class HistoryStore : IDisposable
         insertConnection?.Dispose();
         updateConnection?.Dispose();
         addUsage?.Dispose();
+        insertBlocked?.Dispose();
+        updateBlocked?.Dispose();
         connection.Dispose();
     }
 }

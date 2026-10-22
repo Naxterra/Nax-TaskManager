@@ -176,6 +176,13 @@ public sealed partial class MainWindow : Window
         if (ContentFrame.Content is RulesPage page) page.ShowApp(path);
     }
 
+    /// <summary>Opens the blocked log on the Rules page.</summary>
+    public void ShowBlockedLog()
+    {
+        Navigate("Rules");
+        if (ContentFrame.Content is RulesPage page) page.ShowBlocked();
+    }
+
     /// <summary>Opens the Processes page with every app, largest first by the given column.</summary>
     public void ShowProcessesSorted(string column)
     {

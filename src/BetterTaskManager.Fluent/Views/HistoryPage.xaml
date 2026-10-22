@@ -21,10 +21,21 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
-                <TextBlock x:Uid="HistoryPage_1" Text="History" Style="{StaticResource PageTitleStyle}" />
-                <TextBlock x:Name="SummaryText" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Style="{StaticResource MutedTextStyle}" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Width="38" Height="38" CornerRadius="11" Background="{ThemeResource BadgeGpuBrush}" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE81C;" FontSize="19" Foreground="{ThemeResource ToneGpuBrush}" />
+                    </Border>
+                    <TextBlock x:Uid="HistoryPage_1" Text="History" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock x:Name="SummaryText" Margin="50,0,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button x:Uid="HistoryPage_30" AutomationProperties.Name="Blocked connections" Click="Blocked_Click" ToolTipService.ToolTip="Connections your rules or another firewall blocked">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE72E;" FontSize="14" Foreground="{ThemeResource ToneBadBrush}" />
+                        <TextBlock x:Uid="HistoryPage_31" Text="Blocked connections" />
+                    </StackPanel>
+                </Button>
                 <ToggleButton x:Uid="HistoryPage_2" x:Name="DnsToggle" Click="DnsToggle_Click" ToolTipService.ToolTip="Show which names each app looked up (recorded by the History service)">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE774;" FontSize="14" />

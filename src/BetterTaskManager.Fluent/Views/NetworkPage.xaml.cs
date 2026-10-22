@@ -35,6 +35,8 @@ public sealed partial class NetworkPage : Page
         DownloadTile.Caption = Loc.Get("Tile_Download");
         UploadTile.Caption = Loc.Get("Tile_Upload");
         ConnectionsTile.Caption = Loc.Get("Tile_Connections");
+        (DownloadTile.Tone, UploadTile.Tone, ConnectionsTile.Tone) = ("Receive", "Send", "Cpu");
+        (Details.Tile1.Tone, Details.Tile2.Tone) = ("Receive", "Send");
         Details.Tile1.Caption = Loc.Get("Tile_Download");
         Details.Tile1.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartReceiveBrush"];
         Details.Tile2.Caption = Loc.Get("Tile_Upload");

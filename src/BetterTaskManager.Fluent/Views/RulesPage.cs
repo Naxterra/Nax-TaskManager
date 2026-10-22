@@ -30,10 +30,13 @@ public sealed partial class RulesPage : Page
 
     private readonly Grid body = new() { ColumnSpacing = 18, RowSpacing = 12 };
     private readonly ListView list = new() { SelectionMode = ListViewSelectionMode.Single, Padding = new Thickness(0, 0, 14, 0) };
-    private readonly TextBlock summary = Text("", 13, secondary: true), listEmpty = Text(Loc.Get("RulesPage_Empty"), 12, secondary: true);
+    private readonly TextBlock summary = Text("", 13, secondary: true);
+    private readonly StackPanel listEmpty = Ui.EmptyState("\uE8D7", "Rose", Loc.Get("RulesPage_EmptyTitle"), Loc.Get("RulesPage_Empty"));
     private readonly Border listCard, editorCard;
     private readonly Grid editorHost = new();
-    private readonly TextBlock placeholder = Text(Loc.Get("RulesPage_Choose"), 14, secondary: true);
+    private readonly SelectorBar sections = new();
+    private readonly Border logCard;
+    private readonly BlockedLogView log;
     private readonly Button back = new() { Content = new FontIcon { Glyph = "", FontSize = 14 }, Padding = new Thickness(8), Visibility = Visibility.Collapsed };
     private Editor? editor;
     private string? pendingPath;
@@ -42,7 +45,8 @@ public sealed partial class RulesPage : Page
     public RulesPage()
     {
         InitializeComponent();
-        var root = new Grid { Padding = new Thickness(28, 20, 28, 20), RowSpacing = 16 };
+        var root = new Grid { Padding = new Thickness(28, 20, 28, 20), RowSpacing = 14 };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
@@ -50,9 +54,12 @@ public sealed partial class RulesPage : Page
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel { Spacing = 4 };
-        var title = Text(Loc.Get("RulesPage_Title"), 30, strong: true);
-        titles.Children.Add(title);
+        var titleRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+        titleRow.Children.Add(Ui.IconBadge("\uE8D7", "Rose", 38));
+        titleRow.Children.Add(Text(Loc.Get("RulesPage_Title"), 30, strong: true));
+        titles.Children.Add(titleRow);
         summary.TextWrapping = TextWrapping.Wrap;
+        summary.Margin = new Thickness(50, 0, 0, 0);
         titles.Children.Add(summary);
         header.Children.Add(titles);
         var add = new Button
@@ -67,22 +74,29 @@ public sealed partial class RulesPage : Page
         header.Children.Add(add);
         root.Children.Add(header);
 
+        // Two sections: the apps and their rules, and the log of what the rules blocked.
+        sections.Items.Add(new SelectorBarItem { Text = Loc.Get("RulesPage_TabRules"), Icon = new FontIcon { Glyph = "\uE8D7" }, Tag = "Rules" });
+        sections.Items.Add(new SelectorBarItem { Text = Loc.Get("RulesPage_TabBlocked"), Icon = new FontIcon { Glyph = "\E72E" }, Tag = "Blocked" });
+        sections.SelectedItem = sections.Items[0];
+        sections.SelectionChanged += (_, _) => ShowSection();
+        Grid.SetRow(sections, 1);
+        root.Children.Add(sections);
+
         var listContent = new Grid { RowSpacing = 8 };
         listContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         listContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         listContent.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         listContent.Children.Add(Text(Loc.Get("RulesPage_ListTitle"), 14, strong: true));
         Grid.SetRow(listEmpty, 1);
-        listEmpty.TextWrapping = TextWrapping.Wrap;
         listContent.Children.Add(listEmpty);
         Grid.SetRow(list, 2);
         listContent.Children.Add(list);
         list.SelectionChanged += List_SelectionChanged;
         listCard = Card(listContent, new Thickness(12, 14, 0, 12));
 
-        placeholder.HorizontalAlignment = HorizontalAlignment.Center;
-        placeholder.TextWrapping = TextWrapping.Wrap;
-        editorHost.Children.Add(placeholder);
+        var addFromPlaceholder = new Button { Content = Loc.Get("RulesPage_AddApp") };
+        addFromPlaceholder.Click += async (_, _) => { if (await PickAppAsync() is { } path) _ = SelectAsync(path); };
+        editorHost.Children.Add(Ui.EmptyState("\uE8D7", "Rose", Loc.Get("RulesPage_ChooseTitle"), Loc.Get("RulesPage_Choose"), addFromPlaceholder));
         editorCard = Card(editorHost, new Thickness(0));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(back, Loc.Get("RulesPage_Back"));
         ToolTipService.SetToolTip(back, Loc.Get("RulesPage_Back"));
@@ -90,8 +104,13 @@ public sealed partial class RulesPage : Page
 
         body.Children.Add(listCard);
         body.Children.Add(editorCard);
-        Grid.SetRow(body, 1);
+        Grid.SetRow(body, 2);
         root.Children.Add(body);
+        log = new BlockedLogView(path => ShowApp(path));
+        logCard = Card(log, new Thickness(20, 16, 6, 12));
+        logCard.Visibility = Visibility.Collapsed;
+        Grid.SetRow(logCard, 2);
+        root.Children.Add(logCard);
         Content = root;
         SizeChanged += (_, args) => Arrange(args.NewSize.Width);
         Loaded += (_, _) =>
@@ -110,8 +129,26 @@ public sealed partial class RulesPage : Page
         };
     }
 
-    /// <summary>Opens one app's rules; from the Processes and Network pages and the Overview.</summary>
-    public void ShowApp(string path) => _ = SelectAsync(path);
+    /// <summary>Opens one app's rules; from the Processes and Network pages, the Overview and the blocked log.</summary>
+    public void ShowApp(string path)
+    {
+        sections.SelectedItem = sections.Items[0];
+        _ = SelectAsync(path);
+    }
+
+    /// <summary>Opens the blocked log, optionally searched for one app.</summary>
+    public void ShowBlocked(string? path = null)
+    {
+        sections.SelectedItem = sections.Items[1];
+        if (path is not null) log.FilterApp(path);
+    }
+
+    private void ShowSection()
+    {
+        bool blocked = Equals(sections.SelectedItem?.Tag, "Blocked");
+        body.Visibility = blocked ? Visibility.Collapsed : Visibility.Visible;
+        logCard.Visibility = blocked ? Visibility.Visible : Visibility.Collapsed;
+    }
 
     private void Arrange(double width)
     {
@@ -149,7 +186,10 @@ public sealed partial class RulesPage : Page
 
     // ===== List =====
 
-    private sealed record Entry(string Path, string Name, string Summary, bool Missing);
+    private sealed record Entry(string Path, string Name, List<(string Text, string Tone)> Chips, bool Missing)
+    {
+        public string Summary => Chips.Count == 0 ? Loc.Get("RulesPage_NoRulesYet") : string.Join(", ", Chips.Select(chip => chip.Text));
+    }
 
     private List<Entry> Collect()
     {
@@ -161,30 +201,30 @@ public sealed partial class RulesPage : Page
             .OrderBy(entry => entry.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 
-    /// <summary>What the app's rules do, in a few words: block, network rules, memory limit and priority.</summary>
-    private static string Describe(string path)
+    /// <summary>What the app's rules do as colored chips: block (red), switches (amber), network rules (teal), memory (purple).</summary>
+    private static List<(string Text, string Tone)> Describe(string path)
     {
-        var parts = new List<string>();
-        if (App.Monitor.BlockedPaths.Contains(path)) parts.Add(Loc.Get("RulesList_Blocked"));
+        var parts = new List<(string, string)>();
+        if (App.Monitor.BlockedPaths.Contains(path)) parts.Add((Loc.Get("RulesList_Blocked"), "Bad"));
         if (App.Monitor.Policies.TryGetValue(path, out AppNetworkPolicy? policy))
         {
             int switches = new[] { policy.BlockInternet, policy.BlockLan, policy.BlockLocalhost, policy.BlockInbound }.Count(on => on);
-            if (switches > 0) parts.Add(Loc.F("RulesPage_Switches", switches));
+            if (switches > 0) parts.Add((Loc.F("RulesPage_Switches", switches), "Warn"));
             int rules = policy.Outgoing.Count + policy.Incoming.Count;
-            if (rules > 0) parts.Add(Loc.F("RulesPage_RuleCount", rules));
+            if (rules > 0) parts.Add((Loc.F("RulesPage_RuleCount", rules), "Receive"));
         }
         if (App.Monitor.MemoryRules.TryGetValue(path, out AppMemoryRule? memory))
         {
-            if (memory.LimitMegabytes is { } mb) parts.Add(Loc.F("RulesPage_LimitShort", Format.Memory(mb * 1048576L)));
-            if (memory.Priority is { } priority) parts.Add(Loc.F("RulesPage_PriorityShort", PriorityName(priority)));
+            if (memory.LimitMegabytes is { } mb) parts.Add((Loc.F("RulesPage_LimitShort", Format.Memory(mb * 1048576L)), "Memory"));
+            if (memory.Priority is { } priority) parts.Add((Loc.F("RulesPage_PriorityShort", PriorityName(priority)), "Memory"));
         }
-        return parts.Count == 0 ? Loc.Get("RulesPage_NoRulesYet") : string.Join(" · ", parts);
+        return parts;
     }
 
     private void RebuildList()
     {
         List<Entry> entries = Collect();
-        int count = entries.Count(entry => entry.Summary != Loc.Get("RulesPage_NoRulesYet"));
+        int count = entries.Count(entry => entry.Chips.Count > 0);
         summary.Text = !App.Monitor.FirewallStateKnown ? Loc.Get("Workflow_PolicyUnknown") : Loc.F("RulesPage_Summary", count);
         listEmpty.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         selecting = true;
@@ -208,11 +248,11 @@ public sealed partial class RulesPage : Page
         row.Children.Add(new Image { Source = IconCache.Get(entry.Path), Width = 24, Height = 24, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 0, 0) });
         var texts = new StackPanel { Spacing = 2 };
         texts.Children.Add(Text(entry.Name, 13, strong: true));
-        var detail = Text(entry.Missing ? Loc.Get("RulesList_Missing") : entry.Summary, 12, secondary: !entry.Missing);
-        if (entry.Missing) detail.Foreground = (Brush)Application.Current.Resources["StateWarnBrush"];
-        detail.TextWrapping = TextWrapping.Wrap;
-        detail.MaxLines = 2;
-        texts.Children.Add(detail);
+        List<(string Text, string Tone)> chips = entry.Missing ? [(Loc.Get("RulesList_Missing"), "Warn")]
+            : entry.Chips.Count > 0 ? entry.Chips : [(Loc.Get("RulesPage_NoRulesYet"), "Idle")];
+        var chipRow = Ui.Chips(chips);
+        chipRow.Margin = new Thickness(0, 3, 0, 0);
+        texts.Children.Add(chipRow);
         Grid.SetColumn(texts, 1);
         row.Children.Add(texts);
         return row;
@@ -406,13 +446,12 @@ public sealed partial class RulesPage : Page
         return toggle;
     }
 
-    private static StackPanel Section(string glyph, string title)
+    /// <summary>A section heading with a colored badge, so the network, memory and blocked parts are told apart at a glance.</summary>
+    private static StackPanel Section(string glyph, string tone, string title)
     {
-        var heading = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(0, 6, 0, 0) };
-        var icon = new FontIcon { Glyph = glyph, FontSize = 16 };
-        icon.SetResourceReference(IconElement.ForegroundProperty, "BrandBrush");
-        heading.Children.Add(icon);
-        heading.Children.Add(Text(title, 16, strong: true));
+        var heading = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Margin = new Thickness(0, 10, 0, 0) };
+        heading.Children.Add(Ui.IconBadge(glyph, tone, 32));
+        heading.Children.Add(Text(title, 17, strong: true));
         return heading;
     }
 
@@ -434,6 +473,8 @@ public sealed partial class RulesPage : Page
         private readonly TextBlock usage = Text("", 12, secondary: true), errors = Note(""), status = Note("");
         private readonly Button save = new() { Content = Loc.Get("Rules_Save") }, discard = new() { Content = Loc.Get("RulesPage_Discard") }, removeAll = new() { Content = Loc.Get("Rules_RemoveAll") };
         private readonly StackPanel networkDetails = new() { Spacing = 14 };
+        private readonly StackPanel recent = new() { Spacing = 4 };
+        private DateTime recentReadAt;
 
         public Editor(RulesPage page, string path)
         {
@@ -471,7 +512,7 @@ public sealed partial class RulesPage : Page
             content.Children.Add(header);
 
             // Network.
-            content.Children.Add(Section("", Loc.Get("RulesPage_Network")));
+            content.Children.Add(Section("", "Receive", Loc.Get("RulesPage_Network")));
             blockAll = Switch(loadedBlocked, Loc.Get("RulesPage_BlockAll"));
             content.Children.Add(SettingRow(Loc.Get("RulesPage_BlockAll"), Loc.Get("RulesPage_BlockAllNote"), blockAll));
             internet = Switch(loadedPolicy.BlockInternet, Loc.Get("Rules_BlockInternet"));
@@ -503,8 +544,20 @@ public sealed partial class RulesPage : Page
             });
             content.Children.Add(networkDetails);
 
+            // What the rules blocked lately: the effect of the rules right under them.
+            var recentHeader = new Grid();
+            recentHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            recentHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            recentHeader.Children.Add(Section("\E72E", "Bad", Loc.Get("RulesPage_Recent")));
+            var all = new HyperlinkButton { Content = Loc.Get("RulesPage_RecentAll"), VerticalAlignment = VerticalAlignment.Bottom };
+            all.Click += (_, _) => page.ShowBlocked(path);
+            Grid.SetColumn(all, 1);
+            recentHeader.Children.Add(all);
+            content.Children.Add(recentHeader);
+            content.Children.Add(recent);
+
             // Memory.
-            content.Children.Add(Section("", Loc.Get("RulesPage_Memory")));
+            content.Children.Add(Section("", "Memory", Loc.Get("RulesPage_Memory")));
             limitOn = Switch(loadedMemory.LimitMegabytes is not null, Loc.Get("RulesPage_Limit"));
             long totalMegabytes = Math.Max(1024, (App.Monitor.Latest?.System.Memory.Total ?? 0) / 1048576);
             limit = new NumberBox
@@ -578,8 +631,25 @@ public sealed partial class RulesPage : Page
 
         private bool HasAnything => loadedBlocked || !loadedPolicy.IsEmpty || !loadedMemory.IsEmpty;
 
+        /// <summary>The app's drops of the last 24 hours (re-read at most every 5 seconds).</summary>
+        private async Task ShowRecentAsync()
+        {
+            if (DateTime.UtcNow - recentReadAt < TimeSpan.FromSeconds(5)) return;
+            recentReadAt = DateTime.UtcNow;
+            string path = Path;
+            List<Core.History.BlockedRecord>? records = await Task.Run(() => BlockedLogView.Read(DateTime.UtcNow.AddDays(-1), path, 6, oursOnly: false));
+            recent.Children.Clear();
+            if (records is null || records.Count == 0)
+            {
+                recent.Children.Add(Note(Loc.Get(records is null ? "RulesPage_RecentNoService" : "RulesPage_RecentNone")));
+                return;
+            }
+            foreach (Core.History.BlockedRecord record in records) recent.Children.Add(BlockedLogView.Row(record, showApp: false, _ => page.ShowBlocked(path)));
+        }
+
         public void ShowUsage(MonitorSnapshot snapshot)
         {
+            _ = ShowRecentAsync();
             List<ProcessSample> processes = snapshot.Processes.Where(p => string.Equals(p.Path, Path, StringComparison.OrdinalIgnoreCase)).ToList();
             if (processes.Count == 0)
             {

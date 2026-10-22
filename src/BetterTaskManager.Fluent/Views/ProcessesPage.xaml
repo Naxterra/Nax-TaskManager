@@ -19,8 +19,13 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
-                <TextBlock x:Uid="ProcessesPage_1" Text="Processes" Style="{StaticResource PageTitleStyle}" />
-                <TextBlock x:Name="SummaryText" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Style="{StaticResource MutedTextStyle}" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Width="38" Height="38" CornerRadius="11" Background="{ThemeResource BadgeCpuBrush}" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE9F5;" FontSize="19" Foreground="{ThemeResource ToneCpuBrush}" />
+                    </Border>
+                    <TextBlock x:Uid="ProcessesPage_1" Text="Processes" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock x:Name="SummaryText" Margin="50,0,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                 <Button x:Uid="ProcessesPage_33" x:Name="EndTaskButton" AutomationProperties.Name="End task" IsEnabled="False" Click="EndTask_Click" MinWidth="120">

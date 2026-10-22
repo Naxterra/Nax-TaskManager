@@ -6,7 +6,12 @@
 
     <ScrollViewer>
         <StackPanel Padding="20,8,20,24" Spacing="6" MaxWidth="900" HorizontalAlignment="Left">
-            <TextBlock x:Uid="SettingsPage_1" Text="Settings" Style="{StaticResource PageTitleStyle}" Margin="0,0,0,10" />
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,10">
+                <Border Width="38" Height="38" CornerRadius="11" Background="{ThemeResource BadgeIdleBrush}" VerticalAlignment="Center">
+                    <FontIcon Glyph="&#xE713;" FontSize="19" Foreground="{ThemeResource ToneIdleBrush}" />
+                </Border>
+                <TextBlock x:Uid="SettingsPage_1" Text="Settings" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center" />
+            </StackPanel>
 
             <Border Style="{StaticResource CardStyle}">
                 <Grid ColumnSpacing="16">

@@ -19,7 +19,7 @@ public sealed class HistoryWindowsService : ServiceBase
     {
         BetterTaskManager.Core.DataFolder.EnsureSecured();
         BootMemoryReport? bootReport = BootMemoryReport.ForThisBoot(Path.Combine(HistoryStore.DataFolder, "boot-memory.txt"), Log);
-        worker = new HistoryWorker(HistoryStore.DefaultPath, "NaxTaskManager-History", Log, publishFeed: true, bootReport, trimCache: true);
+        worker = new HistoryWorker(HistoryStore.DefaultPath, "NaxTaskManager-History", Log, publishFeed: true, bootReport, trimCache: true, recordBlocked: true);
         worker.Start();
         Log("Service started");
     }

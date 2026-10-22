@@ -19,8 +19,13 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
-                <TextBlock x:Uid="NetworkPage_1" Text="Network" Style="{StaticResource PageTitleStyle}" />
-                <TextBlock x:Name="SummaryText" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Style="{StaticResource MutedTextStyle}" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Width="38" Height="38" CornerRadius="11" Background="{ThemeResource BadgeReceiveBrush}" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE968;" FontSize="19" Foreground="{ThemeResource ToneReceiveBrush}" />
+                    </Border>
+                    <TextBlock x:Uid="NetworkPage_1" Text="Network" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock x:Name="SummaryText" Margin="50,0,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                 <Button x:Uid="NetworkPage_25" x:Name="RulesButton" AutomationProperties.Name="Rules" Style="{StaticResource AccentButtonStyle}" IsEnabled="False" Click="Rules_Click" MinWidth="110">

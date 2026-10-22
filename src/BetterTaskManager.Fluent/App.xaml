@@ -79,6 +79,43 @@
                     <SolidColorBrush x:Key="StateIdleBrush" Color="#64748B" />
                     <SolidColorBrush x:Key="StateWarnBrush" Color="#FBBF24" />
                     <SolidColorBrush x:Key="StateBadBrush" Color="#F87171" />
+                    <!-- Tones: one color per area (navigation icons, page badges, chips). Badge is the same color as a soft fill, Wash a fainter one for tile backgrounds. -->
+                    <SolidColorBrush x:Key="ToneBrandBrush" Color="#69DDB6" />
+                    <SolidColorBrush x:Key="BadgeBrandBrush" Color="#2E69DDB6" />
+                    <Color x:Key="WashBrandColor">#1C69DDB6</Color>
+                    <SolidColorBrush x:Key="ToneCpuBrush" Color="#22D3EE" />
+                    <SolidColorBrush x:Key="BadgeCpuBrush" Color="#2E22D3EE" />
+                    <Color x:Key="WashCpuColor">#1C22D3EE</Color>
+                    <SolidColorBrush x:Key="ToneMemoryBrush" Color="#A78BFA" />
+                    <SolidColorBrush x:Key="BadgeMemoryBrush" Color="#2EA78BFA" />
+                    <Color x:Key="WashMemoryColor">#1CA78BFA</Color>
+                    <SolidColorBrush x:Key="ToneReceiveBrush" Color="#2DD4BF" />
+                    <SolidColorBrush x:Key="BadgeReceiveBrush" Color="#2E2DD4BF" />
+                    <Color x:Key="WashReceiveColor">#1C2DD4BF</Color>
+                    <SolidColorBrush x:Key="ToneSendBrush" Color="#C084FC" />
+                    <SolidColorBrush x:Key="BadgeSendBrush" Color="#2EC084FC" />
+                    <Color x:Key="WashSendColor">#1CC084FC</Color>
+                    <SolidColorBrush x:Key="ToneDiskBrush" Color="#34D399" />
+                    <SolidColorBrush x:Key="BadgeDiskBrush" Color="#2E34D399" />
+                    <Color x:Key="WashDiskColor">#1C34D399</Color>
+                    <SolidColorBrush x:Key="ToneGpuBrush" Color="#60A5FA" />
+                    <SolidColorBrush x:Key="BadgeGpuBrush" Color="#2E60A5FA" />
+                    <Color x:Key="WashGpuColor">#1C60A5FA</Color>
+                    <SolidColorBrush x:Key="ToneGoodBrush" Color="#34D399" />
+                    <SolidColorBrush x:Key="BadgeGoodBrush" Color="#2E34D399" />
+                    <Color x:Key="WashGoodColor">#1C34D399</Color>
+                    <SolidColorBrush x:Key="ToneWarnBrush" Color="#FBBF24" />
+                    <SolidColorBrush x:Key="BadgeWarnBrush" Color="#2EFBBF24" />
+                    <Color x:Key="WashWarnColor">#1CFBBF24</Color>
+                    <SolidColorBrush x:Key="ToneBadBrush" Color="#F87171" />
+                    <SolidColorBrush x:Key="BadgeBadBrush" Color="#2EF87171" />
+                    <Color x:Key="WashBadColor">#1CF87171</Color>
+                    <SolidColorBrush x:Key="ToneRoseBrush" Color="#FB7185" />
+                    <SolidColorBrush x:Key="BadgeRoseBrush" Color="#2EFB7185" />
+                    <Color x:Key="WashRoseColor">#1CFB7185</Color>
+                    <SolidColorBrush x:Key="ToneIdleBrush" Color="#94A3B8" />
+                    <SolidColorBrush x:Key="BadgeIdleBrush" Color="#2E94A3B8" />
+                    <Color x:Key="WashIdleColor">#1C94A3B8</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="TextFillColorPrimaryBrush" Color="#172C25" />
@@ -135,6 +172,43 @@
                     <SolidColorBrush x:Key="StateIdleBrush" Color="#94A3B8" />
                     <SolidColorBrush x:Key="StateWarnBrush" Color="#D97706" />
                     <SolidColorBrush x:Key="StateBadBrush" Color="#DC2626" />
+                    <!-- Tones: one color per area (navigation icons, page badges, chips). Badge is the same color as a soft fill, Wash a fainter one for tile backgrounds. -->
+                    <SolidColorBrush x:Key="ToneBrandBrush" Color="#087F61" />
+                    <SolidColorBrush x:Key="BadgeBrandBrush" Color="#1F087F61" />
+                    <Color x:Key="WashBrandColor">#14087F61</Color>
+                    <SolidColorBrush x:Key="ToneCpuBrush" Color="#0891B2" />
+                    <SolidColorBrush x:Key="BadgeCpuBrush" Color="#1F0891B2" />
+                    <Color x:Key="WashCpuColor">#140891B2</Color>
+                    <SolidColorBrush x:Key="ToneMemoryBrush" Color="#7C3AED" />
+                    <SolidColorBrush x:Key="BadgeMemoryBrush" Color="#1F7C3AED" />
+                    <Color x:Key="WashMemoryColor">#147C3AED</Color>
+                    <SolidColorBrush x:Key="ToneReceiveBrush" Color="#0D9488" />
+                    <SolidColorBrush x:Key="BadgeReceiveBrush" Color="#1F0D9488" />
+                    <Color x:Key="WashReceiveColor">#140D9488</Color>
+                    <SolidColorBrush x:Key="ToneSendBrush" Color="#9333EA" />
+                    <SolidColorBrush x:Key="BadgeSendBrush" Color="#1F9333EA" />
+                    <Color x:Key="WashSendColor">#149333EA</Color>
+                    <SolidColorBrush x:Key="ToneDiskBrush" Color="#059669" />
+                    <SolidColorBrush x:Key="BadgeDiskBrush" Color="#1F059669" />
+                    <Color x:Key="WashDiskColor">#14059669</Color>
+                    <SolidColorBrush x:Key="ToneGpuBrush" Color="#2563EB" />
+                    <SolidColorBrush x:Key="BadgeGpuBrush" Color="#1F2563EB" />
+                    <Color x:Key="WashGpuColor">#142563EB</Color>
+                    <SolidColorBrush x:Key="ToneGoodBrush" Color="#059669" />
+                    <SolidColorBrush x:Key="BadgeGoodBrush" Color="#1F059669" />
+                    <Color x:Key="WashGoodColor">#14059669</Color>
+                    <SolidColorBrush x:Key="ToneWarnBrush" Color="#D97706" />
+                    <SolidColorBrush x:Key="BadgeWarnBrush" Color="#1FD97706" />
+                    <Color x:Key="WashWarnColor">#14D97706</Color>
+                    <SolidColorBrush x:Key="ToneBadBrush" Color="#DC2626" />
+                    <SolidColorBrush x:Key="BadgeBadBrush" Color="#1FDC2626" />
+                    <Color x:Key="WashBadColor">#14DC2626</Color>
+                    <SolidColorBrush x:Key="ToneRoseBrush" Color="#E11D48" />
+                    <SolidColorBrush x:Key="BadgeRoseBrush" Color="#1FE11D48" />
+                    <Color x:Key="WashRoseColor">#14E11D48</Color>
+                    <SolidColorBrush x:Key="ToneIdleBrush" Color="#64748B" />
+                    <SolidColorBrush x:Key="BadgeIdleBrush" Color="#1F64748B" />
+                    <Color x:Key="WashIdleColor">#1464748B</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 

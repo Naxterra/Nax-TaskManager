@@ -754,7 +754,7 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="RulesPage_Summary" xml:space="preserve"><value>{0} apps with rules. The network and memory rules of every app are in one place here.</value></data>
   <data name="RulesPage_AddApp" xml:space="preserve"><value>Add app</value></data>
   <data name="RulesPage_ListTitle" xml:space="preserve"><value>Apps with rules</value></data>
-  <data name="RulesPage_Empty" xml:space="preserve"><value>No rules yet. Add an app above, or choose “Rules…” for an app on the Processes or Network page.</value></data>
+  <data name="RulesPage_Empty" xml:space="preserve"><value>Add an app above, or choose “Rules…” for an app on the Processes or Network page.</value></data>
   <data name="RulesPage_Choose" xml:space="preserve"><value>Choose an app on the left to see and change its rules.</value></data>
   <data name="RulesPage_Back" xml:space="preserve"><value>Back to the list</value></data>
   <data name="RulesPage_Switches" xml:space="preserve"><value>{0} block switches on</value></data>
@@ -854,4 +854,45 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="SettingsPage_39.Content" xml:space="preserve"><value>Open memory tuning</value></data>
   <data name="RulesPage_NoRules" xml:space="preserve"><value>No rules yet. Everything the switches above do not block is allowed.</value></data>
   <data name="RulesPage_UsageOne" xml:space="preserve"><value>1 process running · {1} private memory · {2} connections</value></data>
+  <data name="RulesPage_EmptyTitle" xml:space="preserve"><value>No rules yet</value></data>
+  <data name="RulesPage_ChooseTitle" xml:space="preserve"><value>Rules for one app</value></data>
+  <data name="RulesPage_TabRules" xml:space="preserve"><value>Apps and rules</value></data>
+  <data name="RulesPage_TabBlocked" xml:space="preserve"><value>Blocked connections</value></data>
+  <data name="RulesPage_Recent" xml:space="preserve"><value>Recently blocked</value></data>
+  <data name="RulesPage_RecentAll" xml:space="preserve"><value>Show all</value></data>
+  <data name="RulesPage_RecentNone" xml:space="preserve"><value>Nothing was blocked for this app in the last 24 hours.</value></data>
+  <data name="RulesPage_RecentNoService" xml:space="preserve"><value>The History service records blocked connections, and it is not running.</value></data>
+  <data name="Blocked_Range" xml:space="preserve"><value>Time range</value></data>
+  <data name="Blocked_RangeHour" xml:space="preserve"><value>Last hour</value></data>
+  <data name="Blocked_RangeDay" xml:space="preserve"><value>Last 24 hours</value></data>
+  <data name="Blocked_RangeWeek" xml:space="preserve"><value>Last 7 days</value></data>
+  <data name="Blocked_RangeMonth" xml:space="preserve"><value>Last 30 days</value></data>
+  <data name="Blocked_Search" xml:space="preserve"><value>Search app or remote host</value></data>
+  <data name="Blocked_Others" xml:space="preserve"><value>Other firewalls too</value></data>
+  <data name="Blocked_Summary" xml:space="preserve"><value>{0} blocked attempts by {1} apps. Click a row to open the app's rules.</value></data>
+  <data name="Blocked_OpenSettings" xml:space="preserve"><value>Open Settings</value></data>
+  <data name="Blocked_NoServiceTitle" xml:space="preserve"><value>The History service is not running</value></data>
+  <data name="Blocked_NoServiceText" xml:space="preserve"><value>The History service records blocked connections, even while this window is closed. Turn it on under Settings &gt; History.</value></data>
+  <data name="Blocked_NoMatchTitle" xml:space="preserve"><value>No matches</value></data>
+  <data name="Blocked_NoMatchText" xml:space="preserve"><value>No blocked connection matches the search in this time range.</value></data>
+  <data name="Blocked_NothingTitle" xml:space="preserve"><value>Nothing blocked</value></data>
+  <data name="Blocked_NothingText" xml:space="preserve"><value>Every connection one of your rules blocked shows here, with the rule that did it. Nothing was blocked in this time range.</value></data>
+  <data name="Blocked_Inbound" xml:space="preserve"><value>Incoming</value></data>
+  <data name="Blocked_Outbound" xml:space="preserve"><value>Outgoing</value></data>
+  <data name="Blocked_Tip" xml:space="preserve"><value>{0}
+{1}
+First {2}, last {3}</value></data>
+  <data name="Blocked_RemoteIn" xml:space="preserve"><value>from {0} to port {1} {2}</value></data>
+  <data name="Blocked_OtherFirewall" xml:space="preserve"><value>Other firewall: {0}</value></data>
+  <data name="Blocked_WholeApp" xml:space="preserve"><value>Whole app blocked</value></data>
+  <data name="Blocked_Internet" xml:space="preserve"><value>Internet blocked</value></data>
+  <data name="Blocked_Lan" xml:space="preserve"><value>LAN blocked</value></data>
+  <data name="Blocked_Localhost" xml:space="preserve"><value>This PC blocked</value></data>
+  <data name="Blocked_InboundSwitch" xml:space="preserve"><value>Incoming blocked</value></data>
+  <data name="Blocked_Rule" xml:space="preserve"><value>Rule {0}</value></data>
+  <data name="Blocked_JustNow" xml:space="preserve"><value>just now</value></data>
+  <data name="Blocked_MinutesAgo" xml:space="preserve"><value>{0} min ago</value></data>
+  <data name="HistoryPage_30.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Blocked connections</value></data>
+  <data name="HistoryPage_30.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Connections your rules or another firewall blocked</value></data>
+  <data name="HistoryPage_31.Text" xml:space="preserve"><value>Blocked connections</value></data>
 </root>

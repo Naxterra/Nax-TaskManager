@@ -33,7 +33,11 @@ public sealed partial class PerformancePage : Page
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel { Spacing = 5 };
-        titles.Children.Add(Text(Loc.Get("Perf_Title"), 30, true));
+        var titleRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+        titleRow.Children.Add(Ui.IconBadge("\uE9D9", "Memory", 38));
+        titleRow.Children.Add(Text(Loc.Get("Perf_Title"), 30, true));
+        titles.Children.Add(titleRow);
+        stamp.Margin = new Thickness(50, 0, 0, 0);
         titles.Children.Add(stamp);
         header.Children.Add(titles);
         var cleanup = BuildCleanupButton();
@@ -142,16 +146,18 @@ public sealed partial class PerformancePage : Page
         StatTile[] tiles = [cpuTile, processTile, threadTile, handleTile];
         string[] labels = ["Tile_Cpu", "Perf_Processes", "Perf_Threads", "Perf_Handles"];
         string[] brushes = ["ChartCpuBrush", "BrandBrush", "ChartReceiveBrush", "ChartMemoryBrush"];
+        string[] tones = ["Cpu", "Brand", "Receive", "Memory"];
         for (int i = 0; i < tiles.Length; i++)
         {
             tiles[i].Caption = Loc.Get(labels[i]);
+            tiles[i].Tone = tones[i];
             tiles[i].SetResourceReference(StatTile.StrokeProperty, brushes[i]);
             cpuMetrics.Children.Add(tiles[i]);
         }
         panel.Children.Add(cpuMetrics);
 
         var chart = new StackPanel { Spacing = 10 };
-        chart.Children.Add(Text(Loc.Get("Perf_CpuHistory"), 16, true));
+        chart.Children.Add(Titled("\uE9D9", "Cpu", Loc.Get("Perf_CpuHistory")));
         cpuChart.SetResourceReference(TrendChart.StrokeProperty, "ChartCpuBrush");
         chart.Children.Add(cpuChart);
         chart.Children.Add(cpuDetail);
@@ -160,7 +166,7 @@ public sealed partial class PerformancePage : Page
         var leaders = new StackPanel { Spacing = 10 };
         var all = new HyperlinkButton { Content = Loc.Get("Perf_AllByCpu"), Padding = new Thickness(0) };
         all.Click += (_, _) => App.Window.ShowProcessesSorted(ProcessTree.SortCpu);
-        leaders.Children.Add(Heading("Perf_CpuApps", all));
+        leaders.Children.Add(Heading("Perf_CpuApps", all, "\uE9F5", "Cpu"));
         leaders.Children.Add(Text(Loc.Get("Perf_CpuAppsNote"), 12, secondary: true));
         leaders.Children.Add(cpuApps);
         cpuAppsCard = Card(leaders);
@@ -211,16 +217,18 @@ public sealed partial class PerformancePage : Page
         StatTile[] tiles = [used, available, cached, commit];
         string[] labels = ["Mem_InUse", "Design_Available", "Memory_Cached", "Design_Committed"];
         string[] brushes = ["ChartMemoryBrush", "BrandBrush", "ChartReceiveBrush", "ChartCpuBrush"];
+        string[] tones = ["Memory", "Brand", "Receive", "Cpu"];
         for (int i = 0; i < tiles.Length; i++)
         {
             tiles[i].Caption = Loc.Get(labels[i]);
+            tiles[i].Tone = tones[i];
             tiles[i].SetResourceReference(StatTile.StrokeProperty, brushes[i]);
             memoryMetrics.Children.Add(tiles[i]);
         }
         panel.Children.Add(memoryMetrics);
 
         var composition = new StackPanel { Spacing = 12 };
-        composition.Children.Add(Heading("Memory_Physical", total));
+        composition.Children.Add(Heading("Memory_Physical", total, "\uE964", "Memory"));
         composition.Children.Add(Text(Loc.Get("Memory_PhysicalNote"), 12, secondary: true));
         string[] capacityBrushes = ["ChartMemoryBrush", "MemoryModifiedBrush", "BrandBrush"];
         string[] capacityLabels = ["Mem_InUse", "Mem_Modified", "Design_Available"];
@@ -246,7 +254,7 @@ public sealed partial class PerformancePage : Page
         panel.Children.Add(Card(composition));
 
         var accounting = new StackPanel { Spacing = 12 };
-        accounting.Children.Add(Text(Loc.Get("Memory_Accounting"), 16, true));
+        accounting.Children.Add(Titled("\uE9F9", "Memory", Loc.Get("Memory_Accounting")));
         string[] names = ["Mem_Apps", "Memory_PagedPool", "Memory_NonpagedPool", "Mem_Cache", "Mem_Drivers", "Memory_Residual", "Mem_Modified", "Mem_Standby", "Mem_Free"];
         foreach (string name in names)
         {
@@ -272,7 +280,7 @@ public sealed partial class PerformancePage : Page
         var leaders = new StackPanel { Spacing = 10 };
         var showProcesses = new HyperlinkButton { Content = Loc.Get("Memory_AllProcesses"), Padding = new Thickness(0) };
         showProcesses.Click += (_, _) => App.Window.ShowProcessesSorted(ProcessTree.SortMemory);
-        leaders.Children.Add(Heading("Memory_AppsTitle", showProcesses));
+        leaders.Children.Add(Heading("Memory_AppsTitle", showProcesses, "\uE9F5", "Brand"));
         leaders.Children.Add(Text(Loc.Get("Memory_AppsNote"), 12, secondary: true));
         leaders.Children.Add(memoryApps);
         memoryAppsCard = Card(leaders);
@@ -280,7 +288,7 @@ public sealed partial class PerformancePage : Page
         panel.Children.Add(memoryLower);
 
         var explanation = new StackPanel { Spacing = 6 };
-        explanation.Children.Add(Text(Loc.Get("Memory_Why"), 14, true));
+        explanation.Children.Add(Titled("\uE946", "Warn", Loc.Get("Memory_Why")));
         explanation.Children.Add(Text(Loc.Get("Memory_WhyText"), 12, secondary: true));
         panel.Children.Add(Card(explanation));
         return panel;
@@ -480,7 +488,7 @@ public sealed partial class PerformancePage : Page
 
         // The two cache settings the History service applies.
         var cache = new StackPanel { Spacing = 16 };
-        cache.Children.Add(Text(Loc.Get("Tuning_CacheTitle"), 16, true));
+        cache.Children.Add(Titled("\uE81E", "Receive", Loc.Get("Tuning_CacheTitle")));
         foreach ((string tag, string label) in new[] { ("off", Loc.Get("Tuning_Off")), ("512", "512 MB"), ("1024", "1 GB"), ("2048", "2 GB"), ("4096", "4 GB"), ("8192", "8 GB") })
         {
             standbyBox.Items.Add(new ComboBoxItem { Content = label, Tag = tag });
@@ -494,7 +502,7 @@ public sealed partial class PerformancePage : Page
 
         // Windows' own memory manager switches.
         var manager = new StackPanel { Spacing = 16 };
-        manager.Children.Add(Text(Loc.Get("Tuning_ManagerTitle"), 16, true));
+        manager.Children.Add(Titled("\uE713", "Gpu", Loc.Get("Tuning_ManagerTitle")));
         manager.Children.Add(managerState);
         foreach ((string feature, string title, string note) in Switches)
         {
@@ -512,7 +520,7 @@ public sealed partial class PerformancePage : Page
         var rules = new StackPanel { Spacing = 12 };
         var open = new Button { Content = Loc.Get("Tuning_OpenRules") };
         open.Click += (_, _) => App.Window.NavigatePage("Rules");
-        rules.Children.Add(Heading("Tuning_RulesTitle", open));
+        rules.Children.Add(Heading("Tuning_RulesTitle", open, "\uE8D7", "Rose"));
         rules.Children.Add(Note(Loc.Get("Tuning_RulesNote")));
         rules.Children.Add(memoryRules);
         panel.Children.Add(Card(rules));
@@ -691,12 +699,21 @@ public sealed partial class PerformancePage : Page
         return row;
     }
 
-    private static Grid Heading(string label, FrameworkElement right)
+    private static Grid Heading(string label, FrameworkElement right, string glyph, string tone)
     {
         var grid = new Grid { ColumnSpacing = 12 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.Children.Add(Text(Loc.Get(label), 16, true)); Grid.SetColumn(right, 1); grid.Children.Add(right); return grid;
+        grid.Children.Add(Titled(glyph, tone, Loc.Get(label))); Grid.SetColumn(right, 1); grid.Children.Add(right); return grid;
+    }
+
+    /// <summary>A card title with a small colored badge in front.</summary>
+    private static StackPanel Titled(string glyph, string tone, string title)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        row.Children.Add(Ui.IconBadge(glyph, tone, 28));
+        row.Children.Add(Text(title, 16, true));
+        return row;
     }
 
     private static Border Card(UIElement content)

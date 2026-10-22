@@ -20,8 +20,13 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
-                <TextBlock x:Uid="StartupPage_1" Text="Startup apps" Style="{StaticResource PageTitleStyle}" />
-                <TextBlock Text="{x:Bind ViewModel.Summary, Mode=OneWay}" Style="{StaticResource MutedTextStyle}" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Width="38" Height="38" CornerRadius="11" Background="{ThemeResource BadgeWarnBrush}" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE7B5;" FontSize="19" Foreground="{ThemeResource ToneWarnBrush}" />
+                    </Border>
+                    <TextBlock x:Uid="StartupPage_1" Text="Startup apps" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{x:Bind ViewModel.Summary, Mode=OneWay}" Style="{StaticResource MutedTextStyle}" Margin="50,0,0,0" />
             </StackPanel>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <Button x:Name="ToggleButton" Style="{StaticResource AccentButtonStyle}" IsEnabled="False" Click="Toggle_Click" MinWidth="130">

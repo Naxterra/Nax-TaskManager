@@ -274,4 +274,6 @@ public sealed partial class HistoryPage : Page
         menu.Items.Add(location);
         return menu;
     }
+
+    private void Blocked_Click(object sender, RoutedEventArgs e) => App.Window.ShowBlockedLog();
 }
