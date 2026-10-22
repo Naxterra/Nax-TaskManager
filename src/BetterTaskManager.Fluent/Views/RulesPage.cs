@@ -76,7 +76,7 @@ public sealed partial class RulesPage : Page
 
         // Two sections: the apps and their rules, and the log of what the rules blocked.
         sections.Items.Add(new SelectorBarItem { Text = Loc.Get("RulesPage_TabRules"), Icon = new FontIcon { Glyph = "\uE8D7" }, Tag = "Rules" });
-        sections.Items.Add(new SelectorBarItem { Text = Loc.Get("RulesPage_TabBlocked"), Icon = new FontIcon { Glyph = "\E72E" }, Tag = "Blocked" });
+        sections.Items.Add(new SelectorBarItem { Text = Loc.Get("RulesPage_TabBlocked"), Icon = new FontIcon { Glyph = "\uE72E" }, Tag = "Blocked" });
         sections.SelectedItem = sections.Items[0];
         sections.SelectionChanged += (_, _) => ShowSection();
         Grid.SetRow(sections, 1);
@@ -548,7 +548,7 @@ public sealed partial class RulesPage : Page
             var recentHeader = new Grid();
             recentHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             recentHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            recentHeader.Children.Add(Section("\E72E", "Bad", Loc.Get("RulesPage_Recent")));
+            recentHeader.Children.Add(Section("\uE72E", "Bad", Loc.Get("RulesPage_Recent")));
             var all = new HyperlinkButton { Content = Loc.Get("RulesPage_RecentAll"), VerticalAlignment = VerticalAlignment.Bottom };
             all.Click += (_, _) => page.ShowBlocked(path);
             Grid.SetColumn(all, 1);
