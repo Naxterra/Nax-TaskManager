@@ -102,8 +102,8 @@ public sealed partial class OverviewPage : Page
         memoryValue.Text = Format.Gigabytes(system.Memory.InUse); memoryDetail.Text = Loc.F("Design_MemoryTotal", Format.Gigabytes(system.Memory.Total)); memoryBar.Value = system.Memory.LoadPercent;
         availableValue.Text = Format.Gigabytes(system.Memory.Available); committedValue.Text = Format.Gigabytes(system.Memory.CommitTotal) + " / " + Format.Gigabytes(system.Memory.CommitLimit);
         processCount.Text = Loc.Get("Design_SortedMemory");
-        var leaders = snapshot.Processes.Where(p => p.Pid > 0).GroupBy(p => p.Path.Length > 0 ? p.Path : p.ImageName, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new { Process = g.First(), Memory = g.Sum(p => p.PrivateWorkingSet), Cpu = g.Sum(p => p.CpuPercent), Count = g.Count() }).OrderByDescending(g => g.Memory).Take(5);
+        var leaders = snapshot.Processes.Where(p => p.Pid > 0).GroupBy(ViewModels.ProcessTree.GroupKey, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new { Process = g.FirstOrDefault(p => !AppIdentityRules.IsEmbeddedHost(p)) ?? g.First(), Memory = g.Sum(p => p.PrivateWorkingSet), Cpu = g.Sum(p => p.CpuPercent), Count = g.Count() }).OrderByDescending(g => g.Memory).Take(5);
         int appIndex = 0;
         foreach (var app in leaders)
         {

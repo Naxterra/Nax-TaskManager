@@ -294,11 +294,13 @@
             </Style>
 
             <!-- A bar meter behind a number in a table cell: the bar grows from the left, the number stays right. -->
+            <!-- Meters sit under the number like an underline, so a full bar never runs through the digits. -->
             <Style x:Key="MeterBarStyle" TargetType="Rectangle">
-                <Setter Property="RadiusX" Value="3" />
-                <Setter Property="RadiusY" Value="3" />
+                <Setter Property="RadiusX" Value="1.5" />
+                <Setter Property="RadiusY" Value="1.5" />
                 <Setter Property="Height" Value="3" />
-                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Bottom" />
+                <Setter Property="Margin" Value="0,0,0,5" />
                 <Setter Property="MinWidth" Value="0" />
             </Style>
 

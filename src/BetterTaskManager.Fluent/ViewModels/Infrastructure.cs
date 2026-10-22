@@ -295,7 +295,8 @@ public sealed class Meter : ObservableObject
     {
         double fraction = scale <= 0 ? 0 : Math.Clamp(value / scale, 0, 1);
         fraction = Math.Round(fraction, 3);
-        if (fraction > 0 && fraction < 0.02) fraction = 0.02;
+        // Tiny values draw nothing rather than a stray dot at the cell's left edge; the number shows them.
+        if (fraction < 0.015) fraction = 0;
         Bar = new GridLength(fraction, GridUnitType.Star);
         Rest = new GridLength(1 - fraction, GridUnitType.Star);
     }

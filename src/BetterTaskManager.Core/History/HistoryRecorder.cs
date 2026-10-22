@@ -104,11 +104,15 @@ public sealed class HistoryRecorder : IDisposable
         DateTime now = snapshot.Timestamp.ToUniversalTime();
         string today = HistoryStore.Day(snapshot.Timestamp);
 
+        Dictionary<int, ProcessSample> byPid = snapshot.Processes.GroupBy(process => process.Pid).ToDictionary(group => group.Key, group => group.First());
         foreach (ProcessSample process in snapshot.Processes)
         {
             if (!identities.TryGetValue(process.Pid, out var known) || known.App.CreateTime != process.CreateTime)
             {
-                identities[process.Pid] = (AppIdentity.From(process), now);
+                // A WebView2 helper's traffic is recorded for the app that started it; the creation time stays the
+                // helper's own, so a reused PID is still noticed.
+                ProcessSample owner = AppIdentityRules.Owner(process, byPid);
+                identities[process.Pid] = (AppIdentity.From(owner) with { CreateTime = process.CreateTime }, now);
             }
             else
             {

@@ -191,7 +191,7 @@ public sealed partial class PerformancePage : Page
         cpuDetail.Text = Loc.F("Perf_CpuDetail", Format.Count(system.ProcessCount), Format.Count(system.ThreadCount),
             Format.Count(system.HandleCount), Environment.ProcessorCount, Format.Duration(system.Uptime));
         var groups = snapshot.Processes.Where(p => p.Pid > 0).GroupBy(ProcessTree.GroupKey, StringComparer.OrdinalIgnoreCase)
-            .Select(g => (Process: g.First(), Value: g.Sum(p => p.CpuPercent), Count: g.Count()))
+            .Select(g => (Process: g.FirstOrDefault(p => !AppIdentityRules.IsEmbeddedHost(p)) ?? g.First(), Value: g.Sum(p => p.CpuPercent), Count: g.Count()))
             .OrderByDescending(g => g.Value).ThenBy(g => g.Process.DisplayName).Take(8);
         FillApps(cpuApps, groups.Select(g => (g.Process, g.Count, Format.Percent(g.Value))));
     }
@@ -325,7 +325,7 @@ public sealed partial class PerformancePage : Page
         availableNote.Text = m.PageListsAvailable ? Loc.F("Memory_AvailableDifference", Format.Memory(Math.Abs(m.AvailableDifference))) : Loc.Get("Memory_PageListsMissing");
         if (!m.ModifiedAvailable) reconciliation.Text += " " + Loc.Get("Memory_ModifiedMissing");
         var groups = snapshot.Processes.Where(p => p.Pid > 0).GroupBy(ProcessTree.GroupKey, StringComparer.OrdinalIgnoreCase)
-            .Select(g => (Process: g.First(), Bytes: g.Sum(p => p.PrivateWorkingSet), Count: g.Count()))
+            .Select(g => (Process: g.FirstOrDefault(p => !AppIdentityRules.IsEmbeddedHost(p)) ?? g.First(), Bytes: g.Sum(p => p.PrivateWorkingSet), Count: g.Count()))
             .OrderByDescending(g => g.Bytes).ThenBy(g => g.Process.DisplayName).Take(8);
         FillApps(memoryApps, groups.Select(g => (g.Process, g.Count, Format.Memory(g.Bytes))));
     }

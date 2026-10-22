@@ -81,28 +81,28 @@
                 <ColumnDefinition Width="36" />
             </Grid.ColumnDefinitions>
             <Button x:Uid="StartupPage_7" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="StartupPage_8" Text="Name" Margin="28,0,0,0" />
-                    <FontIcon x:Name="SortName" FontSize="10" Glyph="&#xE70E;" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="28,0,0,0">
+                    <TextBlock x:Uid="StartupPage_8" Text="Name" VerticalAlignment="Center" />
+                    <FontIcon x:Name="SortName" FontSize="9" Glyph="&#xE70E;" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
             <Button x:Uid="StartupPage_9" Grid.Column="{x:Bind ViewModel.Layout.PublisherColumn, Mode=OneWay}" Tag="Publisher" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Publisher" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="StartupPage_10" Text="Publisher" />
-                    <FontIcon x:Name="SortPublisher" FontSize="10" Glyph="&#xE70E;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock x:Uid="StartupPage_10" Text="Publisher" VerticalAlignment="Center" />
+                    <FontIcon x:Name="SortPublisher" FontSize="9" Glyph="&#xE70E;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
             </Button>
             <Button x:Uid="StartupPage_11" Grid.Column="{x:Bind ViewModel.Layout.StatusColumn, Mode=OneWay}" Tag="Status" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Status" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="StartupPage_12" Text="Status" />
-                    <FontIcon x:Name="SortStatus" FontSize="10" Glyph="&#xE70E;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock x:Uid="StartupPage_12" Text="Status" VerticalAlignment="Center" />
+                    <FontIcon x:Name="SortStatus" FontSize="9" Glyph="&#xE70E;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
             </Button>
             <Button x:Uid="StartupPage_13" Grid.Column="{x:Bind ViewModel.Layout.ScopeColumn, Mode=OneWay}" Tag="Scope" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Starts for" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="StartupPage_14" Text="Starts for" />
-                    <FontIcon x:Name="SortScope" FontSize="10" Glyph="&#xE70E;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock x:Uid="StartupPage_14" Text="Starts for" VerticalAlignment="Center" />
+                    <FontIcon x:Name="SortScope" FontSize="9" Glyph="&#xE70E;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
             </Button>
             <TextBlock x:Uid="StartupPage_15" Grid.Column="4" Text="Command" Margin="8,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 

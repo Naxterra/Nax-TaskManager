@@ -77,6 +77,14 @@ public static class ProcessTree
             if (!groups.TryGetValue(key, out Group? group)) groups[key] = group = new Group { Key = key };
             group.Members.Add(process);
         }
+        // The app's own process comes first, so the group shows its name and icon rather than the helper's.
+        foreach (Group group in groups.Values)
+        {
+            List<ProcessSample> hosts = group.Members.Where(AppIdentityRules.IsEmbeddedHost).ToList();
+            if (hosts.Count == 0 || hosts.Count == group.Members.Count) continue;
+            group.Members.RemoveAll(AppIdentityRules.IsEmbeddedHost);
+            group.Members.AddRange(hosts);
+        }
 
         string query = search.Trim();
         var visible = new List<(Group Group, List<ProcessSample> Children, bool ForceExpand)>();
@@ -195,10 +203,18 @@ public static class ProcessTree
     }
 
     /// <summary>Processes of one executable form one group; each service host stays separate, like Task Manager.</summary>
+    private static Dictionary<int, ProcessSample> byPid = new();
+
+    /// <summary>Remembers the processes of the newest snapshot, so embedded hosts can be grouped with their app.</summary>
+    internal static void SetSnapshot(MonitorSnapshot snapshot) =>
+        byPid = snapshot.Processes.GroupBy(process => process.Pid).ToDictionary(group => group.Key, group => group.First());
+
+    /// <summary>The app group a process belongs to; a WebView2 or CefSharp helper joins the app that started it.</summary>
     internal static string GroupKey(ProcessSample process)
     {
-        if (process.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase)) return "pid:" + process.Pid;
-        return process.Path.Length > 0 ? process.Path : "name:" + process.ImageName;
+        ProcessSample owner = AppIdentityRules.Owner(process, byPid);
+        if (owner.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase)) return "pid:" + owner.Pid;
+        return owner.Path.Length > 0 ? owner.Path : "name:" + owner.ImageName;
     }
 
     private static string GroupName(List<ProcessSample> members)

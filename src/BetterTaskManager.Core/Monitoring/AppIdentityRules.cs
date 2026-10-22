@@ -18,6 +18,31 @@ public static partial class AppIdentityRules
     public static bool IsServiceHost(ProcessSample process) =>
         process.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Programs that run another app's web content: Microsoft Edge WebView2 (WhatsApp, Teams, the Widgets) and
+    /// CefSharp. Their connections, memory and CPU belong to the app that started them, as in Task Manager.
+    /// </summary>
+    public static bool IsEmbeddedHost(ProcessSample process) =>
+        process.ImageName.Equals("msedgewebview2.exe", StringComparison.OrdinalIgnoreCase) ||
+        process.ImageName.Equals("CefSharp.BrowserSubprocess.exe", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The process an embedded host works for: up the parent chain past other hosts to the first program that
+    /// started before it. Services and the system are not owners; a host they started stays its own app.
+    /// </summary>
+    public static ProcessSample Owner(ProcessSample process, IReadOnlyDictionary<int, ProcessSample> byPid)
+    {
+        ProcessSample current = process;
+        for (int depth = 0; depth < 8 && IsEmbeddedHost(current); depth++)
+        {
+            // The parent must have started first, or the PID belongs to a newer process.
+            if (!byPid.TryGetValue(current.ParentPid, out ProcessSample? parent) || parent.Pid == current.Pid || parent.CreateTime > current.CreateTime) break;
+            if (parent.Pid <= 4 || IsServiceHost(parent) || parent.Path.Length == 0) break;
+            current = parent;
+        }
+        return current;
+    }
+
     /// <summary>Stable key across restarts and updates.</summary>
     public static string AppKey(ProcessSample process)
     {

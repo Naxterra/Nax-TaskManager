@@ -231,6 +231,8 @@ public sealed class NetworkViewModel : ObservableObject
             {
                 ConnectionSample first = group.First();
                 processes.TryGetValue(first.Pid, out ProcessSample? owner);
+                // A WebView2 helper's connections are shown under the app that started it, with its name and icon.
+                if (owner is not null) owner = AppIdentityRules.Owner(owner, processes);
                 string name = owner is null || first.Pid == 0
                     ? (first.Pid == 0 ? Loc.Get("Network_Closing") : "PID " + first.Pid)
                     : Loc.AppName(AppIdentityRules.AppName(owner));
@@ -246,6 +248,7 @@ public sealed class NetworkViewModel : ObservableObject
         if (query.Length == 0 && SelectedAppKey != AllAppsKey && !groups.Any(group => group.Key == SelectedAppKey))
         {
             ProcessSample? selected = snapshot.Processes.FirstOrDefault(p => ProcessTree.GroupKey(p) == SelectedAppKey);
+            if (selected is not null) selected = AppIdentityRules.Owner(selected, processes);
             if (selected is not null)
                 groups.Add((SelectedAppKey, Loc.AppName(AppIdentityRules.AppName(selected)), selected.Path, [], VpnTunnels.IsTunnel(selected)));
         }

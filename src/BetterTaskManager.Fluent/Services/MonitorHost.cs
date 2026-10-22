@@ -129,6 +129,7 @@ public sealed class MonitorHost : IDisposable
         if (snapshot is null) return;
 
         Latest = snapshot;
+        ViewModels.ProcessTree.SetSnapshot(snapshot);
         SystemSample system = snapshot.System;
         if (system.CpuSampled) CpuHistory.Add(system.CpuPercent);
         MemoryHistory.Add(system.Memory.LoadPercent);

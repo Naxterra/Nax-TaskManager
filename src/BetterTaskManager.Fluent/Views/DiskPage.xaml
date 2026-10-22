@@ -125,10 +125,10 @@
                         <TextBlock Grid.Column="{x:Bind Layout.KindColumn, Mode=OneWay}" Text="{x:Bind Kind, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <Grid Grid.Column="{x:Bind Layout.ActiveColumn, Mode=OneWay}" Margin="6,0,10,0">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{x:Bind Active.Bar, Mode=OneWay}" />
                                             <ColumnDefinition Width="{x:Bind Active.Rest, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Active.Bar, Mode=OneWay}" />
                                         </Grid.ColumnDefinitions>
-                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
+                                        <Rectangle Grid.Column="1" Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
                                         <TextBlock Grid.ColumnSpan="2" Text="{x:Bind ActiveText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
                         <TextBlock Grid.Column="{x:Bind Layout.ReadColumn, Mode=OneWay}" Text="{x:Bind ReadText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -172,36 +172,36 @@
                 <ColumnDefinition Width="36" />
             </Grid.ColumnDefinitions>
             <Button x:Uid="DiskPage_15" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_16" Text="Name" Margin="28,0,0,0" />
-                    <FontIcon x:Name="ProcSortName" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="28,0,0,0">
+                    <TextBlock x:Uid="DiskPage_16" Text="Name" VerticalAlignment="Center" />
+                    <FontIcon x:Name="ProcSortName" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_17" Grid.Column="{x:Bind ViewModel.ProcessLayout.PidColumn, Mode=OneWay}" Tag="Pid" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by PID" Click="Header_Click">
-                <Grid>
-                    <TextBlock Text="PID" HorizontalAlignment="Right" />
-                    <FontIcon x:Name="ProcSortPid" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <FontIcon x:Name="ProcSortPid" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock Text="PID" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_18" Grid.Column="{x:Bind ViewModel.ProcessLayout.ReadColumn, Mode=OneWay}" Tag="Read" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Read" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_19" Text="Read" HorizontalAlignment="Right" />
-                    <FontIcon x:Name="ProcSortRead" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <FontIcon x:Name="ProcSortRead" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock x:Uid="DiskPage_19" Text="Read" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_20" Grid.Column="{x:Bind ViewModel.ProcessLayout.WriteColumn, Mode=OneWay}" Tag="Write" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Write" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_21" Text="Write" HorizontalAlignment="Right" />
-                    <FontIcon x:Name="ProcSortWrite" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <FontIcon x:Name="ProcSortWrite" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock x:Uid="DiskPage_21" Text="Write" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_22" Grid.Column="{x:Bind ViewModel.ProcessLayout.TotalColumn, Mode=OneWay}" Tag="Total" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Total" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_23" Text="Total" HorizontalAlignment="Right" />
-                    <FontIcon x:Name="ProcSortTotal" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <FontIcon x:Name="ProcSortTotal" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock x:Uid="DiskPage_23" Text="Total" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
-            <TextBlock x:Uid="DiskPage_24" Grid.Column="5" Text="Path" Margin="10,6,0,0" VerticalAlignment="Center" />
+            <TextBlock x:Uid="DiskPage_24" Grid.Column="5" Text="Path" Margin="10,12,0,0" VerticalAlignment="Center" />
 
             <Thumb Tag="Name" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="ProcessSplitter_DragDelta" />
             <Thumb Tag="Pid" Grid.Column="{x:Bind ViewModel.ProcessLayout.PidColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="ProcessSplitter_DragDelta" />
@@ -247,10 +247,10 @@
                         <TextBlock Grid.Column="{x:Bind Layout.WriteColumn, Mode=OneWay}" Text="{x:Bind WriteText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <Grid Grid.Column="{x:Bind Layout.TotalColumn, Mode=OneWay}" Margin="6,0,10,0">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{x:Bind Total.Bar, Mode=OneWay}" />
                                             <ColumnDefinition Width="{x:Bind Total.Rest, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Total.Bar, Mode=OneWay}" />
                                         </Grid.ColumnDefinitions>
-                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
+                                        <Rectangle Grid.Column="1" Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
                                         <TextBlock Grid.ColumnSpan="2" Text="{x:Bind TotalText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
                         <TextBlock Grid.Column="5" Text="{x:Bind Path, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -275,52 +275,52 @@
                 <ColumnDefinition Width="36" />
             </Grid.ColumnDefinitions>
             <Button x:Uid="DiskPage_25" Tag="Name" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Name" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_26" Text="Name" Margin="28,0,0,0" />
-                    <FontIcon x:Name="FileSortName" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="28,0,0,0">
+                    <TextBlock x:Uid="DiskPage_26" Text="Name" VerticalAlignment="Center" />
+                    <FontIcon x:Name="FileSortName" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_27" Grid.Column="{x:Bind ViewModel.FileLayout.PidColumn, Mode=OneWay}" Tag="Pid" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by PID" Click="Header_Click">
-                <Grid>
-                    <TextBlock Text="PID" HorizontalAlignment="Right" />
-                    <FontIcon x:Name="FileSortPid" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <FontIcon x:Name="FileSortPid" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock Text="PID" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_28" Grid.Column="{x:Bind ViewModel.FileLayout.FileColumn, Mode=OneWay}" Tag="File" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by File" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_29" Text="File" Margin="8,0,0,0" />
-                    <FontIcon x:Name="FileSortFile" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="8,0,0,0">
+                    <TextBlock x:Uid="DiskPage_29" Text="File" VerticalAlignment="Center" />
+                    <FontIcon x:Name="FileSortFile" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_30" Grid.Column="{x:Bind ViewModel.FileLayout.ReadColumn, Mode=OneWay}" Tag="Read" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Read" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_31" Text="Read" HorizontalAlignment="Right" />
-                    <FontIcon x:Name="FileSortRead" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <FontIcon x:Name="FileSortRead" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock x:Uid="DiskPage_31" Text="Read" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_32" Grid.Column="{x:Bind ViewModel.FileLayout.WriteColumn, Mode=OneWay}" Tag="Write" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Write" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_33" Text="Write" HorizontalAlignment="Right" />
-                    <FontIcon x:Name="FileSortWrite" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <FontIcon x:Name="FileSortWrite" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock x:Uid="DiskPage_33" Text="Write" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_34" Grid.Column="{x:Bind ViewModel.FileLayout.TotalColumn, Mode=OneWay}" Tag="Total" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Total" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_35" Text="Total" HorizontalAlignment="Right" />
-                    <FontIcon x:Name="FileSortTotal" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <FontIcon x:Name="FileSortTotal" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock x:Uid="DiskPage_35" Text="Total" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_36" Grid.Column="{x:Bind ViewModel.FileLayout.PriorityColumn, Mode=OneWay}" Tag="Priority" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by I/O priority" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_37" Text="I/O priority" Margin="8,0,0,0" />
-                    <FontIcon x:Name="FileSortPriority" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="8,0,0,0">
+                    <TextBlock x:Uid="DiskPage_37" Text="I/O priority" VerticalAlignment="Center" />
+                    <FontIcon x:Name="FileSortPriority" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
             </Button>
             <Button x:Uid="DiskPage_38" Grid.Column="{x:Bind ViewModel.FileLayout.ResponseColumn, Mode=OneWay}" Tag="Response" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Response time" Click="Header_Click">
-                <Grid>
-                    <TextBlock x:Uid="DiskPage_39" Text="Response time" HorizontalAlignment="Right" />
-                    <FontIcon x:Name="FileSortResponse" FontSize="10" Glyph="&#xE70D;" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" />
-                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <FontIcon x:Name="FileSortResponse" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock x:Uid="DiskPage_39" Text="Response time" VerticalAlignment="Center" />
+                </StackPanel>
             </Button>
 
             <Thumb Tag="Name" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FileSplitter_DragDelta" />
@@ -375,10 +375,10 @@
                         <TextBlock Grid.Column="{x:Bind Layout.WriteColumn, Mode=OneWay}" Text="{x:Bind WriteText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <Grid Grid.Column="{x:Bind Layout.TotalColumn, Mode=OneWay}" Margin="6,0,10,0">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{x:Bind Total.Bar, Mode=OneWay}" />
                                             <ColumnDefinition Width="{x:Bind Total.Rest, Mode=OneWay}" />
+                                            <ColumnDefinition Width="{x:Bind Total.Bar, Mode=OneWay}" />
                                         </Grid.ColumnDefinitions>
-                                        <Rectangle Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
+                                        <Rectangle Grid.Column="1" Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterDiskBrush}" />
                                         <TextBlock Grid.ColumnSpan="2" Text="{x:Bind TotalText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
                         <TextBlock Grid.Column="{x:Bind Layout.PriorityColumn, Mode=OneWay}" Text="{x:Bind Priority, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

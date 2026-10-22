@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0-alpha.37 - 2026-10-22
+
+Alignment fixes, and apps built on WebView2 now show their own traffic.
+
+- **Apps that use WebView2 or CefSharp.** WhatsApp, and other apps that show their window through Microsoft Edge WebView2 or CefSharp, start helper processes that make the connections and use most of the memory. These helpers now count toward the app that started them, as in Task Manager: WhatsApp shows its 8 processes, its memory and its connection on the Processes, Network, Overview and Performance pages, and the History service records their traffic for the app. A helper started by a Windows service stays its own entry. Network rules still apply per program file, so a rule for WhatsApp.Root.exe does not cover the WebView2 helper.
+- **Store app icons.** Apps from the Microsoft Store show their own logo from the app package instead of a generic window icon.
+- **Meters.** The bars in table cells sit under the number like an underline and grow from the right, so a full bar no longer runs through the digits, and tiny values no longer leave a dot at the edge of the cell.
+- **Status icons and sort arrows.** The efficiency mode leaf, the suspended icon and the Blocked badge follow the app name instead of sitting at the far edge of the Name column. Every table header shows its sort arrow next to its label. The Path header on the Disk page lines up with the others.
+
 ## 2.0.0-alpha.36 - 2026-10-22
 
 The blocked log, and a more colorful, clearer interface.
