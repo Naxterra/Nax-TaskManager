@@ -63,6 +63,9 @@ public static class MemoryCleanup
     /// <summary>Trims every working set, including system ones, in one kernel call. Needs administrator rights.</summary>
     public static CleanupResult EmptySystemWorkingSets() => MemoryListCommand(MemoryEmptyWorkingSets, "All working sets emptied.");
 
+    /// <summary>Enables "Profile single process", which reading and changing the memory lists needs.</summary>
+    public static bool EnableProfilePrivilege() => TryEnablePrivilege("SeProfileSingleProcessPrivilege", out _);
+
     private static CleanupResult MemoryListCommand(int command, string success)
     {
         if (!TryEnablePrivilege("SeProfileSingleProcessPrivilege", out int privilegeError))

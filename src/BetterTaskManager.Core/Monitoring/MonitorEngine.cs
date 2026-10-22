@@ -601,29 +601,11 @@ public sealed class MonitorEngine : IDisposable
     private MemoryBreakdown SampleMemory(long processPrivate)
     {
         var status = new Win32.MemoryStatusEx { Length = (uint)System.Runtime.InteropServices.Marshal.SizeOf<Win32.MemoryStatusEx>() };
-        Win32.GlobalMemoryStatusEx(ref status);
+        if (!Win32.GlobalMemoryStatusEx(ref status))
+            throw new System.ComponentModel.Win32Exception(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
         Dictionary<string, long> counters = memoryCounters.Read();
-        long Get(string name) => counters.TryGetValue(name, out long value) ? value : 0;
-
-        long total = (long)status.TotalPhys;
-        long available = (long)status.AvailPhys;
-        long modified = Get("Modified Page List Bytes");
-        return new MemoryBreakdown
-        {
-            Total = total,
-            Available = available,
-            Modified = modified,
-            InUse = Math.Max(0, total - available - modified),
-            Standby = Get("Standby Cache Core Bytes") + Get("Standby Cache Normal Priority Bytes") + Get("Standby Cache Reserve Bytes"),
-            Free = Get("Free & Zero Page List Bytes"),
-            ProcessPrivate = processPrivate,
-            KernelPools = Get("Pool Paged Resident Bytes") + Get("Pool Nonpaged Bytes"),
-            FileCache = Get("System Cache Resident Bytes"),
-            Drivers = Get("System Driver Resident Bytes"),
-            CommitTotal = (long)(status.TotalPageFile - status.AvailPageFile),
-            CommitLimit = (long)status.TotalPageFile,
-            Detailed = counters.Count > 0
-        };
+        return MemoryAccounting.Create((long)status.TotalPhys, (long)status.AvailPhys,
+            (long)(status.TotalPageFile - status.AvailPageFile), (long)status.TotalPageFile, processPrivate, counters);
     }
 
     public void Dispose()

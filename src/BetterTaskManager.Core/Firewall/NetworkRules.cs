@@ -427,12 +427,24 @@ public static class NetworkPolicyStore
     {
         try
         {
-            if (File.Exists(FilePath)) return JsonSerializer.Deserialize<List<AppNetworkPolicy>>(File.ReadAllText(FilePath), Options) ?? [];
+            return Read();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
         }
         return [];
+    }
+
+    /// <summary>Reads policies without turning a corrupt or unreadable configuration into an apparent allow.</summary>
+    public static List<AppNetworkPolicy> Read(string? path = null)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<AppNetworkPolicy>>(File.ReadAllText(path ?? FilePath), Options)
+                ?? throw new JsonException("The policy file does not contain a policy list.");
+        }
+        catch (FileNotFoundException) { return []; }
+        catch (DirectoryNotFoundException) { return []; }
     }
 
     public static AppNetworkPolicy? Find(string path) =>

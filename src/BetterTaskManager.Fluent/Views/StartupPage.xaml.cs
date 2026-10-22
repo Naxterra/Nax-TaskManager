@@ -19,6 +19,8 @@ public sealed partial class StartupPage : Page
     {
         ViewModel = new StartupViewModel(App.Settings);
         InitializeComponent();
+        Loaded += Page_Loaded;
+        Unloaded += Page_Unloaded;
         columnReorder = new ColumnReorder(ColumnHeader, ViewModel.Layout);
     }
 
@@ -26,13 +28,14 @@ public sealed partial class StartupPage : Page
 
     public StartupViewModel ViewModel { get; }
 
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    private void Page_Loaded(object sender, RoutedEventArgs e)
     {
+        App.Monitor.SearchChanged -= OnSearchChanged;
         App.Monitor.SearchChanged += OnSearchChanged;
         _ = ReloadAsync();
     }
 
-    protected override void OnNavigatedFrom(NavigationEventArgs e) => App.Monitor.SearchChanged -= OnSearchChanged;
+    private void Page_Unloaded(object sender, RoutedEventArgs e) => App.Monitor.SearchChanged -= OnSearchChanged;
 
     private void OnSearchChanged()
     {

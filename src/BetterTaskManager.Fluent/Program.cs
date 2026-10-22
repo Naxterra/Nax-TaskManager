@@ -22,6 +22,7 @@ public static class Program
     internal const string UninstallCleanupArgument = "--uninstall-cleanup";
     internal const string CacheTrimOnArgument = "--cache-trim-on";
     internal const string CacheTrimOffArgument = "--cache-trim-off";
+    internal const string StandbyLimitArgument = "--standby-limit";
     internal const string PolicyApplyArgument = "--policy-apply";
 
     private static Mutex? s_singleInstance;
@@ -159,6 +160,23 @@ public static class Program
             try
             {
                 Core.Disk.CacheTrimmer.SetEnabled(args[0] == CacheTrimOnArgument);
+                return 0;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                return 1;
+            }
+        }
+
+        // Elevated helper mode: set the standby limit in megabytes, or "off", for the History service, then exit.
+        if (args.Length == 2 && args[0] == StandbyLimitArgument)
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            int? megabytes = args[1] == "off" ? null : int.TryParse(args[1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int value) ? value : -1;
+            if (megabytes is < 0) return 87;
+            try
+            {
+                Core.Native.StandbyLimiter.SetLimit(megabytes);
                 return 0;
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)

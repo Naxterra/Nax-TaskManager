@@ -264,6 +264,8 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength User => this["User"];
     public GridLength Priority => this["Priority"];
 
+    public double TableWidth => widths.Values.Sum() + 156;
+
     public void Resize(string column, double delta)
     {
         if (!widths.TryGetValue(column, out double width)) return;
@@ -272,6 +274,7 @@ public sealed class ColumnLayout : ObservableObject
         widths[column] = next;
         saved[prefix + column] = next;
         Raise(column);
+        Raise(nameof(TableWidth));
         if (ColumnOf(column) is int position and >= 1 and <= 7) Raise("W" + position);
     }
 }

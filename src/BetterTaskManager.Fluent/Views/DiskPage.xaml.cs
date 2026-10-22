@@ -22,6 +22,8 @@ public sealed partial class DiskPage : Page
     {
         ViewModel = new DiskViewModel(App.Monitor, App.Settings);
         InitializeComponent();
+        Loaded += Page_Loaded;
+        Unloaded += Page_Unloaded;
         _ = new ColumnReorder(StorageHeader, ViewModel.StorageLayout);
         processReorder = new ColumnReorder(ProcessHeader, ViewModel.ProcessLayout);
         fileReorder = new ColumnReorder(FileHeader, ViewModel.FileLayout);
@@ -30,8 +32,10 @@ public sealed partial class DiskPage : Page
 
     public DiskViewModel ViewModel { get; }
 
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    private void Page_Loaded(object sender, RoutedEventArgs e)
     {
+        App.Monitor.Updated -= OnUpdated;
+        App.Monitor.SearchChanged -= Refresh;
         visible = true;
         App.Monitor.Updated += OnUpdated;
         App.Monitor.SearchChanged += Refresh;
@@ -40,7 +44,7 @@ public sealed partial class DiskPage : Page
         Refresh();
     }
 
-    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
         visible = false;
         App.Monitor.Updated -= OnUpdated;

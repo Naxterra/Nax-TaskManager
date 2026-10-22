@@ -57,7 +57,7 @@ public sealed class MemoryCounters : IDisposable
         if (!Available || PdhCollectQueryData(query) != 0) return values;
         foreach (var (name, counter) in counters)
         {
-            if (PdhGetFormattedCounterValue(counter, PdhFormatLarge, out _, out PdhFormattedValue value) == 0 && value.Status == 0)
+            if (PdhGetFormattedCounterValue(counter, PdhFormatLarge, out _, out PdhFormattedValue value) == 0 && value.Status is 0 or 1)
             {
                 values[name] = value.LargeValue;
             }

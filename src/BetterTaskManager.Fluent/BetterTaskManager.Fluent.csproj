@@ -8,7 +8,7 @@
     <AssemblyName>Nax-TaskManager</AssemblyName>
     <Product>Nax-TaskManager</Product>
     <Company>Naxterra</Company>
-    <Version>2.0.0-alpha.33</Version>
+    <Version>2.0.0-alpha.34</Version>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64;ARM64</Platforms>
@@ -63,10 +63,10 @@
 
   <Target Name="CopyGeneratedXamlToPublish" AfterTargets="Publish">
     <ItemGroup>
-      <GeneratedXamlResources Include="$(TargetDir)*.xbf" />
+      <GeneratedXamlResources Include="$(TargetDir)**\*.xbf" />
       <GeneratedPriResources Include="$(TargetDir)$(AssemblyName).pri" Condition="Exists('$(TargetDir)$(AssemblyName).pri')" />
     </ItemGroup>
-    <Copy SourceFiles="@(GeneratedXamlResources)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(GeneratedXamlResources)" DestinationFiles="@(GeneratedXamlResources->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(GeneratedPriResources)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
   </Target>
 </Project>

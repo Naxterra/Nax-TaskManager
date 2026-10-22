@@ -57,6 +57,7 @@ public sealed class MonitorHost : IDisposable
     /// <summary>Per-app network rules by executable path, as stored by the last change.</summary>
     public Dictionary<string, AppNetworkPolicy> Policies { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool FirewallStateKnown { get; private set; }
+    public DateTime? FirewallReadAt { get; private set; }
 
     public string SearchText
     {
@@ -179,15 +180,33 @@ public sealed class MonitorHost : IDisposable
         };
     }
 
+    /// <summary>Executable paths with a whole-app block, for the rules overview.</summary>
+    public HashSet<string> BlockedPaths { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private Task? firewallRefresh;
+
+    /// <summary>
+    /// Re-reads blocks and rules. A call while a read is running waits for it and then reads again, so a change made
+    /// in between is never missed.
+    /// </summary>
     public async Task RefreshFirewallAsync()
+    {
+        if (firewallRefresh is { IsCompleted: false } running) await running;
+        firewallRefresh = RefreshFirewallCoreAsync();
+        await firewallRefresh;
+    }
+
+    private async Task RefreshFirewallCoreAsync()
     {
         try
         {
             BlockRules = await Task.Run(FirewallRules.ReadBlockRuleNames);
-            FirewallStateKnown = true;
-            List<AppNetworkPolicy> policies = await Task.Run(NetworkPolicyStore.Load);
+            BlockedPaths = await Task.Run(WfpBlocker.ReadBlockedPaths);
+            List<AppNetworkPolicy> policies = await Task.Run(() => NetworkPolicyStore.Read());
             Policies = policies.Where(policy => policy.Path.Length > 0).GroupBy(policy => policy.Path, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);
+            FirewallReadAt = DateTime.Now;
+            FirewallStateKnown = true;
         }
         catch (Exception ex)
         {

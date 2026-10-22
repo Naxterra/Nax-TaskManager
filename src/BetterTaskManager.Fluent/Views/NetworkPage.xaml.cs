@@ -1,4 +1,5 @@
 using BetterTaskManager.Core.Monitoring;
+using BetterTaskManager.Core.Firewall;
 using BetterTaskManager.Fluent.Services;
 using BetterTaskManager.Fluent.ViewModels;
 using Microsoft.UI.Xaml;
@@ -16,7 +17,7 @@ namespace BetterTaskManager.Fluent.Views;
 public sealed partial class NetworkPage : Page
 {
     private readonly ColumnReorder columnReorder;
-    private readonly Button detailRules, detailFirewall, detailOpen, detailCopy;
+    private readonly Button detailRules, detailFirewall, detailOpen, detailCopy, detailProcess;
     private string? connectionKey;
     private string? detailKey;
     private string? trafficKey;
@@ -28,6 +29,8 @@ public sealed partial class NetworkPage : Page
     {
         ViewModel = new NetworkViewModel(App.Monitor, App.Settings);
         InitializeComponent();
+        Loaded += Page_Loaded;
+        Unloaded += Page_Unloaded;
         columnReorder = new ColumnReorder(ColumnHeader, ViewModel.Layout);
         DownloadTile.Caption = Loc.Get("Tile_Download");
         UploadTile.Caption = Loc.Get("Tile_Upload");
@@ -40,26 +43,55 @@ public sealed partial class NetworkPage : Page
         detailFirewall = Controls.DetailPane.ActionButton("", Loc.Get("Firewall_Block"), Firewall_Click);
         detailOpen = Controls.DetailPane.ActionButton("", Loc.Get("Menu_OpenLocation"), (_, _) => { if (Selected is { Path.Length: > 0 } slot) ProcessActions.OpenFileLocation(slot.Path); });
         detailCopy = Controls.DetailPane.ActionButton("", Loc.Get("Menu_CopyRemoteAddress"), (_, _) => { if (Selected is { } slot) ProcessActions.CopyText(slot.Remote); });
-        Details.SetActions([detailRules, detailFirewall, detailOpen, detailCopy]);
+        detailProcess = Controls.DetailPane.ActionButton("\uE9F5", Loc.Get("Workflow_Process"), (_, _) => ShowProcess());
+        Details.SetActions([detailProcess, detailRules, detailFirewall, detailOpen, detailCopy]);
         DetailsToggle.IsChecked = App.Settings.ShowDetailsPane;
         Details.Visibility = App.Settings.ShowDetailsPane ? Visibility.Visible : Visibility.Collapsed;
+        SizeChanged += (_, _) => { PageCommands.MaxWidth = Math.Max(180, ActualWidth - 330); UpdateDetails(); };
         TrafficTitle.Text = Loc.Get("Network_TrafficTitle");
         SyncSortBox();
         UpdateSortIndicators();
+        AppList.Loaded += (_, _) => { if (AppList.SelectedItem is { } item) AppList.ScrollIntoView(item); };
     }
 
     public NetworkViewModel ViewModel { get; }
 
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    public void ShowApp(ProcessSample process)
     {
+        ViewModel.SelectedAppKey = ProcessTree.GroupKey(process);
+        ViewModel.EstablishedOnly = false;
+        EstablishedOnlyButton.IsChecked = false;
+        connectionKey = null;
+        Refresh();
+        if (AppList.SelectedItem is { } item) AppList.ScrollIntoView(item);
+    }
+
+    private void ShowProcess()
+    {
+        if (Selected is not { Data: { } row } || App.Monitor.Latest is not { } snapshot) return;
+        ProcessSample? process = row.Kind == RowKind.Child ? snapshot.Processes.FirstOrDefault(p => p.Pid == row.Pid)
+            : snapshot.Processes.FirstOrDefault(p => ProcessTree.GroupKey(p) == row.Key);
+        if (process is not null) App.Window.ShowProcess(process);
+    }
+
+    private void AllRules_Click(object sender, RoutedEventArgs e) => _ = RulesOverviewDialog.ShowAsync(XamlRoot);
+
+    private void Page_Loaded(object sender, RoutedEventArgs e)
+    {
+        // Loaded can arrive twice without Unloaded in between; never subscribe twice.
+        App.Monitor.Updated -= OnUpdated;
+        App.Monitor.SearchChanged -= Refresh;
+        App.Monitor.FirewallChanged -= Refresh;
         App.Monitor.Updated += OnUpdated;
         App.Monitor.SearchChanged += Refresh;
         App.Monitor.FirewallChanged += Refresh;
         PauseButton.IsChecked = App.Monitor.Paused;
         Refresh();
+        // Rules change only through this app, which re-reads them after every change; one read on entry is enough.
+        _ = App.Monitor.RefreshFirewallAsync();
     }
 
-    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
         App.Monitor.Updated -= OnUpdated;
         App.Monitor.SearchChanged -= Refresh;
@@ -70,15 +102,21 @@ public sealed partial class NetworkPage : Page
 
     private void Refresh()
     {
-        ViewModel.Refresh();
-        SummaryText.Text = ViewModel.Summary;
-        UpdateTiles();
         restoringSelection = true;
         try
         {
+            // Applying slots can raise SelectionChanged; guard the collection update itself too.
+            ViewModel.Refresh();
+            SummaryText.Text = ViewModel.Summary;
+            UpdateTiles();
             // Slots are reused, so both selections are restored by key after every refresh.
             int appIndex = IndexOf(ViewModel.Apps, ViewModel.SelectedAppKey);
-            if (appIndex < 0) appIndex = 0;
+            if (appIndex < 0)
+            {
+                ViewModel.SelectedAppKey = NetworkViewModel.AllAppsKey;
+                ViewModel.Refresh();
+                appIndex = 0;
+            }
             if (AppList.SelectedIndex != appIndex) AppList.SelectedIndex = appIndex;
             int index = connectionKey is null ? -1 : IndexOf(ViewModel.Connections, connectionKey);
             if (ConnectionList.SelectedIndex != index) ConnectionList.SelectedIndex = index;
@@ -91,6 +129,7 @@ public sealed partial class NetworkPage : Page
         UpdateSelectedApp();
         UpdateCommands();
         UpdateDetails();
+        UpdatePolicy();
     }
 
     private static int IndexOf(SlotCollection<NetworkSlot, (NetworkRowData, Func<string, NetworkAccess>)> rows, string key)
@@ -124,6 +163,7 @@ public sealed partial class NetworkPage : Page
         connectionKey = (ConnectionList.SelectedItem as NetworkSlot)?.Key;
         UpdateCommands();
         UpdateDetails();
+        UpdatePolicy();
     }
 
     /// <summary>The strip above the connections: whose connections these are, and their traffic chart below.</summary>
@@ -161,6 +201,7 @@ public sealed partial class NetworkPage : Page
     /// <summary>The card on the right: the selected connection, or the selected app with its traffic history.</summary>
     private void UpdateDetails()
     {
+        Details.Visibility = App.Settings.ShowDetailsPane && Selected is { } selection && selection.Key != NetworkViewModel.AllAppsKey && ActualWidth >= 1250 ? Visibility.Visible : Visibility.Collapsed;
         if (Details.Visibility == Visibility.Collapsed) return;
         if (Selected is not { Data: { } row } slot)
         {
@@ -192,7 +233,8 @@ public sealed partial class NetworkPage : Page
             if (hasPath)
             {
                 NetworkAccess access = App.Monitor.AccessOf(slot.Path);
-                Details.Fact(Loc.Get("Details_Access"), access switch { NetworkAccess.Blocked => Loc.Get("Details_AccessBlocked"), NetworkAccess.Rules => Loc.Get("Details_AccessRules"), _ => Loc.Get("Details_AccessOpen") });
+                Details.Fact(Loc.Get("Details_Access"), !App.Monitor.FirewallStateKnown ? Loc.Get("Workflow_PolicyUnknown")
+                    : access switch { NetworkAccess.Blocked => Loc.Get("Workflow_OutboundBlocked"), NetworkAccess.Rules => Loc.Get("Details_AccessRules"), _ => Loc.Get("Workflow_DefaultPolicy") });
                 Details.Fact(Loc.Get("Details_Path"), slot.Path, copyable: true);
             }
         }
@@ -207,10 +249,54 @@ public sealed partial class NetworkPage : Page
             Details.Fact("PID", row.Pid.ToString(System.Globalization.CultureInfo.CurrentCulture));
             if (hasPath) Details.Fact(Loc.Get("Details_Path"), slot.Path, copyable: true);
         }
+        if (!group)
+        {
+            Details.Fact(Loc.Get("Workflow_Policy"), DescribePolicy(row));
+            int sourceLine = row.RemoteDetail.IndexOf('\n');
+            if (sourceLine >= 0) Details.Fact(Loc.Get("Workflow_NameSource"), row.RemoteDetail[(sourceLine + 1)..].Trim());
+        }
         Details.EndFacts();
         detailRules.IsEnabled = detailFirewall.IsEnabled = detailOpen.IsEnabled = hasPath;
+        detailProcess.IsEnabled = row.Key != NetworkViewModel.AllAppsKey;
         detailCopy.Visibility = group ? Visibility.Collapsed : Visibility.Visible;
         Controls.DetailPane.SetActionText(detailFirewall, hasPath && App.Monitor.IsBlocked(slot.Path) ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"));
+    }
+
+    private string DescribePolicy(NetworkRowData row)
+    {
+        if (!App.Monitor.FirewallStateKnown) return Loc.Get("Workflow_PolicyUnknown");
+        if (row.Path.Length == 0) return Loc.Get("Workflow_NoIdentity");
+        if (row.Source is not { } source)
+            return App.Monitor.IsBlocked(row.Path) ? Loc.Get("Workflow_OutboundBlocked")
+                : App.Monitor.HasRules(row.Path) ? Loc.Get("Workflow_CustomRules") : Loc.Get("Workflow_DefaultPolicy");
+        App.Monitor.Policies.TryGetValue(row.Path, out AppNetworkPolicy? policy);
+        PolicyExplanation result = ConnectionPolicy.Explain(source, App.Monitor.IsBlocked(row.Path), policy);
+        if (result.Outcome == PolicyOutcome.Unknown) return Loc.Get("Workflow_UnknownPeer");
+        if (result.Outcome == PolicyOutcome.NotApplicable) return Loc.Get("Workflow_Listener");
+        if (result.Outcome == PolicyOutcome.Allowed)
+            return result.Rule.Length > 0 ? Loc.F("Workflow_AllowedRule", result.Rule) : Loc.Get("Workflow_DefaultPolicy");
+        string reason = result.Reason switch
+        {
+            PolicyReason.WholeApp => Loc.Get("Workflow_OutboundBlocked"),
+            PolicyReason.BlockInbound => Loc.Get("Workflow_InboundBlocked"),
+            PolicyReason.BlockInternet => Loc.Get("Workflow_InternetBlocked"),
+            PolicyReason.BlockLan => Loc.Get("Workflow_LanBlocked"),
+            PolicyReason.BlockLocalhost => Loc.Get("Workflow_LocalBlocked"),
+            _ => result.Reason.StartsWith(PolicyReason.RulePrefix) ? result.Reason[PolicyReason.RulePrefix.Length..] : result.Reason
+        };
+        return Loc.F("Workflow_BlockedRule", reason);
+    }
+
+    private void UpdatePolicy()
+    {
+        if (Selected?.Data is not { } row || row.Key == NetworkViewModel.AllAppsKey)
+        {
+            SelectedPolicy.Text = Loc.Get("Workflow_SelectPolicy");
+            return;
+        }
+        SelectedPolicy.Text = Loc.Get("Workflow_Policy") + ": " + DescribePolicy(row);
+        string readAt = App.Monitor.FirewallReadAt?.ToString("T") ?? Loc.Get("Memory_Unavailable");
+        ToolTipService.SetToolTip(SelectedPolicy, Loc.F("Workflow_PolicyNote", readAt));
     }
 
     /// <summary>The strip under the title: throughput and connection count with the last minute as sparklines.</summary>
@@ -329,6 +415,9 @@ public sealed partial class NetworkPage : Page
         bool blocked = hasPath && App.Monitor.IsBlocked(slot.Path);
 
         var menu = new MenuFlyout();
+        var processItem = new MenuFlyoutItem { Text = Loc.Get("Workflow_Process"), Icon = new FontIcon { Glyph = "\uE9F5" }, IsEnabled = slot.Key != NetworkViewModel.AllAppsKey };
+        processItem.Click += (_, _) => ShowProcess();
+        menu.Items.Add(processItem);
         var firewall = new MenuFlyoutItem
         {
             Text = blocked ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"),

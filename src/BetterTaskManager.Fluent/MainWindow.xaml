@@ -35,12 +35,26 @@
             IsPaneToggleButtonVisible="False"
             PaneDisplayMode="Auto"
             CompactModeThresholdWidth="700"
-            ExpandedModeThresholdWidth="1100"
+            ExpandedModeThresholdWidth="1280"
             IsPaneOpen="True"
-            OpenPaneLength="240"
+            OpenPaneLength="216"
             IsSettingsVisible="True"
             SelectionChanged="Navigation_SelectionChanged">
+                        <NavigationView.PaneHeader>
+                <StackPanel x:Name="BrandPanel" Margin="20,12,12,24" Spacing="5">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="NAX" FontSize="27" FontWeight="Bold" CharacterSpacing="120" />
+                        <Border Background="{ThemeResource BrandSoftBrush}" CornerRadius="4" Padding="6,3" VerticalAlignment="Center">
+                            <TextBlock Text="TM" Foreground="{ThemeResource BrandBrush}" FontSize="10" FontWeight="Bold" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock x:Uid="Design_Product" Text="System intelligence" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </NavigationView.PaneHeader>
             <NavigationView.MenuItems>
+                <NavigationViewItem x:Uid="Design_OverviewNav" Content="Overview" Tag="Overview" ToolTipService.ToolTip="Overview (Ctrl+0)">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Uid="MainWindow_2" Content="Processes" Tag="Processes" ToolTipService.ToolTip="Processes (Ctrl+1)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9F5;" />
@@ -55,6 +69,9 @@
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE968;" />
                     </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="Memory_Nav" Content="Memory" Tag="Memory" ToolTipService.ToolTip="Memory (Ctrl+7)">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE964;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem x:Uid="MainWindow_10" Content="Disk" Tag="Disk" ToolTipService.ToolTip="Disk (Ctrl+4)">
                     <NavigationViewItem.Icon>
@@ -74,8 +91,18 @@
             </NavigationView.MenuItems>
 
             <!-- Limited mode as a card at the bottom of the pane, where it does not push the content down. -->
-            <NavigationView.PaneFooter>
-                <Border x:Name="LimitedCard" Margin="8,0,8,8" Padding="10" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <NavigationView.PaneFooter>
+                <StackPanel x:Name="PaneFooterContent">
+                    <Border Margin="10,0,10,12" Padding="12" Background="{ThemeResource SurfaceBrush}" CornerRadius="10" BorderBrush="{ThemeResource SurfaceStrokeBrush}" BorderThickness="1">
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse Width="6" Height="6" Fill="{ThemeResource BrandBrush}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="MachineText" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <TextBlock x:Name="MachineStats" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                <Border x:Name="LimitedCard" Margin="8,0,8,8" Padding="12" Style="{StaticResource CardStyle}" Visibility="Collapsed">
                     <StackPanel Spacing="6">
                         <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
@@ -98,7 +125,7 @@
                         </Button>
                     </StackPanel>
                 </Border>
-            </NavigationView.PaneFooter>
+            </StackPanel></NavigationView.PaneFooter>
 
             <Grid>
                 <Grid.RowDefinitions>
@@ -141,7 +168,7 @@
         </NavigationView>
 
         <!-- Status strip: whether the numbers are live and where they come from. -->
-        <Grid Grid.Row="2" Height="30" Padding="16,0" Background="{ThemeResource AppPaneBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+        <Grid Grid.Row="2" Height="32" Padding="20,0" Background="{ThemeResource AppPaneBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" Spacing="18" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Ellipse x:Name="LiveDot" Width="8" Height="8" Fill="{ThemeResource StateIdleBrush}" VerticalAlignment="Center" />

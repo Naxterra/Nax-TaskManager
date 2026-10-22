@@ -34,7 +34,8 @@ public sealed record NetworkRowData(
     string RemoteAddress = "",
     string RawState = "",
     string AppName = "",
-    int Count = 0);
+    int Count = 0,
+    ConnectionSample? Source = null);
 
 public sealed class NetworkSlot : RowSlot
 {
@@ -241,6 +242,13 @@ public sealed class NetworkViewModel : ObservableObject
                     (connection.RemoteHost?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     connection.Pid.ToString(CultureInfo.InvariantCulture) == query))
             .ToList();
+        // Direct navigation must also work for a running app that currently has no sockets.
+        if (query.Length == 0 && SelectedAppKey != AllAppsKey && !groups.Any(group => group.Key == SelectedAppKey))
+        {
+            ProcessSample? selected = snapshot.Processes.FirstOrDefault(p => ProcessTree.GroupKey(p) == SelectedAppKey);
+            if (selected is not null)
+                groups.Add((SelectedAppKey, Loc.AppName(AppIdentityRules.AppName(selected)), selected.Path, [], VpnTunnels.IsTunnel(selected)));
+        }
         groups = SortGroups(groups, traffic);
 
         // App rows: "All apps" first, then every app with its counts and rates; meters relative to the busiest app.
@@ -258,10 +266,14 @@ public sealed class NetworkViewModel : ObservableObject
             string speed = measured ? Speed(usage.Down, usage.Up) : "";
             appRows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", "", summary, data, speed, "", false, group.Tunnel, false,
                 usage.Down, usage.Up, usage.Received, usage.Sent, established, listening, Count: group.Connections.Count));
-            allDown += usage.Down;
-            allUp += usage.Up;
-            allReceived += usage.Received;
-            allSent += usage.Sent;
+            // Tunnel bytes carry the app traffic again; match the summary's exclusion of VPN overhead.
+            if (!group.Tunnel)
+            {
+                allDown += usage.Down;
+                allUp += usage.Up;
+                allReceived += usage.Received;
+                allSent += usage.Sent;
+            }
             allEstablished += established;
             allListening += listening;
             allCount += group.Connections.Count;
@@ -285,7 +297,8 @@ public sealed class NetworkViewModel : ObservableObject
             foreach (ConnectionSample connection in SortConnections(group.Connections))
             {
                 // Several sockets can share one endpoint (e.g. mDNS on UDP 5353); keep row keys unique.
-                string key = $"{group.Key}|{connection.Pid}|{connection.Protocol}|{connection.LocalAddress}|{connection.LocalPort}|{connection.RemoteAddress}|{connection.RemotePort}";
+                processes.TryGetValue(connection.Pid, out ProcessSample? connectionOwner);
+                string key = $"{group.Key}|{connection.Pid}|{connectionOwner?.CreateTime}|{connection.Protocol}|{connection.LocalAddress}|{connection.LocalPort}|{connection.RemoteAddress}|{connection.RemotePort}";
                 int occurrence = keyCounts[key] = keyCounts.GetValueOrDefault(key) + 1;
                 connectionRows.Add(new NetworkRowData(RowKind.Child,
                     occurrence == 1 ? key : key + "#" + occurrence,
@@ -300,7 +313,7 @@ public sealed class NetworkViewModel : ObservableObject
                     RemoteDetail(connection),
                     false, false, false,
                     connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond, 0, 0, 0, 0, connection.Pid,
-                    connection.Protocol == "UDP" ? "" : Endpoint(connection.RemoteAddress, connection.RemotePort), connection.State, group.Name));
+                    connection.Protocol == "UDP" ? "" : Endpoint(connection.RemoteAddress, connection.RemotePort), connection.State, group.Name, Source: connection));
             }
         }
         if (all) (SelectedDown, SelectedUp) = (allDown, allUp);

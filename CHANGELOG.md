@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.0.0-alpha.34 - 2026-10-22
+
+Redesign stage 4 (Overview and Memory pages), plus a standby limit.
+
+- **Overview page.** The app opens on a live overview: CPU, memory, download and upload with their last minute, a resource chart, the memory footprint, the apps using the most memory, and the active network destinations. Clicking an app or a destination opens it on the Processes or Network page. Ctrl+0 opens it.
+- **Memory page (Ctrl+7).** Physical RAM as "In use", "Modified" and "Available", the four totals with their history, and a list of where the memory is: in use (programs' own memory, the Windows pools, the file cache, driver code, and loaded program files with DLLs) and cache and free (modified, standby, free), each group with its total. One sentence explains why "Free" is almost always close to zero. Counters that Windows does not deliver show as "Not available" instead of 0.
+- **Keep the standby cache small.** Windows cannot switch its standby cache off. A new setting (Settings, Memory) lets the History service check every 10 seconds and empty the standby cache whenever it grows above a limit of 512 MB to 8 GB, so that RAM shows as free. Programs and files used again are then read from disk. Off unless you choose a limit. Tested: with a 1 GB limit the standby cache went from 35.9 GB to 0.7 GB and free memory from 0.09 GB to 36.2 GB.
+- **All rules in one place.** "All rules" on the Network page lists every app with a block or its own rules, with the rule lines and buttons to edit or unblock.
+- **From a process to its connections and back.** The Processes page's details card and menus open the app's connections; the Network page's open the app's processes. An app without open connections still shows, with an empty list.
+- **Rule explanations.** A connection's details say which of your rules or switches allows or blocks it, and where its host name comes from. This explains the configured rules; it is not a record of dropped packets.
+- **Navigation and look.** A brand header in the navigation pane, a card with the machine's CPU and memory at the bottom of it, details cards that appear when something is selected and the window is wide enough, and consistent colors in light and dark mode.
+- **Fixes.** The Network and History app lists leave room for the scrollbar, so names and numbers are no longer covered, and the Network app list is wider. "All apps" no longer counts VPN tunnel traffic twice. A connection keeps its selection only while it belongs to the same process, so a reused PID cannot inherit it. A selection change during a refresh no longer re-enters the refresh. The memory cleanup report waits for a new measurement instead of comparing old values. A rules refresh that arrives during another one now runs afterwards instead of being skipped. Hidden pages stop updating, and a page can no longer subscribe to updates twice.
+- Publishing now copies the compiled pages under Views, and the package check requires them.
+
 ## 2.0.0-alpha.33 - 2026-10-22
 
 Redesign stage 3: the Network page as master and detail.

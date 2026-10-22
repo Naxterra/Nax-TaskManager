@@ -6,7 +6,7 @@
     xmlns:vm="using:BetterTaskManager.Fluent.ViewModels"
     NavigationCacheMode="Required">
 
-    <Grid Padding="16,8,16,16">
+    <Grid Padding="24,16,24,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -102,7 +102,7 @@
             </ListView.ItemContainerTransitions>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="vm:DiskSlot">
-                    <Grid Height="34">
+                    <Grid Height="40">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="{x:Bind Layout.Name, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />
@@ -219,7 +219,7 @@
             </ListView.ItemContainerTransitions>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="vm:DiskProcessSlot">
-                    <Grid Height="34" ToolTipService.ToolTip="{x:Bind Path, Mode=OneWay}" PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited">
+                    <Grid Height="40" ToolTipService.ToolTip="{x:Bind Path, Mode=OneWay}" PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="{x:Bind Layout.Name, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />
@@ -343,7 +343,7 @@
             </ListView.ItemContainerTransitions>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="vm:DiskFileSlot">
-                    <Grid Height="34" ToolTipService.ToolTip="{x:Bind File, Mode=OneWay}" PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited">
+                    <Grid Height="40" ToolTipService.ToolTip="{x:Bind File, Mode=OneWay}" PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="{x:Bind Layout.Name, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />

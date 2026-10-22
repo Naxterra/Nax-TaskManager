@@ -19,7 +19,7 @@ public sealed partial class ProcessesPage : Page
     private bool restoringSelection;
     private bool flatMode;
     private readonly ColumnReorder groupedReorder, flatReorder;
-    private readonly Button detailOpen, detailFirewall, detailRules, detailEnd;
+    private readonly Button detailOpen, detailFirewall, detailRules, detailEnd, detailNetwork;
     private string? detailKey;
     private HistoryBuffer detailCpu = new(MonitorHost.HistoryLength), detailMemory = new(MonitorHost.HistoryLength);
 
@@ -28,6 +28,8 @@ public sealed partial class ProcessesPage : Page
         ViewModel = new ProcessesViewModel(App.Monitor, App.Settings);
         FlatViewModel = new DetailsViewModel(App.Monitor, App.Settings);
         InitializeComponent();
+        Loaded += Page_Loaded;
+        Unloaded += Page_Unloaded;
         groupedReorder = new ColumnReorder(GroupedHeader, ViewModel.Layout);
         flatReorder = new ColumnReorder(FlatHeader, FlatViewModel.Layout);
         flatMode = App.Settings.ProcessFlatView;
@@ -46,19 +48,44 @@ public sealed partial class ProcessesPage : Page
         detailRules = Controls.DetailPane.ActionButton("\uE8D7", Loc.Get("Rules_Menu"), (_, _) => { if (CurrentTarget() is { Path.Length: > 0 } target) _ = AppRulesDialog.ShowAsync(XamlRoot, target.Path, target.Name); });
         detailEnd = Controls.DetailPane.ActionButton("\uE711", Loc.Get("Proc_EndTask"), EndTask_Click);
         Controls.DetailPane.MakeDanger(detailEnd);
-        Details.SetActions([detailOpen, detailFirewall, detailRules, detailEnd]);
+        detailNetwork = Controls.DetailPane.ActionButton("\uE968", Loc.Get("Workflow_Connections"), (_, _) => ShowNetwork());
+        Details.SetActions([detailNetwork, detailOpen, detailFirewall, detailRules, detailEnd]);
         DetailsToggle.IsChecked = App.Settings.ShowDetailsPane;
         Details.Visibility = App.Settings.ShowDetailsPane ? Visibility.Visible : Visibility.Collapsed;
         ApplyMode();
         UpdateSortIndicators();
         UpdateFlatSortIndicators();
+        SizeChanged += (_, _) => { PageCommands.MaxWidth = Math.Max(180, ActualWidth - 440); UpdateDetails(); };
+        RowList.Loaded += (_, _) => { if (RowList.SelectedItem is { } item) RowList.ScrollIntoView(item); };
     }
 
     public ProcessesViewModel ViewModel { get; }
     public DetailsViewModel FlatViewModel { get; }
 
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    public void ShowProcess(ProcessSample process)
     {
+        flatMode = false;
+        App.Settings.ProcessFlatView = false;
+        ModeSelector.SelectedItem = ByAppMode;
+        selectedKey = ProcessTree.GroupKey(process);
+        ApplyMode();
+        Refresh();
+        if (RowList.SelectedItem is { } item) RowList.ScrollIntoView(item);
+    }
+
+    private void ShowNetwork()
+    {
+        if (CurrentTarget() is not { } target || App.Monitor.Latest is not { } snapshot) return;
+        var keys = target.Processes.ToHashSet();
+        if (snapshot.Processes.FirstOrDefault(p => keys.Contains(p.Key)) is { } process) App.Window.ShowAppNetwork(process);
+    }
+
+    private void Page_Loaded(object sender, RoutedEventArgs e)
+    {
+        // Loaded can arrive twice without Unloaded in between; never subscribe twice.
+        App.Monitor.Updated -= OnUpdated;
+        App.Monitor.SearchChanged -= Refresh;
+        App.Monitor.FirewallChanged -= Refresh;
         App.Monitor.Updated += OnUpdated;
         App.Monitor.SearchChanged += Refresh;
         App.Monitor.FirewallChanged += Refresh;
@@ -66,7 +93,7 @@ public sealed partial class ProcessesPage : Page
         Refresh();
     }
 
-    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
         App.Monitor.Updated -= OnUpdated;
         App.Monitor.SearchChanged -= Refresh;
@@ -116,8 +143,9 @@ public sealed partial class ProcessesPage : Page
     /// <summary>The card on the right: the selected app or process with its own CPU and memory history.</summary>
     private void UpdateDetails()
     {
-        if (Details.Visibility == Visibility.Collapsed) return;
         Target? target = CurrentTarget();
+        Details.Visibility = App.Settings.ShowDetailsPane && target is not null && ActualWidth >= 1100 ? Visibility.Visible : Visibility.Collapsed;
+        if (Details.Visibility == Visibility.Collapsed) return;
         if (target is null)
         {
             detailKey = null;
@@ -160,6 +188,7 @@ public sealed partial class ProcessesPage : Page
         Details.EndFacts();
         bool hasPath = target.Path.Length > 0;
         detailOpen.IsEnabled = detailRules.IsEnabled = detailFirewall.IsEnabled = hasPath;
+        detailNetwork.IsEnabled = members.Count > 0;
         Controls.DetailPane.SetActionText(detailFirewall, hasPath && App.Monitor.IsBlocked(target.Path) ? Loc.Get("Firewall_Allow") : Loc.Get("Firewall_Block"));
     }
 
@@ -435,6 +464,7 @@ public sealed partial class ProcessesPage : Page
         bool blocked = hasPath && App.Monitor.IsBlocked(target.Path);
 
         var menu = new MenuFlyout();
+        menu.Items.Add(MenuItem(Loc.Get("Workflow_Connections"), "\uE968", (_, _) => ShowNetwork()));
         menu.Items.Add(MenuItem(Loc.Get("Proc_EndTask"), "", (_, _) => _ = EndSelectedAsync(entireTree: false)));
         menu.Items.Add(MenuItem(Loc.Get("Proc_EndTree"), "", (_, _) => _ = EndSelectedAsync(entireTree: true)));
         var efficiency = new ToggleMenuFlyoutItem { Text = Loc.Get("Proc_Efficiency"), IsChecked = target.Efficiency, IsEnabled = !target.Critical };

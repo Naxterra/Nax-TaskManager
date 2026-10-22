@@ -120,6 +120,8 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <FontIcon Glyph="&#xEEA1;" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1">
@@ -129,6 +131,21 @@
                     <ToggleSwitch x:Uid="SettingsPage_33" x:Name="CacheTrimToggle" Grid.Column="2" MinWidth="0" VerticalAlignment="Center" OnContent="On" OffContent="Off" Toggled="CacheTrimToggle_Toggled" />
                     <TextBlock x:Uid="SettingsPage_34" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"
                                Text="Windows keeps everything written to disk in its file cache. The History service removes files of 256 MB or more (game updates, installers, downloads) from RAM 30 seconds after they were written, and again after 5 minutes. Files a running program still uses stay in RAM. Needs the History service; changing it needs administrator approval." />
+                    <FontIcon Grid.Row="2" Glyph="&#xE964;" VerticalAlignment="Center" Margin="0,12,0,0" />
+                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,12,0,0">
+                        <TextBlock x:Uid="SettingsPage_35" Text="Keep the standby cache small" />
+                        <TextBlock x:Name="StandbyStatusText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ComboBox x:Name="StandbyLimitBox" Grid.Row="2" Grid.Column="2" MinWidth="150" Margin="0,12,0,0" VerticalAlignment="Center" SelectionChanged="StandbyLimitBox_SelectionChanged">
+                        <ComboBoxItem x:Uid="SettingsPage_36" Content="Off" Tag="off" />
+                        <ComboBoxItem Content="512 MB" Tag="512" />
+                        <ComboBoxItem Content="1 GB" Tag="1024" />
+                        <ComboBoxItem Content="2 GB" Tag="2048" />
+                        <ComboBoxItem Content="4 GB" Tag="4096" />
+                        <ComboBoxItem Content="8 GB" Tag="8192" />
+                    </ComboBox>
+                    <TextBlock x:Uid="SettingsPage_37" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"
+                               Text="Windows cannot switch its standby cache off; it refills it with every file that is read or written. With a limit, the History service checks every 10 seconds and empties the cache when it is larger, so the RAM shows as free. Programs and files you use again are then read from disk instead of RAM, which makes their next start slower. Needs the History service; changing it needs administrator approval." />
                 </Grid>
             </Border>
 

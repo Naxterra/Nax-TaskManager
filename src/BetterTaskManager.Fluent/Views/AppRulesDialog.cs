@@ -29,6 +29,7 @@ internal static class AppRulesDialog
 
         var panel = new StackPanel { Spacing = 8, MinWidth = 700 };
         panel.Children.Add(new TextBlock { Text = path, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, Foreground = Brush("TextFillColorSecondaryBrush") });
+        panel.Children.Add(Muted(Loc.Get("Workflow_RuleScope")));
         if (App.Monitor.IsBlocked(path))
         {
             panel.Children.Add(new InfoBar { IsOpen = true, IsClosable = false, Severity = InfoBarSeverity.Warning, Message = Loc.Get("Rules_BlockedNote") });

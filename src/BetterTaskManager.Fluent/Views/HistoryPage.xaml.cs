@@ -18,6 +18,8 @@ public sealed partial class HistoryPage : Page
     {
         ViewModel = new HistoryViewModel(App.Settings);
         InitializeComponent();
+        Loaded += Page_Loaded;
+        Unloaded += Page_Unloaded;
         logReorder = new ColumnReorder(LogHeader, ViewModel.Layout);
         UpdateSortIndicators();
         timer.Tick += (_, _) => _ = LoadAsync();
@@ -68,14 +70,15 @@ public sealed partial class HistoryPage : Page
         }
     }
 
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    private void Page_Loaded(object sender, RoutedEventArgs e)
     {
+        App.Monitor.SearchChanged -= OnSearchChanged;
         App.Monitor.SearchChanged += OnSearchChanged;
         timer.Start();
         _ = LoadAsync();
     }
 
-    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
         App.Monitor.SearchChanged -= OnSearchChanged;
         timer.Stop();

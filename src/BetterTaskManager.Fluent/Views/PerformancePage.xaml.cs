@@ -14,14 +14,9 @@ public sealed partial class PerformancePage : Page
 
     private static readonly Segment[] Segments =
     [
-        new(Loc.Get("Mem_Apps"), Loc.Get("Mem_AppsDesc"), "MemoryAppsBrush", m => m.ProcessPrivate, true),
-        new(Loc.Get("Mem_Kernel"), Loc.Get("Mem_KernelDesc"), "MemoryKernelBrush", m => m.KernelPools, true),
-        new(Loc.Get("Mem_Cache"), Loc.Get("Mem_CacheDesc"), "MemoryCacheBrush", m => m.FileCache, true),
-        new(Loc.Get("Mem_Drivers"), Loc.Get("Mem_DriversDesc"), "MemoryDriversBrush", m => m.Drivers, true),
-        new(Loc.Get("Mem_Shared"), Loc.Get("Mem_SharedDesc"), "MemoryOtherBrush", m => m.Unattributed, true),
+        new(Loc.Get("Mem_InUse"), Loc.Get("Memory_InUseNote"), "MemoryAppsBrush", m => m.InUse, true),
         new(Loc.Get("Mem_Modified"), Loc.Get("Mem_ModifiedDesc"), "MemoryModifiedBrush", m => m.Modified, false),
-        new(Loc.Get("Mem_Standby"), Loc.Get("Mem_StandbyDesc"), "MemoryStandbyBrush", m => m.Standby, false),
-        new(Loc.Get("Mem_Free"), Loc.Get("Mem_FreeDesc"), "MemoryFreeBrush", m => m.Free, false)
+        new(Loc.Get("Design_Available"), Loc.Get("Memory_Ready"), "MemoryStandbyBrush", m => m.Available, false)
     ];
 
     private readonly List<(Segment Segment, TextBlock Value, ColumnDefinition Column)> parts = new();
@@ -29,6 +24,8 @@ public sealed partial class PerformancePage : Page
     public PerformancePage()
     {
         InitializeComponent();
+        Loaded += Page_Loaded;
+        Unloaded += Page_Unloaded;
         BuildMemoryBreakdown();
         if (!App.Monitor.IsElevated)
         {
@@ -39,6 +36,8 @@ public sealed partial class PerformancePage : Page
             }
         }
     }
+
+    private void OpenMemory_Click(object sender, RoutedEventArgs e) => App.Window.NavigatePage("Memory");
 
     private sealed record CleanupAction(string Title, string Explanation, string Button);
 
@@ -88,22 +87,39 @@ public sealed partial class PerformancePage : Page
             messages.Add(message);
         }
 
-        // Let the monitor take a fresh sample so the effect is measured, not guessed.
-        App.Monitor.RequestRefresh();
-        await Task.Delay(1500);
-        MemoryBreakdown? after = App.Monitor.Latest?.System.Memory;
+        // A fixed delay can reuse the pre-cleanup sample when paused or collecting slowly.
+        MemoryBreakdown? after = await SampleAfterAsync(DateTime.Now);
         string combined = string.Join("\n", messages);
-        if (allOk && before is not null && after is not null)
+        if (allOk && before is { PageListsAvailable: true, ModifiedAvailable: true } && after is { PageListsAvailable: true, ModifiedAvailable: true })
         {
             combined += Loc.F("Cleanup_Delta", Format.Gigabytes(before.InUse), Format.Gigabytes(after.InUse),
                 Format.Gigabytes(before.Standby), Format.Gigabytes(after.Standby),
                 Format.Gigabytes(before.Free), Format.Gigabytes(after.Free));
         }
         CleanupBar.Severity = allOk ? InfoBarSeverity.Success : InfoBarSeverity.Error;
+        if (allOk && (before is not { PageListsAvailable: true, ModifiedAvailable: true } || after is not { PageListsAvailable: true, ModifiedAvailable: true }))
+            combined += "\n" + Loc.Get("Cleanup_NoMeasurement");
         CleanupBar.Title = allOk ? Loc.Get("Cleanup_Done") : Loc.Get("Cleanup_NotDone");
         CleanupBar.Message = combined;
         CleanupBar.IsOpen = true;
         CleanupButton.IsEnabled = true;
+    }
+
+    private static async Task<MemoryBreakdown?> SampleAfterAsync(DateTime finished)
+    {
+        if (App.Monitor.Paused) return null;
+        var next = new TaskCompletionSource<MemoryBreakdown>(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Observe(MonitorSnapshot snapshot)
+        {
+            if (snapshot.Timestamp - snapshot.CollectionTime >= finished) next.TrySetResult(snapshot.System.Memory);
+        }
+        App.Monitor.Updated += Observe;
+        try
+        {
+            App.Monitor.RequestRefresh();
+            return await Task.WhenAny(next.Task, Task.Delay(3000)) == next.Task ? await next.Task : null;
+        }
+        finally { App.Monitor.Updated -= Observe; }
     }
 
     private static async Task<(bool Succeeded, string Message)> RunOneAsync(string kind)
@@ -129,13 +145,14 @@ public sealed partial class PerformancePage : Page
     private static (bool, string) ToTuple(CleanupResult result, string doneKey) =>
         (result.Succeeded, result.Succeeded ? Loc.Get(doneKey) : Loc.CleanupFailure(result));
 
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    private void Page_Loaded(object sender, RoutedEventArgs e)
     {
+        App.Monitor.Updated -= OnUpdated;
         App.Monitor.Updated += OnUpdated;
         if (App.Monitor.Latest is { } snapshot) OnUpdated(snapshot);
     }
 
-    protected override void OnNavigatedFrom(NavigationEventArgs e) => App.Monitor.Updated -= OnUpdated;
+    private void Page_Unloaded(object sender, RoutedEventArgs e) => App.Monitor.Updated -= OnUpdated;
 
     private void BuildMemoryBreakdown()
     {
@@ -207,7 +224,7 @@ public sealed partial class PerformancePage : Page
         if (InUseLegend.Children[0] is TextBlock inUseHeader) inUseHeader.Text = Loc.F("Mem_InUseTotal", Format.Gigabytes(memory.InUse));
         if (AvailableLegend.Children[0] is TextBlock availableHeader)
         {
-            availableHeader.Text = Loc.F("Mem_NotInUseTotal", Format.Gigabytes(memory.Modified + memory.Standby + memory.Free));
+            availableHeader.Text = Loc.F("Mem_NotInUseTotal", Format.Gigabytes(memory.Modified + memory.Available));
         }
     }
 }

@@ -28,7 +28,7 @@ public sealed class DetailPane : Grid
     {
         CornerRadius = new CornerRadius(10);
         BorderThickness = new Thickness(1);
-        Padding = new Thickness(14);
+        Padding = new Thickness(18);
         Tile1 = new StatTile { MinWidth = 0, Stacked = true };
         Tile2 = new StatTile { MinWidth = 0, Stacked = true };
         tiles.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -48,7 +48,7 @@ public sealed class DetailPane : Grid
         Grid.SetColumn(texts, 1);
         header.Children.Add(texts);
 
-        facts.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(112) });
+        facts.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
         facts.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         facts.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
@@ -56,11 +56,15 @@ public sealed class DetailPane : Grid
         content.Children.Add(tiles);
         content.Children.Add(facts);
         content.Children.Add(actions);
-        var scroll = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        var scroll = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, HorizontalScrollMode = ScrollMode.Disabled };
         Children.Add(scroll);
-        Children.Add(empty);
-        Loaded += (_, _) => ApplyResources();
-        ActualThemeChanged += (_, _) => ApplyResources();
+                var emptyIcon = new FontIcon { Glyph = "\uE8A0", FontSize = 30, Opacity = 0.35, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0,0,0,16) };
+        var emptyPanel = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, MaxWidth = 230 };
+        emptyPanel.Children.Add(emptyIcon);
+        emptyPanel.Children.Add(empty);
+        Children.Add(emptyPanel);
+        emptyPanel.SetBinding(VisibilityProperty, new Microsoft.UI.Xaml.Data.Binding { Source = empty, Path = new PropertyPath("Visibility"), Mode = Microsoft.UI.Xaml.Data.BindingMode.OneWay });
+        ApplyResources();
     }
 
     public StatTile Tile1 { get; }
@@ -97,9 +101,9 @@ public sealed class DetailPane : Grid
         factOrder.Add(label);
         if (!factRows.TryGetValue(label, out var row))
         {
-            var labelBlock = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Top };
-            labelBlock.Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
-            var valueBlock = new TextBlock { TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, VerticalAlignment = VerticalAlignment.Top };
+            var labelBlock = new TextBlock { Text = label, FontSize = 12, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Top };
+            labelBlock.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
+            var valueBlock = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, VerticalAlignment = VerticalAlignment.Top };
             Button? copy = null;
             if (copyable)
             {
@@ -148,7 +152,7 @@ public sealed class DetailPane : Grid
         return null;
     }
 
-    public void SetActions(IEnumerable<Button> buttons)
+    public void SetActions(Button[] buttons)
     {
         actions.Children.Clear();
         foreach (Button button in buttons)
@@ -198,13 +202,14 @@ public sealed class DetailPane : Grid
     private void ApplyResources()
     {
         ResourceDictionary resources = Application.Current.Resources;
-        Background = (Brush)resources["CardBackgroundFillColorDefaultBrush"];
-        BorderBrush = (Brush)resources["CardStrokeColorDefaultBrush"];
+        this.SetResourceReference(BackgroundProperty, "SurfaceBrush");
+        this.SetResourceReference(BorderBrushProperty, "SurfaceStrokeBrush");
         title.Style = (Style)resources["SubtitleTextBlockStyle"];
         subtitle.Style = (Style)resources["CaptionTextBlockStyle"];
-        subtitle.Foreground = (Brush)resources["TextFillColorSecondaryBrush"];
+        title.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorPrimaryBrush");
+        subtitle.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
         detail.Style = (Style)resources["CaptionTextBlockStyle"];
-        detail.Foreground = (Brush)resources["TextFillColorSecondaryBrush"];
-        empty.Foreground = (Brush)resources["TextFillColorSecondaryBrush"];
+        detail.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
+        empty.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
     }
 }

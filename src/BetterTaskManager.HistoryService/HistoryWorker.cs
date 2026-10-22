@@ -13,6 +13,7 @@ public sealed class HistoryWorker : IDisposable
     private readonly NetworkFeedServer? feed;
     private readonly BootMemoryReport? bootReport;
     private readonly BetterTaskManager.Core.Disk.CacheTrimmer? cacheTrimmer;
+    private readonly BetterTaskManager.Core.Native.StandbyLimiter? standbyLimiter;
     private readonly Action<string> log;
     private readonly object gate = new();
     private DateTime lastError;
@@ -24,7 +25,11 @@ public sealed class HistoryWorker : IDisposable
     public HistoryWorker(string databasePath, string sessionPrefix, Action<string> log, bool publishFeed = false, BootMemoryReport? bootReport = null,
         bool trimCache = false)
     {
-        if (trimCache) cacheTrimmer = new BetterTaskManager.Core.Disk.CacheTrimmer(log);
+        if (trimCache)
+        {
+            cacheTrimmer = new BetterTaskManager.Core.Disk.CacheTrimmer(log);
+            standbyLimiter = new BetterTaskManager.Core.Native.StandbyLimiter(log);
+        }
         this.bootReport = bootReport;
         if (publishFeed) feed = new NetworkFeedServer(log);
         this.log = log;
@@ -41,6 +46,7 @@ public sealed class HistoryWorker : IDisposable
         feed?.Start();
         engine.Start();
         cacheTrimmer?.Start();
+        standbyLimiter?.Start();
     }
 
     private void OnSnapshot(MonitorSnapshot snapshot)
@@ -74,6 +80,7 @@ public sealed class HistoryWorker : IDisposable
 
     public void Dispose()
     {
+        standbyLimiter?.Dispose();
         cacheTrimmer?.Dispose();
         feed?.Dispose();
         engine.Dispose();

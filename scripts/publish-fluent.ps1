@@ -32,6 +32,10 @@ foreach ($required in @(
     $executable,
     (Join-Path $outputFull "Nax-TaskManager.pri"),
     (Join-Path $outputFull "MainWindow.xbf"),
+    (Join-Path $outputFull "Views\OverviewPage.xbf"),
+    (Join-Path $outputFull "Views\MemoryPage.xbf"),
+    (Join-Path $outputFull "Views\ProcessesPage.xbf"),
+    (Join-Path $outputFull "Views\NetworkPage.xbf"),
     (Join-Path $outputFull "HistoryService\Nax-TaskManager.HistoryService.exe")
 )) {
     if (-not (Test-Path -LiteralPath $required)) { throw "Published output is incomplete, missing: $required" }

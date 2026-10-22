@@ -13,35 +13,46 @@
                  GPU blue, disk green, network cyan and violet). The same keys exist for the light theme in muted tones. -->
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
-                    <Color x:Key="SystemAccentColor">#4F8DFF</Color>
-                    <Color x:Key="SystemAccentColorLight1">#6AA0FF</Color>
-                    <Color x:Key="SystemAccentColorLight2">#86B3FF</Color>
-                    <Color x:Key="SystemAccentColorLight3">#A5C6FF</Color>
-                    <Color x:Key="SystemAccentColorDark1">#3D78E6</Color>
-                    <Color x:Key="SystemAccentColorDark2">#2E63C7</Color>
-                    <Color x:Key="SystemAccentColorDark3">#224EA3</Color>
+                    <SolidColorBrush x:Key="TextFillColorPrimaryBrush" Color="#EDF3F6" />
+                    <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#9AACB9" />
+                    <SolidColorBrush x:Key="TextFillColorTertiaryBrush" Color="#718594" />
+                    <SolidColorBrush x:Key="BrandBrush" Color="#69DDB6" />
+                    <SolidColorBrush x:Key="BrandSoftBrush" Color="#183C33" />
+                    <SolidColorBrush x:Key="SurfaceBrush" Color="#151E25" />
+                    <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#1B272F" />
+                    <SolidColorBrush x:Key="SurfaceStrokeBrush" Color="#293640" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#203D37" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#284C43" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#1D2B34" />
+                    <Color x:Key="SystemAccentColor">#69DDB6</Color>
+                    <Color x:Key="SystemAccentColorLight1">#86E7C8</Color>
+                    <Color x:Key="SystemAccentColorLight2">#A4EFDA</Color>
+                    <Color x:Key="SystemAccentColorLight3">#C0F5E7</Color>
+                    <Color x:Key="SystemAccentColorDark1">#45BD94</Color>
+                    <Color x:Key="SystemAccentColorDark2">#27946E</Color>
+                    <Color x:Key="SystemAccentColorDark3">#1B6F52</Color>
 
-                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0B1220" />
-                    <SolidColorBrush x:Key="AppPaneBrush" Color="#0E1627" />
-                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#0E1627" />
-                    <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="#0E1627" />
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0C1116" />
+                    <SolidColorBrush x:Key="AppPaneBrush" Color="#10171D" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#10171D" />
+                    <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="#10171D" />
                     <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
                     <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
-                    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#121B30" />
-                    <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#17213A" />
-                    <SolidColorBrush x:Key="CardStrokeColorDefaultBrush" Color="#1F2B47" />
-                    <SolidColorBrush x:Key="LayerFillColorDefaultBrush" Color="#121B30" />
-                    <SolidColorBrush x:Key="LayerFillColorAltBrush" Color="#17213A" />
+                    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#151E25" />
+                    <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#1B272F" />
+                    <SolidColorBrush x:Key="CardStrokeColorDefaultBrush" Color="#293640" />
+                    <SolidColorBrush x:Key="LayerFillColorDefaultBrush" Color="#151E25" />
+                    <SolidColorBrush x:Key="LayerFillColorAltBrush" Color="#1B272F" />
                     <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#14FFFFFF" />
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush" Color="#0AFFFFFF" />
-                    <SolidColorBrush x:Key="DividerStrokeColorDefaultBrush" Color="#1F2B47" />
-                    <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#182340" />
-                    <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="#1E2A4A" />
-                    <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#2A3858" />
-                    <SolidColorBrush x:Key="TextBoxBackground" Color="#182340" />
-                    <SolidColorBrush x:Key="TextControlBackground" Color="#182340" />
-                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#1E2A4A" />
-                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#0F172A" />
+                    <SolidColorBrush x:Key="DividerStrokeColorDefaultBrush" Color="#293640" />
+                    <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#1C2932" />
+                    <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="#24343F" />
+                    <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#344650" />
+                    <SolidColorBrush x:Key="TextBoxBackground" Color="#1C2932" />
+                    <SolidColorBrush x:Key="TextControlBackground" Color="#1C2932" />
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#24343F" />
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#10191F" />
 
                     <Color x:Key="HeatColor">#FFB84D</Color>
                     <SolidColorBrush x:Key="MemoryAppsBrush" Color="#38BDF8" />
@@ -51,7 +62,7 @@
                     <SolidColorBrush x:Key="MemoryOtherBrush" Color="#FBBF24" />
                     <SolidColorBrush x:Key="MemoryModifiedBrush" Color="#F87171" />
                     <SolidColorBrush x:Key="MemoryStandbyBrush" Color="#4C5B7A" />
-                    <SolidColorBrush x:Key="MemoryFreeBrush" Color="#1F2B47" />
+                    <SolidColorBrush x:Key="MemoryFreeBrush" Color="#293640" />
                     <SolidColorBrush x:Key="ChartCpuBrush" Color="#22D3EE" />
                     <SolidColorBrush x:Key="ChartMemoryBrush" Color="#A78BFA" />
                     <SolidColorBrush x:Key="ChartGpuBrush" Color="#60A5FA" />
@@ -70,13 +81,21 @@
                     <SolidColorBrush x:Key="StateBadBrush" Color="#F87171" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
-                    <Color x:Key="SystemAccentColor">#2F6FE0</Color>
-                    <Color x:Key="SystemAccentColorLight1">#4A84E8</Color>
-                    <Color x:Key="SystemAccentColorLight2">#6A9BEE</Color>
-                    <Color x:Key="SystemAccentColorLight3">#8FB4F3</Color>
-                    <Color x:Key="SystemAccentColorDark1">#2659BD</Color>
-                    <Color x:Key="SystemAccentColorDark2">#1E479A</Color>
-                    <Color x:Key="SystemAccentColorDark3">#173777</Color>
+                    <SolidColorBrush x:Key="TextFillColorPrimaryBrush" Color="#172C25" />
+                    <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#50685F" />
+                    <SolidColorBrush x:Key="TextFillColorTertiaryBrush" Color="#6C8279" />
+                    <SolidColorBrush x:Key="BrandBrush" Color="#087F61" />
+                    <SolidColorBrush x:Key="BrandSoftBrush" Color="#DDF3E9" />
+                    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#F2F6F5" />
+                    <SolidColorBrush x:Key="SurfaceStrokeBrush" Color="#D8E3DF" />
+                    <Color x:Key="SystemAccentColor">#087F61</Color>
+                    <Color x:Key="SystemAccentColorLight1">#209D7C</Color>
+                    <Color x:Key="SystemAccentColorLight2">#4BB598</Color>
+                    <Color x:Key="SystemAccentColorLight3">#7ACDB5</Color>
+                    <Color x:Key="SystemAccentColorDark1">#06674D</Color>
+                    <Color x:Key="SystemAccentColorDark2">#06503D</Color>
+                    <Color x:Key="SystemAccentColorDark3">#043D2E</Color>
 
                     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F6FB" />
                     <SolidColorBrush x:Key="AppPaneBrush" Color="#E9EEF7" />
@@ -121,13 +140,13 @@
 
             <Style x:Key="CardStyle" TargetType="Border">
                 <Setter Property="Padding" Value="16" />
-                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
-                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource SurfaceStrokeBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="CornerRadius" Value="12" />
             </Style>
 
-            <Style x:Key="PageTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleTextBlockStyle}">
+            <Style x:Key="PageTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleTextBlockStyle}"><Setter Property="FontSize" Value="30" /><Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
@@ -185,15 +204,15 @@
 
             <!-- A table sits on a card: header row with its own surface on top, the rows below. -->
             <Style x:Key="TableCardStyle" TargetType="Border">
-                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
-                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource SurfaceStrokeBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="Padding" Value="0,0,0,4" />
             </Style>
 
             <Style x:Key="TableHeaderStyle" TargetType="Grid">
-                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}" />
+                <Setter Property="Background" Value="{ThemeResource SurfaceRaisedBrush}" />
                 <Setter Property="BorderBrush" Value="{ThemeResource DividerStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="0,0,0,1" />
                 <Setter Property="CornerRadius" Value="10,10,0,0" />
@@ -204,7 +223,7 @@
             <Style x:Key="MeterBarStyle" TargetType="Rectangle">
                 <Setter Property="RadiusX" Value="3" />
                 <Setter Property="RadiusY" Value="3" />
-                <Setter Property="Height" Value="18" />
+                <Setter Property="Height" Value="3" />
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="MinWidth" Value="0" />
             </Style>
@@ -233,8 +252,8 @@
             <Style x:Key="TableRowStyle" TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="Margin" Value="0" />
-                <Setter Property="MinHeight" Value="34" />
-                <Setter Property="Height" Value="34" />
+                <Setter Property="MinHeight" Value="40" />
+                <Setter Property="Height" Value="40" />
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="VerticalContentAlignment" Value="Stretch" />
             </Style>

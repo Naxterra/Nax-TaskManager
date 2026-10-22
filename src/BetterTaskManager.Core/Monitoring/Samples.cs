@@ -109,6 +109,14 @@ public sealed class MemoryBreakdown
     public long CommitTotal { get; init; }
     public long CommitLimit { get; init; }
     public bool Detailed { get; init; }
+    /// <summary>All page-list counters were read successfully in this sample.</summary>
+    public bool PageListsAvailable { get; init; }
+    public bool ModifiedAvailable { get; init; }
+    public long PagedPoolResident { get; init; }
+    public long NonpagedPool { get; init; }
+    /// <summary>Signed differences are retained: independently collected counters are not an atomic partition.</summary>
+    public long AvailableDifference => Available - Standby - Free;
+    public long AttributionDifference => InUse - ProcessPrivate - KernelPools - FileCache - Drivers;
     public double LoadPercent => Total == 0 ? 0 : InUse * 100d / Total;
 }
 

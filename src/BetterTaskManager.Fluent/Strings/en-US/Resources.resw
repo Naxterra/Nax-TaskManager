@@ -259,7 +259,7 @@ Answer: {0}</value></data>
   <data name="Perf_Updated" xml:space="preserve"><value>Updated {0} · collected in {1} ms</value></data>
   <data name="Perf_CpuDetail" xml:space="preserve"><value>{0} processes · {1} threads · {2} handles · {3} logical processors · up {4}</value></data>
   <data name="Perf_MemoryDetail" xml:space="preserve"><value>Available {0} · Cached {1} · Committed {2} / {3}</value></data>
-  <data name="Perf_NetworkDetail" xml:space="preserve"><value>Scale {0} · {1} open connections · receive (green) and send (amber), all active adapters</value></data>
+  <data name="Perf_NetworkDetail" xml:space="preserve"><value>Scale {0} · {1} open connections · download and upload, all active adapters</value></data>
   <data name="Proc_Summary" xml:space="preserve"><value>{0} processes · {1} threads · {2} handles · up {3}</value></data>
   <data name="Proc_EndTask" xml:space="preserve"><value>End task</value></data>
   <data name="Proc_EndTree" xml:space="preserve"><value>End process tree</value></data>
@@ -602,4 +602,152 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="Network_TrafficDown" xml:space="preserve"><value>Download {0}</value></data>
   <data name="Network_TrafficUp" xml:space="preserve"><value>Upload {0}</value></data>
   <data name="Network_AppSubline" xml:space="preserve"><value>{0} of {1} established</value></data>
+  <data name="Design_Activity" xml:space="preserve">
+    <value>Resource activity</value>
+  </data>
+  <data name="Design_AllAdapters" xml:space="preserve">
+    <value>All network adapters</value>
+  </data>
+  <data name="Design_Application" xml:space="preserve">
+    <value>APPLICATION</value>
+  </data>
+  <data name="Design_Available" xml:space="preserve">
+    <value>Available</value>
+  </data>
+  <data name="Design_Collecting" xml:space="preserve">
+    <value>Collecting system data…</value>
+  </data>
+  <data name="Design_Committed" xml:space="preserve">
+    <value>Committed</value>
+  </data>
+  <data name="Design_ConnectionSummary" xml:space="preserve">
+    <value>{0} established TCP connections · {1} apps</value>
+  </data>
+  <data name="Design_Destinations" xml:space="preserve">
+    <value>Active destinations</value>
+  </data>
+  <data name="Design_Eyebrow" xml:space="preserve">
+    <value>YOUR SYSTEM, AT A GLANCE</value>
+  </data>
+  <data name="Design_InspectApp" xml:space="preserve">
+    <value>Inspect application</value>
+  </data>
+  <data name="Design_LastSamples" xml:space="preserve">
+    <value>Last 60 samples · 0–100%</value>
+  </data>
+  <data name="Design_Live" xml:space="preserve">
+    <value>LIVE MONITORING</value>
+  </data>
+  <data name="Design_LogicalCores" xml:space="preserve">
+    <value>{0} logical processors</value>
+  </data>
+  <data name="Design_MachineStats" xml:space="preserve">
+    <value>CPU {0}   ·   Memory {1}</value>
+  </data>
+  <data name="Design_MemoryFootprint" xml:space="preserve">
+    <value>Memory footprint</value>
+  </data>
+  <data name="Design_MemoryTotal" xml:space="preserve">
+    <value>in use · {0} total</value>
+  </data>
+  <data name="Design_NoConnections" xml:space="preserve">
+    <value>No established TCP connections.</value>
+  </data>
+  <data name="Design_OfInstalled" xml:space="preserve">
+    <value>of {0} installed</value>
+  </data>
+  <data name="Design_Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Design_OverviewNav.Content" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="Design_OverviewSummary" xml:space="preserve">
+    <value>{0}  ·  {1} processes running</value>
+  </data>
+  <data name="Design_OverviewTitle" xml:space="preserve">
+    <value>System overview</value>
+  </data>
+  <data name="Design_Product.Text" xml:space="preserve">
+    <value>System intelligence</value>
+  </data>
+  <data name="Design_ResourceLeaders" xml:space="preserve">
+    <value>Top applications</value>
+  </data>
+  <data name="Design_SortedMemory" xml:space="preserve">
+    <value>Private working set · sorted by memory</value>
+  </data>
+  <data name="Design_Uptime" xml:space="preserve">
+    <value>Uptime  {0}</value>
+  </data>
+  <data name="Memory_Nav.Content" xml:space="preserve"><value>Memory</value></data>
+  <data name="Memory_Nav.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Memory (Ctrl+7)</value></data>
+  <data name="Memory_Title" xml:space="preserve"><value>Memory</value></data>
+  <data name="Memory_Subtitle" xml:space="preserve"><value>See what uses your RAM, and what Windows can make available.</value></data>
+  <data name="Memory_Cached" xml:space="preserve"><value>Cached</value></data>
+  <data name="Memory_Physical" xml:space="preserve"><value>Physical memory</value></data>
+  <data name="Memory_PhysicalNote" xml:space="preserve"><value>In use + modified + available = usable physical RAM. Available includes standby cache.</value></data>
+  <data name="Memory_Accounting" xml:space="preserve"><value>Where your memory goes</value></data>
+  <data name="Memory_PagedPool" xml:space="preserve"><value>Paged pool · resident</value></data>
+  <data name="Memory_NonpagedPool" xml:space="preserve"><value>Nonpaged pool</value></data>
+  <data name="Memory_Residual" xml:space="preserve"><value>Loaded program files, DLLs and other</value></data>
+  <data name="Memory_AppsTitle" xml:space="preserve"><value>Largest applications</value></data>
+  <data name="Memory_AllProcesses" xml:space="preserve"><value>All processes →</value></data>
+  <data name="Memory_AppsNote" xml:space="preserve"><value>Private working set, grouped by application. Select an app to inspect its processes.</value></data>
+  <data name="Memory_Why" xml:space="preserve"><value>Why the process list does not add up</value></data>
+  <data name="Memory_WhyText" xml:space="preserve"><value>Process memory counts private pages currently in RAM. Shared pages, Windows pools, resident cache and driver memory also use RAM. The residual is not a measurement of shared pages alone. Commit is virtual memory backed by RAM or the page file; it is not additional physical RAM.</value></data>
+  <data name="Memory_Ready" xml:space="preserve"><value>Immediately available to applications</value></data>
+  <data name="Memory_CachedNote" xml:space="preserve"><value>Standby + modified; overlaps physical categories</value></data>
+  <data name="Memory_CommitLimit" xml:space="preserve"><value>Limit {0} · virtual memory</value></data>
+  <data name="Memory_Usable" xml:space="preserve"><value>{0} usable</value></data>
+  <data name="Memory_Sampled" xml:space="preserve"><value>Sample {0} · collection {1} ms · counters are collected independently</value></data>
+  <data name="Memory_Unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="Memory_Partial" xml:space="preserve"><value>Some counters are unavailable. Missing values are not measured zeroes.</value></data>
+  <data name="Memory_Excess" xml:space="preserve"><value>Measured categories exceed in-use RAM by {0}. Values are shown unchanged; no exact partition is claimed.</value></data>
+  <data name="Memory_ResidualNote" xml:space="preserve"><value>{0} are in use but not counted by any of the rows above. Most of it is loaded program files and DLLs (shared by the processes that use them), plus page tables, kernel address space, file system metadata and driver-locked memory.</value></data>
+  <data name="Memory_AvailableDifference" xml:space="preserve"><value>Available versus standby + free: difference {0}. Sampling times can differ.</value></data>
+  <data name="Memory_PageListsMissing" xml:space="preserve"><value>Standby and free-page counters are incomplete. Available RAM is still measured by Windows.</value></data>
+  <data name="Memory_ModifiedMissing" xml:space="preserve"><value>The modified-page counter is missing; the in-use estimate includes those pages.</value></data>
+  <data name="Memory_Open" xml:space="preserve"><value>Open memory accounting →</value></data>
+  <data name="Memory_OpenButton.Content" xml:space="preserve"><value>Open memory accounting →</value></data>
+  <data name="Memory_InUseNote" xml:space="preserve"><value>Private app pages, Windows, shared memory and drivers.</value></data>
+  <data name="Workflow_Connections" xml:space="preserve"><value>Show connections</value></data>
+  <data name="Workflow_Process" xml:space="preserve"><value>Show processes</value></data>
+  <data name="Workflow_RefreshRules.Label" xml:space="preserve"><value>Refresh rules</value></data>
+  <data name="Workflow_Policy" xml:space="preserve"><value>Configured policy</value></data>
+  <data name="Workflow_PolicyUnknown" xml:space="preserve"><value>Policy could not be read. Refresh rules to retry.</value></data>
+  <data name="Workflow_NoIdentity" xml:space="preserve"><value>Executable identity unavailable</value></data>
+  <data name="Workflow_OutboundBlocked" xml:space="preserve"><value>Outbound connections blocked</value></data>
+  <data name="Workflow_CustomRules" xml:space="preserve"><value>Custom app rules; select a connection for the matching rule</value></data>
+  <data name="Workflow_DefaultPolicy" xml:space="preserve"><value>No matching block in Nax rules</value></data>
+  <data name="Workflow_UnknownPeer" xml:space="preserve"><value>Local UDP binding; peer and direction are unknown</value></data>
+  <data name="Workflow_Listener" xml:space="preserve"><value>Listening socket; no remote connection to evaluate</value></data>
+  <data name="Workflow_AllowedRule" xml:space="preserve"><value>Allowed by {0}</value></data>
+  <data name="Workflow_InboundBlocked" xml:space="preserve"><value>Inbound connections blocked</value></data>
+  <data name="Workflow_InternetBlocked" xml:space="preserve"><value>Internet access blocked</value></data>
+  <data name="Workflow_LanBlocked" xml:space="preserve"><value>LAN access blocked</value></data>
+  <data name="Workflow_LocalBlocked" xml:space="preserve"><value>Localhost access blocked</value></data>
+  <data name="Workflow_BlockedRule" xml:space="preserve"><value>Would block: {0}</value></data>
+  <data name="Workflow_SelectPolicy" xml:space="preserve"><value>Select an app or connection to inspect its configured policy.</value></data>
+  <data name="Workflow_PolicyNote" xml:space="preserve"><value>Rules read at {0}. This explains Nax configuration, not a captured packet verdict. Other firewalls may also apply.</value></data>
+  <data name="Workflow_NameSource" xml:space="preserve"><value>Name source</value></data>
+  <data name="Cleanup_NoMeasurement" xml:space="preserve"><value>No fresh comparable sample was available; no memory saving has been measured.</value></data>
+  <data name="Workflow_RuleScope" xml:space="preserve"><value>These rules apply to every process using this executable, including other service hosts using the same file.</value></data>
+  <data name="NetworkPage_32.Label" xml:space="preserve"><value>All rules</value></data>
+  <data name="RulesList_Title" xml:space="preserve"><value>Network rules and blocks ({0})</value></data>
+  <data name="RulesList_Intro" xml:space="preserve"><value>Every app that Nax-TaskManager restricts. Apps not listed here have no restriction from Nax-TaskManager; other firewalls such as Bitdefender can still block them.</value></data>
+  <data name="RulesList_Empty" xml:space="preserve"><value>No app has a block or its own rules.</value></data>
+  <data name="RulesList_Blocked" xml:space="preserve"><value>All network access is blocked.</value></data>
+  <data name="RulesList_Missing" xml:space="preserve"><value>This program file no longer exists. The rule stays until you remove it.</value></data>
+  <data name="RulesList_Outgoing" xml:space="preserve"><value>Outgoing rules (first match decides)</value></data>
+  <data name="RulesList_Incoming" xml:space="preserve"><value>Incoming rules (first match decides)</value></data>
+  <data name="RulesList_Edit" xml:space="preserve"><value>Edit…</value></data>
+  <data name="Memory_UsedGroup" xml:space="preserve"><value>In use: {0}</value></data>
+  <data name="Memory_ReadyGroup" xml:space="preserve"><value>Cache and free, handed to programs on demand: {0}</value></data>
+  <data name="Memory_FreeNote" xml:space="preserve"><value>Free is almost always close to zero. Windows fills unused RAM with the contents of files that were read or written recently (standby cache) and gives that RAM to a program the moment it needs it. To keep it small, set a standby limit in Settings.</value></data>
+  <data name="SettingsPage_35.Text" xml:space="preserve"><value>Keep the standby cache small</value></data>
+  <data name="SettingsPage_36.Content" xml:space="preserve"><value>Off</value></data>
+  <data name="SettingsPage_37.Text" xml:space="preserve"><value>Windows cannot switch its standby cache off; it refills it with every file that is read or written. With a limit, the History service checks every 10 seconds and empties the cache when it is larger, so the RAM shows as free. Programs and files you use again are then read from disk instead of RAM, which makes their next start slower. Needs the History service; changing it needs administrator approval.</value></data>
+  <data name="Standby_On" xml:space="preserve"><value>On: the History service empties the standby cache whenever it grows above {0}.</value></data>
+  <data name="Standby_Off" xml:space="preserve"><value>Off: Windows keeps file contents in the standby cache until programs need the RAM.</value></data>
 </root>

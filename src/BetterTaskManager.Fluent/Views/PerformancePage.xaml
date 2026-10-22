@@ -7,7 +7,7 @@
     NavigationCacheMode="Required">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Padding="20,8,20,24" Spacing="12">
+        <StackPanel Padding="28,20,28,24" Spacing="18">
             <StackPanel>
                 <TextBlock x:Uid="PerformancePage_1" Text="Performance" Style="{StaticResource PageTitleStyle}" />
                 <TextBlock x:Name="SummaryText" Style="{StaticResource MutedTextStyle}" />
@@ -22,10 +22,10 @@
 
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="8">
-                        <Grid>
+                        <StackPanel Spacing="6">
                             <TextBlock Text="CPU" Style="{StaticResource BodyStrongTextBlockStyle}" />
                             <TextBlock x:Name="CpuValue" HorizontalAlignment="Right" Style="{StaticResource SubtitleTextBlockStyle}" />
-                        </Grid>
+                        </StackPanel>
                         <controls:TrendChart x:Name="CpuChart" Height="120" Stroke="{ThemeResource ChartCpuBrush}" />
                         <TextBlock x:Name="CpuDetail" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>
@@ -33,10 +33,10 @@
 
                 <Border Grid.Column="1" Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="8">
-                        <Grid>
+                        <StackPanel Spacing="6">
                             <TextBlock x:Uid="PerformancePage_2" Text="Memory" Style="{StaticResource BodyStrongTextBlockStyle}" />
                             <TextBlock x:Name="MemoryValue" HorizontalAlignment="Right" Style="{StaticResource SubtitleTextBlockStyle}" />
-                        </Grid>
+                        </StackPanel>
                         <controls:TrendChart x:Name="MemoryChart" Height="120" Stroke="{ThemeResource ChartMemoryBrush}" />
                         <TextBlock x:Name="MemoryDetail" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>
@@ -44,10 +44,10 @@
 
                 <Border Grid.Column="2" Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="8">
-                        <Grid>
+                        <StackPanel Spacing="6">
                             <TextBlock x:Uid="PerformancePage_3" Text="Network" Style="{StaticResource BodyStrongTextBlockStyle}" />
                             <TextBlock x:Name="NetworkValue" HorizontalAlignment="Right" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
-                        </Grid>
+                        </StackPanel>
                         <controls:TrendChart x:Name="NetworkChart" Height="120" Stroke="{ThemeResource ChartReceiveBrush}" SecondStroke="{ThemeResource ChartSendBrush}" />
                         <TextBlock x:Name="NetworkDetail" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>
@@ -96,6 +96,7 @@
                     </Grid>
 
                     <InfoBar x:Name="CleanupBar" IsOpen="False" IsClosable="True" />
+                    <HyperlinkButton x:Uid="Memory_OpenButton" Content="Open memory accounting" Click="OpenMemory_Click" Padding="0" />
 
                     <Grid x:Name="MemoryBar" Height="28" CornerRadius="4" />
 

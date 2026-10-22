@@ -4,7 +4,7 @@ namespace BetterTaskManager.Fluent.Services;
 
 public sealed class AppSettings
 {
-    private static readonly string Folder = Path.Combine(
+    private static readonly string Folder = Environment.GetCommandLineArgs().Contains("--preview") ? Path.Combine(AppContext.BaseDirectory, "PreviewData") : Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NaxTaskManager");
     private static readonly string FilePath = Path.Combine(Folder, "settings.json");
     /// <summary>Settings from before the rename to Nax-TaskManager; read once when no new file exists.</summary>
@@ -40,13 +40,14 @@ public sealed class AppSettings
     public Dictionary<string, double> ColumnWidths { get; set; } = new();
     /// <summary>Column order per table ("Processes.", "Details."), comma-separated; absent = default order.</summary>
     public Dictionary<string, string> ColumnOrder { get; set; } = new();
-    public int WindowWidth { get; set; } = 1280;
-    public int WindowHeight { get; set; } = 820;
+    public int WindowWidth { get; set; } = 1500;
+    public int WindowHeight { get; set; } = 980;
 
     public static AppSettings Load()
     {
         try
         {
+            if (Environment.GetCommandLineArgs().Contains("--preview") && !File.Exists(FilePath)) return new AppSettings();
             string path = File.Exists(FilePath) ? FilePath : LegacyFilePath;
             if (File.Exists(path))
             {

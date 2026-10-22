@@ -6,7 +6,7 @@
     xmlns:vm="using:BetterTaskManager.Fluent.ViewModels"
     NavigationCacheMode="Required">
 
-    <Grid Padding="16,8,16,16">
+    <Grid Padding="24,16,24,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -121,7 +121,7 @@
             </ListView.ItemContainerTransitions>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="vm:StartupRow">
-                    <Grid Height="34" ToolTipService.ToolTip="{x:Bind Command}" PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited">
+                    <Grid Height="40" ToolTipService.ToolTip="{x:Bind Command}" PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="{x:Bind Layout.Name, Mode=OneWay}" />
                             <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />
