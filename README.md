@@ -68,8 +68,6 @@ Requires the .NET 11 SDK and Inno Setup 7 (`winget install JRSoftware.InnoSetup.
 | `src/BetterTaskManager.Fluent` | The WinUI 3 app (`Nax-TaskManager.exe`) |
 | `src/BetterTaskManager.HistoryService` | The background history service (`Nax-TaskManager.HistoryService.exe`) |
 
-Design notes, verified measurements and the roadmap are in [docs/FLUENT-REBUILD.md](docs/FLUENT-REBUILD.md).
-
 ## License
 
 MIT — see [LICENSE](LICENSE).
