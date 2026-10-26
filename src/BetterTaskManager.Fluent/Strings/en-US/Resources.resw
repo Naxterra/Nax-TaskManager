@@ -905,4 +905,20 @@ First {2}, last {3}</value></data>
   <data name="RulesPage_HelperMissing" xml:space="preserve"><value>file no longer exists</value></data>
   <data name="RulesPage_HelperRuntimeNote" xml:space="preserve"><value>Many apps share Windows' WebView2 runtime, for example the Widgets, Teams or Outlook. A block or rule then applies to all of them. After a WebView2 update the program lives in a new folder, so check the new entry and save again.</value></data>
   <data name="RulesPage_HelperSharedNote" xml:space="preserve"><value>Other apps use this program too. A block or rule then applies to them as well.</value></data>
+  <data name="Kernel_Line" xml:space="preserve"><value>Kernel and drivers (pools)</value></data>
+  <data name="Kernel_WarningTitle" xml:space="preserve"><value>Kernel memory unusually high</value></data>
+  <data name="Kernel_PoolNonPaged" xml:space="preserve"><value>non-paged pool</value></data>
+  <data name="Kernel_PoolPaged" xml:space="preserve"><value>paged pool</value></data>
+  <data name="Kernel_WarningTag" xml:space="preserve"><value>The {0} holds {1}, of which {2} is under the tag “{3}”{4}.</value></data>
+  <data name="Kernel_WarningPool" xml:space="preserve"><value>The {0} holds {1}.</value></data>
+  <data name="Kernel_WarningExplain" xml:space="preserve"><value>This memory belongs to no program, so no process list shows it. Usually a driver is behind it, or a program that keeps triggering one. Only a restart releases the memory.</value></data>
+  <data name="Kernel_TagsTitle" xml:space="preserve"><value>Kernel memory by driver</value></data>
+  <data name="Kernel_TagsNote" xml:space="preserve"><value>Drivers label their kernel memory with a four-character pool tag. The driver files that contain each tag are listed next to it.</value></data>
+  <data name="Kernel_TagColumn" xml:space="preserve"><value>Tag</value></data>
+  <data name="Kernel_DriverColumn" xml:space="preserve"><value>Driver</value></data>
+  <data name="Kernel_NonPagedColumn" xml:space="preserve"><value>Non-paged</value></data>
+  <data name="Kernel_PagedColumn" xml:space="preserve"><value>Paged</value></data>
+  <data name="Kernel_DriverSearching" xml:space="preserve"><value>searching</value></data>
+  <data name="Kernel_DriverUnknown" xml:space="preserve"><value>no driver found</value></data>
+  <data name="Kernel_DriverMore" xml:space="preserve"><value> and {0} more</value></data>
 </root>

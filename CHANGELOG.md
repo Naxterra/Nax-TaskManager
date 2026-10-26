@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0-alpha.40 - 2026-10-26
+
+- **Kernel memory is visible, and a leaking driver is named.** Memory that drivers and Windows allocate in the kernel pools belongs to no process, so no app list can show it. When a driver leaks, the RAM fills up while every app looks small. The overview's memory card now shows "Kernel and drivers (pools)" as its own line, and the Memory page has a new "Kernel memory by driver" table with the largest pool tags, their non-paged and paged size and the driver files that contain each tag.
+- When the non-paged or the paged pool holds a tenth of the RAM or more (at least 4 GB), both places show a warning that names the pool, the tag holding most of it and its driver, for example "NtFC (ntfs.sys)", and explains that only a restart releases this memory.
+- Finding a tag's driver now also searches the kernel modules that are currently loaded, not only System32\drivers. Tags of the Windows kernel itself (for example EtwB and MmSt) and of drivers installed in the driver store (for example NVRM of the NVIDIA driver) now show their file instead of "no driver found". The startup memory report of the history service uses the same search.
+- A console test project (tests/BetterTaskManager.Core.Tests) checks when the warning fires and which tag it names.
+- Tested on this PC: the table listed NtFC under ntfs.sys, EtwB and MmSt under ntoskrnl.exe and NVRM under nvlddmkm.sys, without administrator rights. The warning itself was not shown on screen because the pools were normal during the test; its rule is covered by the test project.
+
 ## 2.0.0-alpha.39 - 2026-10-22
 
 - **Rules cover an app's helper programs.** Apps that draw their window with a browser engine connect from the engine's program file, which a firewall rule for the app does not cover. An app's rules now list these helper programs under "Helper programs". A helper only this app uses (for example Steam's web helper) is checked for new rules; a shared one (the Windows WebView2 runtime that WhatsApp, the Widgets, Teams and Nax-Notepad use) only when you check it, with a note which other apps a rule would also affect. A checked helper gets the app's block, switches and rules as its own filters; unchecking it gives it its connections back, and rules a helper has of its own are never touched. The Rules list shows helpers as part of their app ("+1 helper programs"), "Recently blocked" includes them, and the app picker no longer offers them as apps.

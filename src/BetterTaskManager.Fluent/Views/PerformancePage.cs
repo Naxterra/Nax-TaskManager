@@ -205,6 +205,8 @@ public sealed partial class PerformancePage : Page
     private readonly TextBlock total = Text("", 14, true);
     private readonly TextBlock reconciliation = Text("", 12, secondary: true), availableNote = Text("", 12, secondary: true);
     private readonly TextBlock usedHeader = Text("", 14, true), readyHeader = Text("", 14, true);
+    private readonly StackPanel kernelRows = new() { Spacing = 2 }, kernelWarning = new() { Spacing = 6, Visibility = Visibility.Collapsed };
+    private readonly TextBlock kernelWarningText = Text("", 12);
     private readonly StackPanel memoryApps = new();
     private readonly List<TextBlock> values = new();
     private readonly HistoryBuffer availableHistory = new(60), cachedHistory = new(60), commitHistory = new(60);
@@ -287,6 +289,18 @@ public sealed partial class PerformancePage : Page
         memoryLower.Children.Add(memoryAppsCard);
         panel.Children.Add(memoryLower);
 
+        // Kernel pool memory per driver: it belongs to no process, so this is the only place that can explain it.
+        var kernel = new StackPanel { Spacing = 10 };
+        kernel.Children.Add(Titled("", "Memory", Loc.Get("Kernel_TagsTitle")));
+        kernelWarningText.SetResourceReference(TextBlock.ForegroundProperty, "ToneWarnBrush");
+        kernelWarning.Children.Add(Ui.Chip(Loc.Get("Kernel_WarningTitle"), "Warn", ""));
+        kernelWarning.Children.Add(kernelWarningText);
+        kernel.Children.Add(kernelWarning);
+        kernel.Children.Add(Note(Loc.Get("Kernel_TagsNote")));
+        kernel.Children.Add(KernelRow(header: true, Loc.Get("Kernel_TagColumn"), Loc.Get("Kernel_DriverColumn"), Loc.Get("Kernel_NonPagedColumn"), Loc.Get("Kernel_PagedColumn")));
+        kernel.Children.Add(kernelRows);
+        panel.Children.Add(Card(kernel));
+
         var explanation = new StackPanel { Spacing = 6 };
         explanation.Children.Add(Titled("\uE946", "Warn", Loc.Get("Memory_Why")));
         explanation.Children.Add(Text(Loc.Get("Memory_WhyText"), 12, secondary: true));
@@ -328,6 +342,39 @@ public sealed partial class PerformancePage : Page
             .Select(g => (Process: g.FirstOrDefault(p => !AppIdentityRules.IsEmbeddedHost(p)) ?? g.First(), Bytes: g.Sum(p => p.PrivateWorkingSet), Count: g.Count()))
             .OrderByDescending(g => g.Bytes).ThenBy(g => g.Process.DisplayName).Take(8);
         FillApps(memoryApps, groups.Select(g => (g.Process, g.Count, Format.Memory(g.Bytes))));
+
+        KernelPoolService.Instance.Refresh(m);
+        string? warning = KernelPoolService.Instance.WarningText();
+        kernelWarningText.Text = warning ?? "";
+        kernelWarning.Visibility = warning is null ? Visibility.Collapsed : Visibility.Visible;
+        IReadOnlyList<Core.Native.PoolTagUsage> tags = KernelPoolService.Instance.Largest;
+        while (kernelRows.Children.Count < tags.Count) kernelRows.Children.Add(KernelRow(header: false, "", "", "", ""));
+        while (kernelRows.Children.Count > tags.Count) kernelRows.Children.RemoveAt(kernelRows.Children.Count - 1);
+        for (int i = 0; i < tags.Count; i++)
+        {
+            var row = (Grid)kernelRows.Children[i];
+            ((TextBlock)row.Children[0]).Text = tags[i].Tag.Trim();
+            ((TextBlock)row.Children[1]).Text = KernelPoolService.Instance.DriversOf(tags[i].Tag);
+            ((TextBlock)row.Children[2]).Text = Format.Memory(tags[i].NonPagedBytes);
+            ((TextBlock)row.Children[3]).Text = Format.Memory(tags[i].PagedBytes);
+        }
+    }
+
+    /// <summary>One line of the kernel pool table: tag, driver files, non-paged and paged bytes.</summary>
+    private static Grid KernelRow(bool header, params string[] cells)
+    {
+        var row = new Grid { ColumnSpacing = 12, MinHeight = 26 };
+        foreach (GridLength width in new[] { new GridLength(64), new GridLength(1, GridUnitType.Star), new GridLength(120), new GridLength(120) })
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
+        for (int i = 0; i < 4; i++)
+        {
+            var cell = Text(cells[i], header ? 11 : 13, strong: !header && i == 0, secondary: header || i == 1);
+            cell.TextWrapping = TextWrapping.NoWrap; cell.TextTrimming = TextTrimming.CharacterEllipsis;
+            if (i >= 2) cell.HorizontalAlignment = HorizontalAlignment.Right;
+            if (i == 0) cell.FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas");
+            Grid.SetColumn(cell, i); row.Children.Add(cell);
+        }
+        return row;
     }
 
     // ===== Freeing memory =====

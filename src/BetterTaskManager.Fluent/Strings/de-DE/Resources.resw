@@ -905,4 +905,20 @@ Erstmals {2}, zuletzt {3}</value></data>
   <data name="RulesPage_HelperMissing" xml:space="preserve"><value>Datei nicht mehr vorhanden</value></data>
   <data name="RulesPage_HelperRuntimeNote" xml:space="preserve"><value>Viele Apps teilen sich die WebView2-Laufzeit von Windows, zum Beispiel die Widgets, Teams oder Outlook. Eine Sperre oder Regel gilt dann für alle diese Apps. Nach einem WebView2-Update liegt das Programm in einem neuen Ordner, dann haken Sie den neuen Eintrag an und speichern erneut.</value></data>
   <data name="RulesPage_HelperSharedNote" xml:space="preserve"><value>Andere Apps nutzen dieses Programm ebenfalls. Eine Sperre oder Regel gilt dann auch für sie.</value></data>
+  <data name="Kernel_Line" xml:space="preserve"><value>Kernel und Treiber (Pools)</value></data>
+  <data name="Kernel_WarningTitle" xml:space="preserve"><value>Kernel-Speicher ungewöhnlich hoch</value></data>
+  <data name="Kernel_PoolNonPaged" xml:space="preserve"><value>nicht ausgelagerte Pool</value></data>
+  <data name="Kernel_PoolPaged" xml:space="preserve"><value>ausgelagerte Pool</value></data>
+  <data name="Kernel_WarningTag" xml:space="preserve"><value>Der {0} belegt {1}, davon {2} unter dem Tag „{3}“{4}.</value></data>
+  <data name="Kernel_WarningPool" xml:space="preserve"><value>Der {0} belegt {1}.</value></data>
+  <data name="Kernel_WarningExplain" xml:space="preserve"><value>Dieser Speicher gehört zu keinem Programm und erscheint deshalb in keiner Prozessliste. Meist steckt ein Treiber dahinter oder ein Programm, das ihn ständig auslöst. Erst ein Neustart gibt den Speicher wieder frei.</value></data>
+  <data name="Kernel_TagsTitle" xml:space="preserve"><value>Kernel-Speicher nach Treiber</value></data>
+  <data name="Kernel_TagsNote" xml:space="preserve"><value>Treiber kennzeichnen ihren Speicher mit einem Kürzel aus vier Zeichen (Pool-Tag). Daneben stehen die Treiberdateien, die dieses Kürzel enthalten.</value></data>
+  <data name="Kernel_TagColumn" xml:space="preserve"><value>Tag</value></data>
+  <data name="Kernel_DriverColumn" xml:space="preserve"><value>Treiber</value></data>
+  <data name="Kernel_NonPagedColumn" xml:space="preserve"><value>Nicht ausgelagert</value></data>
+  <data name="Kernel_PagedColumn" xml:space="preserve"><value>Ausgelagert</value></data>
+  <data name="Kernel_DriverSearching" xml:space="preserve"><value>wird gesucht</value></data>
+  <data name="Kernel_DriverUnknown" xml:space="preserve"><value>kein Treiber gefunden</value></data>
+  <data name="Kernel_DriverMore" xml:space="preserve"><value> und {0} weitere</value></data>
 </root>

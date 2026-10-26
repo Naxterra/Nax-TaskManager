@@ -15,7 +15,9 @@ public sealed partial class OverviewPage : Page
     private readonly StackPanel root = new() { Spacing = 18, Padding = new Thickness(28, 20, 28, 24) };
     private readonly TextBlock summary = Text("", 13, secondary: true), live = Text("", 11), uptime = Text("", 12, secondary: true);
     private readonly TextBlock memoryValue = Text("", 30, strong: true), memoryDetail = Text("", 12, secondary: true);
-    private readonly TextBlock availableValue = Text("", 13, strong: true), committedValue = Text("", 13, strong: true);
+    private readonly TextBlock availableValue = Text("", 13, strong: true), committedValue = Text("", 13, strong: true), kernelValue = Text("", 13, strong: true);
+    private readonly TextBlock kernelWarningText = WrappedWarning();
+    private readonly StackPanel kernelWarning = new() { Spacing = 6, Margin = new Thickness(0, 6, 0, 2), Visibility = Visibility.Collapsed };
     private readonly TextBlock processCount = Text("", 12, secondary: true), connectionCount = Text("", 12, secondary: true), noConnections = Text("", 13, secondary: true);
     private readonly ProgressBar memoryBar = new() { Maximum = 100, Height = 6, Margin = new Thickness(0, 12, 0, 12) };
     private readonly Grid metrics = new() { ColumnSpacing = 12, RowSpacing = 12 }, charts = new() { ColumnSpacing = 18, RowSpacing = 18 }, lists = new() { ColumnSpacing = 18, RowSpacing = 18 };
@@ -58,6 +60,9 @@ public sealed partial class OverviewPage : Page
         activityCard = Card(plot); charts.Children.Add(activityCard);
         var mem = new StackPanel { Spacing = 6 }; mem.Children.Add(Titled("\uE964", "Memory", Loc.Get("Design_MemoryFootprint"))); mem.Children.Add(memoryValue); mem.Children.Add(memoryDetail);
         memoryBar.SetResourceReference(Control.ForegroundProperty, "ChartMemoryBrush"); mem.Children.Add(memoryBar); mem.Children.Add(Fact(Loc.Get("Design_Available"), availableValue)); mem.Children.Add(Fact(Loc.Get("Design_Committed"), committedValue));
+        // Kernel pools belong to no process, so a leaking driver would otherwise only show as "in use" with small apps.
+        mem.Children.Add(Fact(Loc.Get("Kernel_Line"), kernelValue));
+        kernelWarning.Children.Add(Ui.Chip(Loc.Get("Kernel_WarningTitle"), "Warn", "")); kernelWarning.Children.Add(kernelWarningText); mem.Children.Add(kernelWarning);
         var memoryLink = new HyperlinkButton { Content = Loc.Get("Memory_Open"), Padding = new Thickness(0), HorizontalAlignment = HorizontalAlignment.Left };
         memoryLink.Click += (_, _) => App.Window.NavigatePage("Memory"); mem.Children.Add(memoryLink);
         memoryCard = Card(mem); charts.Children.Add(memoryCard); root.Children.Add(charts);
@@ -101,6 +106,11 @@ public sealed partial class OverviewPage : Page
         activity.Update(App.Monitor.CpuHistory, 100, App.Monitor.MemoryHistory);
         memoryValue.Text = Format.Gigabytes(system.Memory.InUse); memoryDetail.Text = Loc.F("Design_MemoryTotal", Format.Gigabytes(system.Memory.Total)); memoryBar.Value = system.Memory.LoadPercent;
         availableValue.Text = Format.Gigabytes(system.Memory.Available); committedValue.Text = Format.Gigabytes(system.Memory.CommitTotal) + " / " + Format.Gigabytes(system.Memory.CommitLimit);
+        KernelPoolService.Instance.Refresh(system.Memory);
+        kernelValue.Text = system.Memory.Detailed ? Format.Gigabytes(system.Memory.PagedPoolResident + system.Memory.NonpagedPool) : "–";
+        string? warning = KernelPoolService.Instance.WarningText();
+        kernelWarningText.Text = warning ?? "";
+        kernelWarning.Visibility = warning is null ? Visibility.Collapsed : Visibility.Visible;
         processCount.Text = Loc.Get("Design_SortedMemory");
         var leaders = snapshot.Processes.Where(p => p.Pid > 0).GroupBy(ViewModels.ProcessTree.GroupKey, StringComparer.OrdinalIgnoreCase)
             .Select(g => new { Process = g.FirstOrDefault(p => !AppIdentityRules.IsEmbeddedHost(p)) ?? g.First(), Memory = g.Sum(p => p.PrivateWorkingSet), Cpu = g.Sum(p => p.CpuPercent), Count = g.Count() }).OrderByDescending(g => g.Memory).Take(5);
@@ -141,6 +151,11 @@ public sealed partial class OverviewPage : Page
     private static TextBlock Text(string text, double size, bool strong = false, bool secondary = false)
     {
         var block = new TextBlock { Text = text, FontSize = size, FontWeight = strong ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, VerticalAlignment = VerticalAlignment.Center }; block.SetResourceReference(TextBlock.ForegroundProperty, secondary ? "TextFillColorSecondaryBrush" : "TextFillColorPrimaryBrush"); return block;
+    }
+    private static TextBlock WrappedWarning()
+    {
+        var block = Text("", 12); block.TextWrapping = TextWrapping.Wrap; block.TextTrimming = TextTrimming.None;
+        block.SetResourceReference(TextBlock.ForegroundProperty, "ToneWarnBrush"); return block;
     }
     private static Button CreateAppRow()
     {

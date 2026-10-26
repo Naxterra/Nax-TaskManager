@@ -53,13 +53,19 @@ public static class PoolTags
         return new List<PoolTagUsage>();
     }
 
-    /// <summary>Driver files in System32\drivers that contain each tag (the usual way to attribute a tag).</summary>
+    /// <summary>
+    /// Kernel files that contain each tag (the usual way to attribute a tag): every file in System32\drivers plus every
+    /// kernel module that is currently loaded, which adds the Windows kernel itself and drivers installed in the driver
+    /// store (for example graphics drivers).
+    /// </summary>
     public static Dictionary<string, List<string>> FindDrivers(IEnumerable<string> tags)
     {
         var wanted = tags.Distinct().ToDictionary(tag => tag, tag => Encoding.ASCII.GetBytes(tag));
         var found = wanted.Keys.ToDictionary(tag => tag, _ => new List<string>());
         string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers");
-        foreach (string file in Directory.EnumerateFiles(folder, "*.sys"))
+        var files = new HashSet<string>(Directory.EnumerateFiles(folder, "*.sys").Select(Path.GetFullPath), StringComparer.OrdinalIgnoreCase);
+        files.UnionWith(LoadedKernelModules().Select(Path.GetFullPath));
+        foreach (string file in files.Order(StringComparer.OrdinalIgnoreCase))
         {
             byte[] bytes;
             try
@@ -72,10 +78,55 @@ public static class PoolTags
             }
             foreach (var (tag, pattern) in wanted)
             {
-                if (bytes.AsSpan().IndexOf(pattern) >= 0) found[tag].Add(Path.GetFileName(file));
+                string name = Path.GetFileName(file);
+                if (bytes.AsSpan().IndexOf(pattern) >= 0 && !found[tag].Contains(name, StringComparer.OrdinalIgnoreCase)) found[tag].Add(name);
             }
         }
         return found;
+    }
+
+    /// <summary>
+    /// Paths of the loaded kernel modules (SystemModuleInformation). Windows names them like
+    /// "\SystemRoot\system32\ntoskrnl.exe" or "\??\C:\...", and only paths that resolve to an existing file are returned.
+    /// </summary>
+    internal static List<string> LoadedKernelModules()
+    {
+        const int SystemModuleInformation = 11;
+        const int ModuleEntrySize = 296;   // RTL_PROCESS_MODULE_INFORMATION on 64-bit Windows
+        const int FullPathOffset = 40;
+        var result = new List<string>();
+        int size = 1 << 18;
+        for (int attempt = 0; attempt < 6; attempt++)
+        {
+            IntPtr buffer = Marshal.AllocHGlobal(size);
+            try
+            {
+                int status = NtQuerySystemInformation(SystemModuleInformation, buffer, size, out int needed);
+                if (status == StatusInfoLengthMismatch)
+                {
+                    size = Math.Max(size * 2, needed + 4096);
+                    continue;
+                }
+                if (status < 0) return result;
+                int count = Marshal.ReadInt32(buffer);
+                string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                for (int index = 0; index < count; index++)
+                {
+                    string? raw = Marshal.PtrToStringAnsi(buffer + 8 + index * ModuleEntrySize + FullPathOffset);
+                    if (string.IsNullOrEmpty(raw)) continue;
+                    string path = raw.StartsWith(@"\SystemRoot\", StringComparison.OrdinalIgnoreCase) ? Path.Combine(windows, raw[12..])
+                        : raw.StartsWith(@"\??\", StringComparison.Ordinal) ? raw[4..]
+                        : raw;
+                    if (Path.IsPathFullyQualified(path) && File.Exists(path)) result.Add(path);
+                }
+                return result;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+        }
+        return result;
     }
 
     [DllImport("ntdll.dll")]
