@@ -58,7 +58,8 @@ public static partial class FirewallRules
     /// </summary>
     public static CommandResult Apply(string path, bool block)
     {
-        if (string.IsNullOrWhiteSpace(path)) return new CommandResult(87, "", "The executable path is empty.", false);
+        // Only full paths: a relative path or a bare name would block whatever the helper's working folder resolves it to.
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path)) return new CommandResult(87, "", "The executable path is not a full path.", false);
         try
         {
             if (block) WfpBlocker.Block(path);
@@ -101,7 +102,10 @@ public static partial class FirewallRules
         policy.Helpers = helpers;
         try
         {
-            AppNetworkPolicy? previous = NetworkPolicyStore.Find(policy.Path);
+            // Read the stored rules strictly before any filter changes: a damaged file stops the change here, while
+            // filters and file still agree.
+            AppNetworkPolicy? previous = NetworkPolicyStore.ReadForUpdate()
+                .FirstOrDefault(stored => string.Equals(stored.Path, policy.Path, StringComparison.OrdinalIgnoreCase));
             WfpBlocker.ApplyPolicy(policy);
             NetworkPolicyStore.Save(policy);
             // Each helper gets the app's switches and rules as its own filters, marked as the app's helper.
@@ -120,7 +124,7 @@ public static partial class FirewallRules
                 NetworkPolicyStore.Save(empty);
             }
         }
-        catch (Exception ex) when (ex is WfpException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is WfpException or IOException or UnauthorizedAccessException or InvalidDataException)
         {
             return new CommandResult(ex is WfpException wfp ? (int)wfp.Code : 1, "", ex.Message, false);
         }
@@ -142,6 +146,24 @@ public static partial class FirewallRules
 
     private static bool RuleExists(string name) =>
         CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=" + name).ExitCode == 0;
+
+    /// <summary>
+    /// Recovery for a damaged rules file: removes every rule filter of every app and the file, so filters and file
+    /// agree again (no rules). Whole-app blocks stay, because WFP itself lists them. Must be elevated.
+    /// </summary>
+    public static CommandResult ResetPolicies()
+    {
+        try
+        {
+            WfpBlocker.RemoveAllPolicies();
+            NetworkPolicyStore.DeleteAll();
+            return new CommandResult(0, "", "", false);
+        }
+        catch (Exception ex) when (ex is WfpException or IOException or UnauthorizedAccessException)
+        {
+            return new CommandResult(ex is WfpException wfp ? (int)wfp.Code : 1, "", ex.Message, false);
+        }
+    }
 
     /// <summary>Removes every block and rule this app ever made: WFP filters, the stored rules and Windows Firewall rules of earlier versions.</summary>
     public static void RemoveAll()

@@ -44,7 +44,8 @@ public static class KernelPoolAlert
         foreach (PoolTagUsage tag in tags)
         {
             long bytes = pool == KernelPoolKind.NonPaged ? tag.NonPagedBytes : tag.PagedBytes;
-            long best = top is null ? -1 : pool == KernelPoolKind.NonPaged ? top.Value.NonPagedBytes : top.Value.PagedBytes;
+            // A tag with nothing in this pool is never named, even when no tag holds anything.
+            long best = top is null ? 0 : pool == KernelPoolKind.NonPaged ? top.Value.NonPagedBytes : top.Value.PagedBytes;
             if (bytes > best) top = tag;
         }
         long topBytes = top is null ? 0 : pool == KernelPoolKind.NonPaged ? top.Value.NonPagedBytes : top.Value.PagedBytes;

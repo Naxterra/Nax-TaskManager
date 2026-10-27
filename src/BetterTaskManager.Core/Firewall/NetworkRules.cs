@@ -56,7 +56,9 @@ public readonly record struct Cidr(UInt128 Network, int Prefix, bool V6)
     {
         cidr = default;
         string[] parts = text.Split('/');
-        if (parts.Length > 2 || !IPAddress.TryParse(parts[0], out IPAddress? address)) return false;
+        // IPAddress.TryParse also accepts shortened IPv4 forms ("10.1" is 10.0.0.1, "3389" is 0.0.13.61), which would
+        // make a rule cover a different network than the one typed. IPv4 needs all four decimal parts.
+        if (parts.Length > 2 || !parts[0].Contains(':') && !IsDottedQuad(parts[0]) || !IPAddress.TryParse(parts[0], out IPAddress? address)) return false;
         if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
         bool v6 = address.AddressFamily == AddressFamily.InterNetworkV6;
         int bits = v6 ? 128 : 32;
@@ -64,6 +66,12 @@ public readonly record struct Cidr(UInt128 Network, int Prefix, bool V6)
         if (parts.Length == 2 && (!int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out prefix) || prefix > bits)) return false;
         cidr = new Cidr(ToNumber(address) & (Max(v6) ^ HostMask(bits - prefix)), prefix, v6);
         return true;
+    }
+
+    private static bool IsDottedQuad(string text)
+    {
+        string[] octets = text.Split('.');
+        return octets.Length == 4 && octets.All(octet => octet.Length is >= 1 and <= 3 && octet.All(char.IsAsciiDigit));
     }
 
     public override string ToString() => Prefix == Bits ? Address.ToString() : $"{Address}/{Prefix}";
@@ -474,16 +482,41 @@ public static class NetworkPolicyStore
     public static AppNetworkPolicy? Find(string path) =>
         Load().FirstOrDefault(policy => string.Equals(policy.Path, path, StringComparison.OrdinalIgnoreCase));
 
+    public const string DamagedMessage = "The stored network rules (app-rules.json) are damaged, so nothing was changed. Reset the rules on the Rules page.";
+
+    /// <summary>
+    /// Reads the stored rules strictly. A damaged file throws <see cref="InvalidDataException"/> instead of reading as
+    /// empty, because saving over it would drop every other app's entry while their filters stay active.
+    /// </summary>
+    public static List<AppNetworkPolicy> ReadForUpdate(string? path = null)
+    {
+        try
+        {
+            return Read(path);
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidDataException(DamagedMessage, ex);
+        }
+    }
+
     /// <summary>Replaces (or with an empty policy removes) one app's entry. Needs administrator rights.</summary>
     public static void Save(AppNetworkPolicy policy)
     {
-        List<AppNetworkPolicy> all = Load();
+        DataFolder.EnsureSecured();
+        Save(policy, FilePath);
+    }
+
+    /// <summary>
+    /// Replaces one app's entry in <paramref name="filePath"/>. Refuses to write over a file it cannot read, and
+    /// writes so that a crash leaves the old or the new file, never a half-written one.
+    /// </summary>
+    public static void Save(AppNetworkPolicy policy, string filePath)
+    {
+        List<AppNetworkPolicy> all = ReadForUpdate(filePath);
         all.RemoveAll(existing => string.Equals(existing.Path, policy.Path, StringComparison.OrdinalIgnoreCase));
         if (!policy.IsEmpty) all.Add(policy);
-        DataFolder.EnsureSecured();
-        string temporary = FilePath + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(all.OrderBy(p => p.Path, StringComparer.OrdinalIgnoreCase).ToList(), Options));
-        File.Move(temporary, FilePath, overwrite: true);
+        AtomicFile.WriteAllText(filePath, JsonSerializer.Serialize(all.OrderBy(p => p.Path, StringComparer.OrdinalIgnoreCase).ToList(), Options));
     }
 
     public static void DeleteAll()

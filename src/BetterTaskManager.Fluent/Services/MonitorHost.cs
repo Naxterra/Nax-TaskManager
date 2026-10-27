@@ -228,16 +228,41 @@ public sealed class MonitorHost : IDisposable
         await firewallRefresh;
     }
 
+    /// <summary>True when app-rules.json cannot be read; saving is refused until the rules are reset.</summary>
+    public bool PoliciesDamaged { get; private set; }
+
+    /// <summary>
+    /// Removes every rule filter and the damaged rules file (one UAC prompt), so filters and file agree again. Whole-app
+    /// blocks stay. Returns an error text, or null on success.
+    /// </summary>
+    public async Task<string?> ResetPoliciesAsync()
+    {
+        string? error = await ElevatedHelper.RunAsync(Program.RulesResetArgument);
+        await RefreshFirewallAsync();
+        return error;
+    }
+
     private async Task RefreshFirewallCoreAsync()
     {
         try
         {
             BlockRules = await Task.Run(FirewallRules.ReadBlockRuleNames);
             BlockedPaths = await Task.Run(WfpBlocker.ReadBlockedPaths);
-            List<AppNetworkPolicy> policies = await Task.Run(() => NetworkPolicyStore.Read());
+            List<AppNetworkPolicy> policies;
+            try
+            {
+                policies = await Task.Run(() => NetworkPolicyStore.Read());
+                PoliciesDamaged = false;
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // The Rules page offers a reset; until then no app shows rules it may not have.
+                policies = [];
+                PoliciesDamaged = true;
+            }
             Policies = policies.Where(policy => policy.Path.Length > 0).GroupBy(policy => policy.Path, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);
-            MemoryRules = (await Task.Run(Core.Native.MemoryRuleStore.Load)).Where(rule => rule.Path.Length > 0)
+            MemoryRules = (await Task.Run(() => Core.Native.MemoryRuleStore.Load())).Where(rule => rule.Path.Length > 0)
                 .GroupBy(rule => rule.Path, StringComparer.OrdinalIgnoreCase).ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);
             FirewallReadAt = DateTime.Now;
             FirewallStateKnown = true;

@@ -20,16 +20,7 @@ internal static class HistoryServiceSetup
     public static int RunHelper(string argument, string resultFile)
     {
         CommandResult result = Apply(argument == InstallArgument);
-        if (!result.Succeeded)
-        {
-            try
-            {
-                File.WriteAllText(resultFile, result.FailureSummary());
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
-        }
+        if (!result.Succeeded) Core.HelperResultFile.TryWrite(resultFile, result.FailureSummary());
         return result.Succeeded ? 0 : Math.Max(1, result.ExitCode);
     }
 

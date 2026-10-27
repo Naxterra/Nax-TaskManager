@@ -63,7 +63,7 @@ public sealed class StandbyLimiter : IDisposable
             return;
         }
         DataFolder.EnsureSecured();
-        File.WriteAllText(ConfigPath, Math.Max(MinimumMegabytes, megabytes.Value).ToString(CultureInfo.InvariantCulture));
+        AtomicFile.WriteAllText(ConfigPath, Math.Max(MinimumMegabytes, megabytes.Value).ToString(CultureInfo.InvariantCulture));
     }
 
     public void Start()
@@ -150,8 +150,9 @@ public sealed class StandbyLimiter : IDisposable
     public void Dispose()
     {
         shutdown.Cancel();
-        thread?.Join(TimeSpan.FromSeconds(5));
-        shutdown.Dispose();
+        // A purge can take longer than the wait. The token source is disposed only when the thread has ended, because
+        // the thread reads its token after every check and would otherwise crash the stopping service.
+        if (thread is null || thread.Join(TimeSpan.FromSeconds(5))) shutdown.Dispose();
     }
 
     [DllImport("ntdll.dll")]

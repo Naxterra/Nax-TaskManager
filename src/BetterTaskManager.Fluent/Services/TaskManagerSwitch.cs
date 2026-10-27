@@ -42,6 +42,10 @@ internal static class TaskManagerSwitch
             {
                 error = ex.Message;
             }
+            catch (InvalidOperationException)
+            {
+                error = Loc.Get("Replace_NeedsMachineInstall");
+            }
         }
         else
         {
@@ -53,7 +57,9 @@ internal static class TaskManagerSwitch
             {
                 using Process helper = Process.Start(startInfo)!;
                 await helper.WaitForExitAsync();
-                if (helper.ExitCode != 0) error = Loc.F("Common_ExitCode", helper.ExitCode);
+                // Exit code 6: this copy is not in an administrator-only folder (see Program, --replace-taskmanager-on).
+                if (helper.ExitCode == 6) error = Loc.Get("Replace_NeedsMachineInstall");
+                else if (helper.ExitCode != 0) error = Loc.F("Common_ExitCode", helper.ExitCode);
             }
             catch (System.ComponentModel.Win32Exception)
             {

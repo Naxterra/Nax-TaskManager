@@ -3,8 +3,8 @@ using System.Diagnostics;
 namespace BetterTaskManager.Fluent.Services;
 
 /// <summary>
-/// Runs one of the app's helper modes (see <see cref="Program"/>) as administrator: directly when this window is
-/// elevated, otherwise as a short-lived elevated copy of the app, so Windows shows one UAC prompt.
+/// Runs one of the app's helper modes (see <see cref="Program"/>) as administrator, always as a short-lived elevated
+/// copy of the app. Without administrator rights Windows shows one UAC prompt; an elevated window starts it without one.
 /// </summary>
 internal static class ElevatedHelper
 {

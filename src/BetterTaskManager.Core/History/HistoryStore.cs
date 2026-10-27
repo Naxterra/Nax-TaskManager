@@ -72,9 +72,30 @@ public sealed class HistoryStore : IDisposable
 
     private HistoryStore(SqliteConnection connection) => this.connection = connection;
 
+    /// <summary>
+    /// Opens the history for the service. A database that SQLite reports as damaged or not a database at all is kept
+    /// as "history.db.damaged-…" and a new one is started, so one bad file cannot stop the service for good.
+    /// </summary>
     public static HistoryStore OpenForWriting(string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        try
+        {
+            return OpenAndPrepare(path);
+        }
+        catch (SqliteException ex) when (ex.SqliteErrorCode is SqliteCorrupt or SqliteNotADatabase)
+        {
+            SqliteConnection.ClearAllPools();
+            File.Move(path, path + ".damaged-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture), overwrite: true);
+            foreach (string journal in new[] { path + "-journal", path + "-wal", path + "-shm" }) if (File.Exists(journal)) File.Delete(journal);
+            return OpenAndPrepare(path);
+        }
+    }
+
+    private const int SqliteCorrupt = 11, SqliteNotADatabase = 26;
+
+    private static HistoryStore OpenAndPrepare(string path)
+    {
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder
         {
             DataSource = path,
@@ -84,9 +105,18 @@ public sealed class HistoryStore : IDisposable
         }.ToString());
         connection.Open();
         var store = new HistoryStore(connection);
-        store.Execute("PRAGMA journal_mode=DELETE; PRAGMA synchronous=NORMAL;");
-        store.CreateSchema();
-        return store;
+        try
+        {
+            // FULL, not NORMAL: in rollback-journal mode only FULL keeps the database intact through a power loss.
+            store.Execute("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;");
+            store.CreateSchema();
+            return store;
+        }
+        catch
+        {
+            store.Dispose();
+            throw;
+        }
     }
 
     /// <summary>Opens an existing history read-only, or returns null when nothing has been recorded yet.</summary>

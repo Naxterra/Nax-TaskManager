@@ -144,9 +144,7 @@ public static partial class WfpBlocker
     {
         HashSet<string> paths = ReadFilters();
         DataFolder.EnsureSecured();
-        string temporary = MirrorPath + ".tmp";
-        File.WriteAllLines(temporary, paths.Order(StringComparer.OrdinalIgnoreCase));
-        File.Move(temporary, MirrorPath, overwrite: true);
+        AtomicFile.WriteAllLines(MirrorPath, paths.Order(StringComparer.OrdinalIgnoreCase));
     }
 
     /// <summary>Paths with a whole-app block: the connect-layer filters that are not rule filters.</summary>

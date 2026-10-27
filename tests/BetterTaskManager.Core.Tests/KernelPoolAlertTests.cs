@@ -68,6 +68,17 @@ internal static class KernelPoolAlertTests
                 Check.Equal(null, warning.TopTag);
             });
 
+        yield return ("tag_with_nothing_in_the_reported_pool_is_never_named",
+            "When the non-paged pool is too large but no tag holds non-paged bytes (only paged ones), the warning names no tag rather than one holding 0 bytes.",
+            () =>
+            {
+                PoolTagUsage[] tags = [new("MmSt", 5 * Gb, 0), new("Ntfx", Gb, 0)];
+                var warning = KernelPoolAlert.Evaluate(12 * Gb, 0, 64 * Gb, tags);
+                Check.Equal(KernelPoolKind.NonPaged, warning!.Pool);
+                Check.Equal(null, warning.TopTag);
+                Check.Equal(0L, warning.TopTagBytes);
+            });
+
         yield return ("largest_tags_are_ranked_by_total_and_limited",
             "The tag list is sorted by paged plus non-paged bytes, skips empty tags and returns only the requested number.",
             () =>

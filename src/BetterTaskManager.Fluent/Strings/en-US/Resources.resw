@@ -921,4 +921,9 @@ First {2}, last {3}</value></data>
   <data name="Kernel_DriverSearching" xml:space="preserve"><value>searching</value></data>
   <data name="Kernel_DriverUnknown" xml:space="preserve"><value>no driver found</value></data>
   <data name="Kernel_DriverMore" xml:space="preserve"><value> and {0} more</value></data>
+  <data name="RulesPage_DamagedTitle" xml:space="preserve"><value>The stored network rules are damaged</value></data>
+  <data name="RulesPage_DamagedText" xml:space="preserve"><value>The network rules file cannot be read. So that no rule is lost while its filter keeps working, nothing is saved. Resetting removes all network rules of all apps and their filters. Blocked apps stay blocked.</value></data>
+  <data name="RulesPage_DamagedReset" xml:space="preserve"><value>Reset rules</value></data>
+  <data name="Replace_NeedsMachineInstall" xml:space="preserve"><value>Only possible when Nax-TaskManager is installed for all users. This copy is in a folder you can change without administrator rights, and Task Manager also starts with administrator rights.</value></data>
+  <data name="Replace_OnUnsafe" xml:space="preserve"><value>On, but this copy is in a folder you can change without administrator rights. Turn the replacement off, or install Nax-TaskManager for all users.</value></data>
 </root>

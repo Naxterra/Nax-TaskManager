@@ -68,9 +68,7 @@ public sealed class AppSettings
         try
         {
             Directory.CreateDirectory(Folder);
-            string temporary = FilePath + ".tmp";
-            File.WriteAllText(temporary, JsonSerializer.Serialize(this, JsonOptions));
-            File.Move(temporary, FilePath, true);
+            Core.AtomicFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, JsonOptions));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

@@ -37,11 +37,12 @@ public static class MemoryRuleStore
 
     public static string FilePath => System.IO.Path.Combine(DataFolder.Path, "memory-rules.json");
 
-    public static List<AppMemoryRule> Load()
+    public static List<AppMemoryRule> Load(string? filePath = null)
     {
+        string path = filePath ?? FilePath;
         try
         {
-            if (File.Exists(FilePath)) return JsonSerializer.Deserialize<List<AppMemoryRule>>(File.ReadAllText(FilePath), Options) ?? [];
+            if (File.Exists(path)) return JsonSerializer.Deserialize<List<AppMemoryRule>>(File.ReadAllText(path), Options) ?? [];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -52,13 +53,30 @@ public static class MemoryRuleStore
     /// <summary>Replaces (or with an empty rule removes) one program's rule. Needs administrator rights.</summary>
     public static void Save(AppMemoryRule rule)
     {
-        List<AppMemoryRule> all = Load();
+        DataFolder.EnsureSecured();
+        Save(rule, FilePath);
+    }
+
+    /// <summary>
+    /// Replaces one program's rule in <paramref name="filePath"/>. A file that cannot be read is kept as
+    /// "memory-rules.json.damaged-…" instead of being overwritten silently, and the rules start over from this one.
+    /// Nothing outside the file depends on it: the service restores normal priorities when rules disappear.
+    /// </summary>
+    public static void Save(AppMemoryRule rule, string filePath)
+    {
+        List<AppMemoryRule> all;
+        try
+        {
+            all = File.Exists(filePath) ? JsonSerializer.Deserialize<List<AppMemoryRule>>(File.ReadAllText(filePath), Options) ?? throw new JsonException("No rule list.") : [];
+        }
+        catch (JsonException)
+        {
+            File.Move(filePath, filePath + ".damaged-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture), overwrite: true);
+            all = [];
+        }
         all.RemoveAll(existing => string.Equals(existing.Path, rule.Path, StringComparison.OrdinalIgnoreCase));
         if (!rule.IsEmpty) all.Add(rule);
-        DataFolder.EnsureSecured();
-        string temporary = FilePath + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(all.OrderBy(r => r.Path, StringComparer.OrdinalIgnoreCase).ToList(), Options));
-        File.Move(temporary, FilePath, overwrite: true);
+        AtomicFile.WriteAllText(filePath, JsonSerializer.Serialize(all.OrderBy(r => r.Path, StringComparer.OrdinalIgnoreCase).ToList(), Options));
     }
 }
 
@@ -126,9 +144,7 @@ public static class MemoryManager
     {
         if (ReadLive() is not { } state) return;
         DataFolder.EnsureSecured();
-        string temporary = StatePath + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(state, Options));
-        File.Move(temporary, StatePath, overwrite: true);
+        AtomicFile.WriteAllText(StatePath, JsonSerializer.Serialize(state, Options));
     }
 
     /// <summary>Switches one feature on or off and stores the new state. Needs administrator rights.</summary>
@@ -308,6 +324,7 @@ public sealed class MemoryRuleEnforcer
         if (handle == IntPtr.Zero) return Failed(process, "priority", Marshal.GetLastWin32Error());
         try
         {
+            if (!IsSameProcess(handle, process)) return false;
             int value = priority;
             return SetProcessInformation(handle, ProcessMemoryPriority, ref value, sizeof(int)) || Failed(process, "priority", Marshal.GetLastWin32Error());
         }
@@ -323,6 +340,7 @@ public sealed class MemoryRuleEnforcer
         if (handle == IntPtr.Zero) return Failed(process, "limit", Marshal.GetLastWin32Error());
         try
         {
+            if (!IsSameProcess(handle, process)) return false;
             return EmptyWorkingSet(handle) || Failed(process, "limit", Marshal.GetLastWin32Error());
         }
         finally
@@ -330,6 +348,16 @@ public sealed class MemoryRuleEnforcer
             Win32.CloseHandle(handle);
         }
     }
+
+    /// <summary>
+    /// The snapshot can be up to two seconds old, and Windows reuses process IDs: only the process with the snapshot's
+    /// creation time is changed, never a newer one that got the same ID.
+    /// </summary>
+    private static bool IsSameProcess(IntPtr handle, ProcessSample process) =>
+        GetProcessTimes(handle, out long created, out _, out _, out _) && created == process.CreateTime;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetProcessTimes(IntPtr process, out long creation, out long exit, out long kernel, out long user);
 
     /// <summary>Logs once per program and kind (protected processes refuse), so a refusal cannot fill the log.</summary>
     private bool Failed(ProcessSample process, string what, int error)

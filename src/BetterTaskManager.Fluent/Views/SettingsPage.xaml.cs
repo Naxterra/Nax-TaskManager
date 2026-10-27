@@ -40,11 +40,15 @@ public sealed partial class SettingsPage : Page
         string? exe = Environment.ProcessPath;
         string? other = exe is null ? null : TaskManagerReplacement.OtherTarget(exe);
         bool ours = exe is not null && TaskManagerReplacement.IsReplacedBy(exe);
+        // Only a copy in an administrator-only folder may replace Task Manager (an install for one user is not one).
+        bool allowed = exe is not null && TaskManagerReplacement.CanReplaceWith(exe);
         ReplaceToggle.IsOn = ours;
-        // Leave another tool's replacement alone: show it and disable the switch so toggling cannot overwrite it.
-        ReplaceToggle.IsEnabled = other is null;
-        ReplaceStatusText.Text = ours ? Loc.Get("Replace_On")
+        // Leave another tool's replacement alone: show it and disable the switch so toggling cannot overwrite it. A
+        // replacement that is on stays switchable, so an unsafe one from an earlier version can be turned off.
+        ReplaceToggle.IsEnabled = other is null && (allowed || ours);
+        ReplaceStatusText.Text = ours ? Loc.Get(allowed ? "Replace_On" : "Replace_OnUnsafe")
             : other is not null ? Loc.F("Replace_Other", other)
+            : !allowed ? Loc.Get("Replace_NeedsMachineInstall")
             : App.Monitor.IsElevated ? Loc.Get("Replace_Off") : Loc.Get("Replace_OffUac");
     }
 
@@ -61,7 +65,6 @@ public sealed partial class SettingsPage : Page
         loading = true;
         ShowReplaceState();
         loading = false;
-        ReplaceToggle.IsEnabled = TaskManagerReplacement.OtherTarget(exe) is null;
         if (error is not null)
         {
             await new ContentDialog { XamlRoot = XamlRoot, Title = Loc.Get("Replace_NotChanged"), Content = error, CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();

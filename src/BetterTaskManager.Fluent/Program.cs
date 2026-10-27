@@ -25,6 +25,7 @@ public static class Program
     internal const string StandbyLimitArgument = "--standby-limit";
     internal const string PolicyApplyArgument = "--policy-apply";
     internal const string RulesApplyArgument = "--rules-apply";
+    internal const string RulesResetArgument = "--rules-reset";
     internal const string MemoryFeatureArgument = "--memory-feature";
 
     private static Mutex? s_singleInstance;
@@ -63,14 +64,20 @@ public static class Program
             code |= 4;
             details.Add("History service: " + service.FailureSummary());
         }
+        Core.HelperResultFile.TryWrite(resultFile, code == 0 ? "OK" : string.Join(Environment.NewLine, details));
+        return code;
+    }
+
+    private static bool IsThisExecutable(string path, string self)
+    {
         try
         {
-            File.WriteAllText(resultFile, code == 0 ? "OK" : string.Join(Environment.NewLine, details));
+            return string.Equals(Path.GetFullPath(path), Path.GetFullPath(self), StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
+            return false;
         }
-        return code;
     }
 
     [STAThread]
@@ -125,18 +132,25 @@ public static class Program
             }
         }
 
-        // Elevated helper mode: make this app replace Windows Task Manager, or restore the built-in one, then exit.
+        // Elevated helper mode: make this app replace Windows Task Manager, or restore the built-in one, then exit. Only
+        // this executable may become the replacement (any program can start the helper with any path), and only from a
+        // folder that only administrators can change.
         if (args.Length == 2 && args[0] == ReplaceTaskManagerOnArgument)
         {
             if (!FirewallRules.IsElevated) return 5;
+            if (Environment.ProcessPath is not { } self || !IsThisExecutable(args[1], self)) return 87;
             try
             {
-                Core.Native.TaskManagerReplacement.Enable(args[1]);
+                Core.Native.TaskManagerReplacement.Enable(self);
                 return 0;
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
             {
                 return 1;
+            }
+            catch (InvalidOperationException)
+            {
+                return 6;
             }
         }
         if (args.Length >= 1 && args[0] == ReplaceTaskManagerOffArgument)
@@ -204,17 +218,17 @@ public static class Program
                 details.Add(ex.Message);
                 code = RuleChange.Invalid;
             }
-            if (args.Length == 3 && code != 0)
-            {
-                try
-                {
-                    File.WriteAllText(args[2], string.Join(Environment.NewLine, details));
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                }
-            }
+            if (args.Length == 3 && code != 0) Core.HelperResultFile.TryWrite(args[2], string.Join(Environment.NewLine, details));
             return code;
+        }
+
+        // Elevated helper mode: recovery for a damaged rules file. Removes every rule filter and the file, so both
+        // agree again; whole-app blocks stay. Then exit.
+        if (args.Length == 1 && args[0] == RulesResetArgument)
+        {
+            if (!FirewallRules.IsElevated) return 5;
+            CommandResult result = FirewallRules.ResetPolicies();
+            return result.Succeeded ? 0 : (result.ExitCode == 0 ? 1 : result.ExitCode);
         }
 
         // Elevated helper mode: switch one of Windows' memory manager features on or off, then exit.

@@ -48,9 +48,23 @@ public static class TaskManagerReplacement
         return PathsEqual(path, executablePath) ? null : path;
     }
 
-    /// <summary>Redirects <c>taskmgr.exe</c> to this app. Needs administrator rights (HKLM).</summary>
+    /// <summary>
+    /// True when the redirect may point at <paramref name="executablePath"/>: only administrators can change the file
+    /// and its folders. An install for one user lives in that user's profile, where the user (and any program the user
+    /// runs) could replace the file that every Task Manager start, including elevated ones, would then run.
+    /// </summary>
+    public static bool CanReplaceWith(string executablePath) => ProtectedLocation.IsAdminOnly(executablePath);
+
+    /// <summary>
+    /// Redirects <c>taskmgr.exe</c> to this app. Needs administrator rights (HKLM). Throws
+    /// <see cref="InvalidOperationException"/> when the file is not in an administrator-only folder.
+    /// </summary>
     public static void Enable(string executablePath)
     {
+        if (!CanReplaceWith(executablePath))
+        {
+            throw new InvalidOperationException("Task Manager can only be replaced by a copy installed for all users, in a folder that only administrators can change.");
+        }
         using RegistryKey key = Registry.LocalMachine.CreateSubKey(IfeoKey, writable: true);
         key.SetValue(DebuggerValue, "\"" + executablePath + "\"", RegistryValueKind.String);
     }

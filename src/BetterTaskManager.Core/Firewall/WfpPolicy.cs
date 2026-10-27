@@ -105,6 +105,25 @@ public static partial class WfpBlocker
         });
     }
 
+    /// <summary>Deletes every rule filter of every app in one transaction; whole-app blocks stay. Needs administrator rights.</summary>
+    public static void RemoveAllPolicies()
+    {
+        using var engine = Engine.Open();
+        Transaction(engine, () =>
+        {
+            foreach (Guid layer in AllLayers)
+            {
+                foreach (WfpFilterInfo filter in EnumerateFilters(engine, layer))
+                {
+                    if (!filter.Description.StartsWith(RuleDescriptionPrefix, StringComparison.Ordinal)) continue;
+                    Guid key = filter.Key;
+                    uint deleted = FwpmFilterDeleteByKey0(engine.Handle, ref key);
+                    if (deleted != 0 && deleted != ErrorFilterNotFound) throw new WfpException("FwpmFilterDeleteByKey0", deleted);
+                }
+            }
+        });
+    }
+
     /// <summary>Paths (lower case) that have rule filters, from WFP. Needs administrator rights.</summary>
     public static HashSet<string> ReadPolicyPaths()
     {

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.0-alpha.41 - 2026-10-27
+
+Safety and robustness fixes from a full review of the project.
+
+- **Replace Windows Task Manager needs an install for all users.** Windows starts the replacement for every account, including elevated starts. A copy installed for one user lives in that user's profile, where any program the user runs could replace it, and an administrator starting Task Manager would then run that file with full rights. The setting is now only available when the app is in a folder that only administrators can change, such as Program Files. A replacement that is already on from an earlier version shows a warning and can still be turned off.
+- **Damaged rule files are no longer overwritten.** When app-rules.json cannot be read, saving is refused instead of treating the file as empty, which used to drop every other app's rules while their filters kept blocking. The Rules page then offers "Reset rules", which removes every rule filter and the file together, so both agree again. A damaged memory-rules.json is kept as a copy and the rules start over.
+- **Files are written crash-safe.** Rules, memory rules, the blocked-apps list, the standby limit, the memory manager state and the settings are written to a temporary file that is flushed to disk before it replaces the old one, so a power loss leaves the old or the new file, never a half-written one.
+- **The history database survives a power loss.** It is written with full synchronisation, and a database that is damaged anyway is kept as a copy while the service starts a new one, instead of failing at every start.
+- **Helper modes accept only what the app itself sends.** The administrator helper replaces Task Manager only with its own program file, blocks only programs given with a full path, and writes result files only as new "nax…" files in the user's temporary folder, never through a link and never over an existing file.
+- **A silent uninstall stops when the cleanup fails**, for example when administrator approval is declined, instead of removing the files and leaving the history service, blocks and rules behind. An interactive uninstall shows what failed.
+- **Rules reject shortened IPv4 addresses.** A target such as "10.1/16" or a bare number used to be read as a different network (10.0.0.0/16, 0.0.13.61). IPv4 targets now need all four parts.
+- **Memory rules never touch a process that only reuses an old process ID**, because the creation time is checked first.
+- Stopping the history service while it empties the standby cache no longer crashes it, and the kernel memory warning never names a tag that holds nothing in the reported pool.
 ## 2.0.0-alpha.40 - 2026-10-26
 
 - **Kernel memory is visible, and a leaking driver is named.** Memory that drivers and Windows allocate in the kernel pools belongs to no process, so no app list can show it. When a driver leaks, the RAM fills up while every app looks small. The overview's memory card now shows "Kernel and drivers (pools)" as its own line, and the Memory page has a new "Kernel memory by driver" table with the largest pool tags, their non-paged and paged size and the driver files that contain each tag.

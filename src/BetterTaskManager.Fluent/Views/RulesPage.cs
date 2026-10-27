@@ -31,6 +31,7 @@ public sealed partial class RulesPage : Page
     private readonly Grid body = new() { ColumnSpacing = 18, RowSpacing = 12 };
     private readonly ListView list = new() { SelectionMode = ListViewSelectionMode.Single, Padding = new Thickness(0, 0, 14, 0) };
     private readonly TextBlock summary = Text("", 13, secondary: true);
+    private readonly InfoBar damagedBar = new() { Severity = InfoBarSeverity.Error, IsClosable = false, Title = Loc.Get("RulesPage_DamagedTitle"), Message = Loc.Get("RulesPage_DamagedText") };
     private readonly StackPanel listEmpty = Ui.EmptyState("\uE8D7", "Rose", Loc.Get("RulesPage_EmptyTitle"), Loc.Get("RulesPage_Empty"));
     private readonly Border listCard, editorCard;
     private readonly Grid editorHost = new();
@@ -61,6 +62,19 @@ public sealed partial class RulesPage : Page
         summary.TextWrapping = TextWrapping.Wrap;
         summary.Margin = new Thickness(50, 0, 0, 0);
         titles.Children.Add(summary);
+        // A damaged rules file: saving is refused until the rules are reset, which removes every rule filter too.
+        var reset = new Button { Content = Loc.Get("RulesPage_DamagedReset") };
+        reset.Click += async (_, _) =>
+        {
+            reset.IsEnabled = false;
+            string? error = await App.Monitor.ResetPoliciesAsync();
+            reset.IsEnabled = true;
+            if (error is not null) damagedBar.Message = Loc.Get("RulesPage_DamagedText") + " " + error;
+            RebuildList();
+        };
+        damagedBar.ActionButton = reset;
+        damagedBar.Margin = new Thickness(50, 6, 0, 0);
+        titles.Children.Add(damagedBar);
         header.Children.Add(titles);
         var add = new Button
         {
@@ -230,6 +244,7 @@ public sealed partial class RulesPage : Page
         List<Entry> entries = Collect();
         int count = entries.Count(entry => entry.Chips.Count > 0);
         summary.Text = !App.Monitor.FirewallStateKnown ? Loc.Get("Workflow_PolicyUnknown") : Loc.F("RulesPage_Summary", count);
+        damagedBar.IsOpen = App.Monitor.PoliciesDamaged;
         listEmpty.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         selecting = true;
         list.Items.Clear();

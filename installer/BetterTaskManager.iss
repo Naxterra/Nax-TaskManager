@@ -92,8 +92,8 @@ english.PreviousUninstallerMissing=An existing installation was detected, but it
 german.PreviousUninstallerMissing=Eine vorhandene Installation wurde erkannt, aber das Deinstallationsprogramm fehlt. Entfernen oder reparieren Sie die vorhandene Installation in den Windows-Einstellungen und versuchen Sie es erneut.
 english.TaskManagerRestoreFailed=Windows Task Manager could not be restored, so it still opens Nax-TaskManager. If you uninstall now, Task Manager will not open until the setting is removed.%n%nUninstall anyway?
 german.TaskManagerRestoreFailed=Der Windows-Task-Manager konnte nicht wiederhergestellt werden und öffnet weiterhin Nax-TaskManager. Wenn Sie jetzt deinstallieren, öffnet sich der Task-Manager nicht mehr, bis die Einstellung entfernt ist.%n%nTrotzdem deinstallieren?
-english.CleanupFailed=Not everything could be cleaned up (blocked programs or the History service may remain). Details: %TEMP%\NaxTaskManager-uninstall.txt%n%nUninstall anyway?
-german.CleanupFailed=Nicht alles konnte aufgeräumt werden (gesperrte Programme oder der Verlaufsdienst können bleiben). Details: %TEMP%\NaxTaskManager-uninstall.txt%n%nTrotzdem deinstallieren?
+english.CleanupFailed=Not everything could be cleaned up (blocked programs or the History service may remain).%n%n%1%n%nUninstall anyway?
+german.CleanupFailed=Nicht alles konnte aufgeräumt werden (gesperrte Programme oder der Verlaufsdienst können bleiben).%n%n%1%n%nTrotzdem deinstallieren?
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopShortcut}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -270,15 +270,24 @@ end;
 function InitializeUninstall(): Boolean;
 var
   ResultCode: Integer;
+  ResultFile: String;
+  Details: AnsiString;
 begin
   Result := True;
   if IsUpgradeUninstall() then
     Exit;
+  // The elevated cleanup only writes a new "nax…" file in the user's temporary folder, so the name is unique.
+  ResultFile := ExpandConstant('{%TEMP}') + '\nax-uninstall-' + GetDateTimeString('yyyymmddhhnnss', '-', '-') + '.txt';
   if not ShellExec('runas', ExpandConstant('{app}\{#AppExeName}'),
-      '--uninstall-cleanup "' + ExpandConstant('{app}\{#AppExeName}') + '" "' + ExpandConstant('{%TEMP}') + '\NaxTaskManager-uninstall.txt"',
+      '--uninstall-cleanup "' + ExpandConstant('{app}\{#AppExeName}') + '" "' + ResultFile + '"',
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     ResultCode := -1;
   Log('Uninstall cleanup exited with code ' + IntToStr(ResultCode));
+  if not LoadStringFromFile(ResultFile, Details) then
+    Details := '';
+  DeleteFile(ResultFile);
+  if Details <> '' then
+    Log('Uninstall cleanup details: ' + String(Details));
   if ResultCode = 0 then
     Exit;
   // Removing the program now would leave Windows Task Manager pointing at a deleted file.
@@ -290,6 +299,10 @@ begin
       Result := MsgBox(CustomMessage('TaskManagerRestoreFailed'), mbError, MB_YESNO or MB_DEFBUTTON2) = IDYES;
     Exit;
   end;
-  if not UninstallSilent() then
-    Result := MsgBox(CustomMessage('CleanupFailed'), mbConfirmation, MB_YESNO) = IDYES;
+  // A silent uninstall (winget, scripts) cannot ask, so it stops: removing the files now would leave the service,
+  // blocks and rules behind with nothing left to undo them.
+  if UninstallSilent() then
+    Result := False
+  else
+    Result := MsgBox(FmtMessage(CustomMessage('CleanupFailed'), [String(Details)]), mbConfirmation, MB_YESNO) = IDYES;
 end;

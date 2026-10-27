@@ -921,4 +921,9 @@ Erstmals {2}, zuletzt {3}</value></data>
   <data name="Kernel_DriverSearching" xml:space="preserve"><value>wird gesucht</value></data>
   <data name="Kernel_DriverUnknown" xml:space="preserve"><value>kein Treiber gefunden</value></data>
   <data name="Kernel_DriverMore" xml:space="preserve"><value> und {0} weitere</value></data>
+  <data name="RulesPage_DamagedTitle" xml:space="preserve"><value>Die gespeicherten Netzwerkregeln sind beschädigt</value></data>
+  <data name="RulesPage_DamagedText" xml:space="preserve"><value>Die Datei mit den Netzwerkregeln kann nicht gelesen werden. Damit keine Regel verloren geht, während ihr Filter weiter wirkt, wird nichts gespeichert. Zurücksetzen entfernt alle Netzwerkregeln aller Apps und ihre Filter. Gesperrte Apps bleiben gesperrt.</value></data>
+  <data name="RulesPage_DamagedReset" xml:space="preserve"><value>Regeln zurücksetzen</value></data>
+  <data name="Replace_NeedsMachineInstall" xml:space="preserve"><value>Nur möglich, wenn Nax-TaskManager für alle Benutzer installiert ist. Diese Kopie liegt in einem Ordner, den Sie ohne Administratorrechte ändern können, und der Task-Manager startet auch mit Administratorrechten.</value></data>
+  <data name="Replace_OnUnsafe" xml:space="preserve"><value>An, aber diese Kopie liegt in einem Ordner, den Sie ohne Administratorrechte ändern können. Schalten Sie die Ersetzung aus, oder installieren Sie Nax-TaskManager für alle Benutzer.</value></data>
 </root>
