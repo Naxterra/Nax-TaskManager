@@ -152,9 +152,10 @@ public static class HistoryServiceControl
 
         try
         {
-            // A removal before the last restart may have left deletions scheduled in this folder.
-            CancelPendingDeletes(InstallFolder);
             CopyFolder(sourceFolder, InstallFolder);
+            // A removal before the last restart may have left deletions scheduled in this folder. They are dropped only
+            // once the new files are in place, so a failed copy keeps the cleanup of the old folder.
+            CancelPendingDeletes(InstallFolder);
             RemoveLegacyFiles();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -238,39 +239,39 @@ public static class HistoryServiceControl
         // Still held (an antivirus scan, for example): Windows deletes what is left at the next restart, files first,
         // then the folders from the deepest up. The folder is renamed first where possible, so a service installed
         // into the same place before that restart is not deleted with it.
+        string renamed = folder + ".delete-" + Guid.NewGuid().ToString("N")[..8];
         try
         {
-            string renamed = folder + ".delete-" + Guid.NewGuid().ToString("N")[..8];
-            try
-            {
-                Directory.Move(folder, renamed);
-                folder = renamed;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // Install cancels pending deletions in its folder, so the original place is still safe to reuse.
-            }
-            foreach (string file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)) MoveFileEx(file, null, DelayUntilReboot);
-            foreach (string directory in Directory.EnumerateDirectories(folder, "*", SearchOption.AllDirectories).OrderByDescending(path => path.Length)) MoveFileEx(directory, null, DelayUntilReboot);
-            MoveFileEx(folder, null, DelayUntilReboot);
+            Directory.Move(folder, renamed);
+            folder = renamed;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Install cancels pending deletions in its folder, so the original place is still safe to reuse.
+        }
+        // Inaccessible entries are skipped instead of ending the walk, so everything that can be scheduled is.
+        var everything = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 };
+        try
+        {
+            foreach (string file in Directory.EnumerateFiles(folder, "*", everything)) MoveFileEx(file, null, DelayUntilReboot);
+            foreach (string directory in Directory.EnumerateDirectories(folder, "*", everything).OrderByDescending(path => path.Length)) MoveFileEx(directory, null, DelayUntilReboot);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
         }
+        MoveFileEx(folder, null, DelayUntilReboot);
     }
 
     private const int DelayUntilReboot = 4;   // MOVEFILE_DELAY_UNTIL_REBOOT
 
     /// <summary>
-    /// Drops deletions scheduled for the next restart (PendingFileRenameOperations) inside <paramref name="folder"/>,
-    /// so files installed there now are not deleted at that restart. Renames scheduled elsewhere stay as they are.
-    /// </summary>
-    /// <summary>
     /// The PendingFileRenameOperations list without the deletions of <paramref name="folder"/> and anything inside it.
-    /// The list holds pairs: the source as "\??\C:\...", then the target, which is empty for a deletion.
+    /// The list holds pairs: the source as "\??\C:\...", then the target, which is empty for a deletion. A list that
+    /// is not made of pairs was written by something else and is returned unchanged.
     /// </summary>
     public static string[] WithoutDeletionsIn(string[] entries, string folder)
     {
+        if (entries.Length % 2 != 0) return entries;
         string prefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder)) + Path.DirectorySeparatorChar;
         var kept = new List<string>();
         for (int index = 0; index + 1 < entries.Length; index += 2)
@@ -284,6 +285,12 @@ public static class HistoryServiceControl
         return kept.ToArray();
     }
 
+    /// <summary>
+    /// Drops deletions scheduled for the next restart (PendingFileRenameOperations) inside <paramref name="folder"/>,
+    /// so files installed there now are not deleted at that restart. Renames scheduled elsewhere stay as they are.
+    /// The value is written back right after it was read and only when something was removed, which keeps the window
+    /// in which another program's new entry could be overwritten as short as possible.
+    /// </summary>
     internal static void CancelPendingDeletes(string folder)
     {
         const string KeyPath = @"SYSTEM\CurrentControlSet\Control\Session Manager";

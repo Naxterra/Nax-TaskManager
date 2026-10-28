@@ -32,6 +32,7 @@ public sealed class RuleChange
         }
         int code = 0;
         List<AppNetworkPolicy> policies;
+        string? rulesUnreadable = null;
         try
         {
             // Read strictly: with a damaged rules file the helper checks below would see nothing, so nothing changes.
@@ -39,14 +40,16 @@ public sealed class RuleChange
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            // A plain block or unblock from the Processes or Network page still works on the program itself, because
-            // the helpers it may list cannot be read. Anything that would write the rules waits for a reset.
+            // A plain block or unblock from the Processes or Network page still works on the program itself, but the
+            // helpers it may list cannot be read, which the result reports. Anything that would write the rules waits
+            // for a reset.
             if (Network is not null || ReplacesPath is not null || Blocked is null)
             {
                 details?.Add(ex.Message);
                 return NetworkFailed;
             }
             policies = [];
+            rulesUnreadable = ex.Message;
         }
         // The whole-app block covers the app's helper programs too: the ones it lists after this change, and helpers
         // it no longer lists are unblocked again.
@@ -74,7 +77,22 @@ public sealed class RuleChange
         // is already blocked for another reason keeps that block, and it is lifted with this app's.
         void BlockHelper(string helper)
         {
-            if (!blockedPaths.Contains(helper)) SetBlock(helper, true);
+            if (blockedPaths.Contains(helper)) return;
+            SetBlock(helper, true);
+            // A helper that was not blocked cannot be blocked on its own. A mark left from an unblock while the rules
+            // could not be written would otherwise keep it blocked after this app is unblocked.
+            if (policies.Any(policy => string.Equals(policy.Path, helper, StringComparison.OrdinalIgnoreCase) && policy.BlockedOnItsOwn))
+            {
+                try
+                {
+                    NetworkPolicyStore.SetBlockedOnItsOwn(helper, false);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+                {
+                    code |= BlockFailed;
+                    details?.Add(ex.Message);
+                }
+            }
         }
         // A helper stays blocked while another blocked app lists it (one WebView2 runtime serves many apps), or while
         // it was blocked on its own.
@@ -132,6 +150,11 @@ public sealed class RuleChange
                 Memory = new AppMemoryRule { Path = replaced }
             };
             code |= removal.Apply(details);
+        }
+        if (rulesUnreadable is not null)
+        {
+            code |= NetworkFailed;
+            details?.Add("The block of the program itself was changed, but its helper programs were not, because the stored rules could not be read (" + rulesUnreadable + "). Reset the rules on the Rules page.");
         }
         return code;
     }

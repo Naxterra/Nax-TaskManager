@@ -119,7 +119,7 @@ internal static class StoreTests
             });
 
         yield return ("reinstalled_service_folder_is_not_deleted_at_the_next_restart",
-            "Deletions scheduled for the next restart inside the History service folder are dropped before a reinstall, while a deletion elsewhere, a scheduled rename into the folder and a folder with a similar name stay.",
+            "Deletions scheduled for the next restart inside the History service folder are dropped before a reinstall, while a deletion elsewhere, a scheduled rename into the folder and a folder with a similar name stay. A list that is not made of pairs is left untouched.",
             () =>
             {
                 const string folder = @"C:\Program Files\Nax-TaskManager History";
@@ -136,6 +136,8 @@ internal static class StoreTests
                 Check.Equal(@"\??\C:\Temp\old.tmp", kept[0]);
                 Check.Equal(@"\??\C:\Temp\new.dll", kept[2]);
                 Check.Equal(@"\??\C:\Program Files\Nax-TaskManager History Backup\x.exe", kept[4]);
+                string[] odd = [@"\??\C:\Program Files\Nax-TaskManager History\a.exe", "", @"\??\C:\Temp\x.tmp"];
+                Check.That(ReferenceEquals(odd, HistoryServiceControl.WithoutDeletionsIn(odd, folder)), "a list that is not made of pairs must stay untouched");
             });
 
         yield return ("history_recorder_flush_stores_the_clock_state",

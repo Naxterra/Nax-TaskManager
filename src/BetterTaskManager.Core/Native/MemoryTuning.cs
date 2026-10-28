@@ -190,11 +190,25 @@ public static class MemoryManager
         // may not be readable or changeable while SysMain is stopped, so it runs while they are restored, and its own
         // recorded start type and running state come last.
         bool hasSysMain = StartSysMainForRestore();
-        MemoryManagerState live = ReadLive() ?? throw new InvalidOperationException("The current memory manager settings could not be read, so nothing was restored.");
-        if (live.MemoryCompression != original.MemoryCompression) Apply(MemoryCompression, original.MemoryCompression);
-        if (live.PageCombining != original.PageCombining) Apply(PageCombining, original.PageCombining);
-        if (live.ApplicationLaunchPrefetching != original.ApplicationLaunchPrefetching) Apply(ApplicationLaunchPrefetching, original.ApplicationLaunchPrefetching);
-        if (live.ApplicationPreLaunch != original.ApplicationPreLaunch) Apply(ApplicationPreLaunch, original.ApplicationPreLaunch);
+        try
+        {
+            MemoryManagerState live = ReadLive() ?? throw new InvalidOperationException("The current memory manager settings could not be read, so nothing was restored.");
+            if (live.MemoryCompression != original.MemoryCompression) Apply(MemoryCompression, original.MemoryCompression);
+            if (live.PageCombining != original.PageCombining) Apply(PageCombining, original.PageCombining);
+            if (live.ApplicationLaunchPrefetching != original.ApplicationLaunchPrefetching) Apply(ApplicationLaunchPrefetching, original.ApplicationLaunchPrefetching);
+            if (live.ApplicationPreLaunch != original.ApplicationPreLaunch) Apply(ApplicationPreLaunch, original.ApplicationPreLaunch);
+        }
+        catch
+        {
+            // SysMain was started only for the restore. It goes back to its recorded state even when the switches
+            // could not be restored, so the uninstall never leaves it changed by the attempt.
+            if (hasSysMain)
+            {
+                try { RestoreSysMain(original); }
+                catch (Exception ex) when (ex is InvalidOperationException or System.ServiceProcess.TimeoutException or System.ComponentModel.Win32Exception) { }
+            }
+            throw;
+        }
         if (hasSysMain) RestoreSysMain(original);
         File.Delete(OriginalPath);
         return null;
