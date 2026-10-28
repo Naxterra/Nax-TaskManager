@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0-alpha.43 - 2026-10-28
+
+Fixes from the review of 2.0.0-alpha.42.
+
+- **Memory settings are restored even when SysMain was off.** While the memory manager switches are put back, SysMain runs, and its own recorded start type and running state are applied last. Before, an uninstall could fail every time on a PC where SysMain had been disabled.
+- **A block you set on a program yourself stays.** Every block set directly on a program is marked as its own, so unblocking an app that lists the program as a helper later leaves it blocked.
+- **Blocking works with a damaged rules file.** A plain block or unblock on the Processes or Network page still changes the program itself. Changes that would write the rules wait until the rules are reset on the Rules page.
+- **A reinstalled History service is not deleted at the next restart.** A service folder that was held by another program while it was removed is renamed before Windows deletes it at the next restart, and installing the service again cancels deletions scheduled in its folder.
+- **Setup waits for the History service to stop** before it copies files, instead of relying on the result of the stop command alone.
 ## 2.0.0-alpha.42 - 2026-10-28
 
 The remaining fixes from the full review, and the move that makes an install for all users work with the History service.
