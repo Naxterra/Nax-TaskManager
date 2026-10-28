@@ -22,8 +22,6 @@ public static class HistoryServiceControl
     public const string ServiceName = "NaxTaskManagerHistory";
     public const string DisplayName = "Nax-TaskManager History";
     public const string ExecutableName = "Nax-TaskManager.HistoryService.exe";
-    /// <summary>File name prefixes of earlier service builds, removed from the install folder on update.</summary>
-    private static readonly string[] LegacyFilePrefixes = ["NaxTaskManager.HistoryService.", "BetterTaskManager.HistoryService."];
     /// <summary>Folder next to the app that holds the service build to install from.</summary>
     public const string BundledFolderName = "HistoryService";
     private static readonly TimeSpan StatusTimeout = TimeSpan.FromSeconds(30);
@@ -148,20 +146,75 @@ public static class HistoryServiceControl
         if (SamePath(sourceFolder, InstallFolder)) return Failed("The service cannot be installed from its own install folder.");
 
         bool installed = QueryState() != HistoryServiceState.NotInstalled;
-        if (installed && Stop() is { Succeeded: false } stopFailed) return stopFailed;
+        RemoveStaleFolders();
 
+        // The new files go to a folder of their own first, while the old service still runs, and the whole folder is
+        // swapped afterwards. A copy that fails halfway then leaves the old service running as it was, instead of a
+        // stopped service with a mix of old and new files.
+        string staging = InstallFolder + ".new";
         try
         {
-            CopyFolder(sourceFolder, InstallFolder);
-            // A removal before the last restart may have left deletions scheduled in this folder. They are dropped only
-            // once the new files are in place, so a failed copy keeps the cleanup of the old folder.
-            CancelPendingDeletes(InstallFolder);
-            RemoveLegacyFiles();
+            if (Directory.Exists(staging)) Directory.Delete(staging, recursive: true);
+            CopyFolder(sourceFolder, staging);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return Failed("Could not copy the service files to " + InstallFolder + ": " + ex.Message);
+            DeleteFolder(staging);
+            return Failed("Could not copy the service files to " + staging + ": " + ex.Message);
         }
+
+        if (installed && Stop() is { Succeeded: false } stopFailed)
+        {
+            DeleteFolder(staging);
+            return stopFailed;
+        }
+        string? previous = null;
+        if (Directory.Exists(InstallFolder))
+        {
+            previous = InstallFolder + ".delete-" + Guid.NewGuid().ToString("N")[..8];
+            // The process can hold its files for a moment after reporting Stopped.
+            bool moved = false;
+            for (int attempt = 0; attempt < 20 && !moved; attempt++)
+            {
+                try
+                {
+                    Directory.Move(InstallFolder, previous);
+                    moved = true;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Thread.Sleep(500);
+                }
+            }
+            if (!moved)
+            {
+                DeleteFolder(staging);
+                if (installed) TryStart();
+                return Failed("The service files in " + InstallFolder + " are still in use, so the service was not updated and runs as before.");
+            }
+        }
+        try
+        {
+            Directory.Move(staging, InstallFolder);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Put the old files back, so the old service can run again.
+            try
+            {
+                if (previous is not null) Directory.Move(previous, InstallFolder);
+            }
+            catch (Exception restore) when (restore is IOException or UnauthorizedAccessException)
+            {
+            }
+            if (installed) TryStart();
+            DeleteFolder(staging);
+            return Failed("Could not move the new service files to " + InstallFolder + ": " + ex.Message);
+        }
+        // A removal before the last restart may have left deletions scheduled in this folder. They are dropped now
+        // that the new files are in place.
+        CancelPendingDeletes(InstallFolder);
+        if (previous is not null) DeleteFolder(previous);
 
         string binPath = "\"" + Path.Combine(InstallFolder, ExecutableName) + "\"";
         CommandResult result = installed
@@ -195,13 +248,49 @@ public static class HistoryServiceControl
     /// </summary>
     public static CommandResult Uninstall(string? keepFolder = null)
     {
-        if (QueryState() == HistoryServiceState.NotInstalled) return new CommandResult(0, "", "", false);
-        if (Stop() is { Succeeded: false } stopFailed) return stopFailed;
-        CommandResult result = Sc("delete", ServiceName);
-        if (!result.Succeeded) return result;
+        if (QueryState() != HistoryServiceState.NotInstalled)
+        {
+            if (Stop() is { Succeeded: false } stopFailed) return stopFailed;
+            CommandResult result = Sc("delete", ServiceName);
+            if (!result.Succeeded) return result;
+        }
+        // Also when the service is no longer registered: its folder, or one left by an interrupted update, may remain.
         DeleteFolder(InstallFolder);
+        RemoveStaleFolders();
         RemoveLegacyFolder(keepFolder);
         return new CommandResult(0, "", "", false);
+    }
+
+    /// <summary>Folders left by an update or removal that was interrupted: "Nax-TaskManager History.new" and ".delete-…".</summary>
+    private static void RemoveStaleFolders()
+    {
+        string? parent = Path.GetDirectoryName(InstallFolder);
+        if (parent is null || !Directory.Exists(parent)) return;
+        string name = Path.GetFileName(InstallFolder);
+        try
+        {
+            foreach (string stale in Directory.EnumerateDirectories(parent, name + ".*")
+                .Where(path => Path.GetFileName(path) is { } leaf && (leaf == name + ".new" || leaf.StartsWith(name + ".delete-", StringComparison.OrdinalIgnoreCase)))
+                .ToList())
+            {
+                DeleteFolder(stale);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private static void TryStart()
+    {
+        try
+        {
+            using var service = new ServiceController(ServiceName);
+            if (service.Status == ServiceControllerStatus.Stopped) service.Start();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ServiceProcess.TimeoutException)
+        {
+        }
     }
 
     private static void RemoveLegacyFolder(string? keep)
@@ -331,23 +420,6 @@ public static class HistoryServiceControl
         }
     }
 
-    /// <summary>Deletes the files of earlier builds whose executable had another name; the service is stopped here.</summary>
-    private static void RemoveLegacyFiles()
-    {
-        foreach (string file in Directory.EnumerateFiles(InstallFolder))
-        {
-            string name = Path.GetFileName(file);
-            if (!LegacyFilePrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))) continue;
-            try
-            {
-                File.Delete(file);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // A leftover file is harmless; the service runs the new executable.
-            }
-        }
-    }
 
     private static void CopyFolder(string source, string target)
     {

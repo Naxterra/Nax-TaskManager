@@ -146,6 +146,7 @@ public static class MemoryManager
     /// <summary>Stores the current state for windows without administrator rights. Needs administrator rights.</summary>
     public static void StoreCurrent()
     {
+        using IDisposable memoryLock = StoreLock.Take(StoreLock.MemoryManager);
         if (ReadLive() is not { } state) return;
         DataFolder.EnsureSecured();
         AtomicFile.WriteAllText(StatePath, JsonSerializer.Serialize(state, Options));
@@ -157,6 +158,7 @@ public static class MemoryManager
     /// <summary>Switches one feature on or off and stores the new state. Needs administrator rights.</summary>
     public static void Set(string feature, bool enable)
     {
+        using IDisposable memoryLock = StoreLock.Take(StoreLock.MemoryManager);
         if (!File.Exists(OriginalPath) && ReadLive() is { } original)
         {
             DataFolder.EnsureSecured();
@@ -174,6 +176,7 @@ public static class MemoryManager
     /// </summary>
     public static string? RestoreOriginal()
     {
+        using IDisposable memoryLock = StoreLock.Take(StoreLock.MemoryManager);
         if (!File.Exists(OriginalPath)) return null;
         MemoryManagerState original;
         try

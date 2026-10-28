@@ -11,15 +11,23 @@ public static class AtomicFile
 {
     public static void WriteAllText(string path, string text)
     {
-        string temporary = path + ".tmp";
-        using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        // A name of its own per write, so two writers of the same file never collide on the temporary file.
+        string temporary = path + "." + Guid.NewGuid().ToString("N")[..8] + ".tmp";
+        try
         {
-            byte[] bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(text);
-            stream.Write(bytes, 0, bytes.Length);
-            // Without this the rename can reach the disk before the data, and a power loss leaves zeros behind.
-            stream.Flush(flushToDisk: true);
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                byte[] bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(text);
+                stream.Write(bytes, 0, bytes.Length);
+                // Without this the rename can reach the disk before the data, and a power loss leaves zeros behind.
+                stream.Flush(flushToDisk: true);
+            }
+            File.Move(temporary, path, overwrite: true);
         }
-        File.Move(temporary, path, overwrite: true);
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
 
     public static void WriteAllLines(string path, IEnumerable<string> lines) =>

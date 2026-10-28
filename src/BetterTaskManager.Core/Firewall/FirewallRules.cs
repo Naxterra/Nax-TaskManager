@@ -58,6 +58,7 @@ public static partial class FirewallRules
     /// </summary>
     public static CommandResult Apply(string path, bool block)
     {
+        using IDisposable rulesLock = StoreLock.Take(StoreLock.Rules);
         // Only full paths: a relative path or a bare name would block whatever the helper's working folder resolves it to.
         if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path)) return new CommandResult(87, "", "The executable path is not a full path.", false);
         try
@@ -90,6 +91,7 @@ public static partial class FirewallRules
     /// </summary>
     public static CommandResult ApplyOwn(string path, bool block)
     {
+        using IDisposable rulesLock = StoreLock.Take(StoreLock.Rules);
         bool rulesReadable;
         try
         {
@@ -119,6 +121,7 @@ public static partial class FirewallRules
     /// </summary>
     public static CommandResult ApplyPolicy(AppNetworkPolicy policy, string? replacing = null)
     {
+        using IDisposable rulesLock = StoreLock.Take(StoreLock.Rules);
         if (string.IsNullOrWhiteSpace(policy.Path) || !Path.IsPathFullyQualified(policy.Path))
         {
             return new CommandResult(87, "", "The executable path is not a full path.", false);
@@ -189,6 +192,7 @@ public static partial class FirewallRules
     /// </summary>
     public static CommandResult ResetPolicies()
     {
+        using IDisposable rulesLock = StoreLock.Take(StoreLock.Rules);
         try
         {
             WfpBlocker.RemoveAllPolicies();
@@ -204,6 +208,7 @@ public static partial class FirewallRules
     /// <summary>Removes every block and rule this app ever made: WFP filters, the stored rules and Windows Firewall rules of earlier versions.</summary>
     public static void RemoveAll()
     {
+        using IDisposable rulesLock = StoreLock.Take(StoreLock.Rules);
         WfpBlocker.RemoveAll();
         NetworkPolicyStore.DeleteAll();
         CommandResult result = CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=all", "dir=out");

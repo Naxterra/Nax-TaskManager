@@ -29,11 +29,21 @@ public static class AppTraceSessions
         return StopAll(keep: AppIsRunning);
     }
 
-    private static bool AppIsRunning()
+    /// <summary>
+    /// For a window that starts: stops sessions left behind by a killed copy, unless another copy runs. Its sessions
+    /// may be live, for example in another user's session, where the single-instance check does not reach, and the
+    /// session names are the same for the whole machine.
+    /// </summary>
+    public static int StopIfNoOtherCopy() => StopAll(keep: () => AppIsRunning(exceptSelf: true));
+
+    private static bool AppIsRunning() => AppIsRunning(exceptSelf: false);
+
+    private static bool AppIsRunning(bool exceptSelf)
     {
         System.Diagnostics.Process[] running = System.Diagnostics.Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(AppExecutableName));
+        bool found = running.Any(process => !exceptSelf || process.Id != Environment.ProcessId);
         foreach (System.Diagnostics.Process process in running) process.Dispose();
-        return running.Length > 0;
+        return found;
     }
 
     /// <summary>

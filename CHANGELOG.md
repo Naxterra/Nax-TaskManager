@@ -5,10 +5,14 @@
 Fixes from the review of 2.0.0-alpha.42.
 
 - **Memory settings are restored even when SysMain was off.** While the memory manager switches are put back, SysMain runs, and its own recorded start type and running state are applied last. Before, an uninstall could fail every time on a PC where SysMain had been disabled.
-- **A block you set on a program yourself stays.** Every block set directly on a program is marked as its own, so unblocking an app that lists the program as a helper later leaves it blocked.
-- **Blocking works with a damaged rules file.** A plain block or unblock on the Processes or Network page still changes the program itself. Changes that would write the rules wait until the rules are reset on the Rules page.
+- **A block you set on a program yourself stays.** Every block set directly on a program from this version on is marked as its own, so unblocking an app that lists the program as a helper later leaves it blocked. Blocks set with earlier versions carry no mark. To keep such a block when its program is also a helper of a blocked app, unblock and block it once again.
+- **Blocking works with a damaged rules file.** A plain block or unblock on the Processes or Network page still changes the program itself. The result says that the helper programs were not changed, and changes that would write the rules wait until the rules are reset on the Rules page.
 - **A reinstalled History service is not deleted at the next restart.** A service folder that was held by another program while it was removed is renamed before Windows deletes it at the next restart, and installing the service again cancels deletions scheduled in its folder.
-- **Setup waits for the History service to stop** before it copies files, instead of relying on the result of the stop command alone.
+- **Setup waits for the History service to stop** before it copies files, instead of relying on the result of the stop command alone, and setup and uninstall wait until Nax-TaskManager is closed.
+- **Updating the History service is all or nothing.** The new files are copied next to the old ones while the old service still runs, and the folder is swapped in one step. If that fails, the old service keeps running as it was.
+- **History is written while the clock is set back.** After the clock was corrected backwards, the service stopped writing until the clock caught up again. It now writes on, and a clock corrected while the service was off also releases held-back time.
+- **Rule changes from several windows at once no longer undo each other.** Changes to rules, blocks and the memory manager switches take turns across all processes, and a helper that a failed rule change blocked is released again.
+- **Uninstall details.** The settings in your profile are only deleted together with the data folder, the cleanup runs after Nax-TaskManager was found closed, and service folders left by an interrupted update are removed.
 ## 2.0.0-alpha.42 - 2026-10-28
 
 The remaining fixes from the full review, and the move that makes an install for all users work with the History service.

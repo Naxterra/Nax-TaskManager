@@ -24,6 +24,8 @@ public sealed class RuleChange
     /// <summary>Applies every part, even after one failed; the result has one bit per failed part.</summary>
     public int Apply(List<string>? details = null)
     {
+        // One change at a time across all processes, so another elevated helper or window cannot undo part of it.
+        using IDisposable rulesLock = Core.StoreLock.Take(Core.StoreLock.Rules);
         if (Path.Length == 0 || Network is { } n && !string.Equals(n.Path, Path, StringComparison.OrdinalIgnoreCase)
             || Memory is { } m && (!string.Equals(m.Path, Path, StringComparison.OrdinalIgnoreCase) || !(m.IsEmpty || m.IsValid))
             || ReplacesPath is { } old && (!System.IO.Path.IsPathFullyQualified(old) || string.Equals(old, Path, StringComparison.OrdinalIgnoreCase)))
@@ -75,10 +77,13 @@ public sealed class RuleChange
         }
         // Only a block the user sets on the helper itself is marked as its own (see FirewallRules.ApplyOwn). A helper that
         // is already blocked for another reason keeps that block, and it is lifted with this app's.
+        // Helpers this change blocked, so they can be released again when the rules that list them are not saved.
+        var newlyBlocked = new List<string>();
         void BlockHelper(string helper)
         {
             if (blockedPaths.Contains(helper)) return;
             SetBlock(helper, true);
+            newlyBlocked.Add(helper);
             // A helper that was not blocked cannot be blocked on its own. A mark left from an unblock while the rules
             // could not be written would otherwise keep it blocked after this app is unblocked.
             if (policies.Any(policy => string.Equals(policy.Path, helper, StringComparison.OrdinalIgnoreCase) && policy.BlockedOnItsOwn))
@@ -124,7 +129,13 @@ public sealed class RuleChange
         if (Network is not null)
         {
             CommandResult result = FirewallRules.ApplyPolicy(Network, ReplacesPath);
-            if (!result.Succeeded) { code |= NetworkFailed; details?.Add(result.FailureSummary()); }
+            if (!result.Succeeded)
+            {
+                code |= NetworkFailed;
+                details?.Add(result.FailureSummary());
+                // The helper list was not stored, so nothing would ever lift the blocks this change gave the new helpers.
+                foreach (string helper in newlyBlocked.Where(helper => !before.Contains(helper, StringComparer.OrdinalIgnoreCase))) SetBlock(helper, false);
+            }
         }
         if (Memory is not null)
         {

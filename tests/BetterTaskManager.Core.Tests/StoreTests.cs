@@ -63,7 +63,7 @@ internal static class StoreTests
                 AtomicFile.WriteAllText(file, "first");
                 AtomicFile.WriteAllText(file, "second");
                 Check.Equal("second", File.ReadAllText(file));
-                Check.That(!File.Exists(file + ".tmp"), "no temporary file may be left behind");
+                Check.Equal(0, Directory.GetFiles(folder, "*.tmp").Length);
             }));
 
         yield return ("damaged_history_database_is_set_aside_and_a_new_one_opens",
@@ -140,6 +140,51 @@ internal static class StoreTests
                 Check.That(ReferenceEquals(odd, HistoryServiceControl.WithoutDeletionsIn(odd, folder)), "a list that is not made of pairs must stay untouched");
             });
 
+        yield return ("history_is_still_written_after_the_clock_is_set_back",
+            "The recorder writes a connection while the clock shows a year ahead, then the clock is corrected. A new connection seen at the correct time is written with the next snapshot instead of waiting a year.",
+            () => InTempFolder(folder =>
+            {
+                string file = Path.Combine(folder, "history.db");
+                DateTime now = DateTime.Now;
+                using HistoryStore store = HistoryStore.OpenForWriting(file);
+                using var recorder = new HistoryRecorder(store, (_, _) => null);
+                recorder.Record(Snapshot(now.AddYears(1), Connection(2001, 443)));
+                recorder.Record(Snapshot(now, Connection(2002, 8443)));
+                List<ConnectionRecord> rows = store.ReadConnections(now.AddDays(-1).ToUniversalTime(), null, null, 100, includeDns: false);
+                Check.That(rows.Any(row => row.RemotePort == 8443), "the connection seen after the correction must be written");
+            }));
+
+        yield return ("held_back_time_shrinks_when_the_clock_was_corrected_while_the_service_was_off",
+            "A year of held-back time from a clock that ran ahead is released when the clock went back by that year while the service was off, and it never drops below zero.",
+            () =>
+            {
+                Check.Equal(TimeSpan.FromHours(8), ClockSkew.AfterDowntime(TimeSpan.FromDays(365), -TimeSpan.FromDays(365) + TimeSpan.FromHours(8)));
+                Check.Equal(TimeSpan.Zero, ClockSkew.AfterDowntime(TimeSpan.FromDays(1), -TimeSpan.FromDays(30)));
+            });
+
+        yield return ("store_lock_is_reentrant_and_makes_other_threads_wait",
+            "The thread holding a store lock can take it again, and another thread only gets it after the holder released it.",
+            () =>
+            {
+                string name = @"Global\NaxTaskManager.Test-" + Guid.NewGuid().ToString("N");
+                // The real locks allow only SYSTEM and Administrators. The test runs without elevation, so its lock
+                // allows everyone.
+                const string Everyone = "D:(A;;GA;;;WD)";
+                bool otherGotIt = false;
+                Thread other;
+                using (StoreLock.Take(name, Everyone))
+                {
+                    using (StoreLock.Take(name, Everyone)) { }
+                    other = new Thread(() =>
+                    {
+                        using (StoreLock.Take(name, Everyone)) otherGotIt = true;
+                    });
+                    other.Start();
+                    Check.That(!other.Join(300), "another thread must wait while the lock is held");
+                }
+                Check.That(other.Join(5000) && otherGotIt, "another thread must get the lock once it is released");
+            });
+
         yield return ("history_recorder_flush_stores_the_clock_state",
             "The first flush of a history recorder writes the time it checked the clock to the database, so the next start can measure how long the service was off.",
             () => InTempFolder(folder =>
@@ -162,6 +207,28 @@ internal static class StoreTests
                 Check.Equal(TimeSpan.Zero, ClockSkew.AfterDowntime(TimeSpan.Zero, TimeSpan.FromDays(2)));
             });
     }
+
+    /// <summary>One TCP connection of a test process to a public address, with the process it belongs to.</summary>
+    private static (Monitoring.ProcessSample Process, Monitoring.ConnectionSample Connection) Connection(int pid, int remotePort) =>
+        (new Monitoring.ProcessSample
+        {
+            Pid = pid, ParentPid = 0, ImageName = "App" + pid + ".exe", CreateTime = DateTime.UtcNow.AddMinutes(-5).ToFileTimeUtc(),
+            Path = @"C:\Test\App" + pid + ".exe", Description = "App", Company = "Test"
+        },
+        new Monitoring.ConnectionSample
+        {
+            Pid = pid, Protocol = "TCP", LocalAddress = "192.168.1.10", LocalPort = 50000, RemoteAddress = "203.0.113.7", RemotePort = remotePort, State = "Established"
+        });
+
+    private static Monitoring.MonitorSnapshot Snapshot(DateTime at, (Monitoring.ProcessSample Process, Monitoring.ConnectionSample Connection) seen) => new()
+    {
+        Timestamp = at,
+        Processes = [seen.Process],
+        Connections = [seen.Connection],
+        Flows = [],
+        NetworkIssues = [],
+        System = new Monitoring.SystemSample { Memory = new Monitoring.MemoryBreakdown() }
+    };
 
     internal static void InTempFolder(Action<string> body)
     {

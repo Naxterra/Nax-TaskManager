@@ -28,9 +28,16 @@ public static class ClockSkew
         return Release(skew, realElapsed);
     }
 
-    /// <summary>The held-back time after the service was off while the wall clock moved <paramref name="gap"/>.</summary>
-    public static TimeSpan AfterDowntime(TimeSpan skew, TimeSpan gap) =>
-        gap > TrustedDowntime ? skew + (gap - TrustedDowntime) : skew;
+    /// <summary>
+    /// The held-back time after the service was off while the wall clock moved <paramref name="gap"/>. A clock that went
+    /// back (corrected before the service started again) takes that much off, as a jump back while running does.
+    /// </summary>
+    public static TimeSpan AfterDowntime(TimeSpan skew, TimeSpan gap)
+    {
+        if (gap > TrustedDowntime) return skew + (gap - TrustedDowntime);
+        if (gap < TimeSpan.Zero) return skew + gap < TimeSpan.Zero ? TimeSpan.Zero : skew + gap;
+        return skew;
+    }
 
     private static TimeSpan Release(TimeSpan skew, TimeSpan realElapsed)
     {

@@ -185,7 +185,9 @@ public sealed class HistoryRecorder : IDisposable
             }
         }
 
-        if (now - lastFlush >= FlushInterval) Flush(now);
+        // A clock set back (now well before the last flush) is due at once, or nothing would be written until the
+        // clock caught up again. A snapshot a moment older than the last flush is ordinary and waits.
+        if (now - lastFlush >= FlushInterval || lastFlush - now >= FlushInterval) Flush(now);
     }
 
     /// <summary>Queues a DNS query answered for a process; safe to call from any thread.</summary>
@@ -302,7 +304,7 @@ public sealed class HistoryRecorder : IDisposable
         foreach (int pid in identities.Where(pair => now - pair.Value.SeenUtc > ExitedProcessMemory).Select(pair => pair.Key).ToList()) identities.Remove(pid);
         lastFlush = now;
 
-        if (now - lastPrune >= PruneInterval)
+        if (now - lastPrune >= PruneInterval || lastPrune - now >= FlushInterval)
         {
             store.Prune(Retention, now - skew);
             lastPrune = now;

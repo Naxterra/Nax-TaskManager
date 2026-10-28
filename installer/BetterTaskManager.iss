@@ -71,6 +71,8 @@ SetupLogging=yes
 SetupIconFile={#IconPath}
 CloseApplications={#CloseApplicationsValue}
 CloseApplicationsFilter={#AppExeName},{#LegacyExeName}
+; The app holds this mutex (in the session's Local namespace) while it runs, so setup and uninstall wait for it to be closed.
+AppMutex=Naxterra.NaxTaskManager.SingleInstance
 RestartApplications=no
 UninstallDisplayIcon={app}\{#AppExeName}
 LicenseFile={#SourceDir}\LICENSE
@@ -301,13 +303,15 @@ begin
   end;
 end;
 
-// sc.exe prints the state names in English on every Windows language.
+// sc.exe prints the state names in English on every Windows language. Both tools are called by full path from the
+// system folder, which is also the working folder, so nothing in the folder setup was started from can stand in.
 function ServiceIsStopped(): Boolean;
 var
   ResultCode: Integer;
 begin
-  Result := Exec(ExpandConstant('{cmd}'), '/c sc query NaxTaskManagerHistory | find "STOPPED" >nul', '', SW_HIDE,
-    ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+  Result := Exec(ExpandConstant('{cmd}'),
+    ExpandConstant('/c ""{sys}\sc.exe" query NaxTaskManagerHistory | "{sys}\find.exe" "STOPPED" >nul"'),
+    ExpandConstant('{sys}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -368,8 +372,9 @@ end;
 // A real uninstall (not the removal a newer setup does before upgrading) undoes everything outside the app folder in
 // one elevated step: Windows Task Manager is restored if it opens this app, every block is removed (otherwise blocked
 // programs would stay blocked with nothing left to unblock them) and the History service goes. It runs from
-// CurUninstallStepChanged(usAppMutexCheck), after the user confirmed the uninstall and before any file is removed,
-// so nothing is undone for an uninstall that is then cancelled, and a failure can still stop it.
+// CurUninstallStepChanged(usUninstall), after the user confirmed the uninstall and the app was found closed, and
+// before any file is removed, so nothing is undone for an uninstall that is then cancelled, and a failure can still
+// stop it.
 function UninstallCleanupAllowed(): Boolean;
 var
   ResultCode: Integer;
@@ -384,15 +389,15 @@ begin
   // Only an interactive uninstall asks. A silent one (winget, scripts) keeps the history.
   RemoveData := '';
   if (not UninstallSilent()) and (MsgBox(CustomMessage('RemoveDataQuestion'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES) then
-  begin
     RemoveData := ' --remove-data';
-    UserDataRemoved := True;
-  end;
   if not ShellExec('runas', ExpandConstant('{app}\{#AppExeName}'),
       '--uninstall-cleanup "' + ExpandConstant('{app}\{#AppExeName}') + '" "' + ResultFile + '"' + RemoveData,
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     ResultCode := -1;
   Log('Uninstall cleanup exited with code ' + IntToStr(ResultCode));
+  // The settings in the user's profile go only together with the data folder: not after a declined approval, a
+  // failed service removal or memory restore (which keep the data folder) or a data folder that could not be deleted.
+  UserDataRemoved := (RemoveData <> '') and (ResultCode >= 0) and ((ResultCode and (4 or 8 or 16)) = 0);
   if not LoadStringFromFile(ResultFile, Details) then
     Details := '';
   DeleteFile(ResultFile);
@@ -432,7 +437,7 @@ end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-  if (CurUninstallStep = usAppMutexCheck) and (not UninstallCleanupAllowed()) then
+  if (CurUninstallStep = usUninstall) and (not UninstallCleanupAllowed()) then
     Abort;
   // The settings and the crash log live in the user's own profile, which the elevated cleanup may not see. When
   // another administrator account runs the uninstall of an install for all users, this is that account's profile,

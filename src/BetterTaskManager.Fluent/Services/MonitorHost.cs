@@ -32,7 +32,7 @@ public sealed class MonitorHost : IDisposable
         // Elevated with the history service running: one set of kernel traces (the service's) is enough.
         else if (Core.History.HistoryServiceControl.QueryState() == Core.History.HistoryServiceState.Running) engine.PreferServiceFeed();
         // A copy that was killed left its traces running. This window starts its own when it needs them.
-        if (IsElevated) Core.Monitoring.AppTraceSessions.StopAll();
+        if (IsElevated) Core.Monitoring.AppTraceSessions.StopIfNoOtherCopy();
     }
 
     /// <summary>Raised on the UI thread with the newest snapshot.</summary>
