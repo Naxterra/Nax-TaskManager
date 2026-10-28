@@ -186,16 +186,50 @@ public static class MemoryManager
             File.Delete(OriginalPath);
             return "The recorded memory manager settings could not be read, so they were not restored: " + ex.Message;
         }
-        // The record is kept until the restore worked, so a failed attempt can be repeated. SysMain comes first, because
-        // the memory manager switches may not be readable or changeable while it is disabled.
-        RestoreSysMain(original);
+        // The record is kept until the restore worked, so a failed attempt can be repeated. The memory manager switches
+        // may not be readable or changeable while SysMain is stopped, so it runs while they are restored, and its own
+        // recorded start type and running state come last.
+        bool hasSysMain = StartSysMainForRestore();
         MemoryManagerState live = ReadLive() ?? throw new InvalidOperationException("The current memory manager settings could not be read, so nothing was restored.");
         if (live.MemoryCompression != original.MemoryCompression) Apply(MemoryCompression, original.MemoryCompression);
         if (live.PageCombining != original.PageCombining) Apply(PageCombining, original.PageCombining);
         if (live.ApplicationLaunchPrefetching != original.ApplicationLaunchPrefetching) Apply(ApplicationLaunchPrefetching, original.ApplicationLaunchPrefetching);
         if (live.ApplicationPreLaunch != original.ApplicationPreLaunch) Apply(ApplicationPreLaunch, original.ApplicationPreLaunch);
+        if (hasSysMain) RestoreSysMain(original);
         File.Delete(OriginalPath);
         return null;
+    }
+
+    /// <summary>
+    /// Makes sure SysMain runs (allowing a manual start if it is disabled) so the memory manager switches can be read and
+    /// changed. Returns false when this Windows has no SysMain service.
+    /// </summary>
+    private static bool StartSysMainForRestore()
+    {
+        using var service = new ServiceController("SysMain");
+        ServiceStartMode mode;
+        try
+        {
+            mode = service.StartType;
+        }
+        catch (InvalidOperationException ex) when (ex.InnerException is System.ComponentModel.Win32Exception { NativeErrorCode: 1060 })
+        {
+            // ERROR_SERVICE_DOES_NOT_EXIST: some Windows editions have no SysMain service, so there is nothing to put
+            // back. Any other failure is thrown, so the record is kept.
+            return false;
+        }
+        if (mode == ServiceStartMode.Disabled)
+        {
+            CommandResult result = CommandRunner.Run("sc.exe", "config", "SysMain", "start=", "demand");
+            if (!result.Succeeded) throw new InvalidOperationException(result.FailureSummary());
+        }
+        service.Refresh();
+        if (service.Status != ServiceControllerStatus.Running)
+        {
+            if (service.Status == ServiceControllerStatus.Stopped) service.Start();
+            service.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+        }
+        return true;
     }
 
     /// <summary>Puts SysMain back to its recorded start type (automatic, manual or disabled) and running state.</summary>
@@ -204,17 +238,7 @@ public static class MemoryManager
         // Records from before the start type was stored only know enabled or disabled.
         string start = original.SysMainStartMode ?? (original.SysMainEnabled ? "auto" : "disabled");
         using var service = new ServiceController("SysMain");
-        string current;
-        try
-        {
-            current = ScStartName(service.StartType);
-        }
-        catch (InvalidOperationException ex) when (ex.InnerException is System.ComponentModel.Win32Exception { NativeErrorCode: 1060 })
-        {
-            // ERROR_SERVICE_DOES_NOT_EXIST: some Windows editions have no SysMain service, so there is nothing to put
-            // back. Any other failure is thrown, so the record is kept.
-            return;
-        }
+        string current = ScStartName(service.StartType);
         if (current != start)
         {
             CommandResult result = CommandRunner.Run("sc.exe", "config", "SysMain", "start=", start);

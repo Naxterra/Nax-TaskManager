@@ -301,22 +301,39 @@ begin
   end;
 end;
 
+// sc.exe prints the state names in English on every Windows language.
+function ServiceIsStopped(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := Exec(ExpandConstant('{cmd}'), '/c sc query NaxTaskManagerHistory | find "STOPPED" >nul', '', SW_HIDE,
+    ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Uninstaller: String;
   RegistrationFound: Boolean;
   ResultCode: Integer;
+  Attempt: Integer;
 begin
   Result := '';
   // Versions up to 2.0.0-alpha.41 ran the History service from {app}\HistoryService. Its running files cannot be
   // replaced, so it is stopped here and moved to its own folder after the files are copied.
-  if IsAdminInstallMode() and (not ServiceStopped) and ServiceRunsFromApp() then
+  // Only a service this setup stops is moved and started again. One that was already stopped (perhaps on purpose)
+  // holds no files open and stays as it is.
+  if IsAdminInstallMode() and (not ServiceStopped) and ServiceRunsFromApp() and (not ServiceIsStopped()) then
   begin
     Exec(ExpandConstant('{sys}\net.exe'), 'stop NaxTaskManagerHistory', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Log('Stopped the History service before copying files, exit code ' + IntToStr(ResultCode));
-    // Only a service this setup stopped is moved and started again. One that was already stopped (perhaps on
-    // purpose) holds no files open and stays as it is.
-    ServiceStopped := ResultCode = 0;
+    // net stop gives up waiting after a while although the service may still be stopping.
+    for Attempt := 1 to 60 do
+    begin
+      if ServiceIsStopped() then
+        Break;
+      Sleep(500);
+    end;
+    ServiceStopped := True;
   end;
   if PreviousVersionRemoved then
     Exit;
@@ -417,7 +434,9 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usAppMutexCheck) and (not UninstallCleanupAllowed()) then
     Abort;
-  // The settings and the crash log live in the user's own profile, which the elevated cleanup may not see.
+  // The settings and the crash log live in the user's own profile, which the elevated cleanup may not see. When
+  // another administrator account runs the uninstall of an install for all users, this is that account's profile,
+  // and the user's own settings stay. They hold no history (see README).
   if (CurUninstallStep = usPostUninstall) and UserDataRemoved then
   begin
     DelTree(ExpandConstant('{localappdata}\NaxTaskManager'), True, True, True);

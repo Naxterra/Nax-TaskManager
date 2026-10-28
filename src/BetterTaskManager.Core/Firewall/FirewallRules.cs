@@ -84,26 +84,27 @@ public static partial class FirewallRules
     }
 
     /// <summary>
-    /// <see cref="Apply"/> for a block the user sets on this program itself. When another app lists the program as a
-    /// helper, the block is marked as its own, so unblocking that app leaves it in place. Unblocking clears the mark.
+    /// <see cref="Apply"/> for a block the user sets on this program itself. The block is marked as its own, so if an
+    /// app lists the program as a helper now or later, unblocking that app leaves it in place. Unblocking clears the
+    /// mark. With a damaged rules file the block itself still changes, and only the mark cannot be stored.
     /// </summary>
     public static CommandResult ApplyOwn(string path, bool block)
     {
-        bool listedAsHelper;
+        bool rulesReadable;
         try
         {
-            // Read strictly before the filter changes, so a damaged rules file stops the change while nothing changed.
-            listedAsHelper = NetworkPolicyStore.ReadForUpdate().Any(policy => policy.Helpers.Contains(path, StringComparer.OrdinalIgnoreCase));
+            NetworkPolicyStore.ReadForUpdate();
+            rulesReadable = true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            return new CommandResult(1, "", ex.Message, false);
+            rulesReadable = false;
         }
         CommandResult result = Apply(path, block);
-        if (!result.Succeeded) return result;
+        if (!result.Succeeded || !rulesReadable) return result;
         try
         {
-            if (!block || listedAsHelper) NetworkPolicyStore.SetBlockedOnItsOwn(path, block);
+            NetworkPolicyStore.SetBlockedOnItsOwn(path, block);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {

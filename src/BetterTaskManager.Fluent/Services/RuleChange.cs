@@ -39,8 +39,14 @@ public sealed class RuleChange
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            details?.Add(ex.Message);
-            return NetworkFailed;
+            // A plain block or unblock from the Processes or Network page still works on the program itself, because
+            // the helpers it may list cannot be read. Anything that would write the rules waits for a reset.
+            if (Network is not null || ReplacesPath is not null || Blocked is null)
+            {
+                details?.Add(ex.Message);
+                return NetworkFailed;
+            }
+            policies = [];
         }
         // The whole-app block covers the app's helper programs too: the ones it lists after this change, and helpers
         // it no longer lists are unblocked again.

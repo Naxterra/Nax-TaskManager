@@ -118,6 +118,26 @@ internal static class StoreTests
                 Check.Equal(TimeSpan.Zero, ClockSkew.Update(skew, TimeSpan.FromDays(5), TimeSpan.FromDays(5)));
             });
 
+        yield return ("reinstalled_service_folder_is_not_deleted_at_the_next_restart",
+            "Deletions scheduled for the next restart inside the History service folder are dropped before a reinstall, while a deletion elsewhere, a scheduled rename into the folder and a folder with a similar name stay.",
+            () =>
+            {
+                const string folder = @"C:\Program Files\Nax-TaskManager History";
+                string[] pending =
+                [
+                    @"\??\C:\Program Files\Nax-TaskManager History\Nax-TaskManager.HistoryService.exe", "",
+                    @"\??\C:\Program Files\Nax-TaskManager History", "",
+                    @"\??\C:\Temp\old.tmp", "",
+                    @"\??\C:\Temp\new.dll", @"\??\C:\Program Files\Nax-TaskManager History\new.dll",
+                    @"\??\C:\Program Files\Nax-TaskManager History Backup\x.exe", "",
+                ];
+                string[] kept = HistoryServiceControl.WithoutDeletionsIn(pending, folder);
+                Check.Equal(6, kept.Length);
+                Check.Equal(@"\??\C:\Temp\old.tmp", kept[0]);
+                Check.Equal(@"\??\C:\Temp\new.dll", kept[2]);
+                Check.Equal(@"\??\C:\Program Files\Nax-TaskManager History Backup\x.exe", kept[4]);
+            });
+
         yield return ("history_recorder_flush_stores_the_clock_state",
             "The first flush of a history recorder writes the time it checked the clock to the database, so the next start can measure how long the service was off.",
             () => InTempFolder(folder =>

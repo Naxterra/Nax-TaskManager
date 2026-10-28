@@ -152,6 +152,8 @@ public static class HistoryServiceControl
 
         try
         {
+            // A removal before the last restart may have left deletions scheduled in this folder.
+            CancelPendingDeletes(InstallFolder);
             CopyFolder(sourceFolder, InstallFolder);
             RemoveLegacyFiles();
         }
@@ -234,9 +236,20 @@ public static class HistoryServiceControl
         }
         if (!Directory.Exists(folder)) return;
         // Still held (an antivirus scan, for example): Windows deletes what is left at the next restart, files first,
-        // then the folders from the deepest up.
+        // then the folders from the deepest up. The folder is renamed first where possible, so a service installed
+        // into the same place before that restart is not deleted with it.
         try
         {
+            string renamed = folder + ".delete-" + Guid.NewGuid().ToString("N")[..8];
+            try
+            {
+                Directory.Move(folder, renamed);
+                folder = renamed;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Install cancels pending deletions in its folder, so the original place is still safe to reuse.
+            }
             foreach (string file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)) MoveFileEx(file, null, DelayUntilReboot);
             foreach (string directory in Directory.EnumerateDirectories(folder, "*", SearchOption.AllDirectories).OrderByDescending(path => path.Length)) MoveFileEx(directory, null, DelayUntilReboot);
             MoveFileEx(folder, null, DelayUntilReboot);
@@ -247,6 +260,48 @@ public static class HistoryServiceControl
     }
 
     private const int DelayUntilReboot = 4;   // MOVEFILE_DELAY_UNTIL_REBOOT
+
+    /// <summary>
+    /// Drops deletions scheduled for the next restart (PendingFileRenameOperations) inside <paramref name="folder"/>,
+    /// so files installed there now are not deleted at that restart. Renames scheduled elsewhere stay as they are.
+    /// </summary>
+    /// <summary>
+    /// The PendingFileRenameOperations list without the deletions of <paramref name="folder"/> and anything inside it.
+    /// The list holds pairs: the source as "\??\C:\...", then the target, which is empty for a deletion.
+    /// </summary>
+    public static string[] WithoutDeletionsIn(string[] entries, string folder)
+    {
+        string prefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder)) + Path.DirectorySeparatorChar;
+        var kept = new List<string>();
+        for (int index = 0; index + 1 < entries.Length; index += 2)
+        {
+            string source = entries[index].StartsWith(@"\??\", StringComparison.Ordinal) ? entries[index][4..] : entries[index];
+            bool inFolder = SamePath(source, folder) || source.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            if (inFolder && entries[index + 1].Length == 0) continue;
+            kept.Add(entries[index]);
+            kept.Add(entries[index + 1]);
+        }
+        return kept.ToArray();
+    }
+
+    internal static void CancelPendingDeletes(string folder)
+    {
+        const string KeyPath = @"SYSTEM\CurrentControlSet\Control\Session Manager";
+        const string ValueName = "PendingFileRenameOperations";
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(KeyPath, writable: true);
+            if (key?.GetValue(ValueName) is not string[] entries) return;
+            string[] kept = WithoutDeletionsIn(entries, folder);
+            if (kept.Length == entries.Length) return;
+            if (kept.Length == 0) key.DeleteValue(ValueName, throwOnMissingValue: false);
+            else key.SetValue(ValueName, kept, Microsoft.Win32.RegistryValueKind.MultiString);
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException or ArgumentException)
+        {
+            // Without access the scheduled deletion stays; the service files are copied anyway.
+        }
+    }
 
     [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
     private static extern bool MoveFileEx(string existing, string? replacement, int flags);
