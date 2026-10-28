@@ -30,7 +30,9 @@ public static class ClockSkew
 
     /// <summary>
     /// The held-back time after the service was off while the wall clock moved <paramref name="gap"/>. A clock that went
-    /// back (corrected before the service started again) takes that much off, as a jump back while running does.
+    /// back (corrected before the service started again) takes the whole gap off. The real time that passed while the
+    /// service was off is unknown here, so a little more is held back than after a jump back while running, which
+    /// only delays pruning and never deletes history early.
     /// </summary>
     public static TimeSpan AfterDowntime(TimeSpan skew, TimeSpan gap)
     {

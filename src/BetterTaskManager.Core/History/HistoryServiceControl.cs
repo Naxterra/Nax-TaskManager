@@ -145,7 +145,10 @@ public static class HistoryServiceControl
         if (!File.Exists(sourceExe)) return Failed("The service files were not found next to the app: " + sourceExe);
         if (SamePath(sourceFolder, InstallFolder)) return Failed("The service cannot be installed from its own install folder.");
 
-        bool installed = QueryState() != HistoryServiceState.NotInstalled;
+        HistoryServiceState before = QueryState();
+        bool installed = before != HistoryServiceState.NotInstalled;
+        // Only a service that ran before is started again when the update fails. One stopped on purpose stays stopped.
+        bool wasRunning = before is HistoryServiceState.Running or HistoryServiceState.Starting;
         RemoveStaleFolders();
 
         // The new files go to a folder of their own first, while the old service still runs, and the whole folder is
@@ -189,7 +192,7 @@ public static class HistoryServiceControl
             if (!moved)
             {
                 DeleteFolder(staging);
-                if (installed) TryStart();
+                if (wasRunning) TryStart();
                 return Failed("The service files in " + InstallFolder + " are still in use, so the service was not updated and runs as before.");
             }
         }
@@ -207,7 +210,7 @@ public static class HistoryServiceControl
             catch (Exception restore) when (restore is IOException or UnauthorizedAccessException)
             {
             }
-            if (installed) TryStart();
+            if (wasRunning) TryStart();
             DeleteFolder(staging);
             return Failed("Could not move the new service files to " + InstallFolder + ": " + ex.Message);
         }
@@ -261,7 +264,10 @@ public static class HistoryServiceControl
         return new CommandResult(0, "", "", false);
     }
 
-    /// <summary>Folders left by an update or removal that was interrupted: "Nax-TaskManager History.new" and ".delete-…".</summary>
+    /// <summary>
+    /// Folders left by an update or removal that was interrupted: "Nax-TaskManager History.new", ".delete-…" and a
+    /// staging folder that was itself renamed for deletion (".new.delete-…").
+    /// </summary>
     private static void RemoveStaleFolders()
     {
         string? parent = Path.GetDirectoryName(InstallFolder);
@@ -270,7 +276,9 @@ public static class HistoryServiceControl
         try
         {
             foreach (string stale in Directory.EnumerateDirectories(parent, name + ".*")
-                .Where(path => Path.GetFileName(path) is { } leaf && (leaf == name + ".new" || leaf.StartsWith(name + ".delete-", StringComparison.OrdinalIgnoreCase)))
+                .Where(path => Path.GetFileName(path) is { } leaf && (leaf == name + ".new"
+                    || leaf.StartsWith(name + ".delete-", StringComparison.OrdinalIgnoreCase)
+                    || leaf.StartsWith(name + ".new.delete-", StringComparison.OrdinalIgnoreCase)))
                 .ToList())
             {
                 DeleteFolder(stale);

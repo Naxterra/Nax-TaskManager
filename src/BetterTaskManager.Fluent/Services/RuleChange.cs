@@ -105,6 +105,9 @@ public sealed class RuleChange
         {
             if (!HelperBlocks.KeepBlocked(helper, Path, policies, blockedPaths)) SetBlock(helper, false);
         }
+        // Helpers dropped from the list are released only once the new list is stored. If storing it fails, the
+        // stored rules still list them for the blocked app, so they stay blocked to match.
+        var dropped = new List<string>();
         if (Blocked is { } block)
         {
             // Blocking a program another app lists as a helper is a block of its own, and unblocking it ends that.
@@ -113,7 +116,7 @@ public sealed class RuleChange
             if (block)
             {
                 foreach (string helper in wasBlocked ? after.Except(before, StringComparer.OrdinalIgnoreCase) : after) BlockHelper(helper);
-                foreach (string helper in before.Except(after, StringComparer.OrdinalIgnoreCase)) UnblockHelper(helper);
+                dropped.AddRange(before.Except(after, StringComparer.OrdinalIgnoreCase));
             }
             else
             {
@@ -124,7 +127,7 @@ public sealed class RuleChange
         else if (blocked)
         {
             foreach (string helper in after.Except(before, StringComparer.OrdinalIgnoreCase)) BlockHelper(helper);
-            foreach (string helper in before.Except(after, StringComparer.OrdinalIgnoreCase)) UnblockHelper(helper);
+            dropped.AddRange(before.Except(after, StringComparer.OrdinalIgnoreCase));
         }
         if (Network is not null)
         {
@@ -135,6 +138,10 @@ public sealed class RuleChange
                 details?.Add(result.FailureSummary());
                 // The helper list was not stored, so nothing would ever lift the blocks this change gave the new helpers.
                 foreach (string helper in newlyBlocked.Where(helper => !before.Contains(helper, StringComparer.OrdinalIgnoreCase))) SetBlock(helper, false);
+            }
+            else
+            {
+                foreach (string helper in dropped) UnblockHelper(helper);
             }
         }
         if (Memory is not null)

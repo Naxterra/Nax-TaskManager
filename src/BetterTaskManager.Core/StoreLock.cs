@@ -9,6 +9,9 @@ namespace BetterTaskManager.Core;
 /// describes. Two elevated helpers (two UAC prompts), an elevated window and the History service can otherwise change
 /// the same file at the same time, and one change would silently undo the other. The locks are Windows mutexes that
 /// SYSTEM and Administrators may use whoever created them, and the same thread may take one again while it holds it.
+/// Any process can create an object under the same name first and hold it, because the Global namespace is open to
+/// every user. That only makes changes wait a minute each and then go ahead without the lock (a local nuisance, not
+/// a way to change rules), so the locks do not defend against it.
 /// </summary>
 public static class StoreLock
 {
@@ -52,8 +55,10 @@ public static class StoreLock
             return new Held(null);
         }
         uint wait = WaitForSingleObject(handle, (uint)MaximumWait.TotalMilliseconds);
-        // WAIT_ABANDONED: a holder ended without releasing it. This thread owns it now, and the files are written
-        // atomically, so there is nothing half-done to repair.
+        // WAIT_ABANDONED: a holder ended without releasing it, perhaps between changing the filters and saving the
+        // file. This thread owns the lock now. Each file on its own is never half-written, but filters and file may
+        // disagree for that one app until its rules are saved again or all rules are reset on the Rules page. Nothing
+        // here detects that.
         if (wait != WaitObject0 && wait != WaitAbandoned)
         {
             handle.Dispose();
