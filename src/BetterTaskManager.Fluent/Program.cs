@@ -43,6 +43,9 @@ public static class Program
     {
         int code = 0;
         var details = new List<string>();
+        // An open window of this install could make new blocks or rules after they are removed here. This step runs
+        // elevated, so it can close an elevated window too, and it only touches windows of the program being removed.
+        CloseWindowsOf(executablePath);
         try
         {
             Core.Native.TaskManagerReplacement.DisableIfOurs(executablePath);
@@ -106,6 +109,27 @@ public static class Program
         }
         Core.HelperResultFile.TryWrite(resultFile, code == 0 ? "OK" : string.Join(Environment.NewLine, details));
         return code;
+    }
+
+    /// <summary>Closes every other running copy of <paramref name="executablePath"/>: politely first, then by force after ten seconds.</summary>
+    private static void CloseWindowsOf(string executablePath)
+    {
+        foreach (Process process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(executablePath)))
+        {
+            using (process)
+            {
+                try
+                {
+                    if (process.Id == Environment.ProcessId || process.MainModule?.FileName is not { } file || !IsThisExecutable(file, executablePath)) continue;
+                    process.CloseMainWindow();
+                    if (!process.WaitForExit(10_000)) process.Kill();
+                }
+                catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException)
+                {
+                    // Gone already, or not ours to touch.
+                }
+            }
+        }
     }
 
     private static bool IsThisExecutable(string path, string self)

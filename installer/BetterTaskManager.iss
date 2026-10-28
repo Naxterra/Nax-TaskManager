@@ -98,8 +98,6 @@ english.RemoveDataQuestion=Also delete the recorded network history, the blocked
 german.RemoveDataQuestion=Auch den aufgezeichneten Netzwerkverlauf, das Sperrprotokoll und die Einstellungen löschen?%n%nSperren und Regeln werden in jedem Fall entfernt. Wählen Sie Nein, um den Verlauf für eine spätere Installation zu behalten.
 english.CleanupPartly=Nax-TaskManager will now be removed, but not everything could be put back.%n%n%1
 german.CleanupPartly=Nax-TaskManager wird jetzt entfernt, aber nicht alles konnte zurückgesetzt werden.%n%n%1
-english.CloseAppFirst=Nax-TaskManager is still open. Close it, then choose Retry.
-german.CloseAppFirst=Nax-TaskManager ist noch geöffnet. Schließen Sie es und wählen Sie dann Wiederholen.
 english.MemoryRestoreFailed=The Windows memory settings this app changed (memory compression, page combining, prefetching or SysMain) could not be put back as they were.%n%n%1%n%nIf you uninstall now, they stay as they are. Uninstall anyway?
 german.MemoryRestoreFailed=Die Windows-Speichereinstellungen, die diese App geändert hat (Speicherkomprimierung, Seitenzusammenführung, Prefetching oder SysMain), konnten nicht wiederhergestellt werden.%n%n%1%n%nWenn Sie jetzt deinstallieren, bleiben sie so. Trotzdem deinstallieren?
 english.ServiceMoveFailed=The History service could not be moved to its new folder and may not be running. Turn it off and on again in Settings > History.%n%n%1
@@ -127,8 +125,6 @@ Filename: "{app}\{#AppExeName}"; Parameters: "--replace-taskmanager-on ""{app}\{
 [Code]
 const
   UninstallRegistryKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#UninstallRegistryId}_is1';
-  // The app holds this mutex (in the session's Local namespace) while a window is open.
-  AppMutexName = 'Naxterra.NaxTaskManager.SingleInstance';
 
 var
   PreviousVersionRemoved: Boolean;
@@ -305,6 +301,25 @@ begin
   end;
 end;
 
+// Closes the open windows of the app in the given folder (politely, then by force after ten seconds), matched by their
+// full path so another install is left alone. Without this the old uninstaller would run while its files are in use, and
+// files it can only delete at the next restart would take the new install's files with them. An install for one
+// user cannot close an elevated window, which then keeps its files as before.
+procedure CloseAppWindows(const Folder: String);
+var
+  ResultCode: Integer;
+  Script: String;
+begin
+  Script := '$dir = ''' + AddBackslash(Folder) + '''; ' +
+    'Get-Process -Name ''Nax-TaskManager'' -ErrorAction SilentlyContinue | ' +
+    'Where-Object { $_.Path -and $_.Path.StartsWith($dir, [StringComparison]::OrdinalIgnoreCase) } | ' +
+    'ForEach-Object { [void]$_.CloseMainWindow(); if (-not $_.WaitForExit(10000)) { Stop-Process -Id $_.Id -Force } }';
+  Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "' + Script + '"',
+    ExpandConstant('{sys}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Log('Closed open windows of the previous installation, exit code ' + IntToStr(ResultCode));
+end;
+
 // sc.exe prints the state names in English on every Windows language. Both tools are called by full path from the
 // system folder, which is also the working folder, so nothing in the folder setup was started from can stand in.
 function ServiceIsStopped(): Boolean;
@@ -352,6 +367,7 @@ begin
   end;
 
   Log('Existing installation detected. Running previous uninstaller: ' + Uninstaller);
+  CloseAppWindows(ExtractFileDir(Uninstaller));
   WizardForm.StatusLabel.Caption := CustomMessage('RemovingPreviousVersion');
   // /NAXUPGRADE tells the old uninstaller this is an upgrade: keep the service, blocks and Task Manager choice.
   if (not ShellExec('', Uninstaller, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /NAXUPGRADE', '',
@@ -387,24 +403,8 @@ begin
   Result := True;
   if IsUpgradeUninstall() then
     Exit;
-  // An open window could make new blocks or rules after the cleanup removed them, so it is closed first. An
-  // interactive uninstall asks the user to close it. A silent one closes it, because a task manager is usually open
-  // and an unattended uninstall must not fail for that.
-  while CheckForMutexes(AppMutexName) do
-  begin
-    if UninstallSilent() then
-    begin
-      Exec(ExpandConstant('{sys}\taskkill.exe'), '/IM {#AppExeName} /F', ExpandConstant('{sys}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
-      Log('Closed the running app before the cleanup, taskkill exit code ' + IntToStr(ResultCode));
-      Sleep(1000);
-      Break;
-    end;
-    if MsgBox(CustomMessage('CloseAppFirst'), mbError, MB_RETRYCANCEL) <> IDRETRY then
-    begin
-      Result := False;
-      Exit;
-    end;
-  end;
+  // The elevated cleanup first closes the open windows of this install (also elevated ones, matched by their path),
+  // so none of them can make new blocks or rules after the cleanup removed them.
   ResultFile := NewResultFile('nax-uninstall-');
   // Only an interactive uninstall asks. A silent one (winget, scripts) keeps the history.
   RemoveData := '';
