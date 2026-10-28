@@ -903,8 +903,15 @@ First {2}, last {3}</value></data>
   <data name="RulesPage_HelperRuntime" xml:space="preserve"><value>Shared WebView2 runtime</value></data>
   <data name="RulesPage_HelperNotRunning" xml:space="preserve"><value>not running</value></data>
   <data name="RulesPage_HelperMissing" xml:space="preserve"><value>file no longer exists</value></data>
-  <data name="RulesPage_HelperRuntimeNote" xml:space="preserve"><value>Many apps share Windows' WebView2 runtime, for example the Widgets, Teams or Outlook. A block or rule then applies to all of them. After a WebView2 update the program lives in a new folder, so check the new entry and save again.</value></data>
+  <data name="RulesPage_HelperRuntimeNote" xml:space="preserve"><value>Many apps share Windows' WebView2 runtime, for example the Widgets, Teams or Outlook. A block or rule then applies to all of them. After a WebView2 update the program lives in a new folder. The new entry is then checked in place of the missing one, and saving moves the rules over.</value></data>
   <data name="RulesPage_HelperSharedNote" xml:space="preserve"><value>Other apps use this program too. A block or rule then applies to them as well.</value></data>
+  <data name="RulesPage_HelperNewVersion" xml:space="preserve"><value>New version, replaces the missing file</value></data>
+  <data name="RulesPage_HelperUnavailable" xml:space="preserve"><value>Not available</value></data>
+  <data name="RulesPage_HelperHasOwnRules" xml:space="preserve"><value>This program has network rules of its own. As a helper it would get this app's rules instead, so it cannot be checked. Remove its own rules first.</value></data>
+  <data name="RulesPage_HelperFollowsOther" xml:space="preserve"><value>This program already follows the rules of {0}. A program can follow the rules of only one app.</value></data>
+  <data name="RulesPage_MoveRules" xml:space="preserve"><value>Move rules</value></data>
+  <data name="RulesPage_MovedTitle" xml:space="preserve"><value>New version found</value></data>
+  <data name="RulesPage_MovedText" xml:space="preserve"><value>This program file no longer exists, probably after an update. The app now runs from {0}. Move the block, the network rules and the memory rule to the new file. The entries of the old file are removed.</value></data>
   <data name="Kernel_Line" xml:space="preserve"><value>Kernel and drivers (pools)</value></data>
   <data name="Kernel_WarningTitle" xml:space="preserve"><value>Kernel memory unusually high</value></data>
   <data name="Kernel_PoolNonPaged" xml:space="preserve"><value>non-paged pool</value></data>

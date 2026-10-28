@@ -84,10 +84,32 @@ public static partial class FirewallRules
     }
 
     /// <summary>
+    /// <see cref="Apply"/> for a block the user sets on this program itself. When another app lists the program as a
+    /// helper, the block is marked as its own, so unblocking that app leaves it in place. Unblocking clears the mark.
+    /// </summary>
+    public static CommandResult ApplyOwn(string path, bool block)
+    {
+        CommandResult result = Apply(path, block);
+        if (!result.Succeeded) return result;
+        try
+        {
+            if (!block || NetworkPolicyStore.Load().Any(policy => policy.Helpers.Contains(path, StringComparer.OrdinalIgnoreCase)))
+            {
+                NetworkPolicyStore.SetBlockedOnItsOwn(path, block);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new CommandResult(1, "", ex.Message, false);
+        }
+        return result;
+    }
+
+    /// <summary>
     /// Applies one app's rules: the WFP filters first (one transaction), then the stored copy the app reads, then
     /// open connections the new rules block are closed. An empty policy removes the app's rules. Must be elevated.
     /// </summary>
-    public static CommandResult ApplyPolicy(AppNetworkPolicy policy)
+    public static CommandResult ApplyPolicy(AppNetworkPolicy policy, string? replacing = null)
     {
         if (string.IsNullOrWhiteSpace(policy.Path) || !Path.IsPathFullyQualified(policy.Path))
         {
@@ -104,8 +126,13 @@ public static partial class FirewallRules
         {
             // Read the stored rules strictly before any filter changes: a damaged file stops the change here, while
             // filters and file still agree.
-            AppNetworkPolicy? previous = NetworkPolicyStore.ReadForUpdate()
-                .FirstOrDefault(stored => string.Equals(stored.Path, policy.Path, StringComparison.OrdinalIgnoreCase));
+            List<AppNetworkPolicy> stored = NetworkPolicyStore.ReadForUpdate();
+            AppNetworkPolicy? previous = stored.FirstOrDefault(entry => string.Equals(entry.Path, policy.Path, StringComparison.OrdinalIgnoreCase));
+            // A newly listed helper would get this app's rules in place of its own, or of the app it already follows.
+            foreach (string added in helpers.Except(previous?.Helpers ?? [], StringComparer.OrdinalIgnoreCase))
+            {
+                if (HelperBlocks.WhyNotHelper(added, policy.Path, stored, replacing) is { } reason) return new CommandResult(87, "", reason, false);
+            }
             WfpBlocker.ApplyPolicy(policy);
             NetworkPolicyStore.Save(policy);
             // Each helper gets the app's switches and rules as its own filters, marked as the app's helper.

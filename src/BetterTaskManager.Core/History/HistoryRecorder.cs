@@ -89,6 +89,10 @@ public sealed class HistoryRecorder : IDisposable
     // Traffic is counted by PID; a process can exit before the next snapshot names it.
     private readonly Dictionary<int, (AppIdentity App, DateTime SeenUtc)> identities = new();
     private DateTime lastFlush = DateTime.UtcNow, lastPrune;
+    // Wall clock and tick count at the last flush, to notice the wall clock jumping (see ClockSkew).
+    private DateTime clockCheckedWall = DateTime.UtcNow;
+    private long clockCheckedTicks = Environment.TickCount64;
+    private TimeSpan? clockSkew;
 
     public delegate bool TracedProcessLookup(int pid, out BandwidthMonitor.TracedProcess process);
 
@@ -296,9 +300,18 @@ public sealed class HistoryRecorder : IDisposable
         foreach (int pid in identities.Where(pair => now - pair.Value.SeenUtc > ExitedProcessMemory).Select(pair => pair.Key).ToList()) identities.Remove(pid);
         lastFlush = now;
 
+        // A wall clock that jumped ahead while the service ran does not count toward the retention period.
+        DateTime wall = DateTime.UtcNow;
+        long ticks = Environment.TickCount64;
+        TimeSpan known = clockSkew ??= store.ReadClockSkew();
+        clockSkew = ClockSkew.Update(known, wall - clockCheckedWall, TimeSpan.FromMilliseconds(ticks - clockCheckedTicks));
+        if (clockSkew != known) store.WriteClockSkew(clockSkew.Value);
+        clockCheckedWall = wall;
+        clockCheckedTicks = ticks;
+
         if (now - lastPrune >= PruneInterval)
         {
-            store.Prune(Retention, now);
+            store.Prune(Retention, now - clockSkew.Value);
             lastPrune = now;
         }
     }

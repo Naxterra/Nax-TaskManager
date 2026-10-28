@@ -28,7 +28,16 @@ public static class HistoryServiceControl
     public const string BundledFolderName = "HistoryService";
     private static readonly TimeSpan StatusTimeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// The service's own folder, separate from the app's: an install for all users puts the app (with its bundled
+    /// service files) in Program Files\Nax-TaskManager, and the running service must never share that folder, or
+    /// installing would copy files onto themselves and removing the service would delete the app's files.
+    /// </summary>
     public static string InstallFolder =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Nax-TaskManager History");
+
+    /// <summary>Where versions up to 2.0.0-alpha.41 installed the service; moved to <see cref="InstallFolder"/> on update.</summary>
+    public static string LegacyInstallFolder =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Nax-TaskManager", "HistoryService");
 
     /// <summary>Product version of the service build in <paramref name="folder"/>, or null.</summary>
@@ -38,10 +47,39 @@ public static class HistoryServiceControl
         return File.Exists(exe) ? System.Diagnostics.FileVersionInfo.GetVersionInfo(exe).ProductVersion : null;
     }
 
-    /// <summary>True when the installed service is another build than the one shipped with the app.</summary>
-    public static bool NeedsUpdate(string bundledFolder) =>
-        QueryState() != HistoryServiceState.NotInstalled && VersionIn(bundledFolder) is { } bundled &&
-        VersionIn(InstallFolder) is { } installed && bundled != installed;
+    /// <summary>The folder Windows starts the service from (its registered binary path), or null when not installed.</summary>
+    public static string? RegisteredFolder()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\" + ServiceName);
+            if (key?.GetValue("ImagePath") is not string imagePath) return null;
+            string exe = Environment.ExpandEnvironmentVariables(imagePath.Trim()).Trim('"');
+            return Path.GetDirectoryName(exe);
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// True when the installed service is another build than the one shipped with the app, or still runs from the
+    /// folder of earlier versions.
+    /// </summary>
+    public static bool NeedsUpdate(string bundledFolder)
+    {
+        if (QueryState() == HistoryServiceState.NotInstalled || VersionIn(bundledFolder) is not { } bundled) return false;
+        string folder = RegisteredFolder() ?? InstallFolder;
+        if (!SamePath(folder, InstallFolder)) return true;
+        return VersionIn(folder) is { } installed && bundled != installed;
+    }
+
+    /// <summary>Version of the service Windows actually runs, for display.</summary>
+    public static string? InstalledVersion() => VersionIn(RegisteredFolder() ?? InstallFolder);
+
+    private static bool SamePath(string a, string b) =>
+        string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(a)), Path.TrimEndingDirectorySeparator(Path.GetFullPath(b)), StringComparison.OrdinalIgnoreCase);
 
     public static HistoryServiceState QueryState()
     {
@@ -107,6 +145,7 @@ public static class HistoryServiceControl
     {
         string sourceExe = Path.Combine(sourceFolder, ExecutableName);
         if (!File.Exists(sourceExe)) return Failed("The service files were not found next to the app: " + sourceExe);
+        if (SamePath(sourceFolder, InstallFolder)) return Failed("The service cannot be installed from its own install folder.");
 
         bool installed = QueryState() != HistoryServiceState.NotInstalled;
         if (installed && Stop() is { Succeeded: false } stopFailed) return stopFailed;
@@ -140,30 +179,59 @@ public static class HistoryServiceControl
         {
             return Failed("The service was installed but did not start: " + ex.Message);
         }
+        // The service now runs from its own folder; the folder of earlier versions goes, unless it is where these
+        // files came from (an install for all users keeps its bundled copy there).
+        RemoveLegacyFolder(keep: sourceFolder);
         return new CommandResult(0, "", "", false);
     }
 
-    /// <summary>Stops and removes the service and its binaries. The recorded history stays in the data folder.</summary>
-    public static CommandResult Uninstall()
+    /// <summary>
+    /// Stops and removes the service and its binaries. The recorded history stays in the data folder.
+    /// <paramref name="keepFolder"/> is the app's bundled service folder, which is never deleted: in an install for
+    /// all users it is the folder earlier versions ran the service from, and the uninstaller removes it itself.
+    /// </summary>
+    public static CommandResult Uninstall(string? keepFolder = null)
     {
         if (QueryState() == HistoryServiceState.NotInstalled) return new CommandResult(0, "", "", false);
         if (Stop() is { Succeeded: false } stopFailed) return stopFailed;
         CommandResult result = Sc("delete", ServiceName);
         if (!result.Succeeded) return result;
+        DeleteFolder(InstallFolder);
+        RemoveLegacyFolder(keepFolder);
+        return new CommandResult(0, "", "", false);
+    }
 
+    private static void RemoveLegacyFolder(string? keep)
+    {
+        if (keep is not null && SamePath(keep, LegacyInstallFolder)) return;
+        // An install for all users next to this one keeps its bundled service files in that folder.
+        string? parent = Path.GetDirectoryName(LegacyInstallFolder);
+        if (parent is not null && Directory.Exists(parent) && Directory.EnumerateFiles(parent, "*.exe").Any()) return;
+        DeleteFolder(LegacyInstallFolder);
+        // Its parent held nothing else for an install for one user.
+        try
+        {
+            if (parent is not null && Directory.Exists(parent) && !Directory.EnumerateFileSystemEntries(parent).Any()) Directory.Delete(parent);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private static void DeleteFolder(string folder)
+    {
         // The process can hold its files for a moment after reporting Stopped.
-        for (int attempt = 0; attempt < 10 && Directory.Exists(InstallFolder); attempt++)
+        for (int attempt = 0; attempt < 10 && Directory.Exists(folder); attempt++)
         {
             try
             {
-                Directory.Delete(InstallFolder, recursive: true);
+                Directory.Delete(folder, recursive: true);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 Thread.Sleep(500);
             }
         }
-        return new CommandResult(0, "", "", false);
     }
 
     private static CommandResult Stop()

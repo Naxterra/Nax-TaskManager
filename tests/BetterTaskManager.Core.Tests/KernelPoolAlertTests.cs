@@ -87,5 +87,18 @@ internal static class KernelPoolAlertTests
                 var largest = KernelPoolAlert.Largest(tags, 3);
                 Check.Equal("Cccc,Dddd,Eeee", string.Join(",", largest.Select(tag => tag.Tag)));
             });
+
+        yield return ("pool_tag_split_across_read_pieces_is_still_found",
+            "A driver file of 3 MB holds one tag that straddles the first 1 MB piece boundary and one at the very end. Both are found, and a tag that is not in the file is not.",
+            () => StoreTests.InTempFolder(folder =>
+            {
+                string file = Path.Combine(folder, "fake.sys");
+                byte[] bytes = new byte[3 << 20];
+                System.Text.Encoding.ASCII.GetBytes("NtFC").CopyTo(bytes, (1 << 20) - 2);
+                System.Text.Encoding.ASCII.GetBytes("Leak").CopyTo(bytes, bytes.Length - 4);
+                File.WriteAllBytes(file, bytes);
+                var wanted = new[] { "NtFC", "Leak", "None" }.ToDictionary(tag => tag, tag => System.Text.Encoding.ASCII.GetBytes(tag));
+                Check.Equal("Leak,NtFC", string.Join(",", PoolTags.TagsIn(file, wanted).Order(StringComparer.Ordinal)));
+            }));
     }
 }

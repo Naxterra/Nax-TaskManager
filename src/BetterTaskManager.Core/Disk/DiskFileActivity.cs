@@ -38,6 +38,9 @@ public sealed class DiskFileActivity : IDisposable
     private readonly ConcurrentDictionary<ulong, string> names = new();
     /// <summary>Image names from the trace's process events, so short-lived processes can still be named.</summary>
     private readonly ConcurrentDictionary<int, string> processNames = new();
+    /// <summary>When each traced process exited (tick count), so names of long-gone processes can be dropped.</summary>
+    private readonly ConcurrentDictionary<int, long> processExited = new();
+    private const int MaxFileNames = 200_000, MaxProcessNames = 4096;
     private readonly string sessionName;
     private TraceEventSession? session;
     private Thread? pump;
@@ -70,8 +73,9 @@ public sealed class DiskFileActivity : IDisposable
             kernel.DiskIOWrite += data => Add(data, read: false);
             kernel.FileIOName += data => Remember(data.FileKey, data.FileName);
             kernel.FileIOFileCreate += data => Remember(data.FileKey, data.FileName);
-            kernel.ProcessStart += data => processNames[data.ProcessID] = data.ImageFileName;
-            kernel.ProcessDCStart += data => processNames[data.ProcessID] = data.ImageFileName;
+            kernel.ProcessStart += data => RememberProcess(data.ProcessID, data.ImageFileName);
+            kernel.ProcessDCStart += data => RememberProcess(data.ProcessID, data.ImageFileName);
+            kernel.ProcessStop += data => processExited[data.ProcessID] = Environment.TickCount64;
             TraceEventSession started = session;
             pump = new Thread(() =>
             {
@@ -95,22 +99,6 @@ public sealed class DiskFileActivity : IDisposable
         }
     }
 
-    /// <summary>
-    /// Stops this app's disk trace if a previous copy was ended without closing it (killed or crashed); otherwise
-    /// its kernel buffers would stay allocated until the next restart of Windows.
-    /// </summary>
-    public static void StopLeftover(string sessionName = DefaultSessionName)
-    {
-        try
-        {
-            TraceEventSession.GetActiveSession(sessionName)?.Stop();
-        }
-        catch (Exception)
-        {
-            // Nothing left over, or no rights to stop it.
-        }
-    }
-
     public void Stop()
     {
         IsRunning = false;
@@ -121,6 +109,7 @@ public sealed class DiskFileActivity : IDisposable
         lock (gate) entries.Clear();
         names.Clear();
         processNames.Clear();
+        processExited.Clear();
     }
 
     /// <summary>Image name of a process the trace saw start or running; empty when unknown.</summary>
@@ -128,7 +117,26 @@ public sealed class DiskFileActivity : IDisposable
 
     private void Remember(ulong fileKey, string? name)
     {
-        if (fileKey != 0 && !string.IsNullOrEmpty(name)) names[fileKey] = name;
+        if (fileKey == 0 || string.IsNullOrEmpty(name)) return;
+        // File keys are never reported as freed here; start over when there are very many, and the next rundown names
+        // the files that are still open.
+        if (names.Count >= MaxFileNames) names.Clear();
+        names[fileKey] = name;
+    }
+
+    private void RememberProcess(int pid, string name)
+    {
+        processExited.TryRemove(pid, out _);
+        processNames[pid] = name;
+        if (processNames.Count <= MaxProcessNames) return;
+        // Keep a minute after exit, long enough for the next snapshot to name a short-lived process.
+        long now = Environment.TickCount64;
+        foreach (var (gone, at) in processExited)
+        {
+            if (now - at < 60_000) continue;
+            processNames.TryRemove(gone, out _);
+            processExited.TryRemove(gone, out _);
+        }
     }
 
     /// <summary>

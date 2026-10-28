@@ -67,22 +67,48 @@ public static class PoolTags
         files.UnionWith(LoadedKernelModules().Select(Path.GetFullPath));
         foreach (string file in files.Order(StringComparer.OrdinalIgnoreCase))
         {
-            byte[] bytes;
+            HashSet<string> contained;
             try
             {
-                bytes = File.ReadAllBytes(file);
+                contained = TagsIn(file, wanted);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 continue;
             }
-            foreach (var (tag, pattern) in wanted)
+            string name = Path.GetFileName(file);
+            foreach (string tag in contained)
             {
-                string name = Path.GetFileName(file);
-                if (bytes.AsSpan().IndexOf(pattern) >= 0 && !found[tag].Contains(name, StringComparer.OrdinalIgnoreCase)) found[tag].Add(name);
+                if (!found[tag].Contains(name, StringComparer.OrdinalIgnoreCase)) found[tag].Add(name);
             }
         }
         return found;
+    }
+
+    /// <summary>
+    /// The tags whose bytes occur in <paramref name="file"/>. The file is read in 1 MB pieces that overlap by three
+    /// bytes, so a tag across a piece boundary is still found and a 100 MB graphics driver is never held in memory.
+    /// </summary>
+    public static HashSet<string> TagsIn(string file, IReadOnlyDictionary<string, byte[]> wanted)
+    {
+        const int ChunkSize = 1 << 20, Overlap = 3;
+        var contained = new HashSet<string>();
+        byte[] buffer = new byte[ChunkSize + Overlap];
+        int kept = 0;
+        using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1, FileOptions.SequentialScan);
+        while (contained.Count < wanted.Count)
+        {
+            int read = stream.Read(buffer, kept, ChunkSize);
+            if (read == 0) break;
+            int length = kept + read;
+            foreach (var (tag, pattern) in wanted)
+            {
+                if (!contained.Contains(tag) && buffer.AsSpan(0, length).IndexOf(pattern) >= 0) contained.Add(tag);
+            }
+            kept = Math.Min(Overlap, length);
+            Buffer.BlockCopy(buffer, length - kept, buffer, 0, kept);
+        }
+        return contained;
     }
 
     /// <summary>

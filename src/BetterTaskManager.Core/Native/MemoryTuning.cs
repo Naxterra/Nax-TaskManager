@@ -82,7 +82,11 @@ public static class MemoryRuleStore
 
 /// <summary>The memory manager's switches, as Windows' MMAgent cmdlets show them, plus the SysMain service.</summary>
 public sealed record MemoryManagerState(bool MemoryCompression, bool PageCombining, bool ApplicationLaunchPrefetching,
-    bool ApplicationPreLaunch, bool SysMainRunning, bool SysMainEnabled, DateTime ReadAtUtc);
+    bool ApplicationPreLaunch, bool SysMainRunning, bool SysMainEnabled, DateTime ReadAtUtc)
+{
+    /// <summary>SysMain's start type as sc.exe names it (auto, demand or disabled). Records of older versions have none.</summary>
+    public string? SysMainStartMode { get; init; }
+}
 
 /// <summary>
 /// Reads and changes Windows' memory manager settings: memory compression, page combining, app launch prefetching,
@@ -115,7 +119,7 @@ public static class MemoryManager
             bool Flag(string name) => output[name] is bool value && value;
             (bool running, bool enabled) = SysMainState();
             return new MemoryManagerState(Flag(MemoryCompression), Flag(PageCombining), Flag(ApplicationLaunchPrefetching),
-                Flag(ApplicationPreLaunch), running, enabled, DateTime.UtcNow);
+                Flag(ApplicationPreLaunch), running, enabled, DateTime.UtcNow) { SysMainStartMode = SysMainStartName() };
         }
         catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or COMException)
         {
@@ -147,8 +151,83 @@ public static class MemoryManager
         AtomicFile.WriteAllText(StatePath, JsonSerializer.Serialize(state, Options));
     }
 
+    /// <summary>The state before this app first changed a switch, so an uninstall can put Windows back as it was.</summary>
+    public static string OriginalPath => System.IO.Path.Combine(DataFolder.Path, "memory-manager-original.json");
+
     /// <summary>Switches one feature on or off and stores the new state. Needs administrator rights.</summary>
     public static void Set(string feature, bool enable)
+    {
+        if (!File.Exists(OriginalPath) && ReadLive() is { } original)
+        {
+            DataFolder.EnsureSecured();
+            AtomicFile.WriteAllText(OriginalPath, JsonSerializer.Serialize(original, Options));
+        }
+        Apply(feature, enable);
+        StoreCurrent();
+    }
+
+    /// <summary>
+    /// Puts every switch this app changed back to the state recorded before the first change, then forgets that
+    /// state. Does nothing when the app never changed a switch. Needs administrator rights.
+    /// </summary>
+    public static void RestoreOriginal()
+    {
+        if (!File.Exists(OriginalPath)) return;
+        MemoryManagerState original;
+        try
+        {
+            original = JsonSerializer.Deserialize<MemoryManagerState>(File.ReadAllText(OriginalPath), Options)
+                ?? throw new JsonException("The file holds no state.");
+        }
+        catch (JsonException ex)
+        {
+            // Nothing can be restored from it, now or later; report it once and let the uninstall go on.
+            File.Delete(OriginalPath);
+            throw new InvalidDataException("The recorded memory manager settings could not be read, so they were not restored: " + ex.Message, ex);
+        }
+        // The record is kept until the restore worked, so a failed attempt can be repeated.
+        MemoryManagerState live = ReadLive() ?? throw new InvalidOperationException("The current memory manager settings could not be read, so nothing was restored.");
+        if (live.MemoryCompression != original.MemoryCompression) Apply(MemoryCompression, original.MemoryCompression);
+        if (live.PageCombining != original.PageCombining) Apply(PageCombining, original.PageCombining);
+        if (live.ApplicationLaunchPrefetching != original.ApplicationLaunchPrefetching) Apply(ApplicationLaunchPrefetching, original.ApplicationLaunchPrefetching);
+        if (live.ApplicationPreLaunch != original.ApplicationPreLaunch) Apply(ApplicationPreLaunch, original.ApplicationPreLaunch);
+        RestoreSysMain(original);
+        File.Delete(OriginalPath);
+    }
+
+    /// <summary>Puts SysMain back to its recorded start type (automatic, manual or disabled) and running state.</summary>
+    private static void RestoreSysMain(MemoryManagerState original)
+    {
+        // Records from before the start type was stored only know enabled or disabled.
+        string start = original.SysMainStartMode ?? (original.SysMainEnabled ? "auto" : "disabled");
+        using var service = new ServiceController("SysMain");
+        string current = ScStartName(service.StartType);
+        if (current != start)
+        {
+            CommandResult result = CommandRunner.Run("sc.exe", "config", "SysMain", "start=", start);
+            if (!result.Succeeded) throw new InvalidOperationException(result.FailureSummary());
+        }
+        service.Refresh();
+        if (original.SysMainRunning && start != "disabled" && service.Status == ServiceControllerStatus.Stopped)
+        {
+            service.Start();
+            service.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+        }
+        else if (!original.SysMainRunning && service.Status == ServiceControllerStatus.Running)
+        {
+            service.Stop();
+            service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
+        }
+    }
+
+    private static string ScStartName(ServiceStartMode mode) => mode switch
+    {
+        ServiceStartMode.Disabled => "disabled",
+        ServiceStartMode.Manual => "demand",
+        _ => "auto"
+    };
+
+    private static void Apply(string feature, bool enable)
     {
         if (feature == SysMain)
         {
@@ -174,7 +253,19 @@ public static class MemoryManager
             parameters[feature] = true;
             using ManagementBaseObject result = agent.InvokeMethod(enable ? "Enable" : "Disable", parameters, null);
         }
-        StoreCurrent();
+    }
+
+    private static string? SysMainStartName()
+    {
+        try
+        {
+            using var service = new ServiceController("SysMain");
+            return ScStartName(service.StartType);
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     private static (bool Running, bool Enabled) SysMainState()

@@ -303,6 +303,14 @@ public sealed class HistoryStore : IDisposable
         foreach (var (item, id) in inserted) item.Id = id;
     }
 
+    /// <summary>
+    /// How far the wall clock was seen to jump ahead of real time while the service ran (see <see cref="ClockSkew"/>).
+    /// Pruning subtracts it, so a clock set a year ahead by mistake does not delete the whole history.
+    /// </summary>
+    public TimeSpan ReadClockSkew() => ReadMetaMs("clock_skew") is { } skew ? skew - DateTime.UnixEpoch : TimeSpan.Zero;
+
+    public void WriteClockSkew(TimeSpan skew) => SetMeta("clock_skew", ((long)skew.TotalMilliseconds).ToString(CultureInfo.InvariantCulture));
+
     /// <summary>Deletes connections and daily totals older than the retention period.</summary>
     public void Prune(TimeSpan retention, DateTime nowUtc)
     {
@@ -475,10 +483,13 @@ public sealed class HistoryStore : IDisposable
     }
 
     /// <summary>When the service last wrote, or null if it never has.</summary>
-    public DateTime? ReadLastWrite()
+    public DateTime? ReadLastWrite() => ReadMetaMs("last_write");
+
+    private DateTime? ReadMetaMs(string key)
     {
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT value FROM meta WHERE key = 'last_write'";
+        command.CommandText = "SELECT value FROM meta WHERE key = $key";
+        command.Parameters.AddWithValue("$key", key);
         return command.ExecuteScalar() is string value && long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long ms)
             ? FromUnixMs(ms)
             : null;

@@ -20,6 +20,7 @@ public sealed class HistoryWorker : IDisposable
     private readonly Action<string> log;
     private readonly object gate = new();
     private DateTime lastError;
+    private long lastTraceCheck = Environment.TickCount64;
     private bool disposed, reportedTraffic;
 
     /// <param name="publishFeed">Serve live traffic to non-elevated app windows (the real service; off for console tests).</param>
@@ -83,6 +84,13 @@ public sealed class HistoryWorker : IDisposable
             }
             recorder.Record(snapshot);
             RecordBlocked(snapshot);
+        }
+        // An app window that was killed leaves its kernel traces running. Stop them once a minute when no window is open.
+        if (Environment.TickCount64 - lastTraceCheck > 60_000)
+        {
+            lastTraceCheck = Environment.TickCount64;
+            int stopped = BetterTaskManager.Core.Monitoring.AppTraceSessions.StopIfAppNotRunning(snapshot);
+            if (stopped > 0) log($"Stopped {stopped} trace session(s) left behind by a closed app window");
         }
         bootReport?.Offer(snapshot);
         memoryRules?.Apply(snapshot);

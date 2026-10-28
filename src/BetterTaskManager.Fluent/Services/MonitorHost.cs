@@ -31,8 +31,8 @@ public sealed class MonitorHost : IDisposable
         if (!IsElevated) engine.UseServiceFeed();
         // Elevated with the history service running: one set of kernel traces (the service's) is enough.
         else if (Core.History.HistoryServiceControl.QueryState() == Core.History.HistoryServiceState.Running) engine.PreferServiceFeed();
-        // A copy that was killed while its Disk page showed files left its trace running; stop it.
-        if (IsElevated) Core.Disk.DiskFileActivity.StopLeftover();
+        // A copy that was killed left its traces running. This window starts its own when it needs them.
+        if (IsElevated) Core.Monitoring.AppTraceSessions.StopAll();
     }
 
     /// <summary>Raised on the UI thread with the newest snapshot.</summary>
@@ -284,7 +284,7 @@ public sealed class MonitorHost : IDisposable
         int exitCode;
         if (IsElevated)
         {
-            CommandResult result = await Task.Run(() => FirewallRules.Apply(path, block));
+            CommandResult result = await Task.Run(() => FirewallRules.ApplyOwn(path, block));
             exitCode = result.Succeeded ? 0 : Math.Max(1, result.ExitCode);
             if (exitCode != 0) return result.FailureSummary();
         }

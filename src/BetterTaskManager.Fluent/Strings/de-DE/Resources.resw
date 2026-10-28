@@ -903,8 +903,15 @@ Erstmals {2}, zuletzt {3}</value></data>
   <data name="RulesPage_HelperRuntime" xml:space="preserve"><value>Gemeinsame WebView2-Laufzeit</value></data>
   <data name="RulesPage_HelperNotRunning" xml:space="preserve"><value>läuft gerade nicht</value></data>
   <data name="RulesPage_HelperMissing" xml:space="preserve"><value>Datei nicht mehr vorhanden</value></data>
-  <data name="RulesPage_HelperRuntimeNote" xml:space="preserve"><value>Viele Apps teilen sich die WebView2-Laufzeit von Windows, zum Beispiel die Widgets, Teams oder Outlook. Eine Sperre oder Regel gilt dann für alle diese Apps. Nach einem WebView2-Update liegt das Programm in einem neuen Ordner, dann haken Sie den neuen Eintrag an und speichern erneut.</value></data>
+  <data name="RulesPage_HelperRuntimeNote" xml:space="preserve"><value>Viele Apps teilen sich die WebView2-Laufzeit von Windows, zum Beispiel die Widgets, Teams oder Outlook. Eine Sperre oder Regel gilt dann für alle diese Apps. Nach einem WebView2-Update liegt das Programm in einem neuen Ordner. Der neue Eintrag ist dann anstelle des fehlenden angehakt, und Speichern überträgt die Regeln.</value></data>
   <data name="RulesPage_HelperSharedNote" xml:space="preserve"><value>Andere Apps nutzen dieses Programm ebenfalls. Eine Sperre oder Regel gilt dann auch für sie.</value></data>
+  <data name="RulesPage_HelperNewVersion" xml:space="preserve"><value>Neue Version, ersetzt die fehlende Datei</value></data>
+  <data name="RulesPage_HelperUnavailable" xml:space="preserve"><value>Nicht verfügbar</value></data>
+  <data name="RulesPage_HelperHasOwnRules" xml:space="preserve"><value>Dieses Programm hat eigene Netzwerkregeln. Als Hilfsprogramm bekäme es stattdessen die Regeln dieser App, deshalb kann es nicht angehakt werden. Entfernen Sie zuerst seine eigenen Regeln.</value></data>
+  <data name="RulesPage_HelperFollowsOther" xml:space="preserve"><value>Dieses Programm folgt schon den Regeln von {0}. Ein Programm kann nur den Regeln einer App folgen.</value></data>
+  <data name="RulesPage_MoveRules" xml:space="preserve"><value>Regeln übertragen</value></data>
+  <data name="RulesPage_MovedTitle" xml:space="preserve"><value>Neue Version gefunden</value></data>
+  <data name="RulesPage_MovedText" xml:space="preserve"><value>Diese Programmdatei gibt es nicht mehr, wahrscheinlich nach einem Update. Die App läuft jetzt aus {0}. Übertragen Sie Sperre, Netzwerkregeln und Speicherregel auf die neue Datei. Die Einträge der alten Datei werden dabei entfernt.</value></data>
   <data name="Kernel_Line" xml:space="preserve"><value>Kernel und Treiber (Pools)</value></data>
   <data name="Kernel_WarningTitle" xml:space="preserve"><value>Kernel-Speicher ungewöhnlich hoch</value></data>
   <data name="Kernel_PoolNonPaged" xml:space="preserve"><value>nicht ausgelagerte Pool</value></data>

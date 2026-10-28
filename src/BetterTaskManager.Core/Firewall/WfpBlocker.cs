@@ -32,7 +32,7 @@ public static partial class WfpBlocker
     /// Standard users may not read WFP, so every change also writes the list of blocked paths to the protected data
     /// folder, where the unelevated app reads it.
     /// </summary>
-    private static string MirrorPath => Path.Combine(DataFolder.Path, "blocked-apps.txt");
+    internal static string MirrorPath => Path.Combine(DataFolder.Path, "blocked-apps.txt");
 
     public static void Block(string path)
     {

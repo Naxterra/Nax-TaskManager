@@ -20,6 +20,8 @@ public static class Program
     internal const string ReplaceTaskManagerOnArgument = "--replace-taskmanager-on";
     internal const string ReplaceTaskManagerOffArgument = "--replace-taskmanager-off";
     internal const string UninstallCleanupArgument = "--uninstall-cleanup";
+    /// <summary>Optional last argument of the uninstall cleanup: also delete the history, logs and rules.</summary>
+    internal const string RemoveDataArgument = "--remove-data";
     internal const string CacheTrimOnArgument = "--cache-trim-on";
     internal const string CacheTrimOffArgument = "--cache-trim-off";
     internal const string StandbyLimitArgument = "--standby-limit";
@@ -33,10 +35,12 @@ public static class Program
     /// <summary>
     /// Restores Windows Task Manager if it points at <paramref name="executablePath"/>, removes every block this app
     /// made (WFP filters and older Windows Firewall rules) and the History service. Each step runs even if another
-    /// failed. The exit code has one bit per failed step (1 Task Manager, 2 blocks, 4 service); details go to
-    /// <paramref name="resultFile"/>.
+    /// failed. Then the memory manager switches go back to how they were before the app first changed them, and the
+    /// memory settings files are deleted; with <paramref name="removeData"/> the whole data folder goes, including the
+    /// history and the logs. The exit code has one bit per failed step (1 Task Manager, 2 blocks, 4 service, 8 memory
+    /// settings, 16 data folder); details go to <paramref name="resultFile"/>.
     /// </summary>
-    private static int UninstallCleanup(string executablePath, string resultFile)
+    private static int UninstallCleanup(string executablePath, string resultFile, bool removeData)
     {
         int code = 0;
         var details = new List<string>();
@@ -58,11 +62,42 @@ public static class Program
             code |= 2;
             details.Add("Blocks: " + ex.Message);
         }
-        CommandResult service = Core.History.HistoryServiceControl.Uninstall();
+        CommandResult service = Core.History.HistoryServiceControl.Uninstall(keepFolder: Services.HistoryServiceSetup.BundledFolder);
         if (!service.Succeeded)
         {
             code |= 4;
             details.Add("History service: " + service.FailureSummary());
+        }
+        try
+        {
+            Core.Native.MemoryManager.RestoreOriginal();
+            // While the service still runs (its removal failed and the uninstall may be cancelled), it keeps following
+            // these files, so they stay.
+            if ((code & 4) == 0)
+            {
+                foreach (string file in new[] { Core.Native.MemoryRuleStore.FilePath, Core.Native.StandbyLimiter.ConfigPath, Core.Disk.CacheTrimmer.DisabledMarkerPath, Core.Native.MemoryManager.StatePath })
+                {
+                    if (File.Exists(file)) File.Delete(file);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Management.ManagementException or System.Runtime.InteropServices.COMException or System.ServiceProcess.TimeoutException)
+        {
+            code |= 8;
+            details.Add("Memory settings: " + ex.Message);
+        }
+        // A failed restore keeps its record in the data folder for another attempt, so the folder stays then too.
+        if (removeData && (code & (4 | 8)) == 0)
+        {
+            try
+            {
+                Core.DataFolder.DeleteAll();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                code |= 16;
+                details.Add("Data folder: " + ex.Message);
+            }
         }
         Core.HelperResultFile.TryWrite(resultFile, code == 0 ? "OK" : string.Join(Environment.NewLine, details));
         return code;
@@ -87,7 +122,7 @@ public static class Program
         if (args.Length == 2 && (args[0] == FirewallBlockArgument || args[0] == FirewallUnblockArgument))
         {
             if (!FirewallRules.IsElevated) return 5;
-            CommandResult result = FirewallRules.Apply(args[1], args[0] == FirewallBlockArgument);
+            CommandResult result = FirewallRules.ApplyOwn(args[1], args[0] == FirewallBlockArgument);
             return result.Succeeded ? 0 : (result.ExitCode == 0 ? 1 : result.ExitCode);
         }
 
@@ -249,10 +284,10 @@ public static class Program
         }
 
         // Elevated helper mode for the uninstaller: undo everything outside the app folder, then exit.
-        if (args.Length == 3 && args[0] == UninstallCleanupArgument)
+        if ((args.Length == 3 || (args.Length == 4 && args[3] == RemoveDataArgument)) && args[0] == UninstallCleanupArgument)
         {
             if (!FirewallRules.IsElevated) return 5;
-            return UninstallCleanup(args[1], args[2]);
+            return UninstallCleanup(args[1], args[2], removeData: args.Length == 4);
         }
 
         WaitForPreviousInstance(args);

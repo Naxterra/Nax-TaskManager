@@ -168,6 +168,8 @@ public sealed class CacheTrimmer : IDisposable
     {
         byte[] input = new byte[40];
         byte[] output = new byte[64 * 1024];
+        // A file that is written in many small steps closes many times; open it once per read of the journal.
+        var considered = new HashSet<long>();
         while (true)
         {
             // READ_USN_JOURNAL_DATA_V0: StartUsn, ReasonMask, ReturnOnlyOnClose, Timeout, BytesToWaitFor, UsnJournalID.
@@ -198,7 +200,7 @@ public sealed class CacheTrimmer : IDisposable
                     if ((reason & UsnReasonClose) != 0 && (reason & (UsnReasonDataOverwrite | UsnReasonDataExtend)) != 0 &&
                         (attributes & FileAttributeDirectory) == 0)
                     {
-                        Consider(volume, fileId);
+                        if (considered.Add(fileId)) Consider(volume, fileId);
                     }
                 }
                 offset += length;

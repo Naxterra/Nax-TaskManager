@@ -381,13 +381,19 @@ public sealed class AppNetworkPolicy
     public List<string> Helpers { get; set; } = [];
     /// <summary>Set on a helper's own entry: the app whose rules it follows.</summary>
     public string? HelperOf { get; set; }
+    /// <summary>
+    /// Set on a helper program's entry when its whole-app block was made for the helper itself, not for an app that
+    /// lists it, so unblocking such an app leaves the helper blocked. Only <see cref="NetworkPolicyStore.SetBlockedOnItsOwn"/>
+    /// changes it; saving rules keeps the stored value.
+    /// </summary>
+    public bool BlockedOnItsOwn { get; set; }
 
     /// <summary>True when switches or rules need filters; helpers alone do not.</summary>
     [JsonIgnore]
     public bool HasFilters => BlockInternet || BlockLan || BlockLocalhost || BlockInbound || Outgoing.Count > 0 || Incoming.Count > 0;
 
     [JsonIgnore]
-    public bool IsEmpty => !HasFilters && Helpers.Count == 0;
+    public bool IsEmpty => !HasFilters && Helpers.Count == 0 && !BlockedOnItsOwn;
 
     /// <summary>The same switches and rules for one of the app's helper programs.</summary>
     public AppNetworkPolicy ForHelper(string helper) => new()
@@ -514,10 +520,29 @@ public static class NetworkPolicyStore
     public static void Save(AppNetworkPolicy policy, string filePath)
     {
         List<AppNetworkPolicy> all = ReadForUpdate(filePath);
-        all.RemoveAll(existing => string.Equals(existing.Path, policy.Path, StringComparison.OrdinalIgnoreCase));
+        AppNetworkPolicy? existing = all.FirstOrDefault(stored => string.Equals(stored.Path, policy.Path, StringComparison.OrdinalIgnoreCase));
+        policy.BlockedOnItsOwn = existing?.BlockedOnItsOwn ?? false;
+        all.RemoveAll(stored => string.Equals(stored.Path, policy.Path, StringComparison.OrdinalIgnoreCase));
         if (!policy.IsEmpty) all.Add(policy);
-        AtomicFile.WriteAllText(filePath, JsonSerializer.Serialize(all.OrderBy(p => p.Path, StringComparer.OrdinalIgnoreCase).ToList(), Options));
+        Write(all, filePath);
     }
+
+    /// <summary>Sets or clears <see cref="AppNetworkPolicy.BlockedOnItsOwn"/> for one program. Needs administrator rights.</summary>
+    public static void SetBlockedOnItsOwn(string path, bool value, string? filePath = null)
+    {
+        if (filePath is null) DataFolder.EnsureSecured();
+        filePath ??= FilePath;
+        List<AppNetworkPolicy> all = ReadForUpdate(filePath);
+        AppNetworkPolicy? entry = all.FirstOrDefault(stored => string.Equals(stored.Path, path, StringComparison.OrdinalIgnoreCase));
+        if ((entry?.BlockedOnItsOwn ?? false) == value) return;
+        if (entry is null) all.Add(entry = new AppNetworkPolicy { Path = path });
+        entry.BlockedOnItsOwn = value;
+        if (entry.IsEmpty) all.Remove(entry);
+        Write(all, filePath);
+    }
+
+    private static void Write(List<AppNetworkPolicy> all, string filePath) =>
+        AtomicFile.WriteAllText(filePath, JsonSerializer.Serialize(all.OrderBy(p => p.Path, StringComparer.OrdinalIgnoreCase).ToList(), Options));
 
     public static void DeleteAll()
     {

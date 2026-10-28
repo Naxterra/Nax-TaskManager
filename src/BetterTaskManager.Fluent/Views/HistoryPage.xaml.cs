@@ -153,7 +153,7 @@ public sealed partial class HistoryPage : Page
                 ServiceBar.IsOpen = true;
                 ServiceBar.Severity = InfoBarSeverity.Informational;
                 ServiceBar.Title = Loc.Get("Service_UpdateTitle");
-                string? installed = HistoryServiceControl.VersionIn(HistoryServiceControl.InstallFolder);
+                string? installed = HistoryServiceControl.InstalledVersion();
                 string? bundled = HistoryServiceControl.VersionIn(HistoryServiceSetup.BundledFolder);
                 // Same version number from another commit (development builds): show the commit too.
                 bool sameNumber = Short(installed) == Short(bundled);

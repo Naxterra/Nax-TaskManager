@@ -94,6 +94,12 @@ english.TaskManagerRestoreFailed=Windows Task Manager could not be restored, so 
 german.TaskManagerRestoreFailed=Der Windows-Task-Manager konnte nicht wiederhergestellt werden und öffnet weiterhin Nax-TaskManager. Wenn Sie jetzt deinstallieren, öffnet sich der Task-Manager nicht mehr, bis die Einstellung entfernt ist.%n%nTrotzdem deinstallieren?
 english.CleanupFailed=Not everything could be cleaned up (blocked programs or the History service may remain).%n%n%1%n%nUninstall anyway?
 german.CleanupFailed=Nicht alles konnte aufgeräumt werden (gesperrte Programme oder der Verlaufsdienst können bleiben).%n%n%1%n%nTrotzdem deinstallieren?
+english.RemoveDataQuestion=Also delete the recorded network history, the logs and the saved rules?%n%nChoose No to keep them for a later installation.
+german.RemoveDataQuestion=Auch den aufgezeichneten Netzwerkverlauf, die Protokolle und die gespeicherten Regeln löschen?%n%nWählen Sie Nein, um sie für eine spätere Installation zu behalten.
+english.CleanupPartly=Nax-TaskManager will now be removed, but not everything could be put back.%n%n%1
+german.CleanupPartly=Nax-TaskManager wird jetzt entfernt, aber nicht alles konnte zurückgesetzt werden.%n%n%1
+english.ServiceMoveFailed=The History service could not be moved to its new folder and may not be running. Turn it off and on again in Settings > History.%n%n%1
+german.ServiceMoveFailed=Der Verlaufsdienst konnte nicht in seinen neuen Ordner verschoben werden und läuft möglicherweise nicht. Schalten Sie ihn unter Einstellungen > Verlauf aus und wieder ein.%n%n%1
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopShortcut}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -118,6 +124,8 @@ const
 
 var
   PreviousVersionRemoved: Boolean;
+  ServiceStopped: Boolean;
+  ServiceMoveTried: Boolean;
 
 function ExecutableFromCommand(const CommandLine: String): String;
 var
@@ -226,6 +234,66 @@ begin
     Result := Pos(Lowercase(ExpandConstant('{app}\{#LegacyExeName}')), Lowercase(Value)) > 0;
 end;
 
+// The History service is registered with a program inside this installation folder.
+function ServiceRunsFromApp(): Boolean;
+var
+  ImagePath: String;
+begin
+  Result := False;
+  if RegQueryStringValue(HKLM64, 'SYSTEM\CurrentControlSet\Services\NaxTaskManagerHistory', 'ImagePath', ImagePath) then
+    Result := Pos(Lowercase(ExpandConstant('{app}\')), Lowercase(ImagePath)) > 0;
+end;
+
+// The elevated helpers only create a new "nax" file in the temporary folder and never write over one, so each run
+// needs a name of its own: the time plus a random number.
+function NewResultFile(const Prefix: String): String;
+begin
+  Result := ExpandConstant('{%TEMP}') + '\' + Prefix + GetDateTimeString('yyyymmddhhnnss', '-', '-') + '-' + IntToStr(Random(1000000000)) + '.txt';
+end;
+
+// The files are in place: move the stopped History service to its own folder and start it again. An install for all
+// users already runs elevated.
+procedure MoveHistoryService();
+var
+  ResultFile: String;
+  ResultCode: Integer;
+  Details: AnsiString;
+begin
+  ServiceMoveTried := True;
+  ResultFile := NewResultFile('nax-setup-service-');
+  if not Exec(ExpandConstant('{app}\{#AppExeName}'), '--install-history-service "' + ResultFile + '"', ExpandConstant('{app}'),
+      SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    ResultCode := -1;
+  Log('Moving the History service exited with code ' + IntToStr(ResultCode));
+  if not LoadStringFromFile(ResultFile, Details) then
+    Details := '';
+  DeleteFile(ResultFile);
+  if ResultCode = 0 then
+    Exit;
+  Log('History service details: ' + String(Details));
+  if not WizardSilent() then
+    MsgBox(FmtMessage(CustomMessage('ServiceMoveFailed'), [String(Details)]), mbError, MB_OK);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if (CurStep = ssPostInstall) and ServiceStopped then
+    MoveHistoryService();
+end;
+
+// Setup stopped the service but never got as far as moving it (the old uninstaller failed, the copy failed or the
+// user cancelled): start it again from where it was.
+procedure DeinitializeSetup();
+var
+  ResultCode: Integer;
+begin
+  if ServiceStopped and (not ServiceMoveTried) then
+  begin
+    Exec(ExpandConstant('{sys}\net.exe'), 'start NaxTaskManagerHistory', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Log('Started the History service again, exit code ' + IntToStr(ResultCode));
+  end;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Uninstaller: String;
@@ -233,6 +301,14 @@ var
   ResultCode: Integer;
 begin
   Result := '';
+  // Versions up to 2.0.0-alpha.41 ran the History service from {app}\HistoryService. Its running files cannot be
+  // replaced, so it is stopped here and moved to its own folder after the files are copied.
+  if IsAdminInstallMode() and (not ServiceStopped) and ServiceRunsFromApp() then
+  begin
+    Exec(ExpandConstant('{sys}\net.exe'), 'stop NaxTaskManagerHistory', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Log('Stopped the History service before copying files, exit code ' + IntToStr(ResultCode));
+    ServiceStopped := True;
+  end;
   if PreviousVersionRemoved then
     Exit;
 
@@ -272,14 +348,18 @@ var
   ResultCode: Integer;
   ResultFile: String;
   Details: AnsiString;
+  RemoveData: String;
 begin
   Result := True;
   if IsUpgradeUninstall() then
     Exit;
-  // The elevated cleanup only writes a new "nax…" file in the user's temporary folder, so the name is unique.
-  ResultFile := ExpandConstant('{%TEMP}') + '\nax-uninstall-' + GetDateTimeString('yyyymmddhhnnss', '-', '-') + '.txt';
+  ResultFile := NewResultFile('nax-uninstall-');
+  // Only an interactive uninstall asks. A silent one (winget, scripts) keeps the history.
+  RemoveData := '';
+  if (not UninstallSilent()) and (MsgBox(CustomMessage('RemoveDataQuestion'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES) then
+    RemoveData := ' --remove-data';
   if not ShellExec('runas', ExpandConstant('{app}\{#AppExeName}'),
-      '--uninstall-cleanup "' + ExpandConstant('{app}\{#AppExeName}') + '" "' + ResultFile + '"',
+      '--uninstall-cleanup "' + ExpandConstant('{app}\{#AppExeName}') + '" "' + ResultFile + '"' + RemoveData,
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     ResultCode := -1;
   Log('Uninstall cleanup exited with code ' + IntToStr(ResultCode));
@@ -290,6 +370,14 @@ begin
     Log('Uninstall cleanup details: ' + String(Details));
   if ResultCode = 0 then
     Exit;
+  // Bits 8 (memory settings not restored) and 16 (data folder not deleted) leave nothing that needs this program to
+  // undo it, so they never stop the uninstall. They are only reported.
+  if (ResultCode > 0) and ((ResultCode and 7) = 0) then
+  begin
+    if not UninstallSilent() then
+      MsgBox(FmtMessage(CustomMessage('CleanupPartly'), [String(Details)]), mbInformation, MB_OK);
+    Exit;
+  end;
   // Removing the program now would leave Windows Task Manager pointing at a deleted file.
   if TaskManagerStillOurs() then
   begin

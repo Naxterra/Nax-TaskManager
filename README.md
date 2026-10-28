@@ -49,7 +49,9 @@ Use **Restart as administrator** in the app, or turn on **Settings â†’ History â
 
 Nothing leaves the PC except DNS reverse lookups for addresses without a known host name (sent to your configured DNS server). There is no telemetry.
 
-The History service stores its database in `C:\ProgramData\NaxTaskManager`. Every local user account can read it; only administrators can change it. Settings and the crash log are in `%LOCALAPPDATA%\NaxTaskManager`.
+The History service stores its database in `C:\ProgramData\NaxTaskManager`. Every local user account can read it; only administrators can change it. Settings and the crash log are in `%LOCALAPPDATA%\NaxTaskManager`. An interactive uninstall asks whether to delete the history, logs and rules too, and a silent uninstall keeps them.
+
+`scripts\test-installer.ps1` ends with a real uninstall, which removes the History service and every block on the machine. Run it only on a test machine, never on a PC where Nax-TaskManager is in use.
 
 ## Build from source
 

@@ -80,6 +80,32 @@ internal static class StoreTests
                 using HistoryStore? reader = HistoryStore.OpenReadOnly(file);
                 Check.That(reader is not null && reader.ReadBlocked(DateTime.UtcNow.AddDays(-1), null, 10).Count == 0, "the new database must be readable and empty");
             }));
+
+        yield return ("history_prune_after_clock_jumps_a_year_ahead_keeps_recent_history",
+            "The clock jumps a year ahead within ten seconds of real time. The jump is stored as skew, pruning with it keeps a blocked entry from two days ago, and setting the clock back again removes the skew.",
+            () => InTempFolder(folder =>
+            {
+                string file = Path.Combine(folder, "history.db");
+                DateTime now = DateTime.UtcNow;
+                using HistoryStore store = HistoryStore.OpenForWriting(file);
+                var recorder = new BlockedRecorder(store, _ => null);
+                recorder.Record([new BlockedEvent(now.AddDays(-2), @"c:\tools\curl.exe", false, 6, "1.2.3.4", 443, 50000, true, PolicyReason.WholeApp)], path => path);
+                recorder.Flush(now.AddDays(-2).AddMinutes(1));
+                TimeSpan skew = ClockSkew.Update(store.ReadClockSkew(), TimeSpan.FromDays(365), TimeSpan.FromSeconds(10));
+                store.WriteClockSkew(skew);
+                Check.Equal(TimeSpan.FromDays(365) - TimeSpan.FromSeconds(10), store.ReadClockSkew());
+                store.Prune(TimeSpan.FromDays(30), now.AddDays(365) - store.ReadClockSkew());
+                Check.Equal(1, store.ReadBlocked(now.AddDays(-3), null, 10).Count);
+                Check.Equal(TimeSpan.Zero, ClockSkew.Update(skew, -TimeSpan.FromDays(365), TimeSpan.FromSeconds(10)));
+            }));
+
+        yield return ("history_prune_ignores_sleep_and_small_clock_corrections",
+            "A laptop asleep for eight hours (the tick count moves with the wall clock) and a time-server correction of two minutes leave the skew at zero, so pruning keeps its normal 30-day cutoff.",
+            () =>
+            {
+                Check.Equal(TimeSpan.Zero, ClockSkew.Update(TimeSpan.Zero, TimeSpan.FromHours(8), TimeSpan.FromHours(8)));
+                Check.Equal(TimeSpan.Zero, ClockSkew.Update(TimeSpan.Zero, TimeSpan.FromSeconds(130), TimeSpan.FromSeconds(10)));
+            });
     }
 
     internal static void InTempFolder(Action<string> body)

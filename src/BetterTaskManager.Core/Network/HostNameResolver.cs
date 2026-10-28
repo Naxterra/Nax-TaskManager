@@ -40,6 +40,9 @@ public sealed class HostNameResolver : IDisposable
 
     private readonly object gate = new();
     private readonly Dictionary<IPAddress, HostName> names = new();
+    // When each name was last learned or asked for, so the caches stay bounded on a machine that reaches many addresses.
+    private readonly Dictionary<IPAddress, DateTime> nameUsed = new();
+    private const int MaxNames = 20000, MaxFailed = 5000, MaxPendingReverse = 256;
     // What each process itself looked up (DNS-Client events carry the requesting PID). Two apps reaching the same
     // CDN address usually asked for different names; like Portmaster, prefer the connecting app's own lookup.
     private readonly Dictionary<int, Dictionary<IPAddress, (string Name, DateTime At)>> byProcess = new();
@@ -126,8 +129,14 @@ public sealed class HostNameResolver : IDisposable
         ip = Normalize(ip);
         lock (gate)
         {
-            if (names.TryGetValue(ip, out HostName known)) return known;
-            if (pendingReverse.Contains(ip)) return null;
+            if (names.TryGetValue(ip, out HostName known))
+            {
+                nameUsed[ip] = DateTime.UtcNow;
+                return known;
+            }
+            // A burst of new addresses (a port scan, a torrent swarm) waits for the next refresh instead of queueing
+            // thousands of lookups.
+            if (pendingReverse.Contains(ip) || pendingReverse.Count >= MaxPendingReverse) return null;
             if (failedReverse.TryGetValue(ip, out DateTime failedAt) && DateTime.UtcNow - failedAt < FailedLookupRetry) return null;
             pendingReverse.Add(ip);
         }
@@ -276,11 +285,11 @@ public sealed class HostNameResolver : IDisposable
         {
             string? name = await Task.Run(() => QueryPointer(ip)).WaitAsync(TimeSpan.FromSeconds(5), shutdown.Token);
             if (name is not null) Remember(ip, name, HostNameSource.Reverse);
-            else lock (gate) failedReverse[ip] = DateTime.UtcNow;
+            else lock (gate) RememberFailure(ip);
         }
         catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
         {
-            lock (gate) failedReverse[ip] = DateTime.UtcNow;
+            lock (gate) RememberFailure(ip);
         }
         finally
         {
@@ -350,8 +359,30 @@ public sealed class HostNameResolver : IDisposable
                 if (existing.Source == HostNameSource.Reverse && string.Equals(existing.Name, name.TrimEnd('.'), StringComparison.OrdinalIgnoreCase)) return;
             }
             names[ip] = new HostName(name.TrimEnd('.'), source);
+            nameUsed[ip] = DateTime.UtcNow;
             failedReverse.Remove(ip);
+            if (names.Count > MaxNames) DropOldestNames();
         }
+    }
+
+    /// <summary>Forgets the quarter of the names that were used longest ago. Called under the lock.</summary>
+    private void DropOldestNames()
+    {
+        foreach (IPAddress old in nameUsed.OrderBy(pair => pair.Value).Take(names.Count / 4).Select(pair => pair.Key).ToList())
+        {
+            names.Remove(old);
+            nameUsed.Remove(old);
+        }
+    }
+
+    /// <summary>Notes a failed reverse lookup; failures older than the retry time are dropped once there are many. Called under the lock.</summary>
+    private void RememberFailure(IPAddress ip)
+    {
+        DateTime now = DateTime.UtcNow;
+        failedReverse[ip] = now;
+        if (failedReverse.Count <= MaxFailed) return;
+        foreach (IPAddress old in failedReverse.Where(pair => now - pair.Value >= FailedLookupRetry).Select(pair => pair.Key).ToList()) failedReverse.Remove(old);
+        if (failedReverse.Count > MaxFailed) failedReverse.Clear();
     }
 
     private static IPAddress Normalize(IPAddress ip)

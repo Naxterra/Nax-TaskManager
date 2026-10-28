@@ -47,6 +47,28 @@ public static class DataFolder
         directory.SetAccessControl(security);
     }
 
+    /// <summary>
+    /// Deletes the whole data folder (history, logs, rules) for an uninstall that asked for it. A folder that is a link
+    /// or that someone else owns was not made by this app, so only a link itself is removed and nothing it points to.
+    /// Needs administrator rights.
+    /// </summary>
+    public static void DeleteAll() => DeleteAll(Path);
+
+    /// <summary>The same for another folder (tests use a scratch folder instead of the real data folder).</summary>
+    public static void DeleteAll(string path)
+    {
+        var directory = new DirectoryInfo(path);
+        if (!directory.Exists) return;
+        if (directory.Attributes.HasFlag(FileAttributes.ReparsePoint))
+        {
+            Directory.Delete(path, recursive: false);
+            return;
+        }
+        if (!IsTrusted(directory)) throw new UnauthorizedAccessException("The data folder was not created by Nax-TaskManager and is left in place: " + path);
+        // A recursive delete removes links inside the folder without following them.
+        Directory.Delete(path, recursive: true);
+    }
+
     /// <summary>A real folder owned by SYSTEM, Administrators or TrustedInstaller, as this app creates it.</summary>
     private static bool IsTrusted(DirectoryInfo directory)
     {

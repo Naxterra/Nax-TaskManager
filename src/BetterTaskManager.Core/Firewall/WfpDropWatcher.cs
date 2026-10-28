@@ -34,6 +34,7 @@ public static partial class WfpBlocker
         private Engine? engine;
         private IntPtr subscription;
         private DateTime filtersReadAt = DateTime.UtcNow;
+        private (DateTime Rules, DateTime Blocks) rulesWritten = RulesWritten();
         private int dropped;
 
         public DropWatcher() => callback = OnEvent;
@@ -116,11 +117,14 @@ public static partial class WfpBlocker
         {
             var events = new List<BlockedEvent>();
             if (engine is null) return events;
-            // Filter ids are reused when rules are saved again; forget them now and then.
-            if (DateTime.UtcNow - filtersReadAt > TimeSpan.FromMinutes(2))
+            // Filter ids are reused when rules are saved again: forget them as soon as the rule files change, and now
+            // and then in case the filters changed without them.
+            var written = RulesWritten();
+            if (written != rulesWritten || DateTime.UtcNow - filtersReadAt > TimeSpan.FromMinutes(2))
             {
                 filters.Clear();
                 filtersReadAt = DateTime.UtcNow;
+                rulesWritten = written;
             }
             Overflow = Interlocked.Exchange(ref dropped, 0);
             while (queue.TryDequeue(out RawDrop drop))
@@ -134,6 +138,10 @@ public static partial class WfpBlocker
             }
             return events;
         }
+
+        /// <summary>When the rule file and the blocked-apps list were last written. A missing file gives a fixed early time.</summary>
+        private static (DateTime Rules, DateTime Blocks) RulesWritten() =>
+            (File.GetLastWriteTimeUtc(NetworkPolicyStore.FilePath), File.GetLastWriteTimeUtc(MirrorPath));
 
         /// <summary>Which filter a drop came from: ours with its reason code, or another one with its name.</summary>
         private (bool Ours, string Reason, string Path)? Describe(ulong id)

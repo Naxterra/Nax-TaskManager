@@ -25,7 +25,7 @@ internal static class HistoryServiceSetup
     }
 
     private static CommandResult Apply(bool enable) =>
-        enable ? HistoryServiceControl.Install(BundledFolder) : HistoryServiceControl.Uninstall();
+        enable ? HistoryServiceControl.Install(BundledFolder) : HistoryServiceControl.Uninstall(keepFolder: BundledFolder);
 
     /// <summary>Returns null on success, otherwise a message for the user.</summary>
     public static async Task<string?> SetEnabledAsync(bool enable, bool elevated)

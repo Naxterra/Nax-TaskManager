@@ -7,6 +7,7 @@ var suites = new (string File, IEnumerable<(string Name, string Scenario, Action
     ("KernelPoolAlertTests.cs", KernelPoolAlertTests.All()),
     ("StoreTests.cs", StoreTests.All()),
     ("SafetyTests.cs", SafetyTests.All()),
+    ("HelperTests.cs", HelperTests.All()),
 };
 
 int failures = 0, count = 0;

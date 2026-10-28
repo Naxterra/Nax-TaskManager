@@ -530,6 +530,7 @@ public sealed partial class RulesPage : Page
             Grid.SetColumn(names, 2);
             header.Children.Add(names);
             content.Children.Add(header);
+            if (NewVersionPath() is { } newPath) content.Children.Add(BuildMoveOffer(newPath));
 
             // Network.
             content.Children.Add(Section("", "Receive", Loc.Get("RulesPage_Network")));
@@ -747,6 +748,15 @@ public sealed partial class RulesPage : Page
             if (found.Count == 0) return null;
 
             bool nothingSaved = loadedPolicy.IsEmpty && !loadedBlocked;
+            // After an update a helper often lives in a new version folder (WebView2, Steam). A saved helper whose file
+            // is gone hands its check to the new file with the same path apart from the version numbers.
+            var replacedKeys = loadedPolicy.Helpers.Where(saved => !File.Exists(saved))
+                .Select(saved => AppIdentityRules.PathKey(saved)).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var newVersions = found.Keys.Where(candidate => File.Exists(candidate) && !loadedPolicy.Helpers.Contains(candidate, StringComparer.OrdinalIgnoreCase)
+                && AppIdentityRules.PathKey(candidate) is { } key && replacedKeys.Contains(key)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var replacedOld = loadedPolicy.Helpers.Where(saved => !File.Exists(saved)
+                && newVersions.Any(candidate => string.Equals(AppIdentityRules.PathKey(candidate), AppIdentityRules.PathKey(saved), StringComparison.OrdinalIgnoreCase)))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var panel = new StackPanel { Spacing = 10 };
             panel.Children.Add(SettingRow(Loc.Get("RulesPage_Helpers"), Loc.Get("RulesPage_HelpersNote"), new Border()));
             foreach (var (helperPath, (name, others, running)) in found.OrderBy(pair => pair.Value.Name, StringComparer.CurrentCultureIgnoreCase))
@@ -759,6 +769,10 @@ public sealed partial class RulesPage : Page
                 else if (runtime) chips.Add((Loc.Get("RulesPage_HelperRuntime"), "Warn"));
                 else chips.Add((Loc.Get("RulesPage_HelperOwn"), "Good"));
                 if (!running) chips.Add((Loc.Get(File.Exists(helperPath) ? "RulesPage_HelperNotRunning" : "RulesPage_HelperMissing"), "Idle"));
+                if (newVersions.Contains(helperPath)) chips.Add((Loc.Get("RulesPage_HelperNewVersion"), "Good"));
+                // A program with rules of its own, or one that follows another app, cannot take this app's rules.
+                string? refused = saved ? null : RefusedReason(helperPath);
+                if (refused is not null) chips.Add((Loc.Get("RulesPage_HelperUnavailable"), "Warn"));
 
                 var texts = new StackPanel { Spacing = 3 };
                 var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -766,8 +780,10 @@ public sealed partial class RulesPage : Page
                 title.Children.Add(Ui.Chips(chips));
                 texts.Children.Add(title);
                 texts.Children.Add(Note(helperPath));
-                if (shared) texts.Children.Add(Note(Loc.Get(runtime ? "RulesPage_HelperRuntimeNote" : "RulesPage_HelperSharedNote")));
-                var box = new CheckBox { Content = texts, IsChecked = saved || (nothingSaved && !shared) };
+                if (refused is not null) texts.Children.Add(Note(refused));
+                else if (shared) texts.Children.Add(Note(Loc.Get(runtime ? "RulesPage_HelperRuntimeNote" : "RulesPage_HelperSharedNote")));
+                bool check = refused is null && ((saved && !replacedOld.Contains(helperPath)) || newVersions.Contains(helperPath) || (nothingSaved && !shared));
+                var box = new CheckBox { Content = texts, IsChecked = check, IsEnabled = refused is null };
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, name);
                 box.Checked += (_, _) => Validate();
                 box.Unchecked += (_, _) => Validate();
@@ -778,6 +794,77 @@ public sealed partial class RulesPage : Page
             card.SetResourceReference(Border.BackgroundProperty, "SurfaceRaisedBrush");
             card.SetResourceReference(Border.BorderBrushProperty, "SurfaceStrokeBrush");
             return card;
+        }
+
+        /// <summary>
+        /// After an update that moved the app into a new version folder (Discord, many Electron apps), the saved file is
+        /// gone. The running program with the same path apart from the version numbers is the new version.
+        /// </summary>
+        private string? NewVersionPath()
+        {
+            if (File.Exists(Path) || AppIdentityRules.PathKey(Path) is not { } key || App.Monitor.Latest is not { } snapshot) return null;
+            return snapshot.Processes.Select(process => process.Path)
+                .FirstOrDefault(candidate => candidate.Length > 0 && !string.Equals(candidate, Path, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(AppIdentityRules.PathKey(candidate), key, StringComparison.OrdinalIgnoreCase) && File.Exists(candidate));
+        }
+
+        /// <summary>Offers to move every rule of the missing file to <paramref name="newPath"/> in one step (one UAC prompt).</summary>
+        private FrameworkElement BuildMoveOffer(string newPath)
+        {
+            var move = new Button { Content = Loc.Get("RulesPage_MoveRules") };
+            var bar = new InfoBar
+            {
+                IsOpen = true,
+                IsClosable = false,
+                Severity = InfoBarSeverity.Informational,
+                Title = Loc.Get("RulesPage_MovedTitle"),
+                Message = Loc.F("RulesPage_MovedText", newPath),
+                ActionButton = move
+            };
+            move.Click += async (_, _) =>
+            {
+                move.IsEnabled = false;
+                AppNetworkPolicy network = CopyPolicy(loadedPolicy, newPath);
+                var change = new RuleChange
+                {
+                    Path = newPath,
+                    Blocked = loadedBlocked ? true : null,
+                    Network = network.IsEmpty ? null : network,
+                    Memory = loadedMemory.IsEmpty ? null : new AppMemoryRule { Path = newPath, LimitMegabytes = loadedMemory.LimitMegabytes, Priority = loadedMemory.Priority },
+                    ReplacesPath = Path
+                };
+                string? error = await App.Monitor.ApplyRulesAsync(change);
+                if (error is null)
+                {
+                    page.Open(newPath);
+                    page.RebuildList();
+                    return;
+                }
+                move.IsEnabled = true;
+                bar.Severity = InfoBarSeverity.Error;
+                bar.Message = Loc.Get("Rules_NotSaved") + ": " + error;
+            };
+            return bar;
+        }
+
+        private static AppNetworkPolicy CopyPolicy(AppNetworkPolicy policy, string path) => new()
+        {
+            Path = path,
+            BlockInternet = policy.BlockInternet,
+            BlockLan = policy.BlockLan,
+            BlockLocalhost = policy.BlockLocalhost,
+            BlockInbound = policy.BlockInbound,
+            Outgoing = [.. policy.Outgoing],
+            Incoming = [.. policy.Incoming],
+            Helpers = [.. policy.Helpers]
+        };
+
+        /// <summary>Why <paramref name="helper"/> cannot follow this app's rules, for the user, or null when it can.</summary>
+        private string? RefusedReason(string helper)
+        {
+            if (!App.Monitor.Policies.TryGetValue(helper, out AppNetworkPolicy? own)) return null;
+            if (own.HelperOf is { } other && !string.Equals(other, Path, StringComparison.OrdinalIgnoreCase)) return Loc.F("RulesPage_HelperFollowsOther", BlockedLogView.AppName(other));
+            return own.HelperOf is null && own.HasFilters ? Loc.Get("RulesPage_HelperHasOwnRules") : null;
         }
 
         private static string Key(AppMemoryRule rule) => rule.LimitMegabytes + "|" + rule.Priority;
