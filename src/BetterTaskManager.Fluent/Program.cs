@@ -81,7 +81,7 @@ public static class Program
                 }
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Management.ManagementException or System.Runtime.InteropServices.COMException or System.ServiceProcess.TimeoutException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or System.Management.ManagementException or System.Runtime.InteropServices.COMException or System.ServiceProcess.TimeoutException)
         {
             code |= 8;
             details.Add("Memory settings: " + ex.Message);

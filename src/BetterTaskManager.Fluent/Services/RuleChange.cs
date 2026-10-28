@@ -60,7 +60,7 @@ public sealed class RuleChange
             {
                 NetworkPolicyStore.SetBlockedOnItsOwn(path, value);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
                 code |= BlockFailed;
                 details?.Add(ex.Message);

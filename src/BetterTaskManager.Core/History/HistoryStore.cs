@@ -304,12 +304,17 @@ public sealed class HistoryStore : IDisposable
     }
 
     /// <summary>
-    /// How far the wall clock was seen to jump ahead of real time while the service ran (see <see cref="ClockSkew"/>).
-    /// Pruning subtracts it, so a clock set a year ahead by mistake does not delete the whole history.
+    /// The time pruning does not trust yet (see <see cref="ClockSkew"/>) and when the wall clock was last checked,
+    /// null before the first check.
     /// </summary>
-    public TimeSpan ReadClockSkew() => ReadMetaMs("clock_skew") is { } skew ? skew - DateTime.UnixEpoch : TimeSpan.Zero;
+    public (TimeSpan Skew, DateTime? CheckedUtc) ReadClockState() =>
+        (ReadMetaMs("clock_skew") is { } skew ? skew - DateTime.UnixEpoch : TimeSpan.Zero, ReadMetaMs("clock_checked"));
 
-    public void WriteClockSkew(TimeSpan skew) => SetMeta("clock_skew", ((long)skew.TotalMilliseconds).ToString(CultureInfo.InvariantCulture));
+    public void WriteClockState(TimeSpan skew, DateTime checkedUtc)
+    {
+        SetMeta("clock_skew", ((long)skew.TotalMilliseconds).ToString(CultureInfo.InvariantCulture));
+        SetMeta("clock_checked", ToUnixMs(checkedUtc).ToString(CultureInfo.InvariantCulture));
+    }
 
     /// <summary>Deletes connections and daily totals older than the retention period.</summary>
     public void Prune(TimeSpan retention, DateTime nowUtc)

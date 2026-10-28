@@ -93,6 +93,7 @@ public sealed class HistoryRecorder : IDisposable
     private DateTime clockCheckedWall = DateTime.UtcNow;
     private long clockCheckedTicks = Environment.TickCount64;
     private TimeSpan? clockSkew;
+    private long clockStoredTicks;
 
     public delegate bool TracedProcessLookup(int pid, out BandwidthMonitor.TracedProcess process);
 
@@ -291,6 +292,7 @@ public sealed class HistoryRecorder : IDisposable
 
     private void Flush(DateTime now)
     {
+        TimeSpan skew = CheckClock();
         List<TrackedConnection> changed = live.Values.Where(tracked => tracked.Changed).Concat(endedPending).ToList();
         if (changed.Count > 0 || usage.Count > 0) store.Write(changed, usage, now);
         foreach (TrackedConnection tracked in changed) tracked.Changed = false;
@@ -300,20 +302,41 @@ public sealed class HistoryRecorder : IDisposable
         foreach (int pid in identities.Where(pair => now - pair.Value.SeenUtc > ExitedProcessMemory).Select(pair => pair.Key).ToList()) identities.Remove(pid);
         lastFlush = now;
 
-        // A wall clock that jumped ahead while the service ran does not count toward the retention period.
-        DateTime wall = DateTime.UtcNow;
-        long ticks = Environment.TickCount64;
-        TimeSpan known = clockSkew ??= store.ReadClockSkew();
-        clockSkew = ClockSkew.Update(known, wall - clockCheckedWall, TimeSpan.FromMilliseconds(ticks - clockCheckedTicks));
-        if (clockSkew != known) store.WriteClockSkew(clockSkew.Value);
-        clockCheckedWall = wall;
-        clockCheckedTicks = ticks;
-
         if (now - lastPrune >= PruneInterval)
         {
-            store.Prune(Retention, now - clockSkew.Value);
+            store.Prune(Retention, now - skew);
             lastPrune = now;
         }
+    }
+
+    /// <summary>
+    /// The part of the wall clock's progress that pruning does not trust yet (see <see cref="ClockSkew"/>): a jump
+    /// while the service runs, measured against the tick count, and at the first flush the time the service was off
+    /// beyond what is believed. Stored at most once a minute, with the time it was checked.
+    /// </summary>
+    private TimeSpan CheckClock()
+    {
+        DateTime wall = DateTime.UtcNow;
+        long ticks = Environment.TickCount64;
+        if (clockSkew is null)
+        {
+            (TimeSpan stored, DateTime? seen) = store.ReadClockState();
+            seen ??= store.ReadLastWrite();
+            clockSkew = seen is { } last ? ClockSkew.AfterDowntime(stored, wall - last) : stored;
+            clockStoredTicks = long.MinValue;
+        }
+        else
+        {
+            clockSkew = ClockSkew.Update(clockSkew.Value, wall - clockCheckedWall, TimeSpan.FromMilliseconds(ticks - clockCheckedTicks));
+        }
+        clockCheckedWall = wall;
+        clockCheckedTicks = ticks;
+        if (ticks - clockStoredTicks >= 60_000)
+        {
+            store.WriteClockState(clockSkew.Value, wall);
+            clockStoredTicks = ticks;
+        }
+        return clockSkew.Value;
     }
 
     /// <summary>Only traffic that leaves the machine; loopback is local IPC.</summary>

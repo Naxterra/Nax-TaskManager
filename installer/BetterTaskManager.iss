@@ -98,6 +98,8 @@ english.RemoveDataQuestion=Also delete the recorded network history, the logs an
 german.RemoveDataQuestion=Auch den aufgezeichneten Netzwerkverlauf, die Protokolle und die gespeicherten Regeln löschen?%n%nWählen Sie Nein, um sie für eine spätere Installation zu behalten.
 english.CleanupPartly=Nax-TaskManager will now be removed, but not everything could be put back.%n%n%1
 german.CleanupPartly=Nax-TaskManager wird jetzt entfernt, aber nicht alles konnte zurückgesetzt werden.%n%n%1
+english.MemoryRestoreFailed=The Windows memory settings this app changed (memory compression, page combining, prefetching or SysMain) could not be put back as they were.%n%n%1%n%nIf you uninstall now, they stay as they are. Uninstall anyway?
+german.MemoryRestoreFailed=Die Windows-Speichereinstellungen, die diese App geändert hat (Speicherkomprimierung, Seitenzusammenführung, Prefetching oder SysMain), konnten nicht wiederhergestellt werden.%n%n%1%n%nWenn Sie jetzt deinstallieren, bleiben sie so. Trotzdem deinstallieren?
 english.ServiceMoveFailed=The History service could not be moved to its new folder and may not be running. Turn it off and on again in Settings > History.%n%n%1
 german.ServiceMoveFailed=Der Verlaufsdienst konnte nicht in seinen neuen Ordner verschoben werden und läuft möglicherweise nicht. Schalten Sie ihn unter Einstellungen > Verlauf aus und wieder ein.%n%n%1
 
@@ -370,9 +372,9 @@ begin
     Log('Uninstall cleanup details: ' + String(Details));
   if ResultCode = 0 then
     Exit;
-  // Bits 8 (memory settings not restored) and 16 (data folder not deleted) leave nothing that needs this program to
-  // undo it, so they never stop the uninstall. They are only reported.
-  if (ResultCode > 0) and ((ResultCode and 7) = 0) then
+  // Bit 16 alone (the data folder the user asked to delete could not be deleted) leaves no change to Windows behind,
+  // so it is only reported.
+  if (ResultCode > 0) and ((ResultCode and 15) = 0) then
   begin
     if not UninstallSilent() then
       MsgBox(FmtMessage(CustomMessage('CleanupPartly'), [String(Details)]), mbInformation, MB_OK);
@@ -387,10 +389,14 @@ begin
       Result := MsgBox(CustomMessage('TaskManagerRestoreFailed'), mbError, MB_YESNO or MB_DEFBUTTON2) = IDYES;
     Exit;
   end;
-  // A silent uninstall (winget, scripts) cannot ask, so it stops: removing the files now would leave the service,
-  // blocks and rules behind with nothing left to undo them.
+  // A silent uninstall (winget, scripts) cannot ask, so it stops. Removing the files now would leave the service,
+  // blocks, rules or changed memory settings behind with nothing left to undo them.
   if UninstallSilent() then
     Result := False
+  // Only the memory settings failed (bit 8, perhaps with 16). Their record stays in the data folder, so a later
+  // uninstall can still restore them.
+  else if (ResultCode > 0) and ((ResultCode and 7) = 0) then
+    Result := MsgBox(FmtMessage(CustomMessage('MemoryRestoreFailed'), [String(Details)]), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES
   else
     Result := MsgBox(FmtMessage(CustomMessage('CleanupFailed'), [String(Details)]), mbConfirmation, MB_YESNO) = IDYES;
 end;

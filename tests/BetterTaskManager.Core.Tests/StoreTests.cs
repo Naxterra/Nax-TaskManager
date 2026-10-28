@@ -82,7 +82,7 @@ internal static class StoreTests
             }));
 
         yield return ("history_prune_after_clock_jumps_a_year_ahead_keeps_recent_history",
-            "The clock jumps a year ahead within ten seconds of real time. The jump is stored as skew, pruning with it keeps a blocked entry from two days ago, and setting the clock back again removes the skew.",
+            "The clock jumps a year ahead within ten seconds of real time. The stored skew keeps a blocked entry from two days ago through the next prune, and setting the clock back again removes the skew.",
             () => InTempFolder(folder =>
             {
                 string file = Path.Combine(folder, "history.db");
@@ -91,10 +91,10 @@ internal static class StoreTests
                 var recorder = new BlockedRecorder(store, _ => null);
                 recorder.Record([new BlockedEvent(now.AddDays(-2), @"c:\tools\curl.exe", false, 6, "1.2.3.4", 443, 50000, true, PolicyReason.WholeApp)], path => path);
                 recorder.Flush(now.AddDays(-2).AddMinutes(1));
-                TimeSpan skew = ClockSkew.Update(store.ReadClockSkew(), TimeSpan.FromDays(365), TimeSpan.FromSeconds(10));
-                store.WriteClockSkew(skew);
-                Check.Equal(TimeSpan.FromDays(365) - TimeSpan.FromSeconds(10), store.ReadClockSkew());
-                store.Prune(TimeSpan.FromDays(30), now.AddDays(365) - store.ReadClockSkew());
+                TimeSpan skew = ClockSkew.Update(TimeSpan.Zero, TimeSpan.FromDays(365), TimeSpan.FromSeconds(10));
+                store.WriteClockState(skew, now.AddDays(365));
+                Check.Equal(skew, store.ReadClockState().Skew);
+                store.Prune(TimeSpan.FromDays(30), now.AddDays(365) - store.ReadClockState().Skew);
                 Check.Equal(1, store.ReadBlocked(now.AddDays(-3), null, 10).Count);
                 Check.Equal(TimeSpan.Zero, ClockSkew.Update(skew, -TimeSpan.FromDays(365), TimeSpan.FromSeconds(10)));
             }));
@@ -105,6 +105,25 @@ internal static class StoreTests
             {
                 Check.Equal(TimeSpan.Zero, ClockSkew.Update(TimeSpan.Zero, TimeSpan.FromHours(8), TimeSpan.FromHours(8)));
                 Check.Equal(TimeSpan.Zero, ClockSkew.Update(TimeSpan.Zero, TimeSpan.FromSeconds(130), TimeSpan.FromSeconds(10)));
+            });
+
+        yield return ("correct_clock_catching_up_resumes_pruning_after_a_quarter_of_the_jump",
+            "A clock that was 40 days behind is corrected while the service runs. Pruning holds back those 40 days at first, and after 10 days of real time the skew is gone, so pruning never stops for good.",
+            () =>
+            {
+                TimeSpan skew = ClockSkew.Update(TimeSpan.Zero, TimeSpan.FromDays(40), TimeSpan.FromSeconds(10));
+                Check.That(skew > TimeSpan.FromDays(39), "the correction is held back at first");
+                skew = ClockSkew.Update(skew, TimeSpan.FromDays(5), TimeSpan.FromDays(5));
+                Check.That(skew > TimeSpan.FromDays(19) && skew < TimeSpan.FromDays(21), "half of it is released after five days");
+                Check.Equal(TimeSpan.Zero, ClockSkew.Update(skew, TimeSpan.FromDays(5), TimeSpan.FromDays(5)));
+            });
+
+        yield return ("clock_jump_while_the_service_was_off_is_held_back",
+            "The wall clock shows a year passed since the service last ran. Three days of that are believed as downtime and the rest is held back, while a weekend off is believed in full.",
+            () =>
+            {
+                Check.Equal(TimeSpan.FromDays(362), ClockSkew.AfterDowntime(TimeSpan.Zero, TimeSpan.FromDays(365)));
+                Check.Equal(TimeSpan.Zero, ClockSkew.AfterDowntime(TimeSpan.Zero, TimeSpan.FromDays(2)));
             });
     }
 

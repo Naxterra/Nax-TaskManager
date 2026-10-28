@@ -98,7 +98,7 @@ public static partial class FirewallRules
                 NetworkPolicyStore.SetBlockedOnItsOwn(path, block);
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             return new CommandResult(1, "", ex.Message, false);
         }

@@ -201,7 +201,16 @@ public static class MemoryManager
         // Records from before the start type was stored only know enabled or disabled.
         string start = original.SysMainStartMode ?? (original.SysMainEnabled ? "auto" : "disabled");
         using var service = new ServiceController("SysMain");
-        string current = ScStartName(service.StartType);
+        string current;
+        try
+        {
+            current = ScStartName(service.StartType);
+        }
+        catch (InvalidOperationException)
+        {
+            // Some Windows editions have no SysMain service; then there is nothing to put back.
+            return;
+        }
         if (current != start)
         {
             CommandResult result = CommandRunner.Run("sc.exe", "config", "SysMain", "start=", start);
