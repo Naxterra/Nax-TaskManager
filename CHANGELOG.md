@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0-alpha.44 - 2026-10-28
+
+Corrections to 2.0.0-alpha.43. Install this version instead of alpha.43.
+
+- **Silent upgrades work again while Nax-TaskManager is open.** In alpha.43 setup stopped when the app was running, which made an unattended upgrade (winget) fail. Setup closes the window again as before. Only the uninstaller checks for an open window: an interactive uninstall asks to close it, and a silent one closes it.
+- **Helpers dropped from an app's list are released only once the new list is saved.** If saving fails, they stay blocked, matching the saved rules.
+- **A failed update of the History service starts it again only if it was running before**, so a service that was stopped on purpose stays stopped.
+- A staging folder from an interrupted service update that was itself scheduled for deletion is now removed with the other leftovers.
 ## 2.0.0-alpha.43 - 2026-10-28
 
 Fixes from the review of 2.0.0-alpha.42.
