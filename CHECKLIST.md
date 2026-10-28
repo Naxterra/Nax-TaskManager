@@ -7,7 +7,7 @@ This list names what Nax-TaskManager must never do. Every release report marks e
 3. Uninstalling never leaves the history service, its data folder permissions, the "replace Windows Task Manager" redirect, startup entries or filters created by the app behind, except where the user chose to keep data.
 4. A crash or power loss never leaves the history database, the settings file or the blocked-apps list half-written or unreadable.
 5. The user interface never writes to the history database, and the history service never deletes history younger than the configured retention.
-6. The app and the history service never send data about processes, connections or the PC to any server.
+6. The app and the history service never send data about processes, connections or the PC to any server, except reverse DNS lookups of remote addresses, which go to the DNS server Windows uses.
 7. Elevated helper modes never act on paths or arguments that did not come from the app's own installer or from an action the user confirmed.
 8. Kernel trace sessions started by the app or the service never keep running after the program that started them exits, and their buffers never grow beyond the configured size.
 9. Monitoring never freezes the user interface, and the app's own CPU and memory use stay small enough not to distort the numbers it shows.
