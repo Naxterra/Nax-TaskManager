@@ -303,21 +303,26 @@ end;
 
 // Closes the open windows of the app in the given folder (politely, then by force after ten seconds), matched by their
 // full path so another install is left alone. Without this the old uninstaller would run while its files are in use, and
-// files it can only delete at the next restart would take the new install's files with them. An install for one
-// user cannot close an elevated window, which then keeps its files as before.
+// files it can only delete at the next restart would take the new install's files with them. A process that is not
+// elevated cannot close an elevated window, which then keeps its files as before. The program name of versions
+// before the rename is matched too.
 procedure CloseAppWindows(const Folder: String);
 var
   ResultCode: Integer;
   Script: String;
+  Dir: String;
 begin
-  Script := '$dir = ''' + AddBackslash(Folder) + '''; ' +
-    'Get-Process -Name ''Nax-TaskManager'' -ErrorAction SilentlyContinue | ' +
+  // The folder goes into a single-quoted PowerShell string, where an apostrophe (C:\Users\O'Brien\...) is doubled.
+  Dir := AddBackslash(Folder);
+  StringChangeEx(Dir, '''', '''''', True);
+  Script := '$dir = ''' + Dir + '''; ' +
+    'Get-Process -Name ''Nax-TaskManager'',''NaxTaskManager'' -ErrorAction SilentlyContinue | ' +
     'Where-Object { $_.Path -and $_.Path.StartsWith($dir, [StringComparison]::OrdinalIgnoreCase) } | ' +
     'ForEach-Object { [void]$_.CloseMainWindow(); if (-not $_.WaitForExit(10000)) { Stop-Process -Id $_.Id -Force } }';
   Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
     '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "' + Script + '"',
     ExpandConstant('{sys}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Log('Closed open windows of the previous installation, exit code ' + IntToStr(ResultCode));
+  Log('Closed open app windows in ' + Folder + ', exit code ' + IntToStr(ResultCode));
 end;
 
 // sc.exe prints the state names in English on every Windows language. Both tools are called by full path from the
@@ -390,9 +395,8 @@ end;
 // A real uninstall (not the removal a newer setup does before upgrading) undoes everything outside the app folder in
 // one elevated step: Windows Task Manager is restored if it opens this app, every block is removed (otherwise blocked
 // programs would stay blocked with nothing left to unblock them) and the History service goes. It runs from
-// CurUninstallStepChanged(usUninstall), after the user confirmed the uninstall and the app was found closed, and
-// before any file is removed, so nothing is undone for an uninstall that is then cancelled, and a failure can still
-// stop it.
+// CurUninstallStepChanged(usUninstall), after the user confirmed the uninstall and before any file is removed, so
+// nothing is undone for an uninstall that is then cancelled, and a failure can still stop it.
 function UninstallCleanupAllowed(): Boolean;
 var
   ResultCode: Integer;
@@ -403,8 +407,11 @@ begin
   Result := True;
   if IsUpgradeUninstall() then
     Exit;
-  // The elevated cleanup first closes the open windows of this install (also elevated ones, matched by their path),
-  // so none of them can make new blocks or rules after the cleanup removed them.
+  // Open windows of this install could make new blocks or rules after the cleanup removed them, and their files could
+  // not be deleted. Windows that are not elevated are closed here, so this also works when the cleanup below does not
+  // run (approval declined). The elevated cleanup then closes elevated ones. If it does not run, an elevated window
+  // can stay open, and the CleanupFailed question below lets the user decide.
+  CloseAppWindows(ExpandConstant('{app}'));
   ResultFile := NewResultFile('nax-uninstall-');
   // Only an interactive uninstall asks. A silent one (winget, scripts) keeps the history.
   RemoveData := '';
