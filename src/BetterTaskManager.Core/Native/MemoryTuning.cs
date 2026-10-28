@@ -186,13 +186,14 @@ public static class MemoryManager
             File.Delete(OriginalPath);
             return "The recorded memory manager settings could not be read, so they were not restored: " + ex.Message;
         }
-        // The record is kept until the restore worked, so a failed attempt can be repeated.
+        // The record is kept until the restore worked, so a failed attempt can be repeated. SysMain comes first, because
+        // the memory manager switches may not be readable or changeable while it is disabled.
+        RestoreSysMain(original);
         MemoryManagerState live = ReadLive() ?? throw new InvalidOperationException("The current memory manager settings could not be read, so nothing was restored.");
         if (live.MemoryCompression != original.MemoryCompression) Apply(MemoryCompression, original.MemoryCompression);
         if (live.PageCombining != original.PageCombining) Apply(PageCombining, original.PageCombining);
         if (live.ApplicationLaunchPrefetching != original.ApplicationLaunchPrefetching) Apply(ApplicationLaunchPrefetching, original.ApplicationLaunchPrefetching);
         if (live.ApplicationPreLaunch != original.ApplicationPreLaunch) Apply(ApplicationPreLaunch, original.ApplicationPreLaunch);
-        RestoreSysMain(original);
         File.Delete(OriginalPath);
         return null;
     }

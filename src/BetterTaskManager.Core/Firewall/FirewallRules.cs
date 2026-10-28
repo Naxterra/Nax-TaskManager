@@ -89,14 +89,21 @@ public static partial class FirewallRules
     /// </summary>
     public static CommandResult ApplyOwn(string path, bool block)
     {
+        bool listedAsHelper;
+        try
+        {
+            // Read strictly before the filter changes, so a damaged rules file stops the change while nothing changed.
+            listedAsHelper = NetworkPolicyStore.ReadForUpdate().Any(policy => policy.Helpers.Contains(path, StringComparer.OrdinalIgnoreCase));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            return new CommandResult(1, "", ex.Message, false);
+        }
         CommandResult result = Apply(path, block);
         if (!result.Succeeded) return result;
         try
         {
-            if (!block || NetworkPolicyStore.Load().Any(policy => policy.Helpers.Contains(path, StringComparer.OrdinalIgnoreCase)))
-            {
-                NetworkPolicyStore.SetBlockedOnItsOwn(path, block);
-            }
+            if (!block || listedAsHelper) NetworkPolicyStore.SetBlockedOnItsOwn(path, block);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
@@ -140,7 +147,8 @@ public static partial class FirewallRules
             {
                 AppNetworkPolicy derived = policy.ForHelper(helper);
                 WfpBlocker.ApplyPolicy(derived);
-                NetworkPolicyStore.Save(derived.HasFilters ? derived : new AppNetworkPolicy { Path = helper });
+                // Kept even without filters, so the helper stays linked to this app and no other app takes it over.
+                NetworkPolicyStore.Save(derived);
             }
             // A helper the app no longer lists loses the rules it had from the app, never rules of its own.
             foreach (string dropped in previous?.Helpers.Except(helpers, StringComparer.OrdinalIgnoreCase) ?? [])

@@ -308,7 +308,7 @@ public sealed class HistoryStore : IDisposable
     /// null before the first check.
     /// </summary>
     public (TimeSpan Skew, DateTime? CheckedUtc) ReadClockState() =>
-        (ReadMetaMs("clock_skew") is { } skew ? skew - DateTime.UnixEpoch : TimeSpan.Zero, ReadMetaMs("clock_checked"));
+        (ReadMetaMs("clock_skew") is { } skew && skew > DateTime.UnixEpoch ? skew - DateTime.UnixEpoch : TimeSpan.Zero, ReadMetaMs("clock_checked"));
 
     public void WriteClockState(TimeSpan skew, DateTime checkedUtc)
     {

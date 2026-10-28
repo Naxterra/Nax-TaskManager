@@ -29,11 +29,8 @@ if (-not (Test-Path -LiteralPath $sourceExecutable)) {
 if (-not (Test-Path -LiteralPath $iconPath)) { throw "Application icon not found: $iconPath" }
 
 if ([string]::IsNullOrWhiteSpace($IsccPath)) {
-    $knownPaths = @(
-        (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 7\ISCC.exe"),
-        "C:\Program Files\Inno Setup 7\ISCC.exe"
-    )
-    $IsccPath = $knownPaths | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    # Only the machine-wide winget install is used, never a second copy.
+    $IsccPath = Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 7\ISCC.exe"
 }
 if ([string]::IsNullOrWhiteSpace($IsccPath) -or -not (Test-Path -LiteralPath $IsccPath)) {
     throw "Inno Setup 7 compiler (ISCC.exe) not found. Install it with: winget install JRSoftware.InnoSetup.7"

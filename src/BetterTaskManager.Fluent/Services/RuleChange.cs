@@ -31,7 +31,17 @@ public sealed class RuleChange
             return Invalid;
         }
         int code = 0;
-        List<AppNetworkPolicy> policies = NetworkPolicyStore.Load();
+        List<AppNetworkPolicy> policies;
+        try
+        {
+            // Read strictly: with a damaged rules file the helper checks below would see nothing, so nothing changes.
+            policies = NetworkPolicyStore.ReadForUpdate();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            details?.Add(ex.Message);
+            return NetworkFailed;
+        }
         // The whole-app block covers the app's helper programs too: the ones it lists after this change, and helpers
         // it no longer lists are unblocked again.
         List<string> before = policies.FirstOrDefault(policy => string.Equals(policy.Path, Path, StringComparison.OrdinalIgnoreCase))?.Helpers ?? [];
@@ -54,24 +64,11 @@ public sealed class RuleChange
             CommandResult result = FirewallRules.Apply(path, block);
             if (!result.Succeeded) { code |= BlockFailed; details?.Add(result.FailureSummary()); }
         }
-        void MarkOwn(string path, bool value)
-        {
-            try
-            {
-                NetworkPolicyStore.SetBlockedOnItsOwn(path, value);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
-            {
-                code |= BlockFailed;
-                details?.Add(ex.Message);
-            }
-        }
-        // A helper that is already blocked although no other blocked app lists it was blocked on its own. That block
-        // has to outlive this app's.
+        // Only a block the user sets on the helper itself is marked as its own (see FirewallRules.ApplyOwn). A helper that
+        // is already blocked for another reason keeps that block, and it is lifted with this app's.
         void BlockHelper(string helper)
         {
             if (!blockedPaths.Contains(helper)) SetBlock(helper, true);
-            else if (HelperBlocks.WasBlockedOnItsOwn(helper, Path, policies, blockedPaths)) MarkOwn(helper, true);
         }
         // A helper stays blocked while another blocked app lists it (one WebView2 runtime serves many apps), or while
         // it was blocked on its own.
@@ -91,7 +88,8 @@ public sealed class RuleChange
             }
             else
             {
-                foreach (string helper in before.Union(after, StringComparer.OrdinalIgnoreCase)) UnblockHelper(helper);
+                // Only the helpers this app listed so far were blocked with it. A newly listed one keeps its own state.
+                foreach (string helper in before) UnblockHelper(helper);
             }
         }
         else if (blocked)

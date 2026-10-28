@@ -24,14 +24,13 @@ internal static class HelperTests
             });
 
         yield return ("helper_blocked_on_its_own_survives_unblocking_the_app",
-            "The runtime was already blocked before Teams was blocked. That block counts as its own, and unblocking Teams later leaves the runtime blocked.",
+            "The user blocked the runtime itself, so its entry is marked as blocked on its own. Unblocking Teams leaves it blocked, while a runtime block without that mark is lifted with Teams.",
             () =>
             {
                 List<AppNetworkPolicy> policies = [new() { Path = Teams, Helpers = [Runtime] }];
-                var blocked = new HashSet<string>([Runtime], StringComparer.OrdinalIgnoreCase);
-                Check.That(HelperBlocks.WasBlockedOnItsOwn(Runtime, Teams, policies, blocked), "a block that no app explains is the helper's own");
+                var blocked = new HashSet<string>([Teams, Runtime], StringComparer.OrdinalIgnoreCase);
+                Check.That(!HelperBlocks.KeepBlocked(Runtime, Teams, policies, blocked), "a block that only came with Teams is lifted with it");
                 policies.Add(new AppNetworkPolicy { Path = Runtime, BlockedOnItsOwn = true });
-                blocked.Add(Teams);
                 Check.That(HelperBlocks.KeepBlocked(Runtime, Teams, policies, blocked), "the helper's own block must outlive the app's");
             });
 
@@ -49,6 +48,17 @@ internal static class HelperTests
                 Check.That(HelperBlocks.WhyNotHelper(Runtime, Outlook, policies) is null, "the app it already follows may keep it");
                 Check.That(HelperBlocks.WhyNotHelper(@"C:\Apps\Free.exe", Teams, policies) is null, "a program without rules may become a helper");
             });
+
+        yield return ("helper_of_an_app_without_rules_stays_linked_and_cannot_be_taken_over",
+            "Teams lists the runtime but has no rules, so the runtime's entry carries only the link to Teams. Saving keeps that entry, and Outlook is refused when it tries to make the runtime its helper.",
+            () => StoreTests.InTempFolder(folder =>
+            {
+                string file = Path.Combine(folder, "app-rules.json");
+                NetworkPolicyStore.Save(new AppNetworkPolicy { Path = Teams, Helpers = [Runtime] }.ForHelper(Runtime), file);
+                List<AppNetworkPolicy> stored = NetworkPolicyStore.Read(file);
+                Check.Equal(Teams, stored.Single().HelperOf);
+                Check.That(HelperBlocks.WhyNotHelper(Runtime, Outlook, stored) is not null, "a second app must not take the helper over");
+            }));
 
         yield return ("own_block_mark_survives_saving_the_helpers_rules",
             "The runtime's entry is marked as blocked on its own. Saving rules from Teams over that entry, and then saving an empty entry, both keep the mark, and clearing it removes the entry.",

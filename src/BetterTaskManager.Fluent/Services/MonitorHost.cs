@@ -276,44 +276,11 @@ public sealed class MonitorHost : IDisposable
     }
 
     /// <summary>
-    /// Adds or removes the outbound block rule for an executable. Without elevation this starts a short-lived
-    /// elevated copy of the app, so Windows shows one UAC prompt per change.
+    /// Adds or removes the whole-app block for an executable, from the Processes and Network pages. It goes through the
+    /// same rule change as the Rules page, so the helper programs the app lists are blocked and unblocked with it.
+    /// Without elevation this starts a short-lived elevated copy of the app, so Windows shows one UAC prompt per change.
     /// </summary>
-    public async Task<string?> SetBlockedAsync(string path, bool block)
-    {
-        int exitCode;
-        if (IsElevated)
-        {
-            CommandResult result = await Task.Run(() => FirewallRules.ApplyOwn(path, block));
-            exitCode = result.Succeeded ? 0 : Math.Max(1, result.ExitCode);
-            if (exitCode != 0) return result.FailureSummary();
-        }
-        else
-        {
-            var startInfo = new ProcessStartInfo(Environment.ProcessPath!)
-            {
-                UseShellExecute = true,
-                Verb = "runas",
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            startInfo.ArgumentList.Add(block ? Program.FirewallBlockArgument : Program.FirewallUnblockArgument);
-            startInfo.ArgumentList.Add(path);
-            try
-            {
-                using Process helper = Process.Start(startInfo)!;
-                await helper.WaitForExitAsync();
-                exitCode = helper.ExitCode;
-            }
-            catch (System.ComponentModel.Win32Exception)
-            {
-                return Loc.Get("Uac_CancelledFirewall");
-            }
-            if (exitCode != 0) return Loc.F("Firewall_Failed", exitCode);
-        }
-
-        await RefreshFirewallAsync();
-        return null;
-    }
+    public Task<string?> SetBlockedAsync(string path, bool block) => ApplyRulesAsync(new RuleChange { Path = path, Blocked = block });
 
     /// <summary>
     /// Saves one app's network rules (empty rules remove them). Without elevation this starts a short-lived elevated

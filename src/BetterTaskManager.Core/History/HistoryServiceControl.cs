@@ -232,7 +232,24 @@ public static class HistoryServiceControl
                 Thread.Sleep(500);
             }
         }
+        if (!Directory.Exists(folder)) return;
+        // Still held (an antivirus scan, for example): Windows deletes what is left at the next restart, files first,
+        // then the folders from the deepest up.
+        try
+        {
+            foreach (string file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)) MoveFileEx(file, null, DelayUntilReboot);
+            foreach (string directory in Directory.EnumerateDirectories(folder, "*", SearchOption.AllDirectories).OrderByDescending(path => path.Length)) MoveFileEx(directory, null, DelayUntilReboot);
+            MoveFileEx(folder, null, DelayUntilReboot);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
+
+    private const int DelayUntilReboot = 4;   // MOVEFILE_DELAY_UNTIL_REBOOT
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern bool MoveFileEx(string existing, string? replacement, int flags);
 
     private static CommandResult Stop()
     {

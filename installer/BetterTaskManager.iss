@@ -94,14 +94,16 @@ english.TaskManagerRestoreFailed=Windows Task Manager could not be restored, so 
 german.TaskManagerRestoreFailed=Der Windows-Task-Manager konnte nicht wiederhergestellt werden und öffnet weiterhin Nax-TaskManager. Wenn Sie jetzt deinstallieren, öffnet sich der Task-Manager nicht mehr, bis die Einstellung entfernt ist.%n%nTrotzdem deinstallieren?
 english.CleanupFailed=Not everything could be cleaned up (blocked programs or the History service may remain).%n%n%1%n%nUninstall anyway?
 german.CleanupFailed=Nicht alles konnte aufgeräumt werden (gesperrte Programme oder der Verlaufsdienst können bleiben).%n%n%1%n%nTrotzdem deinstallieren?
-english.RemoveDataQuestion=Also delete the recorded network history, the logs and the saved rules?%n%nChoose No to keep them for a later installation.
-german.RemoveDataQuestion=Auch den aufgezeichneten Netzwerkverlauf, die Protokolle und die gespeicherten Regeln löschen?%n%nWählen Sie Nein, um sie für eine spätere Installation zu behalten.
+english.RemoveDataQuestion=Also delete the recorded network history, the blocked log and the settings?%n%nBlocks and rules are removed in any case. Choose No to keep the history for a later installation.
+german.RemoveDataQuestion=Auch den aufgezeichneten Netzwerkverlauf, das Sperrprotokoll und die Einstellungen löschen?%n%nSperren und Regeln werden in jedem Fall entfernt. Wählen Sie Nein, um den Verlauf für eine spätere Installation zu behalten.
 english.CleanupPartly=Nax-TaskManager will now be removed, but not everything could be put back.%n%n%1
 german.CleanupPartly=Nax-TaskManager wird jetzt entfernt, aber nicht alles konnte zurückgesetzt werden.%n%n%1
 english.MemoryRestoreFailed=The Windows memory settings this app changed (memory compression, page combining, prefetching or SysMain) could not be put back as they were.%n%n%1%n%nIf you uninstall now, they stay as they are. Uninstall anyway?
 german.MemoryRestoreFailed=Die Windows-Speichereinstellungen, die diese App geändert hat (Speicherkomprimierung, Seitenzusammenführung, Prefetching oder SysMain), konnten nicht wiederhergestellt werden.%n%n%1%n%nWenn Sie jetzt deinstallieren, bleiben sie so. Trotzdem deinstallieren?
 english.ServiceMoveFailed=The History service could not be moved to its new folder and may not be running. Turn it off and on again in Settings > History.%n%n%1
 german.ServiceMoveFailed=Der Verlaufsdienst konnte nicht in seinen neuen Ordner verschoben werden und läuft möglicherweise nicht. Schalten Sie ihn unter Einstellungen > Verlauf aus und wieder ein.%n%n%1
+english.ServiceRestartFailed=Setup stopped the History service but could not start it again. Turn it off and on again in Settings > History after installing Nax-TaskManager.
+german.ServiceRestartFailed=Setup hat den Verlaufsdienst angehalten, konnte ihn aber nicht wieder starten. Schalten Sie ihn nach der Installation von Nax-TaskManager unter Einstellungen > Verlauf aus und wieder ein.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopShortcut}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -128,6 +130,7 @@ var
   PreviousVersionRemoved: Boolean;
   ServiceStopped: Boolean;
   ServiceMoveTried: Boolean;
+  UserDataRemoved: Boolean;
 
 function ExecutableFromCommand(const CommandLine: String): String;
 var
@@ -293,6 +296,8 @@ begin
   begin
     Exec(ExpandConstant('{sys}\net.exe'), 'start NaxTaskManagerHistory', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Log('Started the History service again, exit code ' + IntToStr(ResultCode));
+    if (ResultCode <> 0) and (not WizardSilent()) then
+      MsgBox(CustomMessage('ServiceRestartFailed'), mbError, MB_OK);
   end;
 end;
 
@@ -309,7 +314,9 @@ begin
   begin
     Exec(ExpandConstant('{sys}\net.exe'), 'stop NaxTaskManagerHistory', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Log('Stopped the History service before copying files, exit code ' + IntToStr(ResultCode));
-    ServiceStopped := True;
+    // Only a service this setup stopped is moved and started again. One that was already stopped (perhaps on
+    // purpose) holds no files open and stays as it is.
+    ServiceStopped := ResultCode = 0;
   end;
   if PreviousVersionRemoved then
     Exit;
@@ -343,9 +350,10 @@ end;
 
 // A real uninstall (not the removal a newer setup does before upgrading) undoes everything outside the app folder in
 // one elevated step: Windows Task Manager is restored if it opens this app, every block is removed (otherwise blocked
-// programs would stay blocked with nothing left to unblock them) and the History service goes. This runs before any
-// file is removed, so a failure can still stop the uninstall.
-function InitializeUninstall(): Boolean;
+// programs would stay blocked with nothing left to unblock them) and the History service goes. It runs from
+// CurUninstallStepChanged(usAppMutexCheck), after the user confirmed the uninstall and before any file is removed,
+// so nothing is undone for an uninstall that is then cancelled, and a failure can still stop it.
+function UninstallCleanupAllowed(): Boolean;
 var
   ResultCode: Integer;
   ResultFile: String;
@@ -359,7 +367,10 @@ begin
   // Only an interactive uninstall asks. A silent one (winget, scripts) keeps the history.
   RemoveData := '';
   if (not UninstallSilent()) and (MsgBox(CustomMessage('RemoveDataQuestion'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES) then
+  begin
     RemoveData := ' --remove-data';
+    UserDataRemoved := True;
+  end;
   if not ShellExec('runas', ExpandConstant('{app}\{#AppExeName}'),
       '--uninstall-cleanup "' + ExpandConstant('{app}\{#AppExeName}') + '" "' + ResultFile + '"' + RemoveData,
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
@@ -400,4 +411,16 @@ begin
     Result := MsgBox(FmtMessage(CustomMessage('MemoryRestoreFailed'), [String(Details)]), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES
   else
     Result := MsgBox(FmtMessage(CustomMessage('CleanupFailed'), [String(Details)]), mbConfirmation, MB_YESNO) = IDYES;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if (CurUninstallStep = usAppMutexCheck) and (not UninstallCleanupAllowed()) then
+    Abort;
+  // The settings and the crash log live in the user's own profile, which the elevated cleanup may not see.
+  if (CurUninstallStep = usPostUninstall) and UserDataRemoved then
+  begin
+    DelTree(ExpandConstant('{localappdata}\NaxTaskManager'), True, True, True);
+    DelTree(ExpandConstant('{localappdata}\BetterTaskManager'), True, True, True);
+  end;
 end;

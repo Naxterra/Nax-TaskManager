@@ -393,7 +393,7 @@ public sealed class AppNetworkPolicy
     public bool HasFilters => BlockInternet || BlockLan || BlockLocalhost || BlockInbound || Outgoing.Count > 0 || Incoming.Count > 0;
 
     [JsonIgnore]
-    public bool IsEmpty => !HasFilters && Helpers.Count == 0 && !BlockedOnItsOwn;
+    public bool IsEmpty => !HasFilters && Helpers.Count == 0 && !BlockedOnItsOwn && HelperOf is null;
 
     /// <summary>The same switches and rules for one of the app's helper programs.</summary>
     public AppNetworkPolicy ForHelper(string helper) => new()

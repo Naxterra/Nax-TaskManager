@@ -16,14 +16,6 @@ public static class HelperBlocks
         policies.Any(policy => Same(policy.Path, helper) && policy.BlockedOnItsOwn) || HasOtherBlockedOwner(helper, app, policies, blocked);
 
     /// <summary>
-    /// True when blocking <paramref name="app"/> finds <paramref name="helper"/> already blocked although no other
-    /// blocked app lists it: the helper was blocked on its own (by the user or by an earlier version), and that block
-    /// has to outlive the app's.
-    /// </summary>
-    public static bool WasBlockedOnItsOwn(string helper, string app, IReadOnlyList<AppNetworkPolicy> policies, IReadOnlySet<string> blocked) =>
-        blocked.Contains(helper) && !HasOtherBlockedOwner(helper, app, policies, blocked);
-
-    /// <summary>
     /// Why <paramref name="helper"/> cannot follow <paramref name="app"/>'s rules, or null when it can: it has network
     /// rules of its own, or it already follows another app's rules. Following would replace those rules. A helper of
     /// <paramref name="replacing"/>, the older version of the same app whose rules move to <paramref name="app"/>, may follow it.

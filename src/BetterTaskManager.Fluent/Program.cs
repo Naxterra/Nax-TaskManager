@@ -11,8 +11,6 @@ namespace BetterTaskManager.Fluent;
 public static class Program
 {
     private const string SingleInstanceMutexName = @"Local\Naxterra.NaxTaskManager.SingleInstance";
-    internal const string FirewallBlockArgument = "--firewall-block";
-    internal const string FirewallUnblockArgument = "--firewall-unblock";
     internal const string WaitForProcessArgument = "--wait-for-pid";
     private const string TestInstanceArgument = "--test-instance";
     internal const string StartupEnableArgument = "--startup-enable";
@@ -125,14 +123,6 @@ public static class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        // Elevated helper mode: change one firewall rule and exit without starting the UI.
-        if (args.Length == 2 && (args[0] == FirewallBlockArgument || args[0] == FirewallUnblockArgument))
-        {
-            if (!FirewallRules.IsElevated) return 5;
-            CommandResult result = FirewallRules.ApplyOwn(args[1], args[0] == FirewallBlockArgument);
-            return result.Succeeded ? 0 : (result.ExitCode == 0 ? 1 : result.ExitCode);
-        }
-
         // Elevated helper mode: apply one app's network rules (JSON, Base64) and exit.
         if (args.Length == 2 && args[0] == PolicyApplyArgument)
         {
