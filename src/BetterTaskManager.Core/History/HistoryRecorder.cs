@@ -93,7 +93,7 @@ public sealed class HistoryRecorder : IDisposable
     private DateTime clockCheckedWall = DateTime.UtcNow;
     private long clockCheckedTicks = Environment.TickCount64;
     private TimeSpan? clockSkew;
-    private long clockStoredTicks;
+    private long? clockStoredTicks;
 
     public delegate bool TracedProcessLookup(int pid, out BandwidthMonitor.TracedProcess process);
 
@@ -323,7 +323,7 @@ public sealed class HistoryRecorder : IDisposable
             (TimeSpan stored, DateTime? seen) = store.ReadClockState();
             seen ??= store.ReadLastWrite();
             clockSkew = seen is { } last ? ClockSkew.AfterDowntime(stored, wall - last) : stored;
-            clockStoredTicks = long.MinValue;
+            clockStoredTicks = null;
         }
         else
         {
@@ -331,7 +331,7 @@ public sealed class HistoryRecorder : IDisposable
         }
         clockCheckedWall = wall;
         clockCheckedTicks = ticks;
-        if (ticks - clockStoredTicks >= 60_000)
+        if (clockStoredTicks is not { } storedAt || ticks - storedAt >= 60_000)
         {
             store.WriteClockState(clockSkew.Value, wall);
             clockStoredTicks = ticks;

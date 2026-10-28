@@ -118,6 +118,20 @@ internal static class StoreTests
                 Check.Equal(TimeSpan.Zero, ClockSkew.Update(skew, TimeSpan.FromDays(5), TimeSpan.FromDays(5)));
             });
 
+        yield return ("history_recorder_flush_stores_the_clock_state",
+            "The first flush of a history recorder writes the time it checked the clock to the database, so the next start can measure how long the service was off.",
+            () => InTempFolder(folder =>
+            {
+                string file = Path.Combine(folder, "history.db");
+                using HistoryStore store = HistoryStore.OpenForWriting(file);
+                DateTime before = DateTime.UtcNow.AddSeconds(-1);
+                using (var recorder = new HistoryRecorder(store, (_, _) => null))
+                {
+                    recorder.Flush();
+                }
+                Check.That(store.ReadClockState().CheckedUtc is { } checkedAt && checkedAt >= before, "the clock check must be stored");
+            }));
+
         yield return ("clock_jump_while_the_service_was_off_is_held_back",
             "The wall clock shows a year passed since the service last ran. Three days of that are believed as downtime and the rest is held back, while a weekend off is believed in full.",
             () =>

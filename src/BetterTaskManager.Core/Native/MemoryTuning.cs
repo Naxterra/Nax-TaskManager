@@ -168,11 +168,13 @@ public static class MemoryManager
 
     /// <summary>
     /// Puts every switch this app changed back to the state recorded before the first change, then forgets that
-    /// state. Does nothing when the app never changed a switch. Needs administrator rights.
+    /// state. Does nothing when the app never changed a switch. Returns a note for the user when the record could not
+    /// be read: nothing can be restored from it, now or later, so it is deleted and the uninstall goes on. A restore
+    /// that fails throws and keeps the record. Needs administrator rights.
     /// </summary>
-    public static void RestoreOriginal()
+    public static string? RestoreOriginal()
     {
-        if (!File.Exists(OriginalPath)) return;
+        if (!File.Exists(OriginalPath)) return null;
         MemoryManagerState original;
         try
         {
@@ -181,9 +183,8 @@ public static class MemoryManager
         }
         catch (JsonException ex)
         {
-            // Nothing can be restored from it, now or later; report it once and let the uninstall go on.
             File.Delete(OriginalPath);
-            throw new InvalidDataException("The recorded memory manager settings could not be read, so they were not restored: " + ex.Message, ex);
+            return "The recorded memory manager settings could not be read, so they were not restored: " + ex.Message;
         }
         // The record is kept until the restore worked, so a failed attempt can be repeated.
         MemoryManagerState live = ReadLive() ?? throw new InvalidOperationException("The current memory manager settings could not be read, so nothing was restored.");
@@ -193,6 +194,7 @@ public static class MemoryManager
         if (live.ApplicationPreLaunch != original.ApplicationPreLaunch) Apply(ApplicationPreLaunch, original.ApplicationPreLaunch);
         RestoreSysMain(original);
         File.Delete(OriginalPath);
+        return null;
     }
 
     /// <summary>Puts SysMain back to its recorded start type (automatic, manual or disabled) and running state.</summary>
@@ -206,9 +208,10 @@ public static class MemoryManager
         {
             current = ScStartName(service.StartType);
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException ex) when (ex.InnerException is System.ComponentModel.Win32Exception { NativeErrorCode: 1060 })
         {
-            // Some Windows editions have no SysMain service; then there is nothing to put back.
+            // ERROR_SERVICE_DOES_NOT_EXIST: some Windows editions have no SysMain service, so there is nothing to put
+            // back. Any other failure is thrown, so the record is kept.
             return;
         }
         if (current != start)

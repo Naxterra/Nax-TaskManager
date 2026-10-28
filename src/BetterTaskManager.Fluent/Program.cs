@@ -38,7 +38,8 @@ public static class Program
     /// failed. Then the memory manager switches go back to how they were before the app first changed them, and the
     /// memory settings files are deleted; with <paramref name="removeData"/> the whole data folder goes, including the
     /// history and the logs. The exit code has one bit per failed step (1 Task Manager, 2 blocks, 4 service, 8 memory
-    /// settings, 16 data folder); details go to <paramref name="resultFile"/>.
+    /// settings, 16 data folder) and bit 32 for a memory settings record that could not be read and was dropped. Details
+    /// go to <paramref name="resultFile"/>.
     /// </summary>
     private static int UninstallCleanup(string executablePath, string resultFile, bool removeData)
     {
@@ -70,7 +71,13 @@ public static class Program
         }
         try
         {
-            Core.Native.MemoryManager.RestoreOriginal();
+            // An unreadable record cannot be restored now or later. It is only reported (bit 32), so it never stops the
+            // uninstall or keeps the data folder.
+            if (Core.Native.MemoryManager.RestoreOriginal() is { } note)
+            {
+                code |= 32;
+                details.Add("Memory settings: " + note);
+            }
             // While the service still runs (its removal failed and the uninstall may be cancelled), it keeps following
             // these files, so they stay.
             if ((code & 4) == 0)

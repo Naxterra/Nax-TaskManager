@@ -372,8 +372,9 @@ begin
     Log('Uninstall cleanup details: ' + String(Details));
   if ResultCode = 0 then
     Exit;
-  // Bit 16 alone (the data folder the user asked to delete could not be deleted) leaves no change to Windows behind,
-  // so it is only reported.
+  // Bits 16 (the data folder the user asked to delete could not be deleted) and 32 (an unreadable memory settings
+  // record was dropped, so nothing is left to retry) leave no change to Windows that a later attempt could undo, so
+  // they are only reported.
   if (ResultCode > 0) and ((ResultCode and 15) = 0) then
   begin
     if not UninstallSilent() then
