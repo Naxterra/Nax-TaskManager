@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-alpha.46 - 2026-10-31
+
+- **The search box works on every page.** It was turned off on the Overview, Performance, Rules and Settings pages, so on the start page it did not react to clicks or Ctrl+F. Typing on a page without a list now opens Processes with the search applied.
+- **Uninstalling closes the install's windows itself.** This change was already in alpha.45 but was not listed there. The uninstaller closes the open windows of the install that are not elevated, so an uninstall whose elevated cleanup was declined does not remove files that are still in use. Versions from before the rename are recognized too.
+
 ## 2.0.0-alpha.45 - 2026-10-31
 
 The license changed to the Nax Source-Available License 1.0. You may still install and use the app. Modifying, redistributing or selling it needs written permission.
