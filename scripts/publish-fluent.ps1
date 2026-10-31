@@ -41,7 +41,7 @@ foreach ($required in @(
 )) {
     if (-not (Test-Path -LiteralPath $required)) { throw "Published output is incomplete, missing: $required" }
 }
-foreach ($document in @("README.md", "SECURITY.md", "LICENSE")) {
+foreach ($document in @("README.md", "SECURITY.md", "LICENSE", "THIRD-PARTY-NOTICES.txt")) {
     Copy-Item -LiteralPath (Join-Path $root $document) -Destination (Join-Path $outputFull $document)
 }
 

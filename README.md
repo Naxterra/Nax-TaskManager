@@ -72,4 +72,5 @@ Requires the .NET 11 SDK and Inno Setup 7 (`winget install JRSoftware.InnoSetup.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+This software is under the Nax Source-Available License 1.0. You may install and use the official release builds, privately and at work, and you may read the source code. Modifying the software, redistributing it and selling it need the written permission of the owner. See [LICENSE](LICENSE).
+

@@ -106,7 +106,7 @@ $uninstaller = Get-RegisteredUninstaller $uninstallRegistryPath
 $startMenuGroup = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)) $testAppName
 $startMenuShortcut = Join-Path $startMenuGroup ($testAppName + ".lnk")
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)) ($testAppName + ".lnk")
-foreach ($required in @($installedExe, $uninstaller, (Join-Path $installDirectory "README.md"), (Join-Path $installDirectory "LICENSE"),
+foreach ($required in @($installedExe, $uninstaller, (Join-Path $installDirectory "README.md"), (Join-Path $installDirectory "LICENSE"), (Join-Path $installDirectory "THIRD-PARTY-NOTICES.txt"),
     (Join-Path $installDirectory "HistoryService\Nax-TaskManager.HistoryService.exe"))) {
     if (-not (Test-Path -LiteralPath $required)) { throw "Installed file missing: $required" }
 }

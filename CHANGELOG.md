@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.45 - 2026-10-31
+
+The license changed to the Nax Source-Available License 1.0. You may still install and use the app. Modifying, redistributing or selling it needs written permission.
+
 ## 2.0.0-alpha.44 - 2026-10-28
 
 Corrections to 2.0.0-alpha.43. Install this version instead of alpha.43.
