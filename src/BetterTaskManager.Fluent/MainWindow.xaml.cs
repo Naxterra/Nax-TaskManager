@@ -253,8 +253,13 @@ public sealed partial class MainWindow : Window
             }
         }
 
-        SearchBox.IsEnabled = tag is "Processes" or "Network" or "Disk" or "History" or "Startup";
+        currentTag = tag;
     }
+
+    /// <summary>The page shown now, so typing in the search box on a page without a list can open Processes.</summary>
+    private string currentTag = "Overview";
+
+    private static bool HasSearchableList(string tag) => tag is "Processes" or "Network" or "Disk" or "History" or "Startup";
 
     private void AppTitleBar_PaneToggleRequested(TitleBar sender, object args)
     {
@@ -262,8 +267,13 @@ public sealed partial class MainWindow : Window
         UpdateNavigationChrome();
     }
 
-    private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args) =>
+    private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
         App.Monitor.SearchText = sender.Text;
+        // The box stays usable on every page. Typing on a page without a list (Overview, Performance, Rules, Settings)
+        // opens Processes, which then shows the search at once.
+        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput && sender.Text.Length > 0 && !HasSearchableList(currentTag)) Navigate("Processes");
+    }
 
     private void RestartElevated_Click(object sender, RoutedEventArgs e) => App.RestartElevated();
 
