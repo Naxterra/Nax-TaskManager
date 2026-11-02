@@ -6,8 +6,8 @@ namespace BetterTaskManager.Core.Native;
 /// <summary>
 /// Restarting Windows Explorer, the shell that draws the taskbar and the desktop. Ending it is enough in most cases,
 /// because Winlogon starts the shell again when it exits with an error code (AutoRestartShell). When it does not
-/// come back, the app starts it itself, never elevated: an Explorer started from an elevated app would run the
-/// whole shell, and everything opened from it, with administrator rights.
+/// come back, the app starts it itself with the rights the shell normally has, not with the app's: an Explorer
+/// started from an elevated app would run the whole shell, and everything opened from it, with administrator rights.
 /// </summary>
 public static class ExplorerShell
 {
@@ -16,15 +16,18 @@ public static class ExplorerShell
     public static bool IsExplorer(string path) =>
         string.Equals(path, ExplorerPath, StringComparison.OrdinalIgnoreCase);
 
+    public static bool IsExplorerProcess(int pid) => IsExplorer(Win32.QueryImagePath(pid));
+
     /// <summary>True while a shell owns the desktop window of this session.</summary>
     public static bool IsRunning() => GetShellWindow() != IntPtr.Zero;
 
     /// <summary>
-    /// Starts Explorer as the shell of this session without administrator rights. An elevated app borrows the token
-    /// of the session's shell infrastructure host (sihost.exe), which runs as the signed-in user without elevation,
-    /// the same account Winlogon would start the shell under. Returns 0 or the Windows error code.
+    /// Starts Explorer as the shell of this session with the rights the shell normally has. An elevated app borrows
+    /// the token of the session's shell infrastructure host (sihost.exe), which Windows starts with the same token as
+    /// the shell: without elevation for a normal account, and elevated only where the shell itself is (the built-in
+    /// Administrator, or UAC turned off). Returns 0 or the Windows error code.
     /// </summary>
-    public static int StartUnelevated()
+    public static int StartAsShell()
     {
         using Process self = Process.GetCurrentProcess();
         if (!IsElevated(self.Handle))
@@ -62,7 +65,6 @@ public static class ExplorerShell
         try
         {
             if (!OpenProcessToken(process, TokenDuplicate | TokenQuery, out token)) return Marshal.GetLastWin32Error();
-            if (IsElevatedToken(token)) return ErrorElevationRequired;
             if (!DuplicateTokenEx(token, MaximumAllowed, IntPtr.Zero, SecurityImpersonation, TokenPrimary, out primary)) return Marshal.GetLastWin32Error();
 
             var startup = new StartupInfo { Size = Marshal.SizeOf<StartupInfo>(), Desktop = @"winsta0\default" };
@@ -97,7 +99,6 @@ public static class ExplorerShell
         GetTokenInformation(token, TokenElevation, out int elevated, sizeof(int), out _) && elevated != 0;
 
     private const int ErrorNotFound = 1168;
-    private const int ErrorElevationRequired = 740;
     private const uint TokenDuplicate = 0x0002;
     private const uint TokenQuery = 0x0008;
     private const uint MaximumAllowed = 0x02000000;

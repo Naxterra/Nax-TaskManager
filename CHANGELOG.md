@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-alpha.47 - 2026-11-02
+
+- **Windows Explorer can be restarted from the process menu.** Right-click Windows Explorer on the Processes page and choose Restart. It ends the Explorer processes of your own session, but not the Explorer of other signed-in users, the helper processes listed with it or the programs started from it. Windows normally starts the taskbar and desktop again by itself. If that has not happened after ten seconds, the app starts Explorer itself with the rights the shell normally has, so it does not get administrator rights when the app runs as administrator.
+
 ## 2.0.0-alpha.46 - 2026-10-31
 
 - **The search box works on every page.** It was turned off on the Overview, Performance, Rules and Settings pages, so on the start page it did not react to clicks or Ctrl+F. Typing on a page without a list now opens Processes with the search applied.

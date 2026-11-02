@@ -480,7 +480,7 @@ public sealed partial class ProcessesPage : Page
 
         var menu = new MenuFlyout();
         menu.Items.Add(MenuItem(Loc.Get("Workflow_Connections"), "\uE968", (_, _) => ShowNetwork()));
-        if (ExplorerShell.IsExplorer(target.Path)) menu.Items.Add(MenuItem(Loc.Get("Proc_Restart"), "", (_, _) => _ = RestartExplorerAsync()));
+        if (ExplorerShell.IsExplorer(target.Path)) menu.Items.Add(MenuItem(Loc.Get("Proc_Restart"), "", (_, _) => _ = RestartExplorerAsync(), !ProcessActions.RestartingExplorer));
         menu.Items.Add(MenuItem(Loc.Get("Proc_EndTask"), "", (_, _) => _ = EndSelectedAsync(entireTree: false)));
         menu.Items.Add(MenuItem(Loc.Get("Proc_EndTree"), "", (_, _) => _ = EndSelectedAsync(entireTree: true)));
         var efficiency = new ToggleMenuFlyoutItem { Text = Loc.Get("Proc_Efficiency"), IsChecked = target.Efficiency, IsEnabled = !target.Critical };
@@ -560,9 +560,10 @@ public sealed partial class ProcessesPage : Page
     private async Task RestartExplorerAsync()
     {
         if (CurrentTarget() is not { } target) return;
-        List<string> failures = await ProcessActions.RestartExplorerAsync(target.Processes);
+        if (await ProcessActions.RestartExplorerAsync(target.Processes) is not { } result) return;
         App.Monitor.RequestRefresh();
-        if (failures.Count > 0) await ShowMessageAsync(Loc.Get("Proc_RestartFailed"), string.Join("\n", failures.Take(5)));
+        if (result.NothingEnded) await ShowMessageAsync(Loc.Get("Proc_RestartFailed"), Loc.Get("Proc_RestartNothing"));
+        else if (result.Failures.Count > 0) await ShowMessageAsync(Loc.Get("Proc_RestartFailed"), string.Join("\n", result.Failures.Take(5)));
     }
 
     private async Task ToggleEfficiencyAsync()

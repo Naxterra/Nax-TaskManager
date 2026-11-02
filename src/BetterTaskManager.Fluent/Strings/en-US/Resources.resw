@@ -264,6 +264,7 @@ Answer: {0}</value></data>
   <data name="Proc_EndTask" xml:space="preserve"><value>End task</value></data>
   <data name="Proc_Restart" xml:space="preserve"><value>Restart</value></data>
   <data name="Proc_RestartFailed" xml:space="preserve"><value>Windows Explorer could not be restarted</value></data>
+  <data name="Proc_RestartNothing" xml:space="preserve"><value>This row no longer has a Windows Explorer of your session. The Explorer of other signed-in users is not ended.</value></data>
   <data name="Proc_EndTree" xml:space="preserve"><value>End process tree</value></data>
   <data name="Proc_Properties" xml:space="preserve"><value>Properties</value></data>
   <data name="Proc_CopyPath" xml:space="preserve"><value>Copy path</value></data>

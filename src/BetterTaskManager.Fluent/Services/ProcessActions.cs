@@ -49,26 +49,51 @@ public static class ProcessActions
         return new EndResult(ended, gone, failures);
     });
 
+    /// <summary>Failures of a restart. <see cref="NothingEnded"/> when the row had no Explorer of this session to end.</summary>
+    public sealed record RestartResult(bool NothingEnded, List<string> Failures);
+
+    private static int restartingExplorer;
+
+    /// <summary>True while a restart runs, so a second click does not start a second Explorer as a folder window.</summary>
+    public static bool RestartingExplorer => Volatile.Read(ref restartingExplorer) == 1;
+
     /// <summary>
-    /// Restarts Windows Explorer: ends the given Explorer processes, but not the apps started from them, and makes sure
-    /// a shell is running again afterwards. Returns the failures, empty when the restart worked.
+    /// Restarts Windows Explorer in this session: ends the Explorer processes of the row that run in the app's own
+    /// session, but not other users' Explorer, the helpers grouped with it or the apps started from it, and makes sure
+    /// a shell is running again afterwards. Returns null when a restart is already running.
     /// </summary>
-    public static Task<List<string>> RestartExplorerAsync(IReadOnlyList<(int Pid, long CreateTime)> processes) => Task.Run(async () =>
+    public static Task<RestartResult?> RestartExplorerAsync(IReadOnlyList<(int Pid, long CreateTime)> processes)
     {
-        var failures = new List<string>();
-        var ended = new List<Process>();
-        foreach (var (pid, createTime) in processes)
+        if (Interlocked.Exchange(ref restartingExplorer, 1) == 1) return Task.FromResult<RestartResult?>(null);
+        return Task.Run<RestartResult?>(async () =>
         {
             try
             {
-                Process process = Process.GetProcessById(pid);
-                if (process.StartTime.ToFileTime() != createTime)
-                {
-                    process.Dispose();
-                    continue;
-                }
+                return await RestartExplorerCoreAsync(processes);
+            }
+            finally
+            {
+                Volatile.Write(ref restartingExplorer, 0);
+            }
+        });
+    }
+
+    private static async Task<RestartResult> RestartExplorerCoreAsync(IReadOnlyList<(int Pid, long CreateTime)> processes)
+    {
+        var failures = new List<string>();
+        var ended = new List<Process>();
+        int session;
+        using (Process current = Process.GetCurrentProcess()) session = current.SessionId;
+        foreach (var (pid, createTime) in processes)
+        {
+            Process? process = null;
+            try
+            {
+                process = Process.GetProcessById(pid);
+                if (process.SessionId != session || !ExplorerShell.IsExplorerProcess(pid) || process.StartTime.ToFileTime() != createTime) continue;
                 process.Kill(entireProcessTree: false);
                 ended.Add(process);
+                process = null;
             }
             catch (ArgumentException)
             {
@@ -80,23 +105,33 @@ public static class ProcessActions
             {
                 failures.Add($"PID {pid}: {ex.Message}");
             }
+            finally
+            {
+                process?.Dispose();
+            }
         }
         foreach (Process process in ended)
         {
-            using (process) process.WaitForExit(5_000);
+            // An Explorer that has not exited still owns the shell window, so the check below would report a restart
+            // that never happened.
+            using (process)
+            {
+                if (!process.WaitForExit(5_000)) failures.Add($"PID {process.Id}: {new Win32Exception(ErrorTimeout).Message}");
+            }
         }
+        if (ended.Count == 0) return new RestartResult(failures.Count == 0, failures);
 
         // Winlogon usually starts the shell again within a second or two. The app starts it only when it has not,
         // because a second Explorer started while the shell runs opens a folder window instead.
         for (int waited = 0; waited < 10_000; waited += 250)
         {
-            if (ExplorerShell.IsRunning()) return failures;
+            if (ExplorerShell.IsRunning()) return new RestartResult(false, failures);
             await Task.Delay(250);
         }
-        int error = ExplorerShell.StartUnelevated();
+        int error = ExplorerShell.StartAsShell();
         if (error != 0) failures.Add(new Win32Exception(error).Message);
-        return failures;
-    });
+        return new RestartResult(false, failures);
+    }
 
     public sealed record ChangeResult(int Changed, List<string> Failures, bool AccessDenied);
 
@@ -149,6 +184,7 @@ public static class ProcessActions
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
     }
 
+    private const int ErrorTimeout = 1460;
     private const uint SeeMaskInvokeIdList = 0x0000000C;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

@@ -264,6 +264,7 @@ Antwort: {0}</value></data>
   <data name="Proc_EndTask" xml:space="preserve"><value>Task beenden</value></data>
   <data name="Proc_Restart" xml:space="preserve"><value>Neu starten</value></data>
   <data name="Proc_RestartFailed" xml:space="preserve"><value>Windows-Explorer konnte nicht neu gestartet werden</value></data>
+  <data name="Proc_RestartNothing" xml:space="preserve"><value>In dieser Zeile läuft kein Windows-Explorer Ihrer Sitzung mehr. Der Explorer anderer angemeldeter Benutzer wird nicht beendet.</value></data>
   <data name="Proc_EndTree" xml:space="preserve"><value>Prozessstruktur beenden</value></data>
   <data name="Proc_Properties" xml:space="preserve"><value>Eigenschaften</value></data>
   <data name="Proc_CopyPath" xml:space="preserve"><value>Pfad kopieren</value></data>
