@@ -262,6 +262,8 @@ Answer: {0}</value></data>
   <data name="Perf_NetworkDetail" xml:space="preserve"><value>Scale {0} · {1} open connections · download and upload, all active adapters</value></data>
   <data name="Proc_Summary" xml:space="preserve"><value>{0} processes · {1} threads · {2} handles · up {3}</value></data>
   <data name="Proc_EndTask" xml:space="preserve"><value>End task</value></data>
+  <data name="Proc_Restart" xml:space="preserve"><value>Restart</value></data>
+  <data name="Proc_RestartFailed" xml:space="preserve"><value>Windows Explorer could not be restarted</value></data>
   <data name="Proc_EndTree" xml:space="preserve"><value>End process tree</value></data>
   <data name="Proc_Properties" xml:space="preserve"><value>Properties</value></data>
   <data name="Proc_CopyPath" xml:space="preserve"><value>Copy path</value></data>

@@ -11,6 +11,16 @@ internal static class SafetyTests
 {
     public static IEnumerable<(string Name, string Scenario, Action Body)> All()
     {
+        yield return ("restart_is_offered_only_for_the_windows_explorer",
+            "Only the Explorer in the Windows folder counts as the shell to restart, not another program named explorer.exe or an empty path.",
+            () =>
+            {
+                string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                Check.That(ExplorerShell.IsExplorer(Path.Combine(windows, "explorer.exe")), "the Windows Explorer must be recognized");
+                Check.That(ExplorerShell.IsExplorer(Path.Combine(windows.ToUpperInvariant(), "EXPLORER.EXE")), "the path case must not matter");
+                Check.That(!ExplorerShell.IsExplorer(@"C:\Users\Public\explorer.exe"), "an explorer.exe elsewhere must not count");
+                Check.That(!ExplorerShell.IsExplorer(""), "an unknown path must not count");
+            });
         yield return ("helper_result_file_in_temp_is_written_once",
             "An elevated helper may create a new nax….txt file in the user's temporary folder, but a second write to the same path is refused.",
             () => StoreTests.InTempFolder(folder =>

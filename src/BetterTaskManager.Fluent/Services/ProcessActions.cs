@@ -49,6 +49,55 @@ public static class ProcessActions
         return new EndResult(ended, gone, failures);
     });
 
+    /// <summary>
+    /// Restarts Windows Explorer: ends the given Explorer processes, but not the apps started from them, and makes sure
+    /// a shell is running again afterwards. Returns the failures, empty when the restart worked.
+    /// </summary>
+    public static Task<List<string>> RestartExplorerAsync(IReadOnlyList<(int Pid, long CreateTime)> processes) => Task.Run(async () =>
+    {
+        var failures = new List<string>();
+        var ended = new List<Process>();
+        foreach (var (pid, createTime) in processes)
+        {
+            try
+            {
+                Process process = Process.GetProcessById(pid);
+                if (process.StartTime.ToFileTime() != createTime)
+                {
+                    process.Dispose();
+                    continue;
+                }
+                process.Kill(entireProcessTree: false);
+                ended.Add(process);
+            }
+            catch (ArgumentException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            catch (Win32Exception ex)
+            {
+                failures.Add($"PID {pid}: {ex.Message}");
+            }
+        }
+        foreach (Process process in ended)
+        {
+            using (process) process.WaitForExit(5_000);
+        }
+
+        // Winlogon usually starts the shell again within a second or two. The app starts it only when it has not,
+        // because a second Explorer started while the shell runs opens a folder window instead.
+        for (int waited = 0; waited < 10_000; waited += 250)
+        {
+            if (ExplorerShell.IsRunning()) return failures;
+            await Task.Delay(250);
+        }
+        int error = ExplorerShell.StartUnelevated();
+        if (error != 0) failures.Add(new Win32Exception(error).Message);
+        return failures;
+    });
+
     public sealed record ChangeResult(int Changed, List<string> Failures, bool AccessDenied);
 
     /// <summary>Applies a change to every process of a row; processes that exited in the meantime are skipped.</summary>
