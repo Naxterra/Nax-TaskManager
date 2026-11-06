@@ -32,6 +32,7 @@ public sealed partial class StartupPage : Page
     {
         App.Monitor.SearchChanged -= OnSearchChanged;
         App.Monitor.SearchChanged += OnSearchChanged;
+        OnSearchChanged();
         _ = ReloadAsync();
     }
 
@@ -45,7 +46,7 @@ public sealed partial class StartupPage : Page
 
     private async Task ReloadAsync()
     {
-        await ViewModel.LoadAsync(App.Monitor.SearchText);
+        await ViewModel.LoadAsync(() => App.Window.SearchForPage("Startup"));
         RestoreSelection();
     }
 

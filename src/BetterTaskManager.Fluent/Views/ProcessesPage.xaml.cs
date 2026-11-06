@@ -98,9 +98,11 @@ public sealed partial class ProcessesPage : Page
     private void Page_Loaded(object sender, RoutedEventArgs e)
     {
         // Loaded can arrive twice without Unloaded in between; never subscribe twice.
+        App.Monitor.PauseChanged -= OnPauseChanged;
         App.Monitor.Updated -= OnUpdated;
         App.Monitor.SearchChanged -= Refresh;
         App.Monitor.FirewallChanged -= Refresh;
+        App.Monitor.PauseChanged += OnPauseChanged;
         App.Monitor.Updated += OnUpdated;
         App.Monitor.SearchChanged += Refresh;
         App.Monitor.FirewallChanged += Refresh;
@@ -110,10 +112,13 @@ public sealed partial class ProcessesPage : Page
 
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
+        App.Monitor.PauseChanged -= OnPauseChanged;
         App.Monitor.Updated -= OnUpdated;
         App.Monitor.SearchChanged -= Refresh;
         App.Monitor.FirewallChanged -= Refresh;
     }
+
+    private void OnPauseChanged() => PauseButton.IsChecked = App.Monitor.Paused;
 
     private void OnUpdated(MonitorSnapshot snapshot) => Refresh();
 
@@ -182,8 +187,8 @@ public sealed partial class ProcessesPage : Page
         }
         double cpu = members.Sum(process => process.CpuPercent);
         long memory = members.Sum(process => process.PrivateWorkingSet);
-        detailCpu.Add(cpu);
-        detailMemory.Add(memory);
+        detailCpu.Add(cpu, App.Monitor.Latest?.CollectedAtTicks);
+        detailMemory.Add(memory, App.Monitor.Latest?.CollectedAtTicks);
         string publisher = members.Select(process => process.Company).FirstOrDefault(company => company.Length > 0) ?? "";
         string count = target.Processes.Count == 1 ? "PID " + target.Processes[0].Pid : Loc.F("Tile_Processes", target.Processes.Count);
         Details.SetHeader(IconCache.Get(target.Path), target.Name, publisher, count);

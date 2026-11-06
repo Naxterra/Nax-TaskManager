@@ -370,6 +370,9 @@ public sealed class HistoryStore : IDisposable
     /// <summary>Most recent connections first, optionally for one app and/or matching a search text.</summary>
     /// <param name="largestFirst">Return the connections that moved the most data instead of the newest ones.</param>
     public List<ConnectionRecord> ReadConnections(DateTime sinceUtc, string? appKey, string? search, int limit, bool includeDns = true, bool largestFirst = false)
+        => EnumerateConnections(sinceUtc, appKey, search, limit, includeDns, largestFirst).ToList();
+
+    public IEnumerable<ConnectionRecord> EnumerateConnections(DateTime sinceUtc, string? appKey, string? search, int limit, bool includeDns = true, bool largestFirst = false)
     {
         using SqliteCommand command = connection.CreateCommand();
         var sql = new System.Text.StringBuilder("""
@@ -396,11 +399,10 @@ public sealed class HistoryStore : IDisposable
         command.Parameters.AddWithValue("$limit", limit);
         command.CommandText = sql.ToString();
 
-        var records = new List<ConnectionRecord>();
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
         {
-            records.Add(new ConnectionRecord(
+            yield return new ConnectionRecord(
                 reader.GetInt64(0),
                 FromUnixMs(reader.GetInt64(1)),
                 FromUnixMs(reader.GetInt64(2)),
@@ -420,9 +422,8 @@ public sealed class HistoryStore : IDisposable
                 reader.GetString(16),
                 reader.GetString(17),
                 reader.GetInt64(18) != 0,
-                reader.GetInt64(13) == 2));
+                reader.GetInt64(13) == 2);
         }
-        return records;
     }
 
     /// <summary>
@@ -461,30 +462,40 @@ public sealed class HistoryStore : IDisposable
     }
 
     /// <summary>Drop groups seen since <paramref name="sinceUtc"/>, newest first; optionally one app's only.</summary>
-    public List<BlockedRecord> ReadBlocked(DateTime sinceUtc, string? appPath, int limit, bool oursOnly = false)
+    public List<BlockedRecord> ReadBlocked(DateTime sinceUtc, string? appPath, int limit, bool oursOnly = false, string? search = null, Func<string, string>? appName = null)
+        => EnumerateBlocked(sinceUtc, appPath, limit, oursOnly, search, appName).ToList();
+
+    public IEnumerable<BlockedRecord> EnumerateBlocked(DateTime sinceUtc, string? appPath, int limit, bool oursOnly = false, string? search = null, Func<string, string>? appName = null)
     {
-        var records = new List<BlockedRecord>();
         using (SqliteCommand check = connection.CreateCommand())
         {
             check.CommandText = "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'blocked'";
-            if (Convert.ToInt64(check.ExecuteScalar(), CultureInfo.InvariantCulture) == 0) return records;
+            if (Convert.ToInt64(check.ExecuteScalar(), CultureInfo.InvariantCulture) == 0) yield break;
+        }
+        string query = search?.Trim() ?? "";
+        if (query.Length > 0)
+        {
+            connection.CreateFunction<string, string?, string, bool>("blocked_matches", (path, host, address) =>
+                path.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || (host?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                || address.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || (appName?.Invoke(path) ?? Path.GetFileName(path)).Contains(query, StringComparison.CurrentCultureIgnoreCase), isDeterministic: true);
         }
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = """
             SELECT id, first_seen, last_seen, app_path, inbound, protocol, remote_address, remote_host, remote_port, local_port, ours, reason, count
             FROM blocked WHERE last_seen >= $since
-            """ + (appPath is null ? "" : " AND app_path = $path COLLATE NOCASE") + (oursOnly ? " AND ours = 1" : "") + " ORDER BY last_seen DESC LIMIT $limit";
+            """ + (appPath is null ? "" : " AND app_path = $path COLLATE NOCASE") + (oursOnly ? " AND ours = 1" : "") + (query.Length > 0 ? " AND blocked_matches(app_path, remote_host, remote_address)" : "") + " ORDER BY last_seen DESC, id DESC LIMIT $limit";
         command.Parameters.AddWithValue("$since", ToUnixMs(sinceUtc));
         if (appPath is not null) command.Parameters.AddWithValue("$path", appPath);
         command.Parameters.AddWithValue("$limit", limit);
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
         {
-            records.Add(new BlockedRecord(reader.GetInt64(0), FromUnixMs(reader.GetInt64(1)), FromUnixMs(reader.GetInt64(2)), reader.GetString(3),
+            yield return new BlockedRecord(reader.GetInt64(0), FromUnixMs(reader.GetInt64(1)), FromUnixMs(reader.GetInt64(2)), reader.GetString(3),
                 reader.GetInt64(4) != 0, (int)reader.GetInt64(5), reader.GetString(6), reader.IsDBNull(7) ? null : reader.GetString(7),
-                (int)reader.GetInt64(8), (int)reader.GetInt64(9), reader.GetInt64(10) != 0, reader.GetString(11), (int)reader.GetInt64(12)));
+                (int)reader.GetInt64(8), (int)reader.GetInt64(9), reader.GetInt64(10) != 0, reader.GetString(11), (int)reader.GetInt64(12));
         }
-        return records;
     }
 
     /// <summary>When the service last wrote, or null if it never has.</summary>

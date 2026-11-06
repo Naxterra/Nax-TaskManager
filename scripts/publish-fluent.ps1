@@ -24,7 +24,8 @@ if (-not $outputFull.StartsWith($artifactsFull, [System.StringComparison]::Ordin
 
 if (Test-Path -LiteralPath $outputFull) { Remove-Item -LiteralPath $outputFull -Recurse -Force }
 
-dotnet publish $project -c Release -r win-x64 --self-contained false -o $outputFull
+# Published packages omit debugging symbols so local source paths are not distributed.
+dotnet publish $project -c Release -r win-x64 --self-contained false -p:DebugType=None -p:DebugSymbols=false -o $outputFull
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 
 $executable = Join-Path $outputFull "Nax-TaskManager.exe"

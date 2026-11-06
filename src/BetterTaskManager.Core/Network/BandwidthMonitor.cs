@@ -7,7 +7,7 @@ using Microsoft.Diagnostics.Tracing.Session;
 namespace BetterTaskManager.Core.Network;
 
 /// <summary>Bytes moved by one socket, keyed from the owning process's point of view.</summary>
-public readonly record struct SocketKey(int Pid, bool Tcp, int LocalPort, IPAddress RemoteAddress, int RemotePort);
+public readonly record struct SocketKey(int Pid, bool Tcp, IPAddress LocalAddress, int LocalPort, IPAddress RemoteAddress, int RemotePort);
 
 public struct ByteCounts
 {
@@ -25,8 +25,7 @@ public sealed class BandwidthMonitor : IDisposable
     /// <summary>A process seen by the kernel trace; kept after exit so short-lived processes can still be named.</summary>
     /// <param name="StartedUtc">When the trace saw it start; <see cref="DateTime.MinValue"/> for processes already running.</param>
     public readonly record struct TracedProcess(string Name, string Path, DateTime? ExitedUtc, DateTime StartedUtc = default);
-    private static readonly TimeSpan ExitedProcessMemory = TimeSpan.FromMinutes(10);
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, TracedProcess> processes = new();
+    private readonly TracedProcessCache processes;
 
     public const string DefaultSessionName = "NaxTaskManager-Network";
     private static readonly TimeSpan RestartDelay = TimeSpan.FromSeconds(10);
@@ -44,7 +43,15 @@ public sealed class BandwidthMonitor : IDisposable
     /// ETW session names are machine-wide and opening one replaces any session with the same name, so a second
     /// program using the same name silently stops this one. Tests must pass their own name.
     /// </param>
-    public BandwidthMonitor(string sessionName = DefaultSessionName) => this.sessionName = sessionName;
+    public BandwidthMonitor(string sessionName = DefaultSessionName) : this(sessionName, TimeProvider.System) { }
+
+    internal BandwidthMonitor(string sessionName, TimeProvider clock)
+    {
+        this.sessionName = sessionName;
+        processes = new TracedProcessCache(clock);
+    }
+
+    internal TracedProcessCache ProcessCache => processes;
 
     private const int KernelBufferSizeMB = 16;
 
@@ -75,20 +82,18 @@ public sealed class BandwidthMonitor : IDisposable
             session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP | KernelTraceEventParser.Keywords.Process);
 
             KernelTraceEventParser kernel = session.Source.Kernel;
-            kernel.TcpIpSend += data => Add(data.ProcessID, true, false, data.size, data.sport, data.daddr, data.dport);
-            kernel.TcpIpRecv += data => Add(data.ProcessID, true, true, data.size, data.sport, data.daddr, data.dport);
-            kernel.TcpIpSendIPV6 += data => Add(data.ProcessID, true, false, data.size, data.sport, data.daddr, data.dport);
-            kernel.TcpIpRecvIPV6 += data => Add(data.ProcessID, true, true, data.size, data.sport, data.daddr, data.dport);
-            kernel.UdpIpSend += data => Add(data.ProcessID, false, false, data.size, data.sport, data.daddr, data.dport);
-            kernel.UdpIpRecv += data => Add(data.ProcessID, false, true, data.size, data.sport, data.daddr, data.dport);
-            kernel.UdpIpSendIPV6 += data => Add(data.ProcessID, false, false, data.size, data.sport, data.daddr, data.dport);
-            kernel.UdpIpRecvIPV6 += data => Add(data.ProcessID, false, true, data.size, data.sport, data.daddr, data.dport);
+            // The kernel schema uses saddr/sport for the local endpoint on both send and receive events.
+            kernel.TcpIpSend += data => Add(data.ProcessID, true, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.TcpIpRecv += data => Add(data.ProcessID, true, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.TcpIpSendIPV6 += data => Add(data.ProcessID, true, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.TcpIpRecvIPV6 += data => Add(data.ProcessID, true, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.UdpIpSend += data => Add(data.ProcessID, false, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.UdpIpRecv += data => Add(data.ProcessID, false, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.UdpIpSendIPV6 += data => Add(data.ProcessID, false, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.UdpIpRecvIPV6 += data => Add(data.ProcessID, false, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
             kernel.ProcessStart += data => OnProcessStart(data, data.TimeStamp.ToUniversalTime());
             kernel.ProcessDCStart += data => OnProcessStart(data, DateTime.MinValue);
-            kernel.ProcessStop += data =>
-            {
-                if (processes.TryGetValue(data.ProcessID, out TracedProcess known)) processes[data.ProcessID] = known with { ExitedUtc = DateTime.UtcNow };
-            };
+            kernel.ProcessStop += data => processes.Stop(data.ProcessID);
 
             TraceEventSession started = session;
             pump = new Thread(() =>
@@ -130,25 +135,16 @@ public sealed class BandwidthMonitor : IDisposable
     private void OnProcessStart(ProcessTraceData data, DateTime startedUtc)
     {
         if (data.ProcessID <= 4) return;
-        processes[data.ProcessID] = new TracedProcess(data.ImageFileName, BetterTaskManager.Core.Native.DevicePaths.ToDosPath(data.KernelImageFileName), null, startedUtc);
+        processes.Start(data.ProcessID, new TracedProcess(data.ImageFileName, BetterTaskManager.Core.Native.DevicePaths.ToDosPath(data.KernelImageFileName), null, startedUtc));
     }
 
     /// <summary>Name and path of a process the trace saw start, including ones that exited in the last minutes.</summary>
-    public bool TryGetProcess(int pid, out TracedProcess process)
-    {
-        if (!processes.TryGetValue(pid, out process)) return false;
-        if (process.ExitedUtc is { } exited && DateTime.UtcNow - exited > ExitedProcessMemory)
-        {
-            processes.TryRemove(pid, out _);
-            return false;
-        }
-        return true;
-    }
+    public bool TryGetProcess(int pid, out TracedProcess process) => processes.TryGet(pid, out process);
 
-    private void Add(int pid, bool tcp, bool received, int size, int localPort, IPAddress remote, int remotePort)
+    internal void Add(int pid, bool tcp, bool received, int size, IPAddress local, int localPort, IPAddress remote, int remotePort)
     {
         if (size <= 0 || pid <= 0 || IPAddress.IsLoopback(remote)) return;
-        var key = new SocketKey(pid, tcp, localPort, remote, remotePort);
+        var key = new SocketKey(pid, tcp, local, localPort, remote, remotePort);
         lock (gate)
         {
             ref ByteCounts process = ref System.Runtime.InteropServices.CollectionsMarshal.GetValueRefOrAddDefault(byProcess, pid, out _);
@@ -201,6 +197,7 @@ public sealed class BandwidthMonitor : IDisposable
     /// <summary>Returns the bytes counted since the previous call and starts a new interval.</summary>
     public (Dictionary<int, ByteCounts> Processes, Dictionary<SocketKey, ByteCounts> Sockets) Drain()
     {
+        processes.Sweep();
         lock (gate)
         {
             var result = (byProcess, bySocket);

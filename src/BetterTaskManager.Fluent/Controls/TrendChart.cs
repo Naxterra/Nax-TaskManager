@@ -9,7 +9,7 @@ using Windows.Foundation;
 namespace BetterTaskManager.Fluent.Controls;
 
 /// <summary>
-/// A lightweight area chart for the last 60 samples: one filled series plus an optional second line.
+/// A lightweight area chart for the last minute: one filled series plus an optional second line.
 /// Rebuilds two point collections per update, so it stays cheap at one update per second.
 /// </summary>
 public sealed class TrendChart : Grid
@@ -141,14 +141,11 @@ public sealed class TrendChart : Grid
     private PointCollection Points(HistoryBuffer values, double width, double height)
     {
         var points = new PointCollection();
-        int capacity = values.Capacity;
-        double step = width / (capacity - 1);
-        // Newest sample sits at the right edge; history grows leftwards like Task Manager.
-        int offset = capacity - values.Count;
+        // Space samples by elapsed time: changing refresh speed never changes the chart's one-minute range.
         for (int index = 0; index < values.Count; index++)
         {
             double value = Math.Clamp(values[index] / maximum, 0, 1);
-            points.Add(new Point((offset + index) * step, height - value * (height - 2) - 1));
+            points.Add(new Point(width * (1 - Math.Clamp(values.AgeSeconds(index) / values.WindowSeconds, 0, 1)), height - value * (height - 2) - 1));
         }
         return points;
     }

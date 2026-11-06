@@ -95,9 +95,11 @@ public sealed partial class NetworkPage : Page
     private void Page_Loaded(object sender, RoutedEventArgs e)
     {
         // Loaded can arrive twice without Unloaded in between; never subscribe twice.
+        App.Monitor.PauseChanged -= OnPauseChanged;
         App.Monitor.Updated -= OnUpdated;
         App.Monitor.SearchChanged -= Refresh;
         App.Monitor.FirewallChanged -= Refresh;
+        App.Monitor.PauseChanged += OnPauseChanged;
         App.Monitor.Updated += OnUpdated;
         App.Monitor.SearchChanged += Refresh;
         App.Monitor.FirewallChanged += Refresh;
@@ -109,10 +111,13 @@ public sealed partial class NetworkPage : Page
 
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
+        App.Monitor.PauseChanged -= OnPauseChanged;
         App.Monitor.Updated -= OnUpdated;
         App.Monitor.SearchChanged -= Refresh;
         App.Monitor.FirewallChanged -= Refresh;
     }
+
+    private void OnPauseChanged() => PauseButton.IsChecked = App.Monitor.Paused;
 
     private void OnUpdated(MonitorSnapshot snapshot) => Refresh();
 
@@ -199,8 +204,8 @@ public sealed partial class NetworkPage : Page
             trafficDown = new HistoryBuffer(MonitorHost.HistoryLength);
             trafficUp = new HistoryBuffer(MonitorHost.HistoryLength);
         }
-        trafficDown.Add(ViewModel.SelectedDown);
-        trafficUp.Add(ViewModel.SelectedUp);
+        trafficDown.Add(ViewModel.SelectedDown, App.Monitor.Latest?.CollectedAtTicks);
+        trafficUp.Add(ViewModel.SelectedUp, App.Monitor.Latest?.CollectedAtTicks);
         double max = Math.Max(Math.Max(trafficDown.Max(), trafficUp.Max()), 1024);
         TrafficChart.Update(trafficDown, max, trafficUp);
         TrafficDown.Text = Loc.F("Network_TrafficDown", Format.NetworkRate(ViewModel.SelectedDown));
@@ -231,8 +236,8 @@ public sealed partial class NetworkPage : Page
             detailDown = new HistoryBuffer(MonitorHost.HistoryLength);
             detailUp = new HistoryBuffer(MonitorHost.HistoryLength);
         }
-        detailDown.Add(row.Down);
-        detailUp.Add(row.Up);
+        detailDown.Add(row.Down, App.Monitor.Latest?.CollectedAtTicks);
+        detailUp.Add(row.Up, App.Monitor.Latest?.CollectedAtTicks);
         double max = Math.Max(Math.Max(detailDown.Max(), detailUp.Max()), 1024);
         Details.Tile1.Update(Format.NetworkRate(row.Down), "", detailDown, max);
         Details.Tile2.Update(Format.NetworkRate(row.Up), "", detailUp, max);

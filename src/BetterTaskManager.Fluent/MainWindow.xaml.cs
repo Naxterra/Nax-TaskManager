@@ -19,6 +19,7 @@ public sealed partial class MainWindow : Window
     private OverviewPage? overview;
     private PerformancePage? performancePage;
     private RulesPage? rulesPage;
+    private readonly PageSearchState pageSearch = new();
     private static readonly Dictionary<string, Type> Pages = new()
     {
         ["Overview"] = typeof(OverviewPage),
@@ -93,6 +94,15 @@ public sealed partial class MainWindow : Window
             LimitedText.Text = ElevationBar.Message;
             UpdateStatusStrip(snapshot);
         };
+        App.Monitor.PauseChanged += () =>
+        {
+            if (App.Monitor.Latest is { } snapshot) UpdateStatusStrip(snapshot);
+            else
+            {
+                LiveText.Text = Loc.Get(App.Monitor.Paused ? "Status_Paused" : "Status_Waiting");
+                LiveDot.Fill = (Brush)Application.Current.Resources[App.Monitor.Paused ? "StateWarnBrush" : "StateGoodBrush"];
+            }
+        };
         ApplyTheme(App.Settings.Theme);
         WindowRoot.ActualThemeChanged += (_, _) => UpdateCaptionButtons();
         UpdateCaptionButtons();
@@ -158,15 +168,15 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>Opens a page by its tag; "Memory" and "Tuning" open those sections of the Performance page.</summary>
-    public void NavigatePage(string tag)
+    public void NavigatePage(string tag, string? search = null)
     {
         if (tag is "Memory" or "Tuning" or "Cpu")
         {
-            Navigate("Performance");
+            Navigate("Performance", search);
             if (ContentFrame.Content is PerformancePage page) page.ShowSection(tag);
             return;
         }
-        Navigate(tag);
+        Navigate(tag, search);
     }
 
     /// <summary>Opens the Rules page with one app's rules.</summary>
@@ -186,16 +196,14 @@ public sealed partial class MainWindow : Window
     /// <summary>Opens the Processes page with every app, largest first by the given column.</summary>
     public void ShowProcessesSorted(string column)
     {
-        SetSearch("");
-        Navigate("Processes");
+        Navigate("Processes", "");
         if (ContentFrame.Content is ProcessesPage page) page.ShowSorted(column);
     }
 
     /// <summary>Opens the Network page with all apps, the busiest first.</summary>
     public void ShowNetworkBusiest()
     {
-        SetSearch("");
-        Navigate("Network");
+        Navigate("Network", "");
         if (ContentFrame.Content is NetworkPage page) page.ShowBusiest();
     }
 
@@ -206,24 +214,34 @@ public sealed partial class MainWindow : Window
         BrandPanel.Visibility = PaneFooterContent.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    public void SetSearch(string text) => SearchBox.Text = text;
+    internal string SearchForPage(string page) => pageSearch.GetForPage(page);
+
+    public void SetSearch(string text)
+    {
+        pageSearch.Edit(text, fromUser: false);
+        App.Monitor.SearchText = pageSearch.Text;
+        SearchBox.Text = pageSearch.Text;
+    }
 
     public void ShowProcess(BetterTaskManager.Core.Monitoring.ProcessSample process)
     {
-        SetSearch("");
-        Navigate("Processes");
+        Navigate("Processes", "");
         if (ContentFrame.Content is ProcessesPage page) page.ShowProcess(process);
     }
 
     public void ShowAppNetwork(BetterTaskManager.Core.Monitoring.ProcessSample process)
     {
-        SetSearch("");
-        Navigate("Network");
+        Navigate("Network", "");
         if (ContentFrame.Content is NetworkPage page) page.ShowApp(process);
     }
 
-    private void Navigate(string tag)
+    private void Navigate(string tag, string? search = null)
     {
+        if (search is not null)
+        {
+            pageSearch.SetForPage(tag, search);
+            if (currentTag == tag) SetSearch(search);
+        }
         foreach (object item in Navigation.MenuItems)
         {
             if (item is NavigationViewItem navigationItem && Equals(navigationItem.Tag, tag))
@@ -237,6 +255,9 @@ public sealed partial class MainWindow : Window
     private void Navigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         string tag = args.IsSettingsSelected ? "Settings" : (args.SelectedItemContainer?.Tag as string ?? "Overview");
+        currentTag = tag;
+        // The destination must see its own query during Loaded, including when it is a cached page.
+        SetSearch(pageSearch.Select(tag));
         if (Pages.TryGetValue(tag, out Type? page) && ContentFrame.Content?.GetType() != page)
         {
             try
@@ -252,14 +273,10 @@ public sealed partial class MainWindow : Window
                 throw;
             }
         }
-
-        currentTag = tag;
     }
 
     /// <summary>The page shown now, so typing in the search box on a page without a list can open Processes.</summary>
     private string currentTag = "Overview";
-
-    private static bool HasSearchableList(string tag) => tag is "Processes" or "Network" or "Disk" or "History" or "Startup";
 
     private void AppTitleBar_PaneToggleRequested(TitleBar sender, object args)
     {
@@ -269,10 +286,11 @@ public sealed partial class MainWindow : Window
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
-        App.Monitor.SearchText = sender.Text;
+        string destination = pageSearch.Edit(sender.Text, args.Reason == AutoSuggestionBoxTextChangeReason.UserInput);
+        App.Monitor.SearchText = pageSearch.Text;
         // The box stays usable on every page. Typing on a page without a list (Overview, Performance, Rules, Settings)
         // opens Processes, which then shows the search at once.
-        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput && sender.Text.Length > 0 && !HasSearchableList(currentTag)) Navigate("Processes");
+        if (destination != currentTag) Navigate(destination);
     }
 
     private void RestartElevated_Click(object sender, RoutedEventArgs e) => App.RestartElevated();

@@ -18,6 +18,7 @@ Built with WinUI 3 (Fluent design) on .NET 11. Formerly *Better Task Manager*.
 - **Startup apps**: the Run keys and startup folders with publisher and status; disable or enable them like Task Manager.
 - **Replace Windows Task Manager**: an optional setting so the taskbar menu, Ctrl+Shift+Esc and Ctrl+Alt+Del open Nax-TaskManager. It is only available when the app is installed for all users (Program Files), is reversible and is removed on uninstall.
 - **Disk**: like Resource Monitor's Disk tab: every disk with active time, throughput, response time, queue and free space; processes with disk activity (via the History service without administrator rights); and, as administrator, disk activity per file with I/O priority and response time.
+- **CSV export**: save every connection or blocked-log entry matching the current app, period, search and DNS/firewall filters, including results beyond the display limit.
 - **History**: an optional background service records connections and traffic per app for 30 days, and lets the app show per-app network speed without administrator rights.
 - **Keeps written files out of RAM**: the History service removes files of 256 MB or more from the Windows file cache shortly after they were written (game updates, installers, downloads), so they do not occupy memory nobody asked for.
 - English and German interface (follows Windows, or chosen in Settings), light and dark theme, Mica, keyboard shortcuts (Ctrl+0 to Ctrl+7 for the pages, Ctrl+F search).
@@ -56,6 +57,7 @@ The History service stores its database in `C:\ProgramData\NaxTaskManager`. Ever
 ## Build from source
 
 ```powershell
+scripts\test.ps1                # build + all seven regression runners
 dotnet build BetterTaskManager.slnx -c Release
 scripts\publish-fluent.ps1      # portable folder + ZIP in artifacts\
 scripts\build-installer.ps1     # Inno Setup installer + SHA256SUMS

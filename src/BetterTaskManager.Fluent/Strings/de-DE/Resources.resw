@@ -636,7 +636,7 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
     <value>Anwendung untersuchen</value>
   </data>
   <data name="Design_LastSamples" xml:space="preserve">
-    <value>Letzte 60 Messwerte · 0–100%</value>
+    <value>Letzte Minute · 0–100%</value>
   </data>
   <data name="Design_Live" xml:space="preserve">
     <value>LIVE-ÜBERWACHUNG</value>
@@ -814,7 +814,7 @@ Windows sendet Ping-Anfragen selbst, daher wirken ICMP-Regeln nicht auf Ping.</v
   <data name="Perf_Threads" xml:space="preserve"><value>Threads</value></data>
   <data name="Perf_Handles" xml:space="preserve"><value>Handles</value></data>
   <data name="Perf_Uptime" xml:space="preserve"><value>Betriebszeit {0}</value></data>
-  <data name="Perf_CpuHistory" xml:space="preserve"><value>CPU-Auslastung, letzte 60 Messwerte</value></data>
+  <data name="Perf_CpuHistory" xml:space="preserve"><value>CPU-Auslastung, letzte Minute</value></data>
   <data name="Perf_AllByCpu" xml:space="preserve"><value>Alle Prozesse nach CPU</value></data>
   <data name="Perf_CpuApps" xml:space="preserve"><value>Was die CPU gerade nutzt</value></data>
   <data name="Perf_CpuAppsNote" xml:space="preserve"><value>Apps mit allen ihren Prozessen, nach CPU-Last sortiert. Ein Klick zeigt die App unter Prozesse.</value></data>
@@ -936,4 +936,9 @@ Erstmals {2}, zuletzt {3}</value></data>
   <data name="RulesPage_DamagedReset" xml:space="preserve"><value>Regeln zurücksetzen</value></data>
   <data name="Replace_NeedsMachineInstall" xml:space="preserve"><value>Nur möglich, wenn Nax-TaskManager für alle Benutzer installiert ist. Diese Kopie liegt in einem Ordner, den Sie ohne Administratorrechte ändern können, und der Task-Manager startet auch mit Administratorrechten.</value></data>
   <data name="Replace_OnUnsafe" xml:space="preserve"><value>An, aber diese Kopie liegt in einem Ordner, den Sie ohne Administratorrechte ändern können. Schalten Sie die Ersetzung aus, oder installieren Sie Nax-TaskManager für alle Benutzer.</value></data>
+  <data name="Export_Button" xml:space="preserve"><value>CSV exportieren</value></data>
+  <data name="Export_Csv" xml:space="preserve"><value>CSV-Dateien</value></data>
+  <data name="Export_Failed" xml:space="preserve"><value>Export fehlgeschlagen</value></data>
+  <data name="Export_NoHistory" xml:space="preserve"><value>Es ist keine Verlaufsdatenbank verfügbar.</value></data>
+  <data name="Blocked_Limited" xml:space="preserve"><value>Die neuesten {0} passenden Gruppen werden angezeigt. Der CSV-Export enthält alle Treffer.</value></data>
 </root>

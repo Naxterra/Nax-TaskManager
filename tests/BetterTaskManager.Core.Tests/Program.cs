@@ -8,6 +8,9 @@ var suites = new (string File, IEnumerable<(string Name, string Scenario, Action
     ("StoreTests.cs", StoreTests.All()),
     ("SafetyTests.cs", SafetyTests.All()),
     ("HelperTests.cs", HelperTests.All()),
+    ("ReviewRegressionTests.cs", ReviewRegressionTests.All()),
+    ("RecorderRegressionTests.cs", RecorderRegressionTests.All()),
+    ("NavigationSearchTests.cs", NavigationSearchTests.All()),
 };
 
 int failures = 0, count = 0;
@@ -30,7 +33,7 @@ foreach (var (file, tests) in suites)
         Console.WriteLine($"{file}::{name} | {scenario} | {result}");
     }
 }
-Console.WriteLine(failures == 0 ? "All tests passed." : $"{failures} of {count} tests failed.");
+Console.WriteLine(failures == 0 ? $"All {count} tests passed." : $"{failures} of {count} tests failed.");
 return failures;
 
 namespace BetterTaskManager.Core.Tests

@@ -7,6 +7,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/BetterTaskManager.Fluent/Services/AppSettings.cs" Link="AppSettings.cs" />
+    <Compile Include="../../src/BetterTaskManager.Fluent/Services/HistoryBuffer.cs" Link="HistoryBuffer.cs" />
+    <Compile Include="../../src/BetterTaskManager.Fluent/Services/BlockedLogRows.cs" Link="BlockedLogRows.cs" />
+    <Compile Include="../../src/BetterTaskManager.Fluent/Services/PageSearchState.cs" Link="PageSearchState.cs" />
+    <Compile Include="../../src/BetterTaskManager.Fluent/Services/SearchableListLoader.cs" Link="SearchableListLoader.cs" />
     <ProjectReference Include="../../src/BetterTaskManager.Core/BetterTaskManager.Core.csproj" />
   </ItemGroup>
 </Project>

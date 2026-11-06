@@ -17,7 +17,7 @@ namespace BetterTaskManager.Fluent.Views;
 /// </summary>
 internal sealed class BlockedLogView : Grid
 {
-    private static readonly Dictionary<string, string> Names = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> Names = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>The service's database; tests pass another one with --history-db.</summary>
     private static readonly string Database = Environment.GetCommandLineArgs() is var args && Array.IndexOf(args, "--history-db") is int index and >= 0 && index + 1 < args.Length
         ? args[index + 1] : HistoryStore.DefaultPath;
@@ -26,10 +26,11 @@ internal sealed class BlockedLogView : Grid
     private readonly TextBox search = new() { MinWidth = 220 };
     private readonly TextBlock summary = new() { TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel rows = new() { Spacing = 4 };
+    private readonly BlockedLogRows<UIElement> rowCache = new();
     private readonly Grid empty = new();
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly Action<string> openApp;
-    private bool loading;
+    private bool loading, reloadPending;
 
     public BlockedLogView(Action<string> openApp)
     {
@@ -56,6 +57,26 @@ internal sealed class BlockedLogView : Grid
         filters.Children.Add(range);
         filters.Children.Add(search);
         filters.Children.Add(othersLabel);
+        var export = new Button { Content = Loc.Get("Export_Button") };
+        export.Click += async (_, _) =>
+        {
+            DateTime since = DateTime.UtcNow - Range;
+            bool oursOnly = !others.IsOn;
+            string query = search.Text.Trim();
+            string? path = null;
+            export.IsEnabled = false;
+            try
+            {
+                await CsvExportDialog.SaveAsync(XamlRoot, "blocked-connections", writer =>
+                {
+                    using HistoryStore? store = HistoryStore.OpenReadOnly(Database);
+                    if (store is null) throw new IOException(Loc.Get("Export_NoHistory"));
+                    CsvExport.Blocked(writer, store.EnumerateBlocked(since, path, int.MaxValue, oursOnly, query, AppName));
+                });
+            }
+            finally { export.IsEnabled = true; }
+        };
+        filters.Children.Add(export);
         Children.Add(filters);
 
         summary.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
@@ -76,7 +97,7 @@ internal sealed class BlockedLogView : Grid
     /// <summary>Shows only one app's drops; used by "Show all" in the editor.</summary>
     public void FilterApp(string path)
     {
-        search.Text = AppName(path);
+        search.Text = path;
         _ = LoadAsync();
     }
 
@@ -84,38 +105,41 @@ internal sealed class BlockedLogView : Grid
 
     private async Task LoadAsync()
     {
-        if (loading || !IsLoaded) return;
+        if (!IsLoaded) return;
+        if (loading) { reloadPending = true; return; }
         loading = true;
         try
         {
-            DateTime since = DateTime.UtcNow - Range;
-            bool oursOnly = !others.IsOn;
-            List<BlockedRecord>? records = await Task.Run(() => Read(since, null, 500, oursOnly));
-            string query = search.Text.Trim();
-            List<BlockedRecord> shown = (records ?? []).Where(record => query.Length == 0
-                || AppName(record.AppPath).Contains(query, StringComparison.CurrentCultureIgnoreCase)
-                || record.AppPath.Contains(query, StringComparison.OrdinalIgnoreCase)
-                || (record.RemoteHost ?? "").Contains(query, StringComparison.OrdinalIgnoreCase)
-                || record.RemoteAddress.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
-            rows.Children.Clear();
-            foreach (BlockedRecord record in shown.Take(300)) rows.Children.Add(Row(record, showApp: true, openApp));
-            summary.Text = records is null ? "" : Loc.F("Blocked_Summary", Format.Count(shown.Sum(record => record.Count)), Format.Count(shown.Select(record => record.AppPath.ToLowerInvariant()).Distinct().Count()));
-            empty.Children.Clear();
-            if (shown.Count == 0) empty.Children.Add(EmptyFor(records is null, query.Length > 0));
+            do
+            {
+                reloadPending = false;
+                DateTime since = DateTime.UtcNow - Range;
+                bool oursOnly = !others.IsOn;
+                string query = search.Text.Trim();
+                string? path = null;
+                List<BlockedRecord>? records = await Task.Run(() => Read(since, path, 301, oursOnly, query));
+                if (!IsLoaded) return;
+                if (reloadPending) continue;
+                var shown = rowCache.Apply(rows.Children, records ?? [], record => When(record.LastSeen),
+                    model => Row(model.Record, showApp: true, openApp), (view, model) => UpdateRow((Button)view, model, openApp));
+                summary.Text = records is null ? "" : Loc.F("Blocked_Summary", Format.Count(shown.Sum(record => record.Count)),
+                    Format.Count(shown.Select(record => record.AppPath).Distinct(StringComparer.OrdinalIgnoreCase).Count()))
+                    + (records.Count > 300 ? " " + Loc.F("Blocked_Limited", 300) : "");
+                empty.Children.Clear();
+                if (shown.Count == 0) empty.Children.Add(EmptyFor(records is null, query.Length > 0 || path is not null));
+            }
+            while (reloadPending);
         }
-        finally
-        {
-            loading = false;
-        }
+        finally { loading = false; }
     }
 
     /// <summary>The service's records, or null when there is no history database to read.</summary>
-    public static List<BlockedRecord>? Read(DateTime sinceUtc, string? appPath, int limit, bool oursOnly)
+    public static List<BlockedRecord>? Read(DateTime sinceUtc, string? appPath, int limit, bool oursOnly, string? search = null)
     {
         try
         {
             using HistoryStore? store = HistoryStore.OpenReadOnly(Database);
-            return store?.ReadBlocked(sinceUtc, appPath, limit, oursOnly);
+            return store?.ReadBlocked(sinceUtc, appPath, limit, oursOnly, search, AppName);
         }
         catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or IOException or UnauthorizedAccessException)
         {
@@ -197,9 +221,37 @@ internal sealed class BlockedLogView : Grid
         string tip = Loc.F("Blocked_Tip", AppName(record.AppPath), record.AppPath, record.FirstSeen.ToLocalTime().ToString("g"), record.LastSeen.ToLocalTime().ToString("g"));
         ToolTipService.SetToolTip(button, tip);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, AppName(record.AppPath) + ", " + remote + ", " + reason);
-        string path = record.AppPath;
-        button.Click += (_, _) => openApp(path);
+        button.Tag = new RowState(record, count, time, showApp);
+        button.Click += (_, _) => openApp(((RowState)button.Tag).Record.AppPath);
         return button;
+    }
+
+    private sealed record RowState(BlockedRecord Record, TextBlock Count, TextBlock Time, bool ShowApp);
+
+    private static void UpdateRow(Button button, BlockedRowModel model, Action<string> openApp)
+    {
+        var state = (RowState)button.Tag;
+        BlockedRecord record = model.Record;
+        // Counts and relative times change most often. Keep their text blocks and the rest of the row tree alive.
+        if (model.HasSameContentAs(state.Record))
+        {
+            string count = "×" + Format.Count(record.Count);
+            if (state.Count.Text != count) state.Count.Text = count;
+            if (state.Time.Text != model.Time) state.Time.Text = model.Time;
+            button.Tag = state with { Record = record };
+        }
+        else
+        {
+            Button replacement = Row(record, state.ShowApp, openApp);
+            object content = replacement.Content;
+            replacement.Content = null;
+            button.Content = content;
+            button.Tag = replacement.Tag;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button,
+                Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(replacement));
+        }
+        ToolTipService.SetToolTip(button, Loc.F("Blocked_Tip", AppName(record.AppPath), record.AppPath,
+            record.FirstSeen.ToLocalTime().ToString("g"), record.LastSeen.ToLocalTime().ToString("g")));
     }
 
     /// <summary>The remote end with port and protocol; incoming drops name the local port they were aimed at.</summary>

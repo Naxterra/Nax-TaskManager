@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.0.0-alpha.48 - 2026-11-06
+
+- Keep searches separate for each page so a process search does not hide Startup apps or Network connections. Startup reloads apply the latest query, including when the user switches pages during a read.
+- Retain blocked groups across failed database writes and grouping-window replacements, including updates to existing records.
+- Keep TCP connections with different local addresses separate throughout collection, traffic rates, the service feed and history. Preserve UDP grouping and support older feed messages.
+- Sweep expired traced process identities during monitoring without removing a replacement process that reused the PID.
+- Reuse unchanged blocked-log rows and update their counts and relative times in place.
+- Repair null layout settings on load, keeping valid preferences.
+- Search the entire selected blocked-log period before limiting the displayed results. Filter changes during a read are applied afterwards, and the view says when results are limited.
+- Expire network feed samples using elapsed time so correcting the clock cannot retain stale traffic rates.
+- Stop a disk trace even when its page is left or the app is closed during startup.
+- Sort the combined connection table across all apps by host, speed or state.
+- Update the pause indicator and page buttons immediately when monitoring is paused or resumed.
+- Export the full filtered connection history and blocked log to CSV, including rows beyond the on-screen limit. Exports stream to disk, preserve Unicode, and keep an existing destination intact if writing fails.
+- Chart a fixed minute using elapsed timestamps at every refresh speed; redrawing the same snapshot does not add samples.
+- Run all seven test runners locally with `scripts/test.ps1`. Added regression checks for the fixes and removed the WinRT collection-expression build warning.
+- Omit debugging symbols from published packages to avoid distributing local source paths.
+
 ## 2.0.0-alpha.47 - 2026-11-02
 
 - **Windows Explorer can be restarted from the process menu.** Right-click Windows Explorer on the Processes page and choose Restart. It ends the Explorer processes of your own session, but not the Explorer of other signed-in users, the helper processes listed with it or the programs started from it. Windows normally starts the taskbar and desktop again by itself. If that has not happened after ten seconds, the app starts Explorer itself with the rights the shell normally has, so it does not get administrator rights when the app runs as administrator.

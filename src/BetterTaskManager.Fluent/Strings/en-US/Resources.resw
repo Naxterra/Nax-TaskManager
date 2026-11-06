@@ -636,7 +636,7 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
     <value>Inspect application</value>
   </data>
   <data name="Design_LastSamples" xml:space="preserve">
-    <value>Last 60 samples · 0–100%</value>
+    <value>Last minute · 0–100%</value>
   </data>
   <data name="Design_Live" xml:space="preserve">
     <value>LIVE MONITORING</value>
@@ -814,7 +814,7 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="Perf_Threads" xml:space="preserve"><value>Threads</value></data>
   <data name="Perf_Handles" xml:space="preserve"><value>Handles</value></data>
   <data name="Perf_Uptime" xml:space="preserve"><value>Up for {0}</value></data>
-  <data name="Perf_CpuHistory" xml:space="preserve"><value>CPU usage, last 60 samples</value></data>
+  <data name="Perf_CpuHistory" xml:space="preserve"><value>CPU usage, last minute</value></data>
   <data name="Perf_AllByCpu" xml:space="preserve"><value>All processes by CPU</value></data>
   <data name="Perf_CpuApps" xml:space="preserve"><value>What is using the CPU</value></data>
   <data name="Perf_CpuAppsNote" xml:space="preserve"><value>Apps with all their processes, sorted by CPU load. Click one to see it on the Processes page.</value></data>
@@ -936,4 +936,9 @@ First {2}, last {3}</value></data>
   <data name="RulesPage_DamagedReset" xml:space="preserve"><value>Reset rules</value></data>
   <data name="Replace_NeedsMachineInstall" xml:space="preserve"><value>Only possible when Nax-TaskManager is installed for all users. This copy is in a folder you can change without administrator rights, and Task Manager also starts with administrator rights.</value></data>
   <data name="Replace_OnUnsafe" xml:space="preserve"><value>On, but this copy is in a folder you can change without administrator rights. Turn the replacement off, or install Nax-TaskManager for all users.</value></data>
+  <data name="Export_Button" xml:space="preserve"><value>Export CSV</value></data>
+  <data name="Export_Csv" xml:space="preserve"><value>CSV files</value></data>
+  <data name="Export_Failed" xml:space="preserve"><value>Could not export</value></data>
+  <data name="Export_NoHistory" xml:space="preserve"><value>No history database is available.</value></data>
+  <data name="Blocked_Limited" xml:space="preserve"><value>Showing the latest {0} matching groups. Export CSV to save every match.</value></data>
 </root>

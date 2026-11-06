@@ -82,6 +82,7 @@ public sealed class FlowSample
 {
     public required int Pid { get; init; }
     public required string Protocol { get; init; }
+    public string LocalAddress { get; init; } = "";
     public required int LocalPort { get; init; }
     public required string RemoteAddress { get; init; }
     public required int RemotePort { get; init; }
@@ -157,6 +158,8 @@ public sealed record VolumeSample(string Letter, string Label, long Free, long T
 
 public sealed class MonitorSnapshot
 {
+    /// <summary>Monotonic collection time used by charts, unaffected by wall-clock corrections.</summary>
+    public long CollectedAtTicks { get; init; } = global::System.Diagnostics.Stopwatch.GetTimestamp();
     public required DateTime Timestamp { get; init; }
     public required IReadOnlyList<ProcessSample> Processes { get; init; }
     public required IReadOnlyList<ConnectionSample> Connections { get; init; }

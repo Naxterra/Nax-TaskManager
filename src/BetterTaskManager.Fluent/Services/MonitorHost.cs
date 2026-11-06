@@ -21,8 +21,11 @@ public sealed class MonitorHost : IDisposable
     private string searchText = "";
     private bool viewSuspended;
 
+    private readonly Core.BackgroundActivity diskActivity;
+
     public MonitorHost(AppSettings settings)
     {
+        diskActivity = new Core.BackgroundActivity(DiskFiles.Start, DiskFiles.Stop, CrashLog.Write);
         this.settings = settings;
         engine.Interval = TimeSpan.FromMilliseconds(Math.Clamp(settings.RefreshIntervalMilliseconds, 250, 10000));
         engine.SnapshotReady += OnSnapshotReady;
@@ -39,6 +42,7 @@ public sealed class MonitorHost : IDisposable
     public event Action<MonitorSnapshot>? Updated;
     /// <summary>A collection failed; the numbers on screen are from the last good snapshot until the next one arrives.</summary>
     public event Action<string>? CollectionFailed;
+    public event Action? PauseChanged;
     public event Action? SearchChanged;
     public event Action? FirewallChanged;
 
@@ -74,7 +78,12 @@ public sealed class MonitorHost : IDisposable
     public bool Paused
     {
         get => engine.Paused;
-        set => engine.Paused = value;
+        set
+        {
+            if (engine.Paused == value) return;
+            engine.Paused = value;
+            PauseChanged?.Invoke();
+        }
     }
 
     /// <summary>
@@ -131,21 +140,21 @@ public sealed class MonitorHost : IDisposable
         Latest = snapshot;
         ViewModels.ProcessTree.SetSnapshot(snapshot);
         SystemSample system = snapshot.System;
-        if (system.CpuSampled) CpuHistory.Add(system.CpuPercent);
-        MemoryHistory.Add(system.Memory.LoadPercent);
+        if (system.CpuSampled) CpuHistory.Add(system.CpuPercent, snapshot.CollectedAtTicks);
+        MemoryHistory.Add(system.Memory.LoadPercent, snapshot.CollectedAtTicks);
         if (system.NetworkSampled)
         {
-            ReceiveHistory.Add(system.NetworkReceiveBytesPerSecond);
-            SendHistory.Add(system.NetworkSendBytesPerSecond);
+            ReceiveHistory.Add(system.NetworkReceiveBytesPerSecond, snapshot.CollectedAtTicks);
+            SendHistory.Add(system.NetworkSendBytesPerSecond, snapshot.CollectedAtTicks);
         }
         if (system.Disks.Count > 0)
         {
-            DiskReadHistory.Add(system.Disks.Sum(disk => disk.ReadPerSecond));
-            DiskWriteHistory.Add(system.Disks.Sum(disk => disk.WritePerSecond));
-            DiskActiveHistory.Add(system.Disks.Max(disk => disk.ActivePercent));
+            DiskReadHistory.Add(system.Disks.Sum(disk => disk.ReadPerSecond), snapshot.CollectedAtTicks);
+            DiskWriteHistory.Add(system.Disks.Sum(disk => disk.WritePerSecond), snapshot.CollectedAtTicks);
+            DiskActiveHistory.Add(system.Disks.Max(disk => disk.ActivePercent), snapshot.CollectedAtTicks);
         }
-        if (system.GpuAvailable) GpuHistory.Add(system.GpuPercent);
-        ConnectionHistory.Add(snapshot.Connections.Count(connection => connection.State == "Established"));
+        if (system.GpuAvailable) GpuHistory.Add(system.GpuPercent, snapshot.CollectedAtTicks);
+        ConnectionHistory.Add(snapshot.Connections.Count(connection => connection.State == "Established"), snapshot.CollectedAtTicks);
 
         if (viewSuspended) return;
         try
@@ -324,8 +333,11 @@ public sealed class MonitorHost : IDisposable
     /// <summary>Per-file disk trace for the Disk page; runs only while its file list is shown (administrator only).</summary>
     public BetterTaskManager.Core.Disk.DiskFileActivity DiskFiles { get; } = new();
 
+    public void SetDiskTraceEnabled(bool enabled) => diskActivity.SetEnabled(enabled);
+
     public void Dispose()
     {
+        diskActivity.Dispose();
         DiskFiles.Dispose();
         engine.Dispose();
     }
@@ -337,39 +349,4 @@ public enum NetworkAccess
     Open,
     Rules,
     Blocked
-}
-
-/// <summary>Fixed-size ring of recent values for the trend charts.</summary>
-public sealed class HistoryBuffer
-{
-    private readonly double[] values;
-    private int start;
-
-    public HistoryBuffer(int capacity) => values = new double[capacity];
-
-    public int Count { get; private set; }
-    public int Capacity => values.Length;
-
-    public void Add(double value)
-    {
-        if (Count < values.Length)
-        {
-            values[(start + Count) % values.Length] = value;
-            Count++;
-        }
-        else
-        {
-            values[start] = value;
-            start = (start + 1) % values.Length;
-        }
-    }
-
-    public double this[int index] => values[(start + index) % values.Length];
-
-    public double Max()
-    {
-        double max = 0;
-        for (int index = 0; index < Count; index++) max = Math.Max(max, this[index]);
-        return max;
-    }
 }

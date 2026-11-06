@@ -113,7 +113,7 @@ public sealed class ColumnLayout : ObservableObject
         defaultOrder = movable ?? [];
         // Keep the saved order of known columns; columns added in a later version join at their default place.
         order = [];
-        if (savedOrders is not null && savedOrders.TryGetValue(prefix, out string? text))
+        if (savedOrders is not null && savedOrders.TryGetValue(prefix, out string? text) && !string.IsNullOrWhiteSpace(text))
         {
             order.AddRange(text.Split(',').Where(defaultOrder.Contains).Distinct());
         }

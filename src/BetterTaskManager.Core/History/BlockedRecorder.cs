@@ -14,6 +14,7 @@ public sealed class BlockedRecorder(HistoryStore store, Func<string, string?> re
     private const int MaxGroups = 2000;
 
     private readonly Dictionary<GroupKey, Group> groups = new();
+    private readonly List<Group> endedPending = new();
 
     /// <summary>Adds drops; <paramref name="pathCase"/> turns the engine's lower-case path into the file's own spelling where known.</summary>
     public void Record(IEnumerable<BlockedEvent> events, Func<string, string> pathCase)
@@ -29,6 +30,7 @@ public sealed class BlockedRecorder(HistoryStore store, Func<string, string?> re
                 group.Dirty = true;
                 continue;
             }
+            if (group is { Dirty: true }) endedPending.Add(group);
             groups[key] = new Group(path, drop) { Dirty = true };
         }
     }
@@ -36,7 +38,7 @@ public sealed class BlockedRecorder(HistoryStore store, Func<string, string?> re
     /// <summary>Writes new and grown groups and forgets groups that ended more than 10 minutes ago.</summary>
     public void Flush(DateTime nowUtc)
     {
-        List<Group> dirty = groups.Values.Where(group => group.Dirty).ToList();
+        List<Group> dirty = groups.Values.Where(group => group.Dirty).Concat(endedPending).ToList();
         if (dirty.Count > 0)
         {
             var records = dirty.Select(group => new BlockedRecord(group.Id, group.FirstSeen, group.LastSeen, group.Path, group.Event.Inbound, group.Event.Protocol,
@@ -49,8 +51,9 @@ public sealed class BlockedRecorder(HistoryStore store, Func<string, string?> re
                 if (group.Id == 0) group.Id = ids[next++];
                 group.Dirty = false;
             }
+            endedPending.Clear();
         }
-        foreach (var (key, group) in groups.Where(pair => nowUtc - pair.Value.LastSeen > GroupWindow || groups.Count > MaxGroups && !pair.Value.Dirty).ToList())
+        foreach (var (key, group) in groups.Where(pair => !pair.Value.Dirty && (nowUtc - pair.Value.LastSeen > GroupWindow || groups.Count > MaxGroups)).ToList())
         {
             groups.Remove(key);
         }

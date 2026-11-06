@@ -53,7 +53,7 @@ public sealed class AppSettings
             string path = File.Exists(FilePath) ? FilePath : LegacyFilePath;
             if (File.Exists(path))
             {
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), JsonOptions) ?? new AppSettings();
+                return FromJson(File.ReadAllText(path));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
@@ -61,6 +61,28 @@ public sealed class AppSettings
             // Corrupt or unreadable settings fall back to defaults.
         }
         return new AppSettings();
+    }
+
+    // JSON can contain null even for non-nullable properties; repair individual values, keeping other preferences.
+    internal static AppSettings FromJson(string json)
+    {
+        var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+        settings.ColumnWidths = (settings.ColumnWidths ?? []).Where(pair => double.IsFinite(pair.Value) && pair.Value > 0)
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        settings.ColumnOrder = (settings.ColumnOrder ?? []).Where(pair => !string.IsNullOrWhiteSpace(pair.Value))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        settings.RefreshIntervalMilliseconds = Math.Clamp(settings.RefreshIntervalMilliseconds, 250, 10000);
+        settings.WindowWidth = Math.Clamp(settings.WindowWidth, 1024, 16384);
+        settings.WindowHeight = Math.Clamp(settings.WindowHeight, 700, 16384);
+        settings.Theme ??= "System";
+        settings.Language ??= "System";
+        settings.PerformanceSection ??= "Memory";
+        settings.ProcessSortColumn ??= "Memory";
+        settings.NetworkSortColumn ??= "Name";
+        settings.HistoryAppSortColumn ??= "Data";
+        settings.HistoryLogSortColumn ??= "Time";
+        settings.DetailsSortColumn ??= "Name";
+        return settings;
     }
 
     public void Save()

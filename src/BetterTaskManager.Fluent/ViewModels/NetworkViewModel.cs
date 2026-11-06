@@ -294,30 +294,30 @@ public sealed class NetworkViewModel : ObservableObject
         var keyCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         // An app whose sockets are all closed for a moment keeps the selection; its table is just empty until then.
         bool all = SelectedAppKey == AllAppsKey;
-        foreach (var group in groups)
+        var selectedGroups = groups.Where(group => all || group.Key == SelectedAppKey).ToList();
+        var groupByConnection = selectedGroups.SelectMany(group => group.Connections.Select(connection => (connection, group)))
+            .ToDictionary(pair => pair.connection, pair => pair.group);
+        foreach (ConnectionSample connection in ConnectionOrdering.Sort(groupByConnection.Keys, SortColumn, SortDescending))
         {
-            if (!all && group.Key != SelectedAppKey) continue;
-            foreach (ConnectionSample connection in SortConnections(group.Connections))
-            {
-                // Several sockets can share one endpoint (e.g. mDNS on UDP 5353); keep row keys unique.
-                processes.TryGetValue(connection.Pid, out ProcessSample? connectionOwner);
-                string key = $"{group.Key}|{connection.Pid}|{connectionOwner?.CreateTime}|{connection.Protocol}|{connection.LocalAddress}|{connection.LocalPort}|{connection.RemoteAddress}|{connection.RemotePort}";
-                int occurrence = keyCounts[key] = keyCounts.GetValueOrDefault(key) + 1;
-                connectionRows.Add(new NetworkRowData(RowKind.Child,
-                    occurrence == 1 ? key : key + "#" + occurrence,
-                    connection.Protocol, "PID " + connection.Pid, group.Path,
-                    Endpoint(connection.LocalAddress, connection.LocalPort),
-                    connection.Protocol == "UDP" ? "*"
-                        : connection.RemoteHost is { } host ? $"{(connection.RemoteHostFromOtherApp ? "≈ " : "")}{host}:{connection.RemotePort}" : Endpoint(connection.RemoteAddress, connection.RemotePort),
-                    ScopeText(connection),
-                    Loc.State(connection.State), "", "",
-                    measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
-                        ? Speed(connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond) : "",
-                    RemoteDetail(connection),
-                    false, false, false,
-                    connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond, 0, 0, 0, 0, connection.Pid,
-                    connection.Protocol == "UDP" ? "" : Endpoint(connection.RemoteAddress, connection.RemotePort), connection.State, group.Name, Source: connection));
-            }
+            var group = groupByConnection[connection];
+            // Several sockets can share one endpoint (e.g. mDNS on UDP 5353); keep row keys unique.
+            processes.TryGetValue(connection.Pid, out ProcessSample? connectionOwner);
+            string key = $"{group.Key}|{connection.Pid}|{connectionOwner?.CreateTime}|{connection.Protocol}|{connection.LocalAddress}|{connection.LocalPort}|{connection.RemoteAddress}|{connection.RemotePort}";
+            int occurrence = keyCounts[key] = keyCounts.GetValueOrDefault(key) + 1;
+            connectionRows.Add(new NetworkRowData(RowKind.Child,
+                occurrence == 1 ? key : key + "#" + occurrence,
+                connection.Protocol, "PID " + connection.Pid, group.Path,
+                Endpoint(connection.LocalAddress, connection.LocalPort),
+                connection.Protocol == "UDP" ? "*"
+                    : connection.RemoteHost is { } host ? $"{(connection.RemoteHostFromOtherApp ? "≈ " : "")}{host}:{connection.RemotePort}" : Endpoint(connection.RemoteAddress, connection.RemotePort),
+                ScopeText(connection),
+                Loc.State(connection.State), "", "",
+                measured && connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0
+                    ? Speed(connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond) : "",
+                RemoteDetail(connection),
+                false, false, false,
+                connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond, 0, 0, 0, 0, connection.Pid,
+                connection.Protocol == "UDP" ? "" : Endpoint(connection.RemoteAddress, connection.RemotePort), connection.State, group.Name, Source: connection));
         }
         if (all) (SelectedDown, SelectedUp) = (allDown, allUp);
         else
@@ -387,33 +387,7 @@ public sealed class NetworkViewModel : ObservableObject
         return best ?? "￿";
     }
 
-    /// <summary>
-    /// Connections keep a fixed order (state, host, ports) unless the page is sorted by host or speed, so a group's
-    /// rows do not reshuffle every refresh.
-    /// </summary>
-    private IEnumerable<ConnectionSample> SortConnections(List<ConnectionSample> connections)
-    {
-        static int StateRank(ConnectionSample connection) => connection.State == "Established" ? 0 : connection.State == "Listening" ? 2 : 1;
-        static string Host(ConnectionSample connection) => connection.RemoteHost ?? connection.RemoteAddress;
-        IOrderedEnumerable<ConnectionSample> ordered = SortColumn switch
-        {
-            SortSpeed => SortDescending
-                ? connections.OrderByDescending(connection => connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond)
-                : connections.OrderBy(connection => connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond),
-            SortRemote => SortDescending
-                ? connections.OrderByDescending(Host, StringComparer.OrdinalIgnoreCase)
-                : connections.OrderBy(Host, StringComparer.OrdinalIgnoreCase),
-            _ => connections.OrderBy(StateRank)
-        };
-        return ordered
-            .ThenBy(StateRank)
-            .ThenBy(Host, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(connection => connection.RemotePort)
-            .ThenBy(connection => connection.Protocol, StringComparer.Ordinal)
-            .ThenBy(connection => connection.LocalPort);
-    }
-
-    /// <summary>"Internet", "LAN · in"…; blank for listeners and UDP sockets, which have no remote side.</summary>
+    /// <summary>Scope and direction of the remote endpoint.</summary>
     private static string ScopeText(ConnectionSample connection)
     {
         string scope = Loc.Scope(IpScopes.Label(connection.Scope));

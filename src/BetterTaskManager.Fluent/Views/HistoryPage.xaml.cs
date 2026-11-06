@@ -18,6 +18,8 @@ public sealed partial class HistoryPage : Page
     {
         ViewModel = new HistoryViewModel(App.Settings);
         InitializeComponent();
+        ToolTipService.SetToolTip(ExportButton, Loc.Get("Export_Button"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ExportButton, Loc.Get("Export_Button"));
         Loaded += Page_Loaded;
         Unloaded += Page_Unloaded;
         logReorder = new ColumnReorder(LogHeader, ViewModel.Layout);
@@ -204,6 +206,14 @@ public sealed partial class HistoryPage : Page
         if (ViewModel is null) return;
         ViewModel.Range = (HistoryRange)Math.Max(0, RangeBox.SelectedIndex);
         _ = LoadAsync();
+    }
+
+    private async void Export_Click(object sender, RoutedEventArgs e)
+    {
+        ExportButton.IsEnabled = false;
+        var write = ViewModel.CaptureExport(App.Monitor.SearchText);
+        try { await CsvExportDialog.SaveAsync(XamlRoot, "connection-history", write); }
+        finally { ExportButton.IsEnabled = true; }
     }
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => _ = LoadAsync();

@@ -405,7 +405,7 @@ public sealed partial class PerformancePage : Page
             item.Click += async (_, _) =>
             {
                 CleanupAction action = CleanupActions[kind];
-                await RunCleanupsAsync([kind], action.Title, action.Explanation + "\n\n" + Loc.Get("Cleanup_Note"), action.Button);
+                await RunCleanupsAsync(new[] { kind }, action.Title, action.Explanation + "\n\n" + Loc.Get("Cleanup_Note"), action.Button);
             };
             menu.Items.Add(item);
         }

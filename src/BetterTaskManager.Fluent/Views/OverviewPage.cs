@@ -186,7 +186,7 @@ public sealed partial class OverviewPage : Page
         texts.Children.Add(Text("", 12)); texts.Children.Add(Text("", 11, secondary: true)); Grid.SetColumn(texts, 1); row.Children.Add(texts);
         var port = Text("", 10, secondary: true); Grid.SetColumn(port, 2); row.Children.Add(port);
         Button? button = null;
-        button = RowButton(row, () => { App.Window.SetSearch((string?)button!.Tag ?? ""); App.Window.NavigatePage("Network"); }, "");
+        button = RowButton(row, () => App.Window.NavigatePage("Network", (string?)button!.Tag ?? ""), "");
         return button;
     }
     /// <summary>A tile as a button: the border lights up in the tile's color while the pointer is over it.</summary>
@@ -218,7 +218,7 @@ public sealed partial class OverviewPage : Page
     private static Grid HeadingLink(string title, string page, string glyph, string tone)
     {
         var grid = Heading(title, "", glyph, tone); var button = new Button { Content = new FontIcon { Glyph = "\uE76C", FontSize = 12 }, MinWidth = 0, Padding = new Thickness(8, 4, 8, 4), Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0) }; button.SetResourceReference(Control.ForegroundProperty, "BrandBrush");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, Loc.Get("Design_Open") + " " + title); button.Click += (_, _) => { App.Window.SetSearch(""); App.Window.NavigatePage(page); }; Grid.SetColumn(button, 1); grid.Children.Add(button); return grid;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, Loc.Get("Design_Open") + " " + title); button.Click += (_, _) => App.Window.NavigatePage(page, ""); Grid.SetColumn(button, 1); grid.Children.Add(button); return grid;
     }
     private static UIElement Legend(string label, string brush) { var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 }; panel.Children.Add(Dot(brush)); panel.Children.Add(Text(label, 11, secondary: true)); return panel; }
     private static Grid Fact(string label, TextBlock value) { var row = new Grid { Margin = new Thickness(0, 2, 0, 2) }; row.Children.Add(Text(label, 12, secondary: true)); value.HorizontalAlignment = HorizontalAlignment.Right; row.Children.Add(value); return row; }

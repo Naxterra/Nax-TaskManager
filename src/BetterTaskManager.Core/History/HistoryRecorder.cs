@@ -76,7 +76,7 @@ public sealed class HistoryRecorder : IDisposable
     private static readonly TimeSpan PruneInterval = TimeSpan.FromHours(6);
     private static readonly TimeSpan ExitedProcessMemory = TimeSpan.FromMinutes(5);
 
-    private readonly record struct FlowKey(int Pid, long CreateTime, string Protocol, int LocalPort, string RemoteAddress, int RemotePort);
+    private readonly record struct FlowKey(int Pid, long CreateTime, string Protocol, string LocalAddress, int LocalPort, string RemoteAddress, int RemotePort);
 
     private readonly HistoryStore store;
     private readonly Func<string, int, HostName?> resolveHost;
@@ -130,7 +130,7 @@ public sealed class HistoryRecorder : IDisposable
         {
             if (connection.Protocol != "TCP" || connection.Pid <= 0 || connection.State == "Listen" || !IsRemote(connection.RemoteAddress)) continue;
             AppIdentity app = Identify(connection.Pid);
-            var key = new FlowKey(connection.Pid, app.CreateTime, "TCP", connection.LocalPort, connection.RemoteAddress, connection.RemotePort);
+            var key = new FlowKey(connection.Pid, app.CreateTime, "TCP", connection.LocalAddress, connection.LocalPort, connection.RemoteAddress, connection.RemotePort);
             TrackedConnection tracked = Track(key, app, now);
             seenTcp.Add(key);
             tracked.LocalAddress = connection.LocalAddress;
@@ -153,7 +153,7 @@ public sealed class HistoryRecorder : IDisposable
             // UDP flows are grouped per app and remote endpoint: a client that opens a new local port per request
             // (DNS, QUIC) would otherwise produce one row per packet exchange.
             int localPort = flow.Protocol == "UDP" ? 0 : flow.LocalPort;
-            var key = new FlowKey(flow.Pid, app.CreateTime, flow.Protocol, localPort, flow.RemoteAddress, flow.RemotePort);
+            var key = new FlowKey(flow.Pid, app.CreateTime, flow.Protocol, flow.Protocol == "TCP" ? flow.LocalAddress : "", localPort, flow.RemoteAddress, flow.RemotePort);
             TrackedConnection tracked = Track(key, app, now);
             active.Add(key);
             if (tracked.Scope.Length == 0) tracked.Scope = IpScopes.Label(IpScopes.Classify(flow.RemoteAddress));
@@ -203,7 +203,7 @@ public sealed class HistoryRecorder : IDisposable
         while (dnsQueries.TryDequeue(out var query))
         {
             AppIdentity app = Identify(query.Pid);
-            var key = new FlowKey(query.Pid, app.CreateTime, "DNS", 0, query.Name.ToLowerInvariant(), 0);
+            var key = new FlowKey(query.Pid, app.CreateTime, "DNS", "", 0, query.Name.ToLowerInvariant(), 0);
             TrackedConnection tracked = Track(key, app, now);
             active.Add(key);
             string answer = string.Join(", ", query.Answers.Take(4));
@@ -233,6 +233,7 @@ public sealed class HistoryRecorder : IDisposable
                 App = app,
                 Pid = key.Pid,
                 Protocol = key.Protocol,
+                LocalAddress = key.LocalAddress,
                 LocalPort = key.LocalPort,
                 RemoteAddress = key.RemoteAddress,
                 RemotePort = key.RemotePort,

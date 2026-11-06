@@ -47,6 +47,9 @@
                     <ComboBoxItem x:Uid="HistoryPage_5" Content="Last 7 days" />
                     <ComboBoxItem x:Uid="HistoryPage_6" Content="Last 30 days" />
                 </ComboBox>
+                <Button x:Name="ExportButton" Click="Export_Click" ToolTipService.ToolTip="Export CSV">
+                    <FontIcon Glyph="&#xEDE1;" FontSize="14" />
+                </Button>
                 <Button x:Uid="HistoryPage_7" x:Name="RefreshButton" ToolTipService.ToolTip="Refresh" Click="Refresh_Click">
                     <FontIcon Glyph="&#xE72C;" FontSize="14" />
                 </Button>

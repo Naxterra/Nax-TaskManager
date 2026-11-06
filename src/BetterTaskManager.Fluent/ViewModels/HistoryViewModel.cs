@@ -177,6 +177,19 @@ public sealed class HistoryViewModel
     public string ConnectionSummary { get; private set; } = "";
     public bool HasData { get; private set; }
 
+    public Action<TextWriter> CaptureExport(string search)
+    {
+        DateTime from = DateTime.Today.AddDays(Range switch { HistoryRange.Week => -6, HistoryRange.Month => -29, _ => 0 });
+        string? key = AppKey;
+        bool dns = IncludeDns, largest = LargestFirst;
+        return writer =>
+        {
+            using HistoryStore? store = HistoryStore.OpenReadOnly(HistoryStore.DefaultPath);
+            if (store is null) throw new IOException(Loc.Get("Export_NoHistory"));
+            CsvExport.Connections(writer, store.EnumerateConnections(from.ToUniversalTime(), key, search, int.MaxValue, dns, largest));
+        };
+    }
+
     private sealed record LoadResult(List<AppUsage> Apps, List<ConnectionRecord> Connections, DateTime? LastWrite, string? Error);
 
     public async Task LoadAsync(string search)

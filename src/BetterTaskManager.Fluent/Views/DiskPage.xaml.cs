@@ -34,9 +34,11 @@ public sealed partial class DiskPage : Page
 
     private void Page_Loaded(object sender, RoutedEventArgs e)
     {
+        App.Monitor.PauseChanged -= OnPauseChanged;
         App.Monitor.Updated -= OnUpdated;
         App.Monitor.SearchChanged -= Refresh;
         visible = true;
+        App.Monitor.PauseChanged += OnPauseChanged;
         App.Monitor.Updated += OnUpdated;
         App.Monitor.SearchChanged += Refresh;
         PauseButton.IsChecked = App.Monitor.Paused;
@@ -47,10 +49,13 @@ public sealed partial class DiskPage : Page
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
         visible = false;
+        App.Monitor.PauseChanged -= OnPauseChanged;
         App.Monitor.Updated -= OnUpdated;
         App.Monitor.SearchChanged -= Refresh;
         UpdateTrace();
     }
+
+    private void OnPauseChanged() => PauseButton.IsChecked = App.Monitor.Paused;
 
     private void OnUpdated(MonitorSnapshot snapshot) => Refresh();
 
@@ -70,9 +75,7 @@ public sealed partial class DiskPage : Page
     private void UpdateTrace()
     {
         bool wanted = visible && ViewModel.FilesMode && App.Monitor.IsElevated;
-        var files = App.Monitor.DiskFiles;
-        if (wanted && !files.IsRunning) _ = Task.Run(files.Start);
-        else if (!wanted && files.IsRunning) _ = Task.Run(files.Stop);
+        App.Monitor.SetDiskTraceEnabled(wanted);
     }
 
     private void ModeSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)

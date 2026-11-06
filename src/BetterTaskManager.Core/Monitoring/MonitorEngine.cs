@@ -423,12 +423,20 @@ public sealed class MonitorEngine : IDisposable
         var flows = new List<FlowSample>();
         if (!bandwidth.IsRunning) return flows;
         var (byProcess, bySocket) = bandwidth.Drain();
+        return ApplyTraffic(processes, connections, elapsedSeconds, byProcess, bySocket);
+    }
+
+    internal List<FlowSample> ApplyTraffic(List<ProcessSample> processes, List<ConnectionSample> connections, double elapsedSeconds,
+        Dictionary<int, ByteCounts> byProcess, Dictionary<SocketKey, ByteCounts> bySocket)
+    {
+        var flows = new List<FlowSample>();
         foreach (var (socket, counts) in bySocket)
         {
             flows.Add(new FlowSample
             {
                 Pid = socket.Pid,
                 Protocol = socket.Tcp ? "TCP" : "UDP",
+                LocalAddress = socket.LocalAddress.ToString(),
                 LocalPort = socket.LocalPort,
                 RemoteAddress = socket.RemoteAddress.ToString(),
                 RemotePort = socket.RemotePort,
@@ -455,13 +463,13 @@ public sealed class MonitorEngine : IDisposable
         }
 
         // TCP rows match one socket exactly; the UDP table has no remote side, so UDP rows get the sum per local port.
-        var tcp = new Dictionary<(int, int, string, int), ByteCounts>();
+        var tcp = new Dictionary<(int, string, int, string, int), ByteCounts>();
         var udp = new Dictionary<(int, int), ByteCounts>();
         foreach (var (socket, counts) in bySocket)
         {
             if (socket.Tcp)
             {
-                var key = (socket.Pid, socket.LocalPort, socket.RemoteAddress.ToString(), socket.RemotePort);
+                var key = (socket.Pid, socket.LocalAddress.ToString(), socket.LocalPort, socket.RemoteAddress.ToString(), socket.RemotePort);
                 tcp.TryGetValue(key, out ByteCounts sum);
                 sum.Received += counts.Received;
                 sum.Sent += counts.Sent;
@@ -481,7 +489,7 @@ public sealed class MonitorEngine : IDisposable
         {
             ByteCounts counts;
             bool found = connection.Protocol == "TCP"
-                ? tcp.TryGetValue((connection.Pid, connection.LocalPort, connection.RemoteAddress, connection.RemotePort), out counts)
+                ? tcp.Remove((connection.Pid, connection.LocalAddress, connection.LocalPort, connection.RemoteAddress, connection.RemotePort), out counts)
                 : udp.Remove((connection.Pid, connection.LocalPort), out counts); // first socket on the port gets it, so nothing is shown twice
             if (!found) continue;
             connection.ReceiveBytesPerSecond = counts.Received / elapsedSeconds;
@@ -507,7 +515,7 @@ public sealed class MonitorEngine : IDisposable
         return true;
     }
 
-    private static bool ApplyFeed(List<ProcessSample> processes, List<ConnectionSample> connections, NetworkFeedMessage message)
+    internal static bool ApplyFeed(List<ProcessSample> processes, List<ConnectionSample> connections, NetworkFeedMessage message)
     {
         var byProcess = new Dictionary<(int, long), ProcessTraffic>();
         foreach (ProcessTraffic traffic in message.Processes) byProcess[(traffic.Pid, traffic.CreateTime)] = traffic;
@@ -520,13 +528,17 @@ public sealed class MonitorEngine : IDisposable
             process.NetworkSentTotal = traffic.SentTotal;
         }
 
-        var tcp = new Dictionary<(int, int, string, int), (double Down, double Up)>();
+        var tcp = new Dictionary<(int, string, int, string, int), (double Down, double Up)>();
         var udp = new Dictionary<(int, int), (double Down, double Up)>();
+        var current = processes.ToDictionary(process => process.Pid, process => process.CreateTime);
+        var feedIdentities = message.Processes.GroupBy(process => process.Pid).ToDictionary(group => group.Key, group => group.Last().CreateTime);
         foreach (SocketTraffic socket in message.Sockets)
         {
+            long created = socket.CreateTime != 0 ? socket.CreateTime : feedIdentities.GetValueOrDefault(socket.Pid);
+            if (created != 0 && (!current.TryGetValue(socket.Pid, out long actual) || actual != created)) continue;
             if (socket.Protocol == "TCP")
             {
-                var key = (socket.Pid, socket.LocalPort, socket.RemoteAddress, socket.RemotePort);
+                var key = (socket.Pid, socket.LocalAddress ?? "", socket.LocalPort, socket.RemoteAddress, socket.RemotePort);
                 tcp.TryGetValue(key, out var sum);
                 tcp[key] = (sum.Down + socket.ReceivePerSecond, sum.Up + socket.SendPerSecond);
             }
@@ -537,12 +549,22 @@ public sealed class MonitorEngine : IDisposable
                 udp[key] = (sum.Down + socket.ReceivePerSecond, sum.Up + socket.SendPerSecond);
             }
         }
+        // Old services omit local addresses. Their aggregate can only be attributed when the table has one candidate.
+        var candidates = connections.Where(connection => connection.Protocol == "TCP")
+            .GroupBy(connection => (connection.Pid, connection.LocalPort, connection.RemoteAddress, connection.RemotePort))
+            .ToDictionary(group => group.Key, group => group.Count());
         foreach (ConnectionSample connection in connections)
         {
             (double Down, double Up) rate;
             bool found = connection.Protocol == "TCP"
-                ? tcp.TryGetValue((connection.Pid, connection.LocalPort, connection.RemoteAddress, connection.RemotePort), out rate)
+                ? tcp.Remove((connection.Pid, connection.LocalAddress, connection.LocalPort, connection.RemoteAddress, connection.RemotePort), out rate)
                 : udp.Remove((connection.Pid, connection.LocalPort), out rate);
+            if (connection.Protocol == "TCP" && candidates[(connection.Pid, connection.LocalPort, connection.RemoteAddress, connection.RemotePort)] == 1
+                && tcp.Remove((connection.Pid, "", connection.LocalPort, connection.RemoteAddress, connection.RemotePort), out var legacy))
+            {
+                rate = (rate.Down + legacy.Down, rate.Up + legacy.Up);
+                found = true;
+            }
             if (!found) continue;
             connection.ReceiveBytesPerSecond = rate.Down;
             connection.SendBytesPerSecond = rate.Up;

@@ -13,7 +13,8 @@ namespace BetterTaskManager.Core.Feed;
 public readonly record struct ProcessTraffic(int Pid, long CreateTime, double ReceivePerSecond, double SendPerSecond, long ReceivedTotal, long SentTotal);
 
 /// <summary>Current rate of one connection or UDP socket with traffic.</summary>
-public readonly record struct SocketTraffic(int Pid, string Protocol, int LocalPort, string RemoteAddress, int RemotePort, double ReceivePerSecond, double SendPerSecond);
+public readonly record struct SocketTraffic(int Pid, string Protocol, int LocalPort, string RemoteAddress, int RemotePort, double ReceivePerSecond, double SendPerSecond,
+    string LocalAddress = "", long CreateTime = 0);
 
 /// <summary>Disk bytes per second of one process, as measured by the history service.</summary>
 public readonly record struct ProcessDisk(int Pid, long CreateTime, double ReadPerSecond, double WritePerSecond);
@@ -22,7 +23,10 @@ public readonly record struct ProcessDisk(int Pid, long CreateTime, double ReadP
 public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraffic> Processes, List<SocketTraffic> Sockets, List<ProcessDisk>? Disk = null)
 {
     /// <summary>Builds the message from a service snapshot: only processes and sockets that moved data.</summary>
-    public static NetworkFeedMessage From(MonitorSnapshot snapshot) => new(
+    public static NetworkFeedMessage From(MonitorSnapshot snapshot)
+    {
+        var identities = snapshot.Processes.ToDictionary(process => process.Pid, process => process.CreateTime);
+        return new(
         snapshot.Timestamp.ToUniversalTime(),
         snapshot.Processes
             .Where(process => process.NetworkReceivedTotal + process.NetworkSentTotal > 0)
@@ -32,7 +36,7 @@ public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraff
         snapshot.Connections
             .Where(connection => connection.ReceiveBytesPerSecond + connection.SendBytesPerSecond > 0)
             .Select(connection => new SocketTraffic(connection.Pid, connection.Protocol, connection.LocalPort, connection.RemoteAddress,
-                connection.RemotePort, connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond))
+                connection.RemotePort, connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond, connection.LocalAddress, identities.GetValueOrDefault(connection.Pid)))
             .ToList(),
         snapshot.System.PerProcessDiskAvailable
             ? snapshot.Processes
@@ -40,6 +44,7 @@ public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraff
                 .Select(process => new ProcessDisk(process.Pid, process.CreateTime, process.DiskReadBytesPerSecond, process.DiskWriteBytesPerSecond))
                 .ToList()
             : null);
+    }
 }
 
 /// <summary>
@@ -178,7 +183,7 @@ public sealed class NetworkFeedClient : IDisposable
     private readonly CancellationTokenSource shutdown = new();
     private static readonly TimeSpan SmoothingWindow = TimeSpan.FromSeconds(3);
     private readonly object gate = new();
-    private readonly List<NetworkFeedMessage> recent = new();
+    private readonly List<(NetworkFeedMessage Message, long ReceivedAt)> recent = new();
     private volatile NetworkFeedMessage? latest;
     private long receivedAt;
     private Task? loop;
@@ -227,13 +232,7 @@ public sealed class NetworkFeedClient : IDisposable
             await pipe.ReadExactlyAsync(body, shutdown.Token);
             NetworkFeedMessage? message = JsonSerializer.Deserialize(body, NetworkFeedJson.Default.NetworkFeedMessage);
             if (message is null) continue;
-            lock (gate)
-            {
-                recent.Add(message);
-                recent.RemoveAll(older => message.TimestampUtc - older.TimestampUtc > SmoothingWindow);
-                latest = Average(recent);
-            }
-            Interlocked.Exchange(ref receivedAt, System.Diagnostics.Stopwatch.GetTimestamp());
+            Accept(message, System.Diagnostics.Stopwatch.GetTimestamp());
         }
     }
 
@@ -241,14 +240,27 @@ public sealed class NetworkFeedClient : IDisposable
     /// Rates averaged over the last few seconds. The app and the service sample on unsynchronised one-second clocks,
     /// so single samples jump between neighbouring windows; totals come from the newest message.
     /// </summary>
+    internal void Accept(NetworkFeedMessage message, long receiptTicks)
+    {
+        lock (gate)
+        {
+            recent.Add((message, receiptTicks));
+            recent.RemoveAll(older => System.Diagnostics.Stopwatch.GetElapsedTime(older.ReceivedAt, receiptTicks) > SmoothingWindow);
+            // Bound memory even if a faulty service sends frames much faster than its normal one-second interval.
+            if (recent.Count > 64) recent.RemoveRange(0, recent.Count - 64);
+            latest = Average(recent.Select(frame => frame.Message).ToList());
+            Interlocked.Exchange(ref receivedAt, receiptTicks);
+        }
+    }
+
     private static NetworkFeedMessage Average(List<NetworkFeedMessage> window)
     {
         if (window.Count == 1) return window[0];
         int count = window.Count;
         var processes = new Dictionary<(int, long), ProcessTraffic>();
         var processRates = new Dictionary<(int, long), (double Down, double Up)>();
-        var sockets = new Dictionary<(int, string, int, string, int), SocketTraffic>();
-        var socketRates = new Dictionary<(int, string, int, string, int), (double Down, double Up)>();
+        var sockets = new Dictionary<(int, long, string, string, int, string, int), SocketTraffic>();
+        var socketRates = new Dictionary<(int, long, string, string, int, string, int), (double Down, double Up)>();
         var disk = new Dictionary<(int, long), (double Read, double Write)>();
         bool hasDisk = false;
         foreach (NetworkFeedMessage message in window)
@@ -269,10 +281,12 @@ public sealed class NetworkFeedClient : IDisposable
                 processRates.TryGetValue(key, out var sum);
                 processRates[key] = (sum.Down + process.ReceivePerSecond, sum.Up + process.SendPerSecond);
             }
+            var feedIdentities = message.Processes.GroupBy(process => process.Pid).ToDictionary(group => group.Key, group => group.Last().CreateTime);
             foreach (SocketTraffic socket in message.Sockets)
             {
-                var key = (socket.Pid, socket.Protocol, socket.LocalPort, socket.RemoteAddress, socket.RemotePort);
-                sockets[key] = socket;
+                long created = socket.CreateTime != 0 ? socket.CreateTime : feedIdentities.GetValueOrDefault(socket.Pid);
+                var key = (socket.Pid, created, socket.Protocol, socket.LocalAddress ?? "", socket.LocalPort, socket.RemoteAddress, socket.RemotePort);
+                sockets[key] = socket with { CreateTime = created };
                 socketRates.TryGetValue(key, out var sum);
                 socketRates[key] = (sum.Down + socket.ReceivePerSecond, sum.Up + socket.SendPerSecond);
             }

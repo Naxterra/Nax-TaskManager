@@ -38,7 +38,7 @@ ConnectionSample Tcp(int pid) => new()
 };
 FlowSample Flow(int pid, long received) => new()
 {
-    Pid = pid, Protocol = "TCP", LocalPort = 50000, RemoteAddress = "203.0.113.7", RemotePort = 443, Received = received
+    Pid = pid, Protocol = "TCP", LocalAddress = "192.168.1.10", LocalPort = 50000, RemoteAddress = "203.0.113.7", RemotePort = 443, Received = received
 };
 string NewDatabase() => Path.Combine(Path.GetTempPath(), $"nax-history-check-{Guid.NewGuid():N}.db");
 List<ConnectionRecord> Rows(string db)

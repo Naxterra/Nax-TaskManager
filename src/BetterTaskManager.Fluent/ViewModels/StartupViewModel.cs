@@ -33,12 +33,14 @@ public sealed class StartupViewModel : ObservableObject
     public string SortColumn { get; private set; } = SortName;
     public bool SortDescending { get; private set; }
 
-    public async Task LoadAsync(string search)
-    {
-        apps = await Task.Run(StartupApps.Read);
-        biosTime = StartupApps.LastBiosTime();
-        Apply(search);
-    }
+    public Task LoadAsync(Func<string> currentSearch) => SearchableListLoader.LoadAsync(
+        () => (Apps: StartupApps.Read(), BiosTime: StartupApps.LastBiosTime()), currentSearch,
+        (loaded, search) =>
+        {
+            apps = loaded.Apps;
+            biosTime = loaded.BiosTime;
+            Apply(search);
+        });
 
     public void Apply(string search)
     {
