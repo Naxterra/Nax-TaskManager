@@ -88,13 +88,19 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Uid="NetworkPage_27" Text="Apps" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
-                    <ComboBox x:Name="AppSortBox" Grid.Column="1" MinWidth="130" SelectionChanged="AppSortBox_SelectionChanged">
+                    <ComboBox x:Name="AppSortBox" x:Uid="Network_AppSort" Grid.Column="1" MinWidth="130" SelectionChanged="AppSortBox_SelectionChanged" AutomationProperties.Name="Sort apps">
                         <ComboBoxItem x:Uid="NetworkPage_28" Content="Sort: name" Tag="Name" />
                         <ComboBoxItem x:Uid="NetworkPage_29" Content="Sort: data" Tag="Data" />
                         <ComboBoxItem x:Uid="NetworkPage_30" Content="Sort: speed" Tag="Speed" />
+                        <ComboBoxItem x:Uid="Network_SortDownload" Content="Sort: download" Tag="Download" />
+                        <ComboBoxItem x:Uid="Network_SortUpload" Content="Sort: upload" Tag="Upload" />
                     </ComboBox>
+                    <Button x:Name="AppSortDirection" Grid.Column="2" Margin="6,0,0,0" Click="AppSortDirection_Click">
+                        <FontIcon x:Name="AppSortDirectionIcon" Glyph="&#xE70E;" FontSize="12" />
+                    </Button>
                 </Grid>
                 <ListView x:Name="AppList" Grid.Row="1" Padding="0,0,14,0" ItemsSource="{x:Bind ViewModel.Apps}" SelectionMode="Single" SelectionChanged="AppList_SelectionChanged" ContextRequested="List_ContextRequested">
                     <ListView.ItemContainerStyle>
@@ -162,7 +168,32 @@
 
         <!-- Connections of the selected app, with its traffic underneath. -->
         <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource TableCardStyle}">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled"><Grid MinWidth="{x:Bind ViewModel.Layout.TableWidth, Mode=OneWay}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Padding="12,8,10,8" ColumnSpacing="6" Background="{ThemeResource SurfaceRaisedBrush}" CornerRadius="10,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Uid="Network_ConnectionsHeading" Text="Connections" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                    <ComboBox x:Name="ConnectionSortBox" x:Uid="Network_ConnectionSort" Grid.Column="1" MinWidth="160" SelectionChanged="ConnectionSortBox_SelectionChanged" AutomationProperties.Name="Sort connections">
+                        <ComboBoxItem x:Uid="Network_SortRemote" Content="Sort: remote host" Tag="Remote" />
+                        <ComboBoxItem x:Uid="Network_SortApp" Content="Sort: app" Tag="App" />
+                        <ComboBoxItem x:Uid="Network_SortLocal" Content="Sort: local address" Tag="Local" />
+                        <ComboBoxItem x:Uid="Network_SortScope" Content="Sort: scope" Tag="Scope" />
+                        <ComboBoxItem x:Uid="Network_SortState" Content="Sort: state" Tag="State" />
+                        <ComboBoxItem x:Uid="Network_SortDownload" Content="Sort: download" Tag="Download" />
+                        <ComboBoxItem x:Uid="Network_SortUpload" Content="Sort: upload" Tag="Upload" />
+                    </ComboBox>
+                    <Button x:Name="ConnectionSortDirection" Grid.Column="2" Click="ConnectionSortDirection_Click">
+                        <FontIcon x:Name="ConnectionSortDirectionIcon" Glyph="&#xE70E;" FontSize="12" />
+                    </Button>
+                </Grid>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled"><Grid MinWidth="{x:Bind ViewModel.Layout.TableWidth, Mode=OneWay}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -185,48 +216,65 @@
 
                 <Grid x:Name="ColumnHeader" Grid.Row="1" Height="40" Style="{StaticResource TableHeaderStyle}" CornerRadius="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.Remote, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.W0, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.W1, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.W2, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.W3, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.W4, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.W5, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.W6, Mode=OneWay}" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="36" />
                     </Grid.ColumnDefinitions>
-                    <Button x:Uid="NetworkPage_8" Grid.Column="0" Tag="Remote" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Remote host" Click="Header_Click">
+                    <Button x:Uid="NetworkPage_8" Grid.Column="{x:Bind ViewModel.Layout.RemoteColumn, Mode=OneWay}" Tag="Remote" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Remote host" Click="Header_Click">
                         <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,0,0,0">
                             <TextBlock x:Uid="NetworkPage_9" Text="Remote host" />
                             <FontIcon x:Name="SortRemote" FontSize="10" Glyph="" VerticalAlignment="Center" Visibility="Collapsed" />
                         </StackPanel>
                     </Button>
-                    <Border Grid.Column="{x:Bind ViewModel.Layout.AppColumn, Mode=OneWay}" Tag="App" Background="Transparent">
-                        <TextBlock x:Uid="NetworkPage_31" Text="App" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </Border>
-                    <Border Grid.Column="{x:Bind ViewModel.Layout.LocalColumn, Mode=OneWay}" Tag="Local" Background="Transparent">
-                        <TextBlock x:Uid="NetworkPage_7" Text="Local address" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </Border>
-                    <Border Grid.Column="{x:Bind ViewModel.Layout.ScopeColumn, Mode=OneWay}" Tag="Scope" Background="Transparent">
-                        <TextBlock x:Uid="NetworkPage_10" Text="Scope" Margin="10,0,0,6" VerticalAlignment="Bottom" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </Border>
+                    <Button x:Uid="Network_HeaderApp" Grid.Column="{x:Bind ViewModel.Layout.AppColumn, Mode=OneWay}" Tag="App" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by App" Click="Header_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                            <TextBlock x:Uid="NetworkPage_31" Text="App" />
+                            <FontIcon x:Name="SortApp" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Uid="Network_HeaderLocal" Grid.Column="{x:Bind ViewModel.Layout.LocalColumn, Mode=OneWay}" Tag="Local" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Local address" Click="Header_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                            <TextBlock x:Uid="NetworkPage_7" Text="Local address" />
+                            <FontIcon x:Name="SortLocal" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Uid="Network_HeaderScope" Grid.Column="{x:Bind ViewModel.Layout.ScopeColumn, Mode=OneWay}" Tag="Scope" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Scope" Click="Header_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                            <TextBlock x:Uid="NetworkPage_10" Text="Scope" />
+                            <FontIcon x:Name="SortScope" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
                     <Button x:Uid="NetworkPage_11" Grid.Column="{x:Bind ViewModel.Layout.StateColumn, Mode=OneWay}" Tag="State" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by State" Click="Header_Click">
                         <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
                             <TextBlock x:Uid="NetworkPage_12" Text="State" />
                             <FontIcon x:Name="SortState" FontSize="10" Glyph="" VerticalAlignment="Center" Visibility="Collapsed" />
                         </StackPanel>
                     </Button>
-                    <Button x:Uid="NetworkPage_15" Grid.Column="{x:Bind ViewModel.Layout.SpeedColumn, Mode=OneWay}" Tag="Speed" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Speed" Click="Header_Click">
+                    <Button x:Uid="Network_HeaderDownload" Grid.Column="{x:Bind ViewModel.Layout.DownloadColumn, Mode=OneWay}" Tag="Download" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Download" Click="Header_Click">
                         <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
-                            <TextBlock x:Uid="NetworkPage_16" Text="Speed (down / up)" />
-                            <FontIcon x:Name="SortSpeed" FontSize="10" Glyph="" VerticalAlignment="Center" Visibility="Collapsed" />
+                            <TextBlock x:Uid="Network_DownloadHeader" Text="Download" />
+                            <FontIcon x:Name="SortDownload" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
                         </StackPanel>
                     </Button>
-                    <Thumb Tag="Remote" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
+                    <Button x:Uid="Network_HeaderUpload" Grid.Column="{x:Bind ViewModel.Layout.UploadColumn, Mode=OneWay}" Tag="Upload" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Upload" Click="Header_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+                            <TextBlock x:Uid="Network_UploadHeader" Text="Upload" />
+                            <FontIcon x:Name="SortUpload" FontSize="10" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Thumb Tag="Remote" Grid.Column="{x:Bind ViewModel.Layout.RemoteColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
                     <Thumb Tag="App" Grid.Column="{x:Bind ViewModel.Layout.AppColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
                     <Thumb Tag="Local" Grid.Column="{x:Bind ViewModel.Layout.LocalColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
                     <Thumb Tag="Scope" Grid.Column="{x:Bind ViewModel.Layout.ScopeColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
                     <Thumb Tag="State" Grid.Column="{x:Bind ViewModel.Layout.StateColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
-                    <Thumb Tag="Speed" Grid.Column="{x:Bind ViewModel.Layout.SpeedColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
+                    <Thumb Tag="Download" Grid.Column="{x:Bind ViewModel.Layout.DownloadColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
+                    <Thumb Tag="Upload" Grid.Column="{x:Bind ViewModel.Layout.UploadColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="Splitter_DragDelta" />
                 </Grid>
 
                 <ListView x:Name="ConnectionList" Grid.Row="2" ItemsSource="{x:Bind ViewModel.Connections}" SelectionMode="Single" ItemContainerStyle="{StaticResource TableRowStyle}" SelectionChanged="ConnectionList_SelectionChanged" ContextRequested="List_ContextRequested">
@@ -237,16 +285,17 @@
                         <DataTemplate x:DataType="vm:NetworkSlot">
                             <Grid Height="40" ToolTipService.ToolTip="{x:Bind RemoteDetail, Mode=OneWay}" PointerEntered="Row_PointerEntered" PointerExited="Row_PointerExited">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="{x:Bind Layout.Remote, Mode=OneWay}" />
+                                    <ColumnDefinition Width="{x:Bind Layout.W0, Mode=OneWay}" />
                                     <ColumnDefinition Width="{x:Bind Layout.W1, Mode=OneWay}" />
                                     <ColumnDefinition Width="{x:Bind Layout.W2, Mode=OneWay}" />
                                     <ColumnDefinition Width="{x:Bind Layout.W3, Mode=OneWay}" />
                                     <ColumnDefinition Width="{x:Bind Layout.W4, Mode=OneWay}" />
                                     <ColumnDefinition Width="{x:Bind Layout.W5, Mode=OneWay}" />
+                                    <ColumnDefinition Width="{x:Bind Layout.W6, Mode=OneWay}" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="36" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Margin="12,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                <TextBlock Grid.Column="{x:Bind Layout.RemoteColumn, Mode=OneWay}" Margin="12,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
                                     <Run Text="{x:Bind Remote, Mode=OneWay}" />
                                     <Run Text="{x:Bind Name, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
                                 </TextBlock>
@@ -257,8 +306,9 @@
                                     <Ellipse Width="8" Height="8" Fill="{x:Bind StateBrush, Mode=OneWay}" Visibility="{x:Bind StateDotVisibility, Mode=OneWay}" VerticalAlignment="Center" />
                                     <TextBlock Text="{x:Bind State, Mode=OneWay}" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
-                                <TextBlock Grid.Column="{x:Bind Layout.SpeedColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" Text="{x:Bind Speed, Mode=OneWay}" />
-                                <Button x:Uid="Common_RowMenu" Grid.Column="7" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />
+                                <TextBlock Grid.Column="{x:Bind Layout.DownloadColumn, Mode=OneWay}" Margin="10,0,8,0" HorizontalAlignment="Right" VerticalAlignment="Center" Text="{x:Bind DownloadText, Mode=OneWay}" />
+                                <TextBlock Grid.Column="{x:Bind Layout.UploadColumn, Mode=OneWay}" Margin="10,0,8,0" HorizontalAlignment="Right" VerticalAlignment="Center" Text="{x:Bind UploadText, Mode=OneWay}" />
+                                <Button x:Uid="Common_RowMenu" Grid.Column="8" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>
@@ -285,6 +335,7 @@
                     <controls:TrendChart x:Name="TrafficChart" Grid.Row="1" Height="90" Stroke="{ThemeResource ChartReceiveBrush}" SecondStroke="{ThemeResource ChartSendBrush}" />
                 </Grid>
             </Grid></ScrollViewer>
+            </Grid>
         </Border>
     </Grid>
 </Page>

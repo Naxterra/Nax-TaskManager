@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Net.NetworkInformation;
 using BetterTaskManager.Core.Feed;
 using BetterTaskManager.Core.Native;
 using BetterTaskManager.Core.Network;
@@ -27,9 +26,7 @@ public sealed class MonitorEngine : IDisposable
     private readonly Dictionary<(int, long), ByteCounts> networkTotals = new();
     private readonly CancellationTokenSource shutdown = new();
     private readonly SemaphoreSlim wake = new(0);
-    private Dictionary<string, (long Received, long Sent)> previousAdapters = new();
-    private NetworkInterface[] adapters = [];
-    private long adaptersReadAt;
+    private readonly AdapterTrafficAccounting adapterTraffic = new();
     private long previousTimestamp;
     private long previousIdle, previousKernel, previousUser;
     private Dictionary<int, List<string>> services = new();
@@ -325,7 +322,10 @@ public sealed class MonitorEngine : IDisposable
             if (connectionCounts.TryGetValue(process.Pid, out int count)) process.ConnectionCount = count;
         }
         List<FlowSample> flows = ApplyThroughput(processes, connections, elapsedSeconds);
-        bool fromService = !bandwidth.IsRunning && feed?.Current is { } feedMessage && ApplyFeed(processes, connections, feedMessage);
+        List<ConnectionSample> udpPeers = UdpPeers.FromFlows(processes, flows, elapsedSeconds);
+        NetworkFeedMessage? feedMessage = !bandwidth.IsRunning ? feed?.Current : null;
+        bool fromService = feedMessage is not null && ApplyFeed(processes, connections, feedMessage);
+        if (fromService) udpPeers = UdpPeers.FromFeed(processes, feedMessage!);
         bool ownDisk = NtProcessReader.DiskCountersAvailable;
         bool diskFromService = !ownDisk && feed?.Current is { Disk: { } diskFeed } && ApplyDiskFeed(processes, diskFeed);
         IReadOnlyList<DiskSample> disks = [];
@@ -334,9 +334,9 @@ public sealed class MonitorEngine : IDisposable
             diskCounters ??= new DiskCounters();
             disks = diskCounters.Read();
         }
-        foreach (ConnectionSample connection in connections)
+        foreach (ConnectionSample connection in connections.Concat(udpPeers))
         {
-            if (connection.Protocol != "TCP" || connection.RemoteAddress.Length == 0) continue;
+            if (!UdpPeers.KnownAddress(connection.RemoteAddress)) continue;
             if (hostNames.Resolve(connection.RemoteAddress, connection.Pid) is { } host)
             {
                 connection.RemoteHost = host.Name;
@@ -377,6 +377,7 @@ public sealed class MonitorEngine : IDisposable
             Processes = processes,
             Connections = connections,
             Flows = flows,
+            UdpPeers = udpPeers,
             NetworkIssues = network.Issues,
             System = system,
             CollectionTime = stopwatch.Elapsed
@@ -585,39 +586,8 @@ public sealed class MonitorEngine : IDisposable
 
     private (double Receive, double Send, bool Sampled) SampleAdapters(double elapsedSeconds)
     {
-        // Enumerating adapters is far more expensive than reading their counters, so the list refreshes every 10 s.
-        if (adaptersReadAt == 0 || Stopwatch.GetElapsedTime(adaptersReadAt).TotalSeconds >= 10)
-        {
-            adapters = NetworkInterface.GetAllNetworkInterfaces();
-            adaptersReadAt = Stopwatch.GetTimestamp();
-        }
-
-        var current = new Dictionary<string, (long Received, long Sent)>();
-        foreach (NetworkInterface adapter in adapters)
-        {
-            try
-            {
-                if (adapter.OperationalStatus != OperationalStatus.Up || adapter.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
-                IPInterfaceStatistics statistics = adapter.GetIPStatistics();
-                current[adapter.Id] = (statistics.BytesReceived, statistics.BytesSent);
-            }
-            catch (NetworkInformationException)
-            {
-            }
-        }
-
-        long received = 0, sent = 0;
-        int matched = 0;
-        foreach (var (id, value) in current)
-        {
-            if (!previousAdapters.TryGetValue(id, out var old) || value.Received < old.Received || value.Sent < old.Sent) continue;
-            received += value.Received - old.Received;
-            sent += value.Sent - old.Sent;
-            matched++;
-        }
-        previousAdapters = current;
-        if (matched == 0 || elapsedSeconds <= 0) return (0, 0, false);
-        return (received / elapsedSeconds, sent / elapsedSeconds, true);
+        try { return adapterTraffic.Sample(AdapterTrafficReader.Read(), elapsedSeconds); }
+        catch (System.ComponentModel.Win32Exception) { return adapterTraffic.Sample([], elapsedSeconds); }
     }
 
     private MemoryBreakdown SampleMemory(long processPrivate)

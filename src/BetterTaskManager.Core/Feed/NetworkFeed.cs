@@ -20,7 +20,8 @@ public readonly record struct SocketTraffic(int Pid, string Protocol, int LocalP
 public readonly record struct ProcessDisk(int Pid, long CreateTime, double ReadPerSecond, double WritePerSecond);
 
 /// <param name="Disk">Per-process disk rates; null from a service version that does not measure them.</param>
-public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraffic> Processes, List<SocketTraffic> Sockets, List<ProcessDisk>? Disk = null)
+public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraffic> Processes, List<SocketTraffic> Sockets, List<ProcessDisk>? Disk = null,
+    List<SocketTraffic>? UdpPeers = null)
 {
     /// <summary>Builds the message from a service snapshot: only processes and sockets that moved data.</summary>
     public static NetworkFeedMessage From(MonitorSnapshot snapshot)
@@ -43,7 +44,9 @@ public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraff
                 .Where(process => process.DiskBytesPerSecond > 0)
                 .Select(process => new ProcessDisk(process.Pid, process.CreateTime, process.DiskReadBytesPerSecond, process.DiskWriteBytesPerSecond))
                 .ToList()
-            : null);
+            : null,
+        snapshot.UdpPeers.Select(peer => new SocketTraffic(peer.Pid, "UDP", peer.LocalPort, peer.RemoteAddress, peer.RemotePort,
+            peer.ReceiveBytesPerSecond, peer.SendBytesPerSecond, peer.LocalAddress, identities.GetValueOrDefault(peer.Pid))).ToList());
     }
 }
 
@@ -295,8 +298,15 @@ public sealed class NetworkFeedClient : IDisposable
             window[^1].TimestampUtc,
             processes.Select(pair => pair.Value with { ReceivePerSecond = processRates[pair.Key].Down / count, SendPerSecond = processRates[pair.Key].Up / count }).ToList(),
             sockets.Select(pair => pair.Value with { ReceivePerSecond = socketRates[pair.Key].Down / count, SendPerSecond = socketRates[pair.Key].Up / count }).ToList(),
-            hasDisk ? disk.Select(pair => new ProcessDisk(pair.Key.Item1, pair.Key.Item2, pair.Value.Read / count, pair.Value.Write / count)).ToList() : null);
+            hasDisk ? disk.Select(pair => new ProcessDisk(pair.Key.Item1, pair.Key.Item2, pair.Value.Read / count, pair.Value.Write / count)).ToList() : null,
+            AverageUdpPeers(window));
     }
+
+    private static List<SocketTraffic>? AverageUdpPeers(List<NetworkFeedMessage> window) => window.All(frame => frame.UdpPeers is null) ? null
+        : window.SelectMany(frame => frame.UdpPeers ?? [])
+            .GroupBy(peer => (peer.Pid, peer.CreateTime, peer.Protocol, peer.LocalAddress, peer.LocalPort, peer.RemoteAddress, peer.RemotePort))
+            .Select(group => group.First() with { ReceivePerSecond = group.Sum(peer => peer.ReceivePerSecond) / window.Count,
+                SendPerSecond = group.Sum(peer => peer.SendPerSecond) / window.Count }).ToList();
 
     private static bool IsServedByHistoryService(NamedPipeClientStream pipe) =>
         GetNamedPipeServerProcessId(pipe.SafePipeHandle, out uint serverPid) && serverPid != 0 && serverPid == HistoryServiceControl.QueryProcessId();

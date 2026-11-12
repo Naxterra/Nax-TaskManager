@@ -165,6 +165,8 @@ public sealed class MonitorSnapshot
     public required IReadOnlyList<ConnectionSample> Connections { get; init; }
     /// <summary>Per-socket traffic since the previous snapshot; empty without administrator rights.</summary>
     public IReadOnlyList<FlowSample> Flows { get; init; } = [];
+    /// <summary>UDP peer endpoints observed during this sample, with independent directional rates.</summary>
+    public IReadOnlyList<ConnectionSample> UdpPeers { get; init; } = [];
     public required IReadOnlyList<string> NetworkIssues { get; init; }
     public required SystemSample System { get; init; }
     public TimeSpan CollectionTime { get; init; }

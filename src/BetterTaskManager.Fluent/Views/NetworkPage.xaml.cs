@@ -63,6 +63,7 @@ public sealed partial class NetworkPage : Page
     {
         ViewModel.SelectedAppKey = NetworkViewModel.AllAppsKey;
         ViewModel.SortApps(NetworkViewModel.SortSpeed);
+        ViewModel.SortConnections(NetworkViewModel.SortDownload);
         ViewModel.EstablishedOnly = false;
         EstablishedOnlyButton.IsChecked = false;
         connectionKey = null;
@@ -329,6 +330,8 @@ public sealed partial class NetworkPage : Page
         double max = Math.Max(Math.Max(monitor.ReceiveHistory.Max(), monitor.SendHistory.Max()), 131072);
         DownloadTile.Update(Format.NetworkRate(system.NetworkReceiveBytesPerSecond), Loc.F("Tile_PeakDetail", Format.NetworkRate(monitor.ReceiveHistory.Max())), monitor.ReceiveHistory, max);
         UploadTile.Update(Format.NetworkRate(system.NetworkSendBytesPerSecond), Loc.F("Tile_PeakDetail", Format.NetworkRate(monitor.SendHistory.Max())), monitor.SendHistory, max);
+        ToolTipService.SetToolTip(DownloadTile, Format.NetworkRate(system.NetworkReceiveBytesPerSecond) + " · " + Loc.Get("Network_AdapterTrafficNote"));
+        ToolTipService.SetToolTip(UploadTile, Format.NetworkRate(system.NetworkSendBytesPerSecond) + " · " + Loc.Get("Network_AdapterTrafficNote"));
         int established = snapshot.Connections.Count(connection => connection.State == "Established");
         ConnectionsTile.Update(Format.Count(snapshot.Connections.Count), Loc.F("Tile_Established", Format.Count(established), ViewModel.AppCount), monitor.ConnectionHistory, Math.Max(monitor.ConnectionHistory.Max(), 10));
     }
@@ -364,11 +367,34 @@ public sealed partial class NetworkPage : Page
         Refresh();
     }
 
-    /// <summary>Shows the app list's current order in the dropdown; a connection sort leaves it blank.</summary>
+    private void ConnectionSortBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (settingSort || ConnectionSortBox.SelectedItem is not ComboBoxItem { Tag: string column }) return;
+        ViewModel.SortConnections(column);
+        UpdateSortIndicators();
+        Refresh();
+    }
+
+    private void AppSortDirection_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ToggleAppSort();
+        UpdateSortIndicators();
+        Refresh();
+    }
+
+    private void ConnectionSortDirection_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ToggleConnectionSort();
+        UpdateSortIndicators();
+        Refresh();
+    }
+
+    /// <summary>Keeps both selectors in sync without changing the other list's order.</summary>
     private void SyncSortBox()
     {
         settingSort = true;
-        AppSortBox.SelectedIndex = ViewModel.SortColumn switch { NetworkViewModel.SortName => 0, NetworkViewModel.SortData => 1, NetworkViewModel.SortSpeed => 2, _ => -1 };
+        AppSortBox.SelectedIndex = Array.IndexOf(NetworkSortState.AppColumns, ViewModel.AppSortColumn);
+        ConnectionSortBox.SelectedIndex = Array.IndexOf(NetworkSortState.ConnectionColumns, ViewModel.SortColumn);
         settingSort = false;
     }
 
@@ -376,13 +402,26 @@ public sealed partial class NetworkPage : Page
     {
         var indicators = new Dictionary<string, FontIcon>
         {
-            [NetworkViewModel.SortRemote] = SortRemote, [NetworkViewModel.SortState] = SortState, [NetworkViewModel.SortSpeed] = SortSpeed
+            [NetworkViewModel.SortRemote] = SortRemote, [NetworkViewModel.SortState] = SortState,
+            [NetworkViewModel.SortDownload] = SortDownload, [NetworkViewModel.SortUpload] = SortUpload,
+            [NetworkViewModel.SortApp] = SortApp, [NetworkViewModel.SortLocal] = SortLocal, [NetworkViewModel.SortScope] = SortScope
         };
         foreach (var (column, icon) in indicators)
         {
-            icon.Visibility = column == ViewModel.SortColumn ? Visibility.Visible : Visibility.Collapsed;
+            bool active = column == ViewModel.SortColumn;
+            icon.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
             icon.Glyph = ViewModel.SortDescending ? "" : "";
         }
+        UpdateDirection(AppSortDirection, AppSortDirectionIcon, ViewModel.AppSortDescending);
+        UpdateDirection(ConnectionSortDirection, ConnectionSortDirectionIcon, ViewModel.SortDescending);
+    }
+
+    private static void UpdateDirection(Button button, FontIcon icon, bool descending)
+    {
+        icon.Glyph = descending ? "\uE70D" : "\uE70E";
+        string label = Loc.F("Network_SortDirection", Loc.Get(descending ? "Sort_Descending" : "Sort_Ascending"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
+        ToolTipService.SetToolTip(button, label);
     }
 
     private void Pause_Click(object sender, RoutedEventArgs e) => App.Monitor.Paused = PauseButton.IsChecked == true;

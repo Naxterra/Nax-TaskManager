@@ -22,6 +22,8 @@ public sealed class AppSettings
     /// <summary>Network page: by app name by default, so rows do not move while traffic changes.</summary>
     public string NetworkSortColumn { get; set; } = "Name";
     public bool NetworkSortDescending { get; set; }
+    public string? NetworkConnectionSortColumn { get; set; }
+    public bool NetworkConnectionSortDescending { get; set; }
     /// <summary>History page: app list by data used, connection log newest first.</summary>
     public string HistoryAppSortColumn { get; set; } = "Data";
     public bool HistoryAppSortDescending { get; set; } = true;

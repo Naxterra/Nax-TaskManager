@@ -150,7 +150,7 @@ Duration {2}</value></data>
 Name from reverse DNS; may be the hosting provider rather than the service</value></data>
   <data name="Remote_Lookup" xml:space="preserve"><value>{0}
 Name the app looked up</value></data>
-  <data name="Remote_UdpNone" xml:space="preserve"><value>UDP sockets have no fixed remote side</value></data>
+  <data name="Remote_UdpNone" xml:space="preserve"><value>No remote peer has been observed for this UDP socket.</value></data>
   <data name="Dns_NoAddresses" xml:space="preserve"><value>no addresses</value></data>
   <data name="Dns_Detail" xml:space="preserve"><value>DNS lookup by the app
 Answer: {0}</value></data>
@@ -941,4 +941,26 @@ First {2}, last {3}</value></data>
   <data name="Export_Failed" xml:space="preserve"><value>Could not export</value></data>
   <data name="Export_NoHistory" xml:space="preserve"><value>No history database is available.</value></data>
   <data name="Blocked_Limited" xml:space="preserve"><value>Showing the latest {0} matching groups. Export CSV to save every match.</value></data>
+  <data name="Network_ConnectionsHeading.Text" xml:space="preserve"><value>Connections</value></data>
+  <data name="Network_AppSort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort apps</value></data>
+  <data name="Network_ConnectionSort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort connections</value></data>
+  <data name="Network_SortRemote.Content" xml:space="preserve"><value>Sort: remote host</value></data>
+  <data name="Network_SortApp.Content" xml:space="preserve"><value>Sort: app</value></data>
+  <data name="Network_SortLocal.Content" xml:space="preserve"><value>Sort: local address</value></data>
+  <data name="Network_SortScope.Content" xml:space="preserve"><value>Sort: scope</value></data>
+  <data name="Network_SortState.Content" xml:space="preserve"><value>Sort: state</value></data>
+  <data name="Network_SortSpeed.Content" xml:space="preserve"><value>Sort: speed</value></data>
+  <data name="Network_SortDownload.Content" xml:space="preserve"><value>Sort: download</value></data>
+  <data name="Network_SortUpload.Content" xml:space="preserve"><value>Sort: upload</value></data>
+  <data name="Network_HeaderApp.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by App</value></data>
+  <data name="Network_HeaderLocal.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Local address</value></data>
+  <data name="Network_HeaderScope.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Scope</value></data>
+  <data name="Sort_Ascending" xml:space="preserve"><value>Ascending</value></data>
+  <data name="Sort_Descending" xml:space="preserve"><value>Descending</value></data>
+  <data name="Network_SortDirection" xml:space="preserve"><value>Sort order: {0}. Click to reverse.</value></data>
+  <data name="Network_AdapterTrafficNote" xml:space="preserve"><value>Traffic across physical network adapters. VPN and filter copies are excluded; packet overhead can make this differ from app traffic. Virtual machines use non-tunnel adapters when no hardware adapter is available.</value></data>
+  <data name="Network_HeaderDownload.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Download</value></data>
+  <data name="Network_HeaderUpload.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Upload</value></data>
+  <data name="Network_DownloadHeader.Text" xml:space="preserve"><value>Download</value></data>
+  <data name="Network_UploadHeader.Text" xml:space="preserve"><value>Upload</value></data>
 </root>

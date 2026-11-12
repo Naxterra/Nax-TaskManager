@@ -82,15 +82,15 @@ public sealed class BandwidthMonitor : IDisposable
             session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP | KernelTraceEventParser.Keywords.Process);
 
             KernelTraceEventParser kernel = session.Source.Kernel;
-            // The kernel schema uses saddr/sport for the local endpoint on both send and receive events.
+            // TCP reports the local endpoint in saddr/sport. UDP receive uses packet source/destination order.
             kernel.TcpIpSend += data => Add(data.ProcessID, true, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
             kernel.TcpIpRecv += data => Add(data.ProcessID, true, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
             kernel.TcpIpSendIPV6 += data => Add(data.ProcessID, true, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
             kernel.TcpIpRecvIPV6 += data => Add(data.ProcessID, true, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
-            kernel.UdpIpSend += data => Add(data.ProcessID, false, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
-            kernel.UdpIpRecv += data => Add(data.ProcessID, false, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
-            kernel.UdpIpSendIPV6 += data => Add(data.ProcessID, false, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
-            kernel.UdpIpRecvIPV6 += data => Add(data.ProcessID, false, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.UdpIpSend += data => AddUdpPacket(data.ProcessID, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.UdpIpRecv += data => AddUdpPacket(data.ProcessID, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.UdpIpSendIPV6 += data => AddUdpPacket(data.ProcessID, false, data.size, data.saddr, data.sport, data.daddr, data.dport);
+            kernel.UdpIpRecvIPV6 += data => AddUdpPacket(data.ProcessID, true, data.size, data.saddr, data.sport, data.daddr, data.dport);
             kernel.ProcessStart += data => OnProcessStart(data, data.TimeStamp.ToUniversalTime());
             kernel.ProcessDCStart += data => OnProcessStart(data, DateTime.MinValue);
             kernel.ProcessStop += data => processes.Stop(data.ProcessID);
@@ -140,6 +140,10 @@ public sealed class BandwidthMonitor : IDisposable
 
     /// <summary>Name and path of a process the trace saw start, including ones that exited in the last minutes.</summary>
     public bool TryGetProcess(int pid, out TracedProcess process) => processes.TryGet(pid, out process);
+
+    internal void AddUdpPacket(int pid, bool received, int size, IPAddress source, int sourcePort, IPAddress destination, int destinationPort) =>
+        Add(pid, false, received, size, received ? destination : source, received ? destinationPort : sourcePort,
+            received ? source : destination, received ? sourcePort : destinationPort);
 
     internal void Add(int pid, bool tcp, bool received, int size, IPAddress local, int localPort, IPAddress remote, int remotePort)
     {

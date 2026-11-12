@@ -11,6 +11,7 @@ var suites = new (string File, IEnumerable<(string Name, string Scenario, Action
     ("ReviewRegressionTests.cs", ReviewRegressionTests.All()),
     ("RecorderRegressionTests.cs", RecorderRegressionTests.All()),
     ("NavigationSearchTests.cs", NavigationSearchTests.All()),
+    ("NetworkRegressionTests.cs", NetworkRegressionTests.All()),
 };
 
 int failures = 0, count = 0;

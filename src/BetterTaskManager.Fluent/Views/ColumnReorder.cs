@@ -62,8 +62,8 @@ internal sealed class ColumnReorder
         {
             menuColumn = (menu.Target as FrameworkElement)?.Tag as string;
             int position = menuColumn is null ? -1 : layout.ColumnOf(menuColumn);
-            moveLeft.IsEnabled = position > 1;
-            moveRight.IsEnabled = position >= 1 && position < layout.Order.Count;
+            moveLeft.IsEnabled = position > layout.FirstMovablePosition;
+            moveRight.IsEnabled = position >= layout.FirstMovablePosition && position < layout.LastMovablePosition;
             reset.IsEnabled = !layout.IsDefaultOrder;
         };
         foreach (FrameworkElement element in header.Children.OfType<FrameworkElement>())

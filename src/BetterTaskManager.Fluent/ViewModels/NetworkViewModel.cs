@@ -70,6 +70,9 @@ public sealed class NetworkSlot : RowSlot
     public string Summary { get => summary; private set => Set(ref summary, value); }
     public string Transferred { get => transferred; private set => Set(ref transferred, value); }
     public string Speed { get => speed; private set => Set(ref speed, value); }
+    private string downloadText = "", uploadText = "";
+    public string DownloadText { get => downloadText; private set => Set(ref downloadText, value); }
+    public string UploadText { get => uploadText; private set => Set(ref uploadText, value); }
     /// <summary>Numeric endpoint and name source, shown as the remote column's tooltip.</summary>
     public string RemoteDetail { get => remoteDetail; private set => Set(ref remoteDetail, value); }
     /// <summary>The app a connection belongs to, for the all-apps view.</summary>
@@ -117,6 +120,8 @@ public sealed class NetworkSlot : RowSlot
         slot.Summary = row.Summary;
         slot.Transferred = row.Transferred;
         slot.Speed = row.Speed;
+        slot.DownloadText = row.Speed.Length == 0 ? "" : Format.NetworkRate(row.Down);
+        slot.UploadText = row.Speed.Length == 0 ? "" : Format.NetworkRate(row.Up);
         slot.RemoteDetail = row.RemoteDetail;
         slot.AppName = row.AppName;
         slot.Subline = group ? Loc.F("Network_AppSubline", row.Established, row.Count) + (row.Speed.Length > 0 ? " · " + row.Speed.Replace("   ", " ") : "") : "";
@@ -138,8 +143,8 @@ public sealed class NetworkSlot : RowSlot
 
 /// <summary>
 /// The Network page as master-detail: the apps with open sockets on the left (plus an "All apps" row), the
-/// connections of the selected app in the table. Sorting by name, data or speed orders the apps; sorting by remote
-/// host, state or speed orders the connections.
+/// connections of the selected app in the table. The lists have independent sort choices, including separate
+/// download and upload rates; every connection column is sortable.
 /// </summary>
 public sealed class NetworkViewModel : ObservableObject
 {
@@ -148,20 +153,24 @@ public sealed class NetworkViewModel : ObservableObject
     public const string SortState = "State";
     public const string SortData = "Data";
     public const string SortSpeed = "Speed";
+    public const string SortApp = "App";
+    public const string SortLocal = "Local";
+    public const string SortScope = "Scope";
+    public const string SortDownload = "Download";
+    public const string SortUpload = "Upload";
     public const string AllAppsKey = "*";
 
     private readonly MonitorHost monitor;
-    private readonly AppSettings settings;
+    private readonly NetworkSortState sorting;
 
     public NetworkViewModel(MonitorHost monitor, AppSettings settings)
     {
         this.monitor = monitor;
-        this.settings = settings;
-        if (settings.NetworkSortColumn is not (SortName or SortRemote or SortState or SortData or SortSpeed)) settings.NetworkSortColumn = SortName;
+        sorting = new NetworkSortState(settings);
         Layout = new ColumnLayout("Connections.", new Dictionary<string, double>
         {
-            ["Remote"] = 300, ["App"] = 180, ["Local"] = 200, ["Scope"] = 110, ["State"] = 130, ["Speed"] = 170
-        }, settings.ColumnWidths, ["App", "Local", "Scope", "State", "Speed"], settings.ColumnOrder);
+            ["Remote"] = 300, ["App"] = 180, ["Local"] = 200, ["Scope"] = 110, ["State"] = 130, ["Download"] = 130, ["Upload"] = 130
+        }, settings.ColumnWidths, ["Remote", "App", "Local", "Scope", "State", "Download", "Upload"], settings.ColumnOrder, movableFirst: true);
         NetworkSlot.SharedLayout = Layout;
         Apps = new SlotCollection<NetworkSlot, (NetworkRowData, Func<string, NetworkAccess>)>(NetworkSlot.Load);
         Connections = new SlotCollection<NetworkSlot, (NetworkRowData, Func<string, NetworkAccess>)>(NetworkSlot.Load);
@@ -179,21 +188,15 @@ public sealed class NetworkViewModel : ObservableObject
     /// <summary>The selected app's current rates (or everything's), for the traffic chart.</summary>
     public double SelectedDown { get; private set; }
     public double SelectedUp { get; private set; }
-    public string SortColumn => settings.NetworkSortColumn;
-    public bool SortDescending => settings.NetworkSortDescending;
+    public string SortColumn => sorting.ConnectionColumn;
+    public bool SortDescending => sorting.ConnectionsDescending;
+    public string AppSortColumn => sorting.AppColumn;
+    public bool AppSortDescending => sorting.AppsDescending;
 
     /// <summary>Clicking the active column flips the direction; a new column starts with its natural direction.</summary>
     public void Sort(string column)
     {
-        if (settings.NetworkSortColumn == column)
-        {
-            settings.NetworkSortDescending = !settings.NetworkSortDescending;
-        }
-        else
-        {
-            settings.NetworkSortColumn = column;
-            settings.NetworkSortDescending = column is SortState or SortData or SortSpeed;
-        }
+        sorting.SelectConnections(column, toggle: true);
         Raise(nameof(SortColumn));
         Refresh();
     }
@@ -201,11 +204,20 @@ public sealed class NetworkViewModel : ObservableObject
     /// <summary>Sets the app list's order without flipping; used by the "Sort by" dropdown.</summary>
     public void SortApps(string column)
     {
-        settings.NetworkSortColumn = column;
-        settings.NetworkSortDescending = column is SortData or SortSpeed;
+        sorting.SelectApps(column);
         Raise(nameof(SortColumn));
         Refresh();
     }
+
+    public void SortConnections(string column)
+    {
+        sorting.SelectConnections(column);
+        Raise(nameof(SortColumn));
+        Refresh();
+    }
+
+    public void ToggleAppSort() { sorting.ToggleApps(); Refresh(); }
+    public void ToggleConnectionSort() { sorting.ToggleConnections(); Refresh(); }
 
     public void Refresh()
     {
@@ -224,7 +236,7 @@ public sealed class NetworkViewModel : ObservableObject
                 sum.Received + process.NetworkReceivedTotal, sum.Sent + process.NetworkSentTotal);
         }
 
-        var groups = snapshot.Connections
+        var groups = UdpPeers.ForDisplay(snapshot.Connections, snapshot.UdpPeers)
             .Where(connection => !EstablishedOnly || (connection.Protocol == "TCP" && connection.State is not ("Listening" or "Time Wait")))
             .GroupBy(connection => processes.TryGetValue(connection.Pid, out ProcessSample? process) ? ProcessTree.GroupKey(process) : "pid:" + connection.Pid)
             .Select(group =>
@@ -297,7 +309,8 @@ public sealed class NetworkViewModel : ObservableObject
         var selectedGroups = groups.Where(group => all || group.Key == SelectedAppKey).ToList();
         var groupByConnection = selectedGroups.SelectMany(group => group.Connections.Select(connection => (connection, group)))
             .ToDictionary(pair => pair.connection, pair => pair.group);
-        foreach (ConnectionSample connection in ConnectionOrdering.Sort(groupByConnection.Keys, SortColumn, SortDescending))
+        foreach (ConnectionSample connection in ConnectionOrdering.Sort(groupByConnection.Keys, SortColumn, SortDescending,
+            connection => groupByConnection[connection].Name, ScopeText))
         {
             var group = groupByConnection[connection];
             // Several sockets can share one endpoint (e.g. mDNS on UDP 5353); keep row keys unique.
@@ -308,7 +321,7 @@ public sealed class NetworkViewModel : ObservableObject
                 occurrence == 1 ? key : key + "#" + occurrence,
                 connection.Protocol, "PID " + connection.Pid, group.Path,
                 Endpoint(connection.LocalAddress, connection.LocalPort),
-                connection.Protocol == "UDP" ? "*"
+                connection.Protocol == "UDP" && !UdpPeers.KnownAddress(connection.RemoteAddress) ? "*"
                     : connection.RemoteHost is { } host ? $"{(connection.RemoteHostFromOtherApp ? "≈ " : "")}{host}:{connection.RemotePort}" : Endpoint(connection.RemoteAddress, connection.RemotePort),
                 ScopeText(connection),
                 Loc.State(connection.State), "", "",
@@ -317,7 +330,7 @@ public sealed class NetworkViewModel : ObservableObject
                 RemoteDetail(connection),
                 false, false, false,
                 connection.ReceiveBytesPerSecond, connection.SendBytesPerSecond, 0, 0, 0, 0, connection.Pid,
-                connection.Protocol == "UDP" ? "" : Endpoint(connection.RemoteAddress, connection.RemotePort), connection.State, group.Name, Source: connection));
+                connection.Protocol == "UDP" && !UdpPeers.KnownAddress(connection.RemoteAddress) ? "" : Endpoint(connection.RemoteAddress, connection.RemotePort), connection.State, group.Name, Source: connection));
         }
         if (all) (SelectedDown, SelectedUp) = (allDown, allUp);
         else
@@ -347,44 +360,18 @@ public sealed class NetworkViewModel : ObservableObject
         var byName = StringComparer.CurrentCultureIgnoreCase;
         IOrderedEnumerable<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel)> ordered;
 
-        if (SortColumn == SortRemote)
+        Func<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel), double>? measure = AppSortColumn switch
         {
-            // Order apps by their alphabetically first remote host, so clicking the header visibly reorders the list;
-            // the connections inside each app are ordered by host too (see SortConnections).
-            var byHost = StringComparer.OrdinalIgnoreCase;
-            ordered = (SortDescending
-                ? groups.OrderByDescending(group => GroupHost(group.Connections), byHost)
-                : groups.OrderBy(group => GroupHost(group.Connections), byHost)).ThenBy(group => group.Name, byName);
-        }
-        else
-        {
-            Func<(string Key, string Name, string Path, List<ConnectionSample> Connections, bool Tunnel), double>? measure = SortColumn switch
-            {
-                SortState => group => group.Connections.Count(connection => connection.State == "Established") * 100000d + group.Connections.Count,
-                SortData => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Received + usage.Sent : 0,
-                SortSpeed => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Down + usage.Up : 0,
-                _ => null
-            };
-            ordered = measure is null
-                ? (SortDescending ? groups.OrderByDescending(group => group.Name, byName) : groups.OrderBy(group => group.Name, byName))
-                : (SortDescending ? groups.OrderByDescending(measure) : groups.OrderBy(measure)).ThenBy(group => group.Name, byName);
-        }
+            SortData => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Received + usage.Sent : 0,
+            SortSpeed => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Down + usage.Up : 0,
+            SortDownload => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Down : 0,
+            SortUpload => group => traffic.TryGetValue(group.Key, out var usage) ? usage.Up : 0,
+            _ => null
+        };
+        ordered = measure is null
+            ? (AppSortDescending ? groups.OrderByDescending(group => group.Name, byName) : groups.OrderBy(group => group.Name, byName))
+            : (AppSortDescending ? groups.OrderByDescending(measure) : groups.OrderBy(measure)).ThenBy(group => group.Name, byName);
         return ordered.ThenBy(group => group.Key, StringComparer.Ordinal).ToList();
-    }
-
-    /// <summary>An app's representative remote host for sorting: the alphabetically first host it talks to. Apps with
-    /// no remote host (only listeners or UDP sockets) sort last.</summary>
-    private static string GroupHost(List<ConnectionSample> connections)
-    {
-        string? best = null;
-        foreach (ConnectionSample connection in connections)
-        {
-            if (connection.Protocol != "TCP" || connection.State == "Listening") continue;
-            string host = connection.RemoteHost ?? connection.RemoteAddress;
-            if (host.Length == 0) continue;
-            if (best is null || string.Compare(host, best, StringComparison.OrdinalIgnoreCase) < 0) best = host;
-        }
-        return best ?? "￿";
     }
 
     /// <summary>Scope and direction of the remote endpoint.</summary>
@@ -397,7 +384,7 @@ public sealed class NetworkViewModel : ObservableObject
 
     private static string RemoteDetail(ConnectionSample connection)
     {
-        if (connection.Protocol == "UDP") return Loc.Get("Remote_UdpNone");
+        if (connection.Protocol == "UDP" && !UdpPeers.KnownAddress(connection.RemoteAddress)) return Loc.Get("Remote_UdpNone");
         string endpoint = Endpoint(connection.RemoteAddress, connection.RemotePort);
         if (connection.RemoteHost is null) return endpoint;
         return connection.RemoteHostIsReverse ? Loc.F("Remote_Reverse", endpoint)

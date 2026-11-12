@@ -12,6 +12,8 @@
     <Compile Include="../../src/BetterTaskManager.Fluent/Services/BlockedLogRows.cs" Link="BlockedLogRows.cs" />
     <Compile Include="../../src/BetterTaskManager.Fluent/Services/PageSearchState.cs" Link="PageSearchState.cs" />
     <Compile Include="../../src/BetterTaskManager.Fluent/Services/SearchableListLoader.cs" Link="SearchableListLoader.cs" />
+    <Compile Include="../../src/BetterTaskManager.Fluent/Services/NetworkSortState.cs" Link="NetworkSortState.cs" />
+    <Compile Include="../../src/BetterTaskManager.Fluent/Services/ColumnOrderState.cs" Link="ColumnOrderState.cs" />
     <ProjectReference Include="../../src/BetterTaskManager.Core/BetterTaskManager.Core.csproj" />
   </ItemGroup>
 </Project>
