@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.0-alpha.49 - 2026-11-12
+
+- **The app list on the Network page has its own search box.** It narrows only the app list, by app name or path, while All apps, the totals and the connection table stay complete. Opening the page for a specific app clears it, so that app is shown.
+- Count the traffic of physical network adapters once, show the remote peers of UDP connections correctly, and get observed peers from the History service as well.
+- Sort the app list and the connection table separately, with separate Download and Upload columns. Every Network column can be moved into the first position, and saved layouts are kept.
+
 ## 2.0.0-alpha.48 - 2026-11-06
 
 - Keep searches separate for each page so a process search does not hide Startup apps or Network connections. Startup reloads apply the latest query, including when the user switches pages during a read.
