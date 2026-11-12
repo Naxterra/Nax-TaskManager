@@ -85,6 +85,10 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid Padding="12,8,10,8" Background="{ThemeResource SurfaceRaisedBrush}" CornerRadius="10,10,0,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -101,6 +105,8 @@
                     <Button x:Name="AppSortDirection" Grid.Column="2" Margin="6,0,0,0" Click="AppSortDirection_Click">
                         <FontIcon x:Name="AppSortDirectionIcon" Glyph="&#xE70E;" FontSize="12" />
                     </Button>
+                    <!-- Narrows only this list, by app name or path; the window's search box filters connections too. -->
+                    <TextBox x:Name="AppFilterBox" x:Uid="Network_AppFilter" Grid.Row="1" Grid.ColumnSpan="3" Margin="0,8,0,0" PlaceholderText="Find app" AutomationProperties.Name="Find app" TextChanged="AppFilterBox_TextChanged" />
                 </Grid>
                 <ListView x:Name="AppList" Grid.Row="1" Padding="0,0,14,0" ItemsSource="{x:Bind ViewModel.Apps}" SelectionMode="Single" SelectionChanged="AppList_SelectionChanged" ContextRequested="List_ContextRequested">
                     <ListView.ItemContainerStyle>

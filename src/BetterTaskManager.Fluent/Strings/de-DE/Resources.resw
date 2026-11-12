@@ -943,6 +943,8 @@ Erstmals {2}, zuletzt {3}</value></data>
   <data name="Blocked_Limited" xml:space="preserve"><value>Die neuesten {0} passenden Gruppen werden angezeigt. Der CSV-Export enthält alle Treffer.</value></data>
   <data name="Network_ConnectionsHeading.Text" xml:space="preserve"><value>Verbindungen</value></data>
   <data name="Network_AppSort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Apps sortieren</value></data>
+  <data name="Network_AppFilter.PlaceholderText" xml:space="preserve"><value>App suchen</value></data>
+  <data name="Network_AppFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>App suchen</value></data>
   <data name="Network_ConnectionSort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Verbindungen sortieren</value></data>
   <data name="Network_SortRemote.Content" xml:space="preserve"><value>Sortierung: Remotehost</value></data>
   <data name="Network_SortApp.Content" xml:space="preserve"><value>Sortierung: App</value></data>

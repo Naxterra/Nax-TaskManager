@@ -76,6 +76,9 @@ public sealed partial class NetworkPage : Page
     public void ShowApp(ProcessSample process)
     {
         ViewModel.SelectedAppKey = ProcessTree.GroupKey(process);
+        // The app filter would hide the app that was asked for, and the page would fall back to all apps.
+        ViewModel.AppFilter = "";
+        AppFilterBox.Text = "";
         ViewModel.EstablishedOnly = false;
         EstablishedOnlyButton.IsChecked = false;
         connectionKey = null;
@@ -372,6 +375,12 @@ public sealed partial class NetworkPage : Page
         if (settingSort || ConnectionSortBox.SelectedItem is not ComboBoxItem { Tag: string column }) return;
         ViewModel.SortConnections(column);
         UpdateSortIndicators();
+        Refresh();
+    }
+
+    private void AppFilterBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        ViewModel.AppFilter = AppFilterBox.Text.Trim();
         Refresh();
     }
 

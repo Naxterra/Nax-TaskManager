@@ -943,6 +943,8 @@ First {2}, last {3}</value></data>
   <data name="Blocked_Limited" xml:space="preserve"><value>Showing the latest {0} matching groups. Export CSV to save every match.</value></data>
   <data name="Network_ConnectionsHeading.Text" xml:space="preserve"><value>Connections</value></data>
   <data name="Network_AppSort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort apps</value></data>
+  <data name="Network_AppFilter.PlaceholderText" xml:space="preserve"><value>Find app</value></data>
+  <data name="Network_AppFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Find app</value></data>
   <data name="Network_ConnectionSort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort connections</value></data>
   <data name="Network_SortRemote.Content" xml:space="preserve"><value>Sort: remote host</value></data>
   <data name="Network_SortApp.Content" xml:space="preserve"><value>Sort: app</value></data>

@@ -182,6 +182,8 @@ public sealed class NetworkViewModel : ObservableObject
     public bool EstablishedOnly { get; set; }
     /// <summary>The app whose connections fill the table; <see cref="AllAppsKey"/> shows every connection.</summary>
     public string SelectedAppKey { get; set; } = AllAppsKey;
+    /// <summary>Narrows the app list by name or path. "All apps", the totals and the connections stay complete.</summary>
+    public string AppFilter { get; set; } = "";
     public string Summary { get; private set; } = "";
     /// <summary>Apps shown after the search filter, for the connections tile.</summary>
     public int AppCount { get; private set; }
@@ -279,8 +281,10 @@ public sealed class NetworkViewModel : ObservableObject
             string summary = Loc.F("Network_GroupSummary", established, listening, group.Connections.Count - established - listening);
             string data = measured && usage.Received + usage.Sent > 0 ? $"↓ {Format.Bytes(usage.Received)}   ↑ {Format.Bytes(usage.Sent)}" : "";
             string speed = measured ? Speed(usage.Down, usage.Up) : "";
-            appRows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", "", summary, data, speed, "", false, group.Tunnel, false,
-                usage.Down, usage.Up, usage.Received, usage.Sent, established, listening, Count: group.Connections.Count));
+            if (AppFilter.Length == 0 || group.Name.Contains(AppFilter, StringComparison.CurrentCultureIgnoreCase) ||
+                group.Path.Contains(AppFilter, StringComparison.CurrentCultureIgnoreCase))
+                appRows.Add(new NetworkRowData(RowKind.Group, group.Key, group.Name, $"({group.Connections.Count})", group.Path, "", "", "", "", summary, data, speed, "", false, group.Tunnel, false,
+                    usage.Down, usage.Up, usage.Received, usage.Sent, established, listening, Count: group.Connections.Count));
             // Tunnel bytes carry the app traffic again; match the summary's exclusion of VPN overhead.
             if (!group.Tunnel)
             {
