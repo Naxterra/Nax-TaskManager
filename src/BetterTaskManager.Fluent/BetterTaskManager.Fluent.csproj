@@ -8,7 +8,7 @@
     <AssemblyName>Nax-TaskManager</AssemblyName>
     <Product>Nax-TaskManager</Product>
     <Company>Naxterra</Company>
-    <Version>2.0.0-alpha.49</Version>
+    <Version>2.0.0-alpha.50</Version>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64;ARM64</Platforms>
@@ -23,6 +23,7 @@
     <Nullable>enable</Nullable>
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishTrimmed>false</PublishTrimmed>
+    <StartupHookSupport>false</StartupHookSupport>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
@@ -42,12 +43,13 @@
 
   <!-- The background history service ships in a HistoryService folder next to the app; Settings installs it from there. -->
   <Target Name="BundleHistoryService" AfterTargets="Build">
-    <MSBuild Projects="..\BetterTaskManager.HistoryService\BetterTaskManager.HistoryService.csproj" Targets="Build" Properties="Configuration=$(Configuration)">
+    <MSBuild Projects="..\BetterTaskManager.HistoryService\BetterTaskManager.HistoryService.csproj" Targets="Build" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)">
       <Output TaskParameter="TargetOutputs" ItemName="HistoryServiceAssembly" />
     </MSBuild>
     <PropertyGroup>
       <HistoryServiceOutput>@(HistoryServiceAssembly->'%(RootDir)%(Directory)')</HistoryServiceOutput>
     </PropertyGroup>
+    <RemoveDir Directories="$(OutDir)HistoryService" Condition="Exists('$(OutDir)HistoryService')" />
     <ItemGroup>
       <HistoryServiceFiles Include="$(HistoryServiceOutput)**\*" Exclude="$(HistoryServiceOutput)**\*.pdb" />
     </ItemGroup>

@@ -55,13 +55,17 @@ internal static class TaskManagerSwitch
             if (enable) startInfo.ArgumentList.Add(exe);
             try
             {
-                using Process helper = Process.Start(startInfo)!;
-                await helper.WaitForExitAsync();
-                // Exit code 6: this copy is not in an administrator-only folder (see Program, --replace-taskmanager-on).
-                if (helper.ExitCode == 6) error = Loc.Get("Replace_NeedsMachineInstall");
-                else if (helper.ExitCode != 0) error = Loc.F("Common_ExitCode", helper.ExitCode);
+                using Process? helper = Process.Start(startInfo);
+                if (helper is null) error = Loc.Get("Uac_CancelledNothing");
+                else
+                {
+                    await helper.WaitForExitAsync();
+                    // Exit code 6: this copy is not in an administrator-only folder (see Program, --replace-taskmanager-on).
+                    if (helper.ExitCode == 6) error = Loc.Get("Replace_NeedsMachineInstall");
+                    else if (helper.ExitCode != 0) error = Loc.F("Common_ExitCode", helper.ExitCode);
+                }
             }
-            catch (System.ComponentModel.Win32Exception)
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
             {
                 error = Loc.Get("Uac_CancelledNothing");
             }

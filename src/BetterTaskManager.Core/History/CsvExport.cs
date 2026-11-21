@@ -48,7 +48,12 @@ public static class CsvExport
         {
             string text = Convert.ToString(field, CultureInfo.InvariantCulture) ?? "";
             // Treat executable names/hostnames/rule text as data when opened in a spreadsheet.
-            if (field is string && text.TrimStart() is { Length: > 0 } trimmed && "=+-@".Contains(trimmed[0])) text = "'" + text;
+            if (field is string && text.Length > 0)
+            {
+                string trimmed = text.TrimStart();
+                if (text[0] is '\t' or '\r' or '\n' || (trimmed.Length > 0 && "=+-@".Contains(trimmed[0])))
+                    text = "'" + text;
+            }
             return "\"" + text.Replace("\"", "\"\"") + "\"";
         })));
     }

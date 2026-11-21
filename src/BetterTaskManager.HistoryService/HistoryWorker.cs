@@ -145,6 +145,7 @@ public sealed class HistoryWorker : IDisposable
             disposed = true;
             try
             {
+                blocked?.Flush(DateTime.UtcNow);
                 recorder.Dispose();
             }
             catch (Exception ex)

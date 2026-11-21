@@ -32,12 +32,13 @@ public sealed class MemoryCounters : IDisposable
     [DllImport("pdh.dll")]
     private static extern uint PdhCloseQuery(IntPtr query);
 
-    private readonly IntPtr query;
+    private readonly object sync = new();
+    private IntPtr query;
     private readonly Dictionary<string, IntPtr> counters = new();
 
     public MemoryCounters()
     {
-        if (PdhOpenQuery(null, IntPtr.Zero, out query) != 0) return;
+        if (PdhOpenQuery(null, IntPtr.Zero, out query) != 0) { query = IntPtr.Zero; return; }
         foreach (string name in new[]
         {
             "Modified Page List Bytes", "Standby Cache Core Bytes", "Standby Cache Normal Priority Bytes",
@@ -53,20 +54,27 @@ public sealed class MemoryCounters : IDisposable
 
     public Dictionary<string, long> Read()
     {
-        var values = new Dictionary<string, long>();
-        if (!Available || PdhCollectQueryData(query) != 0) return values;
-        foreach (var (name, counter) in counters)
+        lock (sync)
         {
-            if (PdhGetFormattedCounterValue(counter, PdhFormatLarge, out _, out PdhFormattedValue value) == 0 && value.Status is 0 or 1)
+            var values = new Dictionary<string, long>();
+            if (!Available || PdhCollectQueryData(query) != 0) return values;
+            foreach (var (name, counter) in counters)
             {
-                values[name] = value.LargeValue;
+                if (PdhGetFormattedCounterValue(counter, PdhFormatLarge, out _, out PdhFormattedValue value) == 0 && value.Status is 0 or 1)
+                {
+                    values[name] = value.LargeValue;
+                }
             }
+            return values;
         }
-        return values;
     }
 
     public void Dispose()
     {
-        if (query != IntPtr.Zero) PdhCloseQuery(query);
+        lock (sync)
+        {
+            if (query != IntPtr.Zero) PdhCloseQuery(query);
+            query = IntPtr.Zero;
+        }
     }
 }

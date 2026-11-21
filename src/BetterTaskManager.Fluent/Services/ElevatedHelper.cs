@@ -23,13 +23,19 @@ internal static class ElevatedHelper
         if (resultFile is not null) startInfo.ArgumentList.Add(resultFile);
         try
         {
-            using Process helper = Process.Start(startInfo)!;
+            using Process? helper = Process.Start(startInfo);
+            if (helper is null) return Loc.Get("Uac_CancelledNothing");
             await helper.WaitForExitAsync();
             if (helper.ExitCode == 0) return null;
-            string details = resultFile is not null && File.Exists(resultFile) ? (await File.ReadAllTextAsync(resultFile)).Trim() : "";
+            string details = "";
+            if (resultFile is not null && File.Exists(resultFile))
+            {
+                try { details = (await File.ReadAllTextAsync(resultFile)).Trim(); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            }
             return details.Length > 0 ? details : Loc.F("Common_ExitCode", helper.ExitCode);
         }
-        catch (System.ComponentModel.Win32Exception)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
             return Loc.Get("Uac_CancelledNothing");
         }

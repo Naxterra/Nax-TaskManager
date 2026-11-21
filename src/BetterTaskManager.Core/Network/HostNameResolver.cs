@@ -58,11 +58,13 @@ public sealed class HostNameResolver : IDisposable
     private TraceEventSession? dnsSession;
     private Task? cacheLoop;
     private bool cacheReadOnce;
+    private volatile bool liveDnsEvents;
+    private volatile bool disposed;
 
     /// <param name="sessionName">Machine-wide ETW session name; tests must pass their own (see <see cref="BandwidthMonitor"/>).</param>
     public HostNameResolver(string sessionName = DefaultSessionName) => this.sessionName = sessionName;
 
-    public bool LiveDnsEvents { get; private set; }
+    public bool LiveDnsEvents => liveDnsEvents;
 
     /// <summary>
     /// False while another process (the history service) already traces DNS; names then come from the DNS cache and
@@ -203,6 +205,7 @@ public sealed class HostNameResolver : IDisposable
             parser.All += OnDnsEvent;
             dnsSession.EnableProvider("Microsoft-Windows-DNS-Client");
             TraceEventSession started = dnsSession;
+            liveDnsEvents = true;
             var pump = new Thread(() =>
             {
                 try
@@ -213,14 +216,14 @@ public sealed class HostNameResolver : IDisposable
                 {
                     // Session stopped or lost; the cache poll keeps names coming.
                 }
-                LiveDnsEvents = false;
+                liveDnsEvents = false;
             })
             { IsBackground = true, Name = "DnsTrace" };
             pump.Start();
-            LiveDnsEvents = true;
         }
         catch (Exception)
         {
+            liveDnsEvents = false;
             dnsSession?.Dispose();
             dnsSession = null;
         }
@@ -258,6 +261,10 @@ public sealed class HostNameResolver : IDisposable
                 if (lookups.Count > 20000)
                 {
                     foreach (IPAddress stale in lookups.Where(pair => pair.Value.Values.All(at => now - at > ProcessNameLifetime)).Select(pair => pair.Key).ToList()) lookups.Remove(stale);
+                    if (lookups.Count > 20000)
+                    {
+                        foreach (IPAddress oldest in lookups.OrderBy(pair => pair.Value.Values.Max()).Take(lookups.Count / 4).Select(pair => pair.Key).ToList()) lookups.Remove(oldest);
+                    }
                 }
             }
         }
@@ -272,6 +279,10 @@ public sealed class HostNameResolver : IDisposable
                 if (byProcess.Count > 2000)
                 {
                     foreach (int stale in byProcess.Where(pair => pair.Value.Values.All(entry => now - entry.At > ProcessNameLifetime)).Select(pair => pair.Key).ToList()) byProcess.Remove(stale);
+                    if (byProcess.Count > 2000)
+                    {
+                        foreach (int oldest in byProcess.OrderBy(pair => pair.Value.Values.Max(entry => entry.At)).Take(byProcess.Count / 4).Select(pair => pair.Key).ToList()) byProcess.Remove(oldest);
+                    }
                 }
             }
         }
@@ -280,21 +291,26 @@ public sealed class HostNameResolver : IDisposable
 
     private async Task ReverseLookupAsync(IPAddress ip)
     {
-        await reverseSlots.WaitAsync();
+        bool acquired = false;
         try
         {
+            await reverseSlots.WaitAsync(shutdown.Token);
+            acquired = true;
             string? name = await Task.Run(() => QueryPointer(ip)).WaitAsync(TimeSpan.FromSeconds(5), shutdown.Token);
             if (name is not null) Remember(ip, name, HostNameSource.Reverse);
             else lock (gate) RememberFailure(ip);
         }
-        catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
+        catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or ObjectDisposedException)
         {
-            lock (gate) RememberFailure(ip);
+            if (ex is TimeoutException) lock (gate) RememberFailure(ip);
         }
         finally
         {
             lock (gate) pendingReverse.Remove(ip);
-            reverseSlots.Release();
+            if (acquired)
+            {
+                try { reverseSlots.Release(); } catch (ObjectDisposedException) { }
+            }
         }
     }
 
@@ -406,8 +422,13 @@ public sealed class HostNameResolver : IDisposable
 
     public void Dispose()
     {
+        if (disposed) return;
+        disposed = true;
+        liveDnsEvents = false;
         shutdown.Cancel();
         dnsSession?.Dispose();
         dnsSession = null;
+        try { cacheLoop?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
+        shutdown.Dispose();
     }
 }

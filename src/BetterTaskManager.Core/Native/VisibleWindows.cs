@@ -18,6 +18,7 @@ public static class VisibleWindows
     {
         var titles = new Dictionary<int, string>();
         var text = new StringBuilder(256);
+        int selfPid = Environment.ProcessId;
         Win32.EnumWindows((window, _) =>
         {
             if (!Win32.IsWindowVisible(window)) return true;
@@ -25,11 +26,12 @@ public static class VisibleWindows
             if ((Win32.GetWindowLong(window, GwlExStyle) & WsExToolWindow) != 0) return true;
             if (Win32.DwmGetWindowAttribute(window, DwmwaCloaked, out int cloaked, sizeof(int)) == 0 && cloaked != 0) return true;
 
+            Win32.GetWindowThreadProcessId(window, out int pid);
+            // Skipping our own process avoids synchronous WM_GETTEXT calls to the UI thread during shutdown.
+            if (pid == 0 || pid == selfPid || titles.ContainsKey(pid)) return true;
+
             int length = Win32.GetWindowTextLength(window);
             if (length == 0) return true;
-
-            Win32.GetWindowThreadProcessId(window, out int pid);
-            if (pid == 0 || titles.ContainsKey(pid)) return true;
 
             text.Clear();
             text.EnsureCapacity(length + 1);

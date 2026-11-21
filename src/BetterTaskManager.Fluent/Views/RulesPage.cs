@@ -67,10 +67,21 @@ public sealed partial class RulesPage : Page
         reset.Click += async (_, _) =>
         {
             reset.IsEnabled = false;
-            string? error = await App.Monitor.ResetPoliciesAsync();
-            reset.IsEnabled = true;
-            if (error is not null) damagedBar.Message = Loc.Get("RulesPage_DamagedText") + " " + error;
-            RebuildList();
+            try
+            {
+                string? error = await App.Monitor.ResetPoliciesAsync();
+                if (error is not null) damagedBar.Message = Loc.Get("RulesPage_DamagedText") + " " + error;
+                RebuildList();
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write(ex);
+                damagedBar.Message = Loc.Get("RulesPage_DamagedText") + " " + ex.Message;
+            }
+            finally
+            {
+                reset.IsEnabled = true;
+            }
         };
         damagedBar.ActionButton = reset;
         damagedBar.Margin = new Thickness(50, 6, 0, 0);
@@ -285,7 +296,14 @@ public sealed partial class RulesPage : Page
             ShowEditor();
             return;
         }
-        if (!await SelectAsync(path)) RebuildList();
+        try
+        {
+            if (!await SelectAsync(path)) RebuildList();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex);
+        }
     }
 
     private void OnRulesChanged()
@@ -304,16 +322,11 @@ public sealed partial class RulesPage : Page
         pendingPath = path;
         if (editor is { IsDirty: true } && !string.Equals(editor.Path, path, StringComparison.OrdinalIgnoreCase))
         {
-            var ask = new ContentDialog
+            if (!await Dialogs.ConfirmAsync(XamlRoot, Loc.Get("RulesPage_DiscardTitle"),
+                Loc.F("RulesPage_DiscardText", editor.Name), Loc.Get("RulesPage_Discard")) || pendingPath != path)
             {
-                XamlRoot = XamlRoot,
-                Title = Loc.Get("RulesPage_DiscardTitle"),
-                Content = Loc.F("RulesPage_DiscardText", editor.Name),
-                PrimaryButtonText = Loc.Get("RulesPage_Discard"),
-                CloseButtonText = Loc.Get("Common_Cancel"),
-                DefaultButton = ContentDialogButton.Close
-            };
-            if (await ask.ShowAsync() != ContentDialogResult.Primary || pendingPath != path) return false;
+                return false;
+            }
         }
         Open(path);
         RebuildList();
@@ -329,18 +342,8 @@ public sealed partial class RulesPage : Page
         ShowEditor();
     }
 
-    /// <summary>The file description (as Task Manager shows it), else the file name.</summary>
-    internal static string DisplayName(string path)
-    {
-        try
-        {
-            if (File.Exists(path) && FileVersionInfo.GetVersionInfo(path).FileDescription is { Length: > 0 } description) return description;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
-        return System.IO.Path.GetFileName(path);
-    }
+    /// <summary>The file description (as Task Manager shows it), else the file name (cached).</summary>
+    internal static string DisplayName(string path) => BlockedLogView.AppName(path);
 
     private static string PriorityName(int priority) => Loc.Get("RulesPage_Priority" + priority.ToString(CultureInfo.InvariantCulture));
 
@@ -355,6 +358,10 @@ public sealed partial class RulesPage : Page
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(filter, Loc.Get("RulesPage_PickFilter"));
         var apps = new ListView { SelectionMode = ListViewSelectionMode.Single, Height = 320 };
         var pathBox = new TextBox { PlaceholderText = Loc.Get("RulesPage_PickPath"), IsSpellCheckEnabled = false };
+        var pathError = Note("");
+        pathError.SetResourceReference(TextBlock.ForegroundProperty, "SystemFillColorCriticalBrush");
+        pathError.Visibility = Visibility.Collapsed;
+        pathBox.TextChanged += (_, _) => pathError.Visibility = Visibility.Collapsed;
         void Fill()
         {
             apps.Items.Clear();
@@ -384,28 +391,41 @@ public sealed partial class RulesPage : Page
         panel.Children.Add(apps);
         panel.Children.Add(Text(Loc.Get("RulesPage_PickOr"), 13, strong: true));
         panel.Children.Add(pathBox);
+        panel.Children.Add(pathError);
         var dialog = new ContentDialog
         {
-            XamlRoot = XamlRoot,
             Title = Loc.Get("RulesPage_AddApp"),
             Content = panel,
             PrimaryButtonText = Loc.Get("RulesPage_PickOpen"),
             CloseButtonText = Loc.Get("Common_Cancel"),
             DefaultButton = ContentDialogButton.Primary
         };
-        bool picked = false;
-        dialog.PrimaryButtonClick += (_, _) => picked = true;
+        string? chosen = null;
+        dialog.PrimaryButtonClick += (_, args) =>
+        {
+            string typed = pathBox.Text.Trim().Trim('"');
+            if (typed.Length > 0)
+            {
+                if (!File.Exists(typed))
+                {
+                    pathError.Text = Loc.Get("RulesPage_PickPathMissing");
+                    pathError.Visibility = Visibility.Visible;
+                    args.Cancel = true;
+                    return;
+                }
+                chosen = System.IO.Path.GetFullPath(typed);
+                return;
+            }
+            chosen = (apps.SelectedItem as ListViewItem)?.Tag as string;
+        };
         apps.DoubleTapped += (_, _) =>
         {
-            if (apps.SelectedItem is null) return;
-            picked = true;
+            if (apps.SelectedItem is not ListViewItem { Tag: string path }) return;
+            chosen = path;
             dialog.Hide();
         };
-        await dialog.ShowAsync();
-        if (!picked) return null;
-        string typed = pathBox.Text.Trim().Trim('"');
-        if (typed.Length > 0) return File.Exists(typed) ? System.IO.Path.GetFullPath(typed) : null;
-        return (apps.SelectedItem as ListViewItem)?.Tag as string;
+        await Dialogs.ShowDialogAsync(dialog, XamlRoot);
+        return chosen;
     }
 
     // ===== Helpers =====
@@ -601,10 +621,9 @@ public sealed partial class RulesPage : Page
             priority.SelectedIndex = Array.IndexOf(Priorities, loadedMemory.Priority) is int index and >= 0 ? index : 0;
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(priority, Loc.Get("RulesPage_Priority"));
             content.Children.Add(SettingRow(Loc.Get("RulesPage_Priority"), Loc.Get("RulesPage_PriorityNote"), priority));
-            if (HistoryServiceControl.QueryState() != HistoryServiceState.Running)
-            {
-                content.Children.Add(new InfoBar { IsOpen = true, IsClosable = false, Severity = InfoBarSeverity.Warning, Message = Loc.Get("RulesPage_NeedsService") });
-            }
+            var needsServiceBar = new InfoBar { IsOpen = false, IsClosable = false, Severity = InfoBarSeverity.Warning, Message = Loc.Get("RulesPage_NeedsService") };
+            content.Children.Add(needsServiceBar);
+            _ = CheckServiceAsync(needsServiceBar);
 
             var scroll = new ScrollViewer { Content = content, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
 
@@ -614,7 +633,7 @@ public sealed partial class RulesPage : Page
             footer.BorderThickness = new Thickness(0, 1, 0, 0);
             footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            errors.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
+            errors.SetResourceReference(TextBlock.ForegroundProperty, "SystemFillColorCriticalBrush");
             var messages = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
             messages.Children.Add(errors);
             messages.Children.Add(status);
@@ -654,6 +673,13 @@ public sealed partial class RulesPage : Page
 
         private bool HasAnything => loadedBlocked || !loadedPolicy.IsEmpty || !loadedMemory.IsEmpty;
 
+        private async Task CheckServiceAsync(InfoBar bar)
+        {
+            HistoryServiceState state = await Task.Run(HistoryServiceControl.QueryState);
+            if (!page.IsLoaded || !ReferenceEquals(page.editor, this)) return;
+            bar.IsOpen = state != HistoryServiceState.Running;
+        }
+
         /// <summary>The app's drops of the last 24 hours (re-read at most every 5 seconds).</summary>
         private async Task ShowRecentAsync()
         {
@@ -668,8 +694,14 @@ public sealed partial class RulesPage : Page
                 {
                     if (BlockedLogView.Read(DateTime.UtcNow.AddDays(-1), one, 6, oursOnly: false) is { } part) (all ??= []).AddRange(part);
                 }
-                return all?.OrderByDescending(record => record.LastSeen).Take(6).ToList();
+                List<Core.History.BlockedRecord>? top = all?.OrderByDescending(record => record.LastSeen).Take(6).ToList();
+                if (top is not null)
+                {
+                    foreach (Core.History.BlockedRecord item in top) _ = BlockedLogView.AppName(item.AppPath);
+                }
+                return top;
             });
+            if (!page.IsLoaded || !ReferenceEquals(page.editor, this)) return;
             recent.Children.Clear();
             if (records is null || records.Count == 0)
             {
@@ -824,25 +856,41 @@ public sealed partial class RulesPage : Page
             move.Click += async (_, _) =>
             {
                 move.IsEnabled = false;
-                AppNetworkPolicy network = CopyPolicy(loadedPolicy, newPath);
-                var change = new RuleChange
+                Saving = true;
+                Validate();
+                try
                 {
-                    Path = newPath,
-                    Blocked = loadedBlocked ? true : null,
-                    Network = network.IsEmpty ? null : network,
-                    Memory = loadedMemory.IsEmpty ? null : new AppMemoryRule { Path = newPath, LimitMegabytes = loadedMemory.LimitMegabytes, Priority = loadedMemory.Priority },
-                    ReplacesPath = Path
-                };
-                string? error = await App.Monitor.ApplyRulesAsync(change);
-                if (error is null)
-                {
-                    page.Open(newPath);
-                    page.RebuildList();
-                    return;
+                    AppNetworkPolicy network = CopyPolicy(loadedPolicy, newPath);
+                    var change = new RuleChange
+                    {
+                        Path = newPath,
+                        Blocked = loadedBlocked ? true : null,
+                        Network = network.IsEmpty ? null : network,
+                        Memory = loadedMemory.IsEmpty ? null : new AppMemoryRule { Path = newPath, LimitMegabytes = loadedMemory.LimitMegabytes, Priority = loadedMemory.Priority },
+                        ReplacesPath = Path
+                    };
+                    string? error = await App.Monitor.ApplyRulesAsync(change);
+                    if (error is null)
+                    {
+                        page.Open(newPath);
+                        page.RebuildList();
+                        return;
+                    }
+                    bar.Severity = InfoBarSeverity.Error;
+                    bar.Message = Loc.Get("Rules_NotSaved") + ": " + error;
                 }
-                move.IsEnabled = true;
-                bar.Severity = InfoBarSeverity.Error;
-                bar.Message = Loc.Get("Rules_NotSaved") + ": " + error;
+                catch (Exception ex)
+                {
+                    CrashLog.Write(ex);
+                    bar.Severity = InfoBarSeverity.Error;
+                    bar.Message = Loc.Get("Rules_NotSaved") + ": " + ex.Message;
+                }
+                finally
+                {
+                    Saving = false;
+                    move.IsEnabled = true;
+                    Validate();
+                }
             };
             return bar;
         }
@@ -889,34 +937,42 @@ public sealed partial class RulesPage : Page
 
         private async Task SaveAsync(bool remove)
         {
-            if (remove)
+            if (remove && !await Dialogs.ConfirmAsync(page.XamlRoot, Loc.F("RulesPage_RemoveTitle", Name),
+                Loc.Get("RulesPage_RemoveText"), Loc.Get("Rules_RemoveAll")))
             {
-                var confirm = new ContentDialog
-                {
-                    XamlRoot = page.XamlRoot,
-                    Title = Loc.F("RulesPage_RemoveTitle", Name),
-                    Content = Loc.Get("RulesPage_RemoveText"),
-                    PrimaryButtonText = Loc.Get("Rules_RemoveAll"),
-                    CloseButtonText = Loc.Get("Common_Cancel"),
-                    DefaultButton = ContentDialogButton.Close
-                };
-                if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+                return;
             }
             AppNetworkPolicy policy = remove ? new AppNetworkPolicy { Path = Path } : CurrentPolicy();
             AppMemoryRule memory = remove ? new AppMemoryRule { Path = Path } : CurrentMemory();
             bool blocked = !remove && blockAll.IsOn;
+            // Do not persist auto-checked helpers when the user only saved a memory rule and set no network block or rules.
+            bool networkChanged = remove
+                ? !loadedPolicy.IsEmpty
+                : (blocked || policy.HasFilters || !loadedPolicy.IsEmpty || Key(policy) != loadedNetworkKey) && Key(policy) != storedNetworkKey;
             var change = new RuleChange
             {
                 Path = Path,
                 Blocked = blocked != loadedBlocked ? blocked : null,
-                Network = Key(policy) != storedNetworkKey || (remove && !loadedPolicy.IsEmpty) ? policy : null,
+                Network = networkChanged ? policy : null,
                 Memory = Key(memory) != loadedMemoryKey ? memory : null
             };
             Saving = true;
             status.Text = Loc.Get("RulesPage_Saving");
             Validate();
-            string? error = await App.Monitor.ApplyRulesAsync(change);
-            Saving = false;
+            string? error;
+            try
+            {
+                error = await App.Monitor.ApplyRulesAsync(change);
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write(ex);
+                error = ex.Message;
+            }
+            finally
+            {
+                Saving = false;
+            }
             if (error is null)
             {
                 // The page reloads this app from the saved state (FirewallChanged), which also clears the dirty state.

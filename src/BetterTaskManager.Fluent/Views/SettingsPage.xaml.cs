@@ -28,28 +28,44 @@ public sealed partial class SettingsPage : Page
 
         string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
         VersionText.Text = "Nax-TaskManager " + version.Split('+')[0];
-        ShowHistoryState();
-        ShowReplaceState();
+        ReplaceToggle.IsEnabled = false;
+        HistoryToggle.IsEnabled = false;
         loading = false;
+        Loaded += (_, _) => _ = RefreshSystemStatesAsync();
+    }
+
+    private async Task RefreshSystemStatesAsync()
+    {
+        await Task.WhenAll(RefreshReplaceStateAsync(), RefreshHistoryStateAsync());
     }
 
     private void OpenTuning_Click(object sender, RoutedEventArgs e) => App.Window.NavigatePage("Tuning");
 
-    private void ShowReplaceState()
+    private async Task RefreshReplaceStateAsync()
     {
         string? exe = Environment.ProcessPath;
-        string? other = exe is null ? null : TaskManagerReplacement.OtherTarget(exe);
-        bool ours = exe is not null && TaskManagerReplacement.IsReplacedBy(exe);
-        // Only a copy in an administrator-only folder may replace Task Manager (an install for one user is not one).
-        bool allowed = exe is not null && TaskManagerReplacement.CanReplaceWith(exe);
-        ReplaceToggle.IsOn = ours;
-        // Leave another tool's replacement alone: show it and disable the switch so toggling cannot overwrite it. A
-        // replacement that is on stays switchable, so an unsafe one from an earlier version can be turned off.
-        ReplaceToggle.IsEnabled = other is null && (allowed || ours);
-        ReplaceStatusText.Text = ours ? Loc.Get(allowed ? "Replace_On" : "Replace_OnUnsafe")
-            : other is not null ? Loc.F("Replace_Other", other)
-            : !allowed ? Loc.Get("Replace_NeedsMachineInstall")
-            : App.Monitor.IsElevated ? Loc.Get("Replace_Off") : Loc.Get("Replace_OffUac");
+        (string? other, bool ours, bool allowed) = await Task.Run(() =>
+        {
+            if (exe is null) return ((string?)null, false, false);
+            return (TaskManagerReplacement.OtherTarget(exe), TaskManagerReplacement.IsReplacedBy(exe), TaskManagerReplacement.CanReplaceWith(exe));
+        });
+        if (!IsLoaded) return;
+        loading = true;
+        try
+        {
+            ReplaceToggle.IsOn = ours;
+            // Leave another tool's replacement alone: show it and disable the switch so toggling cannot overwrite it. A
+            // replacement that is on stays switchable, so an unsafe one from an earlier version can be turned off.
+            ReplaceToggle.IsEnabled = other is null && (allowed || ours);
+            ReplaceStatusText.Text = ours ? Loc.Get(allowed ? "Replace_On" : "Replace_OnUnsafe")
+                : other is not null ? Loc.F("Replace_Other", other)
+                : !allowed ? Loc.Get("Replace_NeedsMachineInstall")
+                : App.Monitor.IsElevated ? Loc.Get("Replace_Off") : Loc.Get("Replace_OffUac");
+        }
+        finally
+        {
+            loading = false;
+        }
     }
 
     private async void ReplaceToggle_Toggled(object sender, RoutedEventArgs e)
@@ -60,30 +76,49 @@ public sealed partial class SettingsPage : Page
         if (exe is null) return;
 
         ReplaceToggle.IsEnabled = false;
-        string? error = await TaskManagerSwitch.SetAsync(enable);
-
-        loading = true;
-        ShowReplaceState();
-        loading = false;
-        if (error is not null)
+        string? error = null;
+        try
         {
-            await new ContentDialog { XamlRoot = XamlRoot, Title = Loc.Get("Replace_NotChanged"), Content = error, CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();
+            error = await TaskManagerSwitch.SetAsync(enable);
         }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex);
+            error = ex.Message;
+        }
+        finally
+        {
+            await RefreshReplaceStateAsync();
+        }
+        if (error is not null) await Dialogs.ShowAsync(XamlRoot, Loc.Get("Replace_NotChanged"), error);
     }
 
-    private void ShowHistoryState()
+    private async Task RefreshHistoryStateAsync()
     {
-        HistoryServiceState state = HistoryServiceControl.QueryState();
-        HistoryToggle.IsOn = state != HistoryServiceState.NotInstalled;
-        HistoryStatusText.Text = state switch
+        (HistoryServiceState state, bool needsUpdate) = await Task.Run(() =>
         {
-            HistoryServiceState.Running when HistoryServiceControl.NeedsUpdate(HistoryServiceSetup.BundledFolder) =>
-                Loc.Get("Settings_HistoryOld"),
-            HistoryServiceState.Running => Loc.Get("Settings_HistoryOn"),
-            HistoryServiceState.NotInstalled => App.Monitor.IsElevated ? Loc.Get("Settings_HistoryOff") : Loc.Get("Settings_HistoryOffUac"),
-            HistoryServiceState.Starting => Loc.Get("Settings_HistoryStarting"),
-            _ => Loc.Get("Settings_HistoryNotRunning")
-        };
+            HistoryServiceState current = HistoryServiceControl.QueryState();
+            return (current, current == HistoryServiceState.Running && HistoryServiceControl.NeedsUpdate(HistoryServiceSetup.BundledFolder));
+        });
+        if (!IsLoaded) return;
+        loading = true;
+        try
+        {
+            HistoryToggle.IsOn = state != HistoryServiceState.NotInstalled;
+            HistoryToggle.IsEnabled = true;
+            HistoryStatusText.Text = state switch
+            {
+                HistoryServiceState.Running when needsUpdate => Loc.Get("Settings_HistoryOld"),
+                HistoryServiceState.Running => Loc.Get("Settings_HistoryOn"),
+                HistoryServiceState.NotInstalled => App.Monitor.IsElevated ? Loc.Get("Settings_HistoryOff") : Loc.Get("Settings_HistoryOffUac"),
+                HistoryServiceState.Starting => Loc.Get("Settings_HistoryStarting"),
+                _ => Loc.Get("Settings_HistoryNotRunning")
+            };
+        }
+        finally
+        {
+            loading = false;
+        }
     }
 
     private async void HistoryToggle_Toggled(object sender, RoutedEventArgs e)
@@ -92,14 +127,23 @@ public sealed partial class SettingsPage : Page
         bool enable = HistoryToggle.IsOn;
         HistoryToggle.IsEnabled = false;
         HistoryStatusText.Text = enable ? Loc.Get("Settings_TurningOn") : Loc.Get("Settings_TurningOff");
-        string? error = await HistoryServiceSetup.SetEnabledAsync(enable, App.Monitor.IsElevated);
-        HistoryToggle.IsEnabled = true;
-        loading = true;
-        ShowHistoryState();
-        loading = false;
+        string? error = null;
+        try
+        {
+            error = await HistoryServiceSetup.SetEnabledAsync(enable, App.Monitor.IsElevated);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex);
+            error = ex.Message;
+        }
+        finally
+        {
+            await RefreshHistoryStateAsync();
+        }
         if (error is not null)
         {
-            await new ContentDialog { XamlRoot = XamlRoot, Title = enable ? Loc.Get("Service_NotTurnedOn") : Loc.Get("Service_NotTurnedOff"), Content = error, CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();
+            await Dialogs.ShowAsync(XamlRoot, enable ? Loc.Get("Service_NotTurnedOn") : Loc.Get("Service_NotTurnedOff"), error);
         }
     }
 
@@ -138,8 +182,14 @@ public sealed partial class SettingsPage : Page
 
     private void DataFolder_Click(object sender, RoutedEventArgs e)
     {
-        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NaxTaskManager");
-        Directory.CreateDirectory(folder);
-        Process.Start(new ProcessStartInfo("explorer.exe", folder) { UseShellExecute = true });
+        try
+        {
+            string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NaxTaskManager");
+            Directory.CreateDirectory(folder);
+            using Process? process = Process.Start(new ProcessStartInfo(BetterTaskManager.Core.Native.ExplorerShell.ExplorerPath, folder) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
+        {
+        }
     }
 }

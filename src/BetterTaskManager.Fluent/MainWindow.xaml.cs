@@ -1,3 +1,4 @@
+using BetterTaskManager.Fluent.Controls;
 using BetterTaskManager.Fluent.Services;
 using BetterTaskManager.Fluent.Views;
 using Microsoft.UI;
@@ -80,12 +81,12 @@ public sealed partial class MainWindow : Window
         };
         string limitedMessage = ElevationBar.Message;
         // A failed collection leaves the last numbers on screen: say so until a new snapshot arrives.
-        App.Monitor.CollectionFailed += message =>
+        void onCollectionFailed(string message)
         {
             CollectionBar.Message = Loc.F("Collection_Failed", message);
             CollectionBar.IsOpen = true;
-        };
-        App.Monitor.Updated += snapshot =>
+        }
+        void onUpdated(Core.Monitoring.MonitorSnapshot snapshot)
         {
             CollectionBar.IsOpen = false;
             ElevationBar.Message = snapshot.System.PerProcessNetworkFromService
@@ -93,18 +94,32 @@ public sealed partial class MainWindow : Window
                 : limitedMessage;
             LimitedText.Text = ElevationBar.Message;
             UpdateStatusStrip(snapshot);
-        };
-        App.Monitor.PauseChanged += () =>
+        }
+        void onPauseChanged()
         {
             if (App.Monitor.Latest is { } snapshot) UpdateStatusStrip(snapshot);
             else
             {
                 LiveText.Text = Loc.Get(App.Monitor.Paused ? "Status_Paused" : "Status_Waiting");
-                LiveDot.Fill = (Brush)Application.Current.Resources[App.Monitor.Paused ? "StateWarnBrush" : "StateGoodBrush"];
+                LiveDot.Fill = ThemeResources.GetBrush(WindowRoot, App.Monitor.Paused ? "StateWarnBrush" : "StateGoodBrush");
             }
+        }
+        App.Monitor.CollectionFailed += onCollectionFailed;
+        App.Monitor.Updated += onUpdated;
+        App.Monitor.PauseChanged += onPauseChanged;
+        Closed += (_, _) =>
+        {
+            App.Monitor.CollectionFailed -= onCollectionFailed;
+            App.Monitor.Updated -= onUpdated;
+            App.Monitor.PauseChanged -= onPauseChanged;
         };
         ApplyTheme(App.Settings.Theme);
-        WindowRoot.ActualThemeChanged += (_, _) => UpdateCaptionButtons();
+        WindowRoot.ActualThemeChanged += (_, _) =>
+        {
+            UpdateCaptionButtons();
+            if (App.Monitor.Latest is { } snapshot) UpdateStatusStrip(snapshot);
+            else LiveDot.Fill = ThemeResources.GetBrush(WindowRoot, App.Monitor.Paused ? "StateWarnBrush" : "StateIdleBrush");
+        };
         UpdateCaptionButtons();
 
         WindowRoot.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
@@ -118,6 +133,8 @@ public sealed partial class MainWindow : Window
         AddAccelerator(VirtualKey.Number7, () => Navigate("Rules"));
         AddAccelerator(VirtualKey.F, () => SearchBox.Focus(FocusState.Keyboard));
         AddAccelerator(VirtualKey.K, () => SearchBox.Focus(FocusState.Keyboard));
+        AddAccelerator(VirtualKey.P, () => App.Monitor.Paused = !App.Monitor.Paused);
+        AddAccelerator((VirtualKey)188, () => Navigate("Settings"));
 
         string[] args = Environment.GetCommandLineArgs();
         int pageIndex = Array.IndexOf(args, "--page");
@@ -130,10 +147,9 @@ public sealed partial class MainWindow : Window
         }
         // The settings entry only exists once the NavigationView template has loaded.
         if (startPage == "Settings") Navigation.Loaded += (_, _) => Navigation.SelectedItem = Navigation.SettingsItem;
-        else
+        else if (!TryNavigate(startPage))
         {
             Navigation.SelectedItem = Navigation.MenuItems[0];
-            Navigate(startPage);
         }
     }
 
@@ -142,7 +158,7 @@ public sealed partial class MainWindow : Window
     {
         MachineStats.Text = Loc.F("Design_MachineStats", Format.WholePercent(snapshot.System.CpuPercent), Format.WholePercent(snapshot.System.Memory.LoadPercent));
         bool paused = App.Monitor.Paused;
-        LiveDot.Fill = (Brush)Application.Current.Resources[paused ? "StateWarnBrush" : "StateGoodBrush"];
+        LiveDot.Fill = ThemeResources.GetBrush(WindowRoot, paused ? "StateWarnBrush" : "StateGoodBrush");
         LiveText.Text = paused ? Loc.Get("Status_Paused") : Loc.F("Status_Live", snapshot.Timestamp.ToLocalTime().ToString("T", System.Globalization.CultureInfo.CurrentCulture));
         SourceText.Text = snapshot.System.PerProcessNetworkFromService ? Loc.Get("Status_SourceService")
             : App.Monitor.IsElevated ? Loc.Get("Status_SourceOwn")
@@ -164,7 +180,11 @@ public sealed partial class MainWindow : Window
     {
         bool dark = WindowRoot.ActualTheme == ElementTheme.Dark;
         AppWindow.TitleBar.ButtonForegroundColor = dark ? Colors.White : Colors.Black;
+        AppWindow.TitleBar.ButtonHoverForegroundColor = dark ? Colors.White : Colors.Black;
+        AppWindow.TitleBar.ButtonPressedForegroundColor = dark ? Colors.White : Colors.Black;
+        AppWindow.TitleBar.ButtonInactiveForegroundColor = dark ? Windows.UI.Color.FromArgb(140, 255, 255, 255) : Windows.UI.Color.FromArgb(140, 0, 0, 0);
         AppWindow.TitleBar.ButtonHoverBackgroundColor = dark ? Windows.UI.Color.FromArgb(24, 255, 255, 255) : Windows.UI.Color.FromArgb(24, 0, 0, 0);
+        AppWindow.TitleBar.ButtonPressedBackgroundColor = dark ? Windows.UI.Color.FromArgb(40, 255, 255, 255) : Windows.UI.Color.FromArgb(40, 0, 0, 0);
     }
 
     /// <summary>Opens a page by its tag; "Memory" and "Tuning" open those sections of the Performance page.</summary>
@@ -235,21 +255,30 @@ public sealed partial class MainWindow : Window
         if (ContentFrame.Content is NetworkPage page) page.ShowApp(process);
     }
 
-    private void Navigate(string tag, string? search = null)
+    private void Navigate(string tag, string? search = null) => TryNavigate(tag, search);
+
+    private bool TryNavigate(string tag, string? search = null)
     {
         if (search is not null)
         {
             pageSearch.SetForPage(tag, search);
             if (currentTag == tag) SetSearch(search);
         }
+        if (tag == "Settings")
+        {
+            if (Navigation.SettingsItem is not null) Navigation.SelectedItem = Navigation.SettingsItem;
+            else Navigation.Loaded += (_, _) => Navigation.SelectedItem = Navigation.SettingsItem;
+            return true;
+        }
         foreach (object item in Navigation.MenuItems)
         {
             if (item is NavigationViewItem navigationItem && Equals(navigationItem.Tag, tag))
             {
                 Navigation.SelectedItem = navigationItem;
-                return;
+                return true;
             }
         }
+        return false;
     }
 
     private void Navigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -265,7 +294,11 @@ public sealed partial class MainWindow : Window
                 if (tag == "Overview") ContentFrame.Content = overview ??= new OverviewPage();
                 else if (tag == "Performance") ContentFrame.Content = performancePage ??= new PerformancePage();
                 else if (tag == "Rules") ContentFrame.Content = rulesPage ??= new RulesPage();
-                else ContentFrame.Navigate(page, null, new EntranceNavigationTransitionInfo());
+                else
+                {
+                    ContentFrame.Navigate(page, null, new EntranceNavigationTransitionInfo());
+                    ContentFrame.BackStack.Clear();
+                }
             }
             catch (Exception ex)
             {
@@ -293,15 +326,35 @@ public sealed partial class MainWindow : Window
         if (destination != currentTag) Navigate(destination);
     }
 
+    private void SearchBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Escape) return;
+        if (!string.IsNullOrEmpty(SearchBox.Text)) SetSearch("");
+        if (ContentFrame.Content is Control content) content.Focus(FocusState.Programmatic);
+        else Navigation.Focus(FocusState.Programmatic);
+        e.Handled = true;
+    }
+
     private void RestartElevated_Click(object sender, RoutedEventArgs e) => App.RestartElevated();
 
     private async void RestoreReplace_Click(object sender, RoutedEventArgs e)
     {
         RestoreReplaceButton.IsEnabled = false;
-        string? error = await TaskManagerSwitch.SetAsync(true);
-        RestoreReplaceButton.IsEnabled = true;
-        if (error is null) ReplaceLostBar.IsOpen = false;
-        else ReplaceLostBar.Message = error;
+        try
+        {
+            string? error = await TaskManagerSwitch.SetAsync(true);
+            if (error is null) ReplaceLostBar.IsOpen = false;
+            else ReplaceLostBar.Message = error;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex);
+            ReplaceLostBar.Message = ex.Message;
+        }
+        finally
+        {
+            RestoreReplaceButton.IsEnabled = true;
+        }
     }
 
     private void AddAccelerator(VirtualKey key, Action action)

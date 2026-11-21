@@ -224,17 +224,22 @@ public sealed class MonitorHost : IDisposable
     /// <summary>Executable paths with a whole-app block, for the rules overview.</summary>
     public HashSet<string> BlockedPaths { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private Task? firewallRefresh;
+    private readonly SemaphoreSlim firewallRefreshGate = new(1, 1);
 
     /// <summary>
-    /// Re-reads blocks and rules. A call while a read is running waits for it and then reads again, so a change made
-    /// in between is never missed.
+    /// Re-reads blocks and rules serially so overlapping refreshes never overwrite fresher state with stale results.
     /// </summary>
     public async Task RefreshFirewallAsync()
     {
-        if (firewallRefresh is { IsCompleted: false } running) await running;
-        firewallRefresh = RefreshFirewallCoreAsync();
-        await firewallRefresh;
+        await firewallRefreshGate.WaitAsync();
+        try
+        {
+            await RefreshFirewallCoreAsync();
+        }
+        finally
+        {
+            firewallRefreshGate.Release();
+        }
     }
 
     /// <summary>True when app-rules.json cannot be read; saving is refused until the rules are reset.</summary>
@@ -246,7 +251,16 @@ public sealed class MonitorHost : IDisposable
     /// </summary>
     public async Task<string?> ResetPoliciesAsync()
     {
-        string? error = await ElevatedHelper.RunAsync(Program.RulesResetArgument);
+        string? error;
+        if (IsElevated)
+        {
+            CommandResult result = await Task.Run(FirewallRules.ResetPolicies);
+            error = result.Succeeded ? null : result.FailureSummary();
+        }
+        else
+        {
+            error = await ElevatedHelper.RunAsync(Program.RulesResetArgument);
+        }
         await RefreshFirewallAsync();
         return error;
     }
@@ -290,45 +304,6 @@ public sealed class MonitorHost : IDisposable
     /// Without elevation this starts a short-lived elevated copy of the app, so Windows shows one UAC prompt per change.
     /// </summary>
     public Task<string?> SetBlockedAsync(string path, bool block) => ApplyRulesAsync(new RuleChange { Path = path, Blocked = block });
-
-    /// <summary>
-    /// Saves one app's network rules (empty rules remove them). Without elevation this starts a short-lived elevated
-    /// copy of the app with the rules as its argument, so Windows shows one UAC prompt per change.
-    /// </summary>
-    public async Task<string?> SetPolicyAsync(AppNetworkPolicy policy)
-    {
-        if (IsElevated)
-        {
-            CommandResult result = await Task.Run(() => FirewallRules.ApplyPolicy(policy));
-            if (!result.Succeeded) return result.FailureSummary();
-        }
-        else
-        {
-            var startInfo = new ProcessStartInfo(Environment.ProcessPath!)
-            {
-                UseShellExecute = true,
-                Verb = "runas",
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            startInfo.ArgumentList.Add(Program.PolicyApplyArgument);
-            startInfo.ArgumentList.Add(Convert.ToBase64String(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(policy)));
-            int exitCode;
-            try
-            {
-                using Process helper = Process.Start(startInfo)!;
-                await helper.WaitForExitAsync();
-                exitCode = helper.ExitCode;
-            }
-            catch (System.ComponentModel.Win32Exception)
-            {
-                return Loc.Get("Uac_CancelledRules");
-            }
-            if (exitCode != 0) return Loc.F("Rules_Failed", exitCode);
-        }
-
-        await RefreshFirewallAsync();
-        return null;
-    }
 
     /// <summary>Per-file disk trace for the Disk page; runs only while its file list is shown (administrator only).</summary>
     public BetterTaskManager.Core.Disk.DiskFileActivity DiskFiles { get; } = new();

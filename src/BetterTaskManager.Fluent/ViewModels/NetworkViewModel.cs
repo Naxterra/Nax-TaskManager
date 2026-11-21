@@ -1,6 +1,7 @@
 using System.Globalization;
 using BetterTaskManager.Core.Monitoring;
 using BetterTaskManager.Core.Network;
+using BetterTaskManager.Fluent.Controls;
 using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -88,19 +89,13 @@ public sealed class NetworkSlot : RowSlot
     public Meter UpMeter { get; } = new();
     public Windows.UI.Text.FontWeight NameWeight => isGroup ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal;
 
-    private static readonly Dictionary<string, Brush> stateBrushes = new();
-
     private static Brush StateBrushFor(string state)
     {
         string key = state == Loc.State("Established") ? "StateGoodBrush"
             : state == Loc.State("Listening") || state.Length == 0 ? "StateIdleBrush"
             : "StateWarnBrush";
-        if (!stateBrushes.TryGetValue(key, out Brush? brush))
-        {
-            brush = (Brush)Application.Current.Resources[key];
-            stateBrushes[key] = brush;
-        }
-        return brush;
+        return ThemeResources.GetBrush(App.Window?.Content as FrameworkElement, key)
+            ?? new SolidColorBrush(Microsoft.UI.Colors.Transparent);
     }
 
     public static void Load(NetworkSlot slot, (NetworkRowData Row, Func<string, NetworkAccess> Access) input)
@@ -196,35 +191,36 @@ public sealed class NetworkViewModel : ObservableObject
     public bool AppSortDescending => sorting.AppsDescending;
 
     /// <summary>Clicking the active column flips the direction; a new column starts with its natural direction.</summary>
-    public void Sort(string column)
+    public void Sort(string column, bool refresh = true)
     {
         sorting.SelectConnections(column, toggle: true);
         Raise(nameof(SortColumn));
-        Refresh();
+        if (refresh) Refresh();
     }
 
     /// <summary>Sets the app list's order without flipping; used by the "Sort by" dropdown.</summary>
-    public void SortApps(string column)
+    public void SortApps(string column, bool refresh = true)
     {
         sorting.SelectApps(column);
-        Raise(nameof(SortColumn));
-        Refresh();
+        Raise(nameof(AppSortColumn));
+        if (refresh) Refresh();
     }
 
-    public void SortConnections(string column)
+    public void SortConnections(string column, bool refresh = true)
     {
         sorting.SelectConnections(column);
         Raise(nameof(SortColumn));
-        Refresh();
+        if (refresh) Refresh();
     }
 
-    public void ToggleAppSort() { sorting.ToggleApps(); Refresh(); }
-    public void ToggleConnectionSort() { sorting.ToggleConnections(); Refresh(); }
+    public void ToggleAppSort(bool refresh = true) { sorting.ToggleApps(); if (refresh) Refresh(); }
+    public void ToggleConnectionSort(bool refresh = true) { sorting.ToggleConnections(); if (refresh) Refresh(); }
 
     public void Refresh()
     {
         if (monitor.Latest is not { } snapshot) return;
-        var processes = snapshot.Processes.ToDictionary(process => process.Pid);
+        var processes = new Dictionary<int, ProcessSample>(snapshot.Processes.Count);
+        foreach (ProcessSample process in snapshot.Processes) processes.TryAdd(process.Pid, process);
         string query = monitor.SearchText.Trim();
         bool measured = snapshot.System.PerProcessNetworkAvailable;
 

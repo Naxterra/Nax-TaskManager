@@ -1,5 +1,6 @@
 using System.ServiceProcess;
 using BetterTaskManager.Core.Firewall;
+using BetterTaskManager.Core.Native;
 
 namespace BetterTaskManager.Core.History;
 
@@ -144,6 +145,8 @@ public static class HistoryServiceControl
         string sourceExe = Path.Combine(sourceFolder, ExecutableName);
         if (!File.Exists(sourceExe)) return Failed("The service files were not found next to the app: " + sourceExe);
         if (SamePath(sourceFolder, InstallFolder)) return Failed("The service cannot be installed from its own install folder.");
+        if (!ProtectedLocation.IsAdminOnlyDirectory(sourceFolder))
+            return Failed("Install Nax-TaskManager for all users in a protected folder before enabling the history service.");
 
         HistoryServiceState before = QueryState();
         bool installed = before != HistoryServiceState.NotInstalled;
@@ -431,12 +434,22 @@ public static class HistoryServiceControl
 
     private static void CopyFolder(string source, string target)
     {
+        if (!ProtectedLocation.IsAdminOnlyDirectory(source))
+            throw new UnauthorizedAccessException("The service folder is outside the protected installation: " + source);
         Directory.CreateDirectory(target);
-        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        foreach (FileSystemInfo entry in new DirectoryInfo(source).EnumerateFileSystemInfos())
         {
-            string destination = Path.Combine(target, Path.GetRelativePath(source, file));
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Copy(file, destination, overwrite: true);
+            string destination = Path.Combine(target, entry.Name);
+            if (entry is DirectoryInfo)
+            {
+                CopyFolder(entry.FullName, destination);
+            }
+            else
+            {
+                if (!ProtectedLocation.IsAdminOnly(entry.FullName))
+                    throw new UnauthorizedAccessException("The service file is outside the protected installation: " + entry.FullName);
+                File.Copy(entry.FullName, destination, overwrite: true);
+            }
         }
     }
 

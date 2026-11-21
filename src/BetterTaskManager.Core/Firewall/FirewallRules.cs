@@ -40,13 +40,30 @@ public static partial class FirewallRules
     /// </summary>
     public static HashSet<string> ReadBlockRuleNames()
     {
-        CommandResult result = CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=all", "dir=out");
-        if (!result.Succeeded) throw new InvalidOperationException(result.FailureSummary());
-        HashSet<string> names = RuleNamePattern().Matches(result.StandardOutput)
-            .Select(match => RulePrefix + match.Groups[1].Value.ToUpperInvariant())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+        Exception? netshError = null;
+        CommandResult result = CommandRunner.Run(Path.Combine(Environment.SystemDirectory, "netsh.exe"), "advfirewall", "firewall", "show", "rule", "name=all", "dir=out");
+        if (result.Succeeded)
+        {
+            foreach (Match match in RuleNamePattern().Matches(result.StandardOutput))
+            {
+                names.Add(RulePrefix + match.Groups[1].Value.ToUpperInvariant());
+            }
+        }
+        else
+        {
+            netshError = new InvalidOperationException(result.FailureSummary());
+        }
         // Blocks made since WFP enforcement are filters, not netsh rules; report them under the same names.
-        foreach (string path in WfpBlocker.ReadBlockedPaths()) names.Add(RuleNameForPath(path));
+        // Read WFP even when netsh fails (for example when Windows Firewall is disabled or managed by another product).
+        try
+        {
+            foreach (string path in WfpBlocker.ReadBlockedPaths()) names.Add(RuleNameForPath(path));
+        }
+        catch (Exception) when (netshError is not null)
+        {
+            throw netshError;
+        }
         return names;
     }
 
@@ -71,12 +88,12 @@ public static partial class FirewallRules
             return new CommandResult(ex is WfpException wfp ? (int)wfp.Code : 1, "", ex.Message, false);
         }
 
-        // The filter applies to new connections at once; close the open ones too, so the block is immediate.
-        if (block) TryCut(path, (_, _, _) => true);
+        // The filter applies to new outbound connections at once; close open outbound ones too, leaving inbound alone.
+        if (block) TryCut(path, (inbound, _, _) => !inbound);
 
         string rule = RuleNameForPath(path);
         string[] legacy = [LegacyRuleName(rule), rule];
-        foreach (string name in legacy) CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + name);
+        foreach (string name in legacy) CommandRunner.Run(Path.Combine(Environment.SystemDirectory, "netsh.exe"), "advfirewall", "firewall", "delete", "rule", "name=" + name);
         if (!block && legacy.FirstOrDefault(RuleExists) is { } remaining)
         {
             return new CommandResult(1, "", $"The Windows Firewall rule \"{remaining}\" from an earlier version could not be removed.", false);
@@ -133,6 +150,7 @@ public static partial class FirewallRules
         List<string> helpers = policy.Helpers.Where(helper => Path.IsPathFullyQualified(helper) && !string.Equals(helper, policy.Path, StringComparison.OrdinalIgnoreCase))
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         policy.Helpers = helpers;
+        var applied = new List<(string Target, AppNetworkPolicy Previous)>();
         try
         {
             // Read the stored rules strictly before any filter changes: a damaged file stops the change here, while
@@ -144,27 +162,40 @@ public static partial class FirewallRules
             {
                 if (HelperBlocks.WhyNotHelper(added, policy.Path, stored, replacing) is { } reason) return new CommandResult(87, "", reason, false);
             }
-            WfpBlocker.ApplyPolicy(policy);
-            NetworkPolicyStore.Save(policy);
+
+            void ApplyTracked(AppNetworkPolicy target)
+            {
+                AppNetworkPolicy prior = stored.FirstOrDefault(entry => string.Equals(entry.Path, target.Path, StringComparison.OrdinalIgnoreCase))
+                    ?? new AppNetworkPolicy { Path = target.Path };
+                WfpBlocker.ApplyPolicy(target);
+                applied.Add((target.Path, prior));
+                NetworkPolicyStore.Save(target);
+            }
+
+            ApplyTracked(policy);
             // Each helper gets the app's switches and rules as its own filters, marked as the app's helper.
             foreach (string helper in helpers)
             {
-                AppNetworkPolicy derived = policy.ForHelper(helper);
-                WfpBlocker.ApplyPolicy(derived);
                 // Kept even without filters, so the helper stays linked to this app and no other app takes it over.
-                NetworkPolicyStore.Save(derived);
+                ApplyTracked(policy.ForHelper(helper));
             }
             // A helper the app no longer lists loses the rules it had from the app, never rules of its own.
             foreach (string dropped in previous?.Helpers.Except(helpers, StringComparer.OrdinalIgnoreCase) ?? [])
             {
-                if (NetworkPolicyStore.Find(dropped) is { } own && !string.Equals(own.HelperOf, policy.Path, StringComparison.OrdinalIgnoreCase)) continue;
-                var empty = new AppNetworkPolicy { Path = dropped };
-                WfpBlocker.ApplyPolicy(empty);
-                NetworkPolicyStore.Save(empty);
+                AppNetworkPolicy? own = stored.FirstOrDefault(entry => string.Equals(entry.Path, dropped, StringComparison.OrdinalIgnoreCase));
+                if (own is not null && !string.Equals(own.HelperOf, policy.Path, StringComparison.OrdinalIgnoreCase)) continue;
+                ApplyTracked(new AppNetworkPolicy { Path = dropped });
             }
         }
         catch (Exception ex) when (ex is WfpException or IOException or UnauthorizedAccessException or InvalidDataException)
         {
+            // Roll back any filters and stored entries written before the failure so filters and app-rules.json stay aligned.
+            for (int index = applied.Count - 1; index >= 0; index--)
+            {
+                AppNetworkPolicy prior = applied[index].Previous;
+                try { WfpBlocker.ApplyPolicy(prior); } catch (Exception rollback) when (rollback is WfpException or IOException or UnauthorizedAccessException) { }
+                try { NetworkPolicyStore.Save(prior); } catch (Exception rollback) when (rollback is IOException or UnauthorizedAccessException or InvalidDataException) { }
+            }
             return new CommandResult(ex is WfpException wfp ? (int)wfp.Code : 1, "", ex.Message, false);
         }
         foreach (string path in helpers.Prepend(policy.Path)) TryCut(path, (inbound, remote, port) => policy.Evaluate(inbound, remote, 6, port) is not null);
@@ -184,7 +215,7 @@ public static partial class FirewallRules
     }
 
     private static bool RuleExists(string name) =>
-        CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=" + name).ExitCode == 0;
+        CommandRunner.Run(Path.Combine(Environment.SystemDirectory, "netsh.exe"), "advfirewall", "firewall", "show", "rule", "name=" + name).ExitCode == 0;
 
     /// <summary>
     /// Recovery for a damaged rules file: removes every rule filter of every app and the file, so filters and file
@@ -211,12 +242,12 @@ public static partial class FirewallRules
         using IDisposable rulesLock = StoreLock.Take(StoreLock.Rules);
         WfpBlocker.RemoveAll();
         NetworkPolicyStore.DeleteAll();
-        CommandResult result = CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "show", "rule", "name=all", "dir=out");
+        CommandResult result = CommandRunner.Run(Path.Combine(Environment.SystemDirectory, "netsh.exe"), "advfirewall", "firewall", "show", "rule", "name=all", "dir=out");
         if (!result.Succeeded) return;
         foreach (string hash in RuleNamePattern().Matches(result.StandardOutput).Select(match => match.Groups[1].Value.ToUpperInvariant()).Distinct())
         {
-            CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + RulePrefix + hash);
-            CommandRunner.Run("netsh.exe", "advfirewall", "firewall", "delete", "rule", "name=" + LegacyRulePrefix + hash);
+            CommandRunner.Run(Path.Combine(Environment.SystemDirectory, "netsh.exe"), "advfirewall", "firewall", "delete", "rule", "name=" + RulePrefix + hash);
+            CommandRunner.Run(Path.Combine(Environment.SystemDirectory, "netsh.exe"), "advfirewall", "firewall", "delete", "rule", "name=" + LegacyRulePrefix + hash);
         }
     }
 }

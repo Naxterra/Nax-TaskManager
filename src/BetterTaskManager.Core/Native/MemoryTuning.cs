@@ -37,22 +37,26 @@ public static class MemoryRuleStore
 
     public static string FilePath => System.IO.Path.Combine(DataFolder.Path, "memory-rules.json");
 
-    public static List<AppMemoryRule> Load(string? filePath = null)
+    public static List<AppMemoryRule> Load(string? filePath = null) => TryLoad(filePath) ?? [];
+
+    internal static List<AppMemoryRule>? TryLoad(string? filePath = null)
     {
         string path = filePath ?? FilePath;
         try
         {
-            if (File.Exists(path)) return JsonSerializer.Deserialize<List<AppMemoryRule>>(File.ReadAllText(path), Options) ?? [];
+            if (!File.Exists(path)) return [];
+            return JsonSerializer.Deserialize<List<AppMemoryRule>>(AtomicFile.ReadAllTextShared(path), Options) ?? [];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
+            return null;
         }
-        return [];
     }
 
     /// <summary>Replaces (or with an empty rule removes) one program's rule. Needs administrator rights.</summary>
     public static void Save(AppMemoryRule rule)
     {
+        using IDisposable memoryLock = StoreLock.Take(StoreLock.MemoryManager);
         DataFolder.EnsureSecured();
         Save(rule, FilePath);
     }
@@ -67,7 +71,7 @@ public static class MemoryRuleStore
         List<AppMemoryRule> all;
         try
         {
-            all = File.Exists(filePath) ? JsonSerializer.Deserialize<List<AppMemoryRule>>(File.ReadAllText(filePath), Options) ?? throw new JsonException("No rule list.") : [];
+            all = File.Exists(filePath) ? JsonSerializer.Deserialize<List<AppMemoryRule>>(AtomicFile.ReadAllTextShared(filePath), Options) ?? throw new JsonException("No rule list.") : [];
         }
         catch (JsonException)
         {
@@ -80,12 +84,14 @@ public static class MemoryRuleStore
     }
 }
 
-/// <summary>The memory manager's switches, as Windows' MMAgent cmdlets show them, plus the SysMain service.</summary>
+/// <summary>The memory manager's configured switches and the SysMain service. Prefetch changes may need a restart.</summary>
 public sealed record MemoryManagerState(bool MemoryCompression, bool PageCombining, bool ApplicationLaunchPrefetching,
     bool ApplicationPreLaunch, bool SysMainRunning, bool SysMainEnabled, DateTime ReadAtUtc)
 {
     /// <summary>SysMain's start type as sc.exe names it (auto, demand or disabled). Records of older versions have none.</summary>
     public string? SysMainStartMode { get; init; }
+    public bool PrefetchModeCaptured { get; init; }
+    public int? PrefetchMode { get; init; }
 }
 
 /// <summary>
@@ -116,12 +122,18 @@ public static class MemoryManager
             using var agent = new ManagementClass(ClassPath);
             using ManagementBaseObject result = agent.InvokeMethod("Get", null, null);
             if (result["CmdletOutput"] is not ManagementBaseObject output) return null;
-            bool Flag(string name) => output[name] is bool value && value;
-            (bool running, bool enabled) = SysMainState();
-            return new MemoryManagerState(Flag(MemoryCompression), Flag(PageCombining), Flag(ApplicationLaunchPrefetching),
-                Flag(ApplicationPreLaunch), running, enabled, DateTime.UtcNow) { SysMainStartMode = SysMainStartName() };
+            using (output)
+            {
+                bool Flag(string name) => output[name] is bool value && value;
+                (bool running, bool enabled) = SysMainState();
+                (bool prefetchOk, int? prefetch) = TryReadPrefetchMode();
+                return new MemoryManagerState(Flag(MemoryCompression), Flag(PageCombining),
+                    prefetchOk ? PrefetchSettings.ApplicationsEnabled(prefetch, Flag(ApplicationLaunchPrefetching)) : Flag(ApplicationLaunchPrefetching),
+                    Flag(ApplicationPreLaunch), running, enabled, DateTime.UtcNow)
+                    { SysMainStartMode = SysMainStartName(), PrefetchModeCaptured = prefetchOk, PrefetchMode = prefetch };
+            }
         }
-        catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or COMException)
+        catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or COMException or InvalidOperationException)
         {
             return null;
         }
@@ -132,11 +144,31 @@ public static class MemoryManager
     {
         try
         {
-            return File.Exists(StatePath) ? JsonSerializer.Deserialize<MemoryManagerState>(File.ReadAllText(StatePath), Options) : null;
+            var state = File.Exists(StatePath) ? JsonSerializer.Deserialize<MemoryManagerState>(AtomicFile.ReadAllTextShared(StatePath), Options) : null;
+            if (state is null) return null;
+            // The protected service cache can be older than a recent helper change, especially with an older
+            // service. The saved Prefetch mode is readable without elevation and takes precedence here too.
+            (bool prefetchOk, int? mode) = TryReadPrefetchMode();
+            return prefetchOk
+                ? state with { ApplicationLaunchPrefetching = PrefetchSettings.ApplicationsEnabled(mode, state.ApplicationLaunchPrefetching),
+                    PrefetchModeCaptured = true, PrefetchMode = mode }
+                : state;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
         {
             return null;
+        }
+    }
+
+    private static (bool Ok, int? Mode) TryReadPrefetchMode()
+    {
+        try
+        {
+            return (true, PrefetchSettings.ReadMode());
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException or IOException or System.Security.SecurityException)
+        {
+            return (false, null);
         }
     }
 
@@ -164,9 +196,26 @@ public static class MemoryManager
             DataFolder.EnsureSecured();
             AtomicFile.WriteAllText(OriginalPath, JsonSerializer.Serialize(original, Options));
         }
+        // Older restore records hold only the application flag. Capture the full mode before changing it so boot
+        // prefetching can be restored exactly, including when an existing record predates registry-based control.
+        if (feature == ApplicationLaunchPrefetching)
+        {
+            var recorded = File.Exists(OriginalPath)
+                ? JsonSerializer.Deserialize<MemoryManagerState>(AtomicFile.ReadAllTextShared(OriginalPath), Options) : null;
+            if (recorded is null) throw new InvalidOperationException("The original memory settings could not be saved, so Prefetch was left unchanged.");
+            if (!recorded.PrefetchModeCaptured)
+                AtomicFile.WriteAllText(OriginalPath, JsonSerializer.Serialize(CapturePrefetchMode(recorded, PrefetchSettings.ReadMode()), Options));
+        }
         Apply(feature, enable);
         StoreCurrent();
     }
+
+    internal static MemoryManagerState CapturePrefetchMode(MemoryManagerState original, int? mode) =>
+        original.PrefetchModeCaptured ? original : original with
+        {
+            PrefetchModeCaptured = true,
+            PrefetchMode = mode is { } value ? PrefetchSettings.WithApplications(value, original.ApplicationLaunchPrefetching) : null
+        };
 
     /// <summary>
     /// Puts every switch this app changed back to the state recorded before the first change, then forgets that
@@ -181,7 +230,7 @@ public static class MemoryManager
         MemoryManagerState original;
         try
         {
-            original = JsonSerializer.Deserialize<MemoryManagerState>(File.ReadAllText(OriginalPath), Options)
+            original = JsonSerializer.Deserialize<MemoryManagerState>(AtomicFile.ReadAllTextShared(OriginalPath), Options)
                 ?? throw new JsonException("The file holds no state.");
         }
         catch (JsonException ex)
@@ -198,7 +247,11 @@ public static class MemoryManager
             MemoryManagerState live = ReadLive() ?? throw new InvalidOperationException("The current memory manager settings could not be read, so nothing was restored.");
             if (live.MemoryCompression != original.MemoryCompression) Apply(MemoryCompression, original.MemoryCompression);
             if (live.PageCombining != original.PageCombining) Apply(PageCombining, original.PageCombining);
-            if (live.ApplicationLaunchPrefetching != original.ApplicationLaunchPrefetching) Apply(ApplicationLaunchPrefetching, original.ApplicationLaunchPrefetching);
+            if (original.PrefetchModeCaptured && original.PrefetchMode is { } originalMode)
+            {
+                if (PrefetchSettings.ReadMode() != originalMode) PrefetchSettings.WriteMode(originalMode);
+            }
+            else if (live.ApplicationLaunchPrefetching != original.ApplicationLaunchPrefetching) Apply(ApplicationLaunchPrefetching, original.ApplicationLaunchPrefetching);
             if (live.ApplicationPreLaunch != original.ApplicationPreLaunch) Apply(ApplicationPreLaunch, original.ApplicationPreLaunch);
         }
         catch
@@ -237,7 +290,7 @@ public static class MemoryManager
         }
         if (mode == ServiceStartMode.Disabled)
         {
-            CommandResult result = CommandRunner.Run("sc.exe", "config", "SysMain", "start=", "demand");
+            CommandResult result = CommandRunner.Run(Path.Combine(Environment.SystemDirectory, "sc.exe"), "config", "SysMain", "start=", "demand");
             if (!result.Succeeded) throw new InvalidOperationException(result.FailureSummary());
         }
         service.Refresh();
@@ -258,7 +311,7 @@ public static class MemoryManager
         string current = ScStartName(service.StartType);
         if (current != start)
         {
-            CommandResult result = CommandRunner.Run("sc.exe", "config", "SysMain", "start=", start);
+            CommandResult result = CommandRunner.Run(Path.Combine(Environment.SystemDirectory, "sc.exe"), "config", "SysMain", "start=", start);
             if (!result.Succeeded) throw new InvalidOperationException(result.FailureSummary());
         }
         service.Refresh();
@@ -285,27 +338,34 @@ public static class MemoryManager
     {
         if (feature == SysMain)
         {
-            CommandResult result = CommandRunner.Run("sc.exe", "config", "SysMain", "start=", enable ? "auto" : "disabled");
+            CommandResult result = CommandRunner.Run(Path.Combine(Environment.SystemDirectory, "sc.exe"), "config", "SysMain", "start=", enable ? "auto" : "disabled");
             if (!result.Succeeded) throw new InvalidOperationException(result.FailureSummary());
             using var service = new ServiceController("SysMain");
-            if (enable && service.Status == ServiceControllerStatus.Stopped)
+            if (enable && service.Status != ServiceControllerStatus.Running)
             {
-                service.Start();
+                if (service.Status == ServiceControllerStatus.Stopped) service.Start();
                 service.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
             }
             else if (!enable && service.Status != ServiceControllerStatus.Stopped)
             {
-                service.Stop();
+                if (service.Status != ServiceControllerStatus.StopPending) service.Stop();
                 service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
             }
         }
         else
         {
             if (!Features.Contains(feature)) throw new ArgumentException("Unknown memory manager feature: " + feature, nameof(feature));
+            if (feature == ApplicationLaunchPrefetching && PrefetchSettings.ReadMode() is { } mode)
+            {
+                PrefetchSettings.WriteMode(PrefetchSettings.WithApplications(mode, enable));
+                return;
+            }
             using var agent = new ManagementClass(ClassPath);
             using ManagementBaseObject parameters = agent.GetMethodParameters(enable ? "Enable" : "Disable");
             parameters[feature] = true;
             using ManagementBaseObject result = agent.InvokeMethod(enable ? "Enable" : "Disable", parameters, null);
+            if (result.Properties["ReturnValue"]?.Value is uint code && code != 0)
+                throw new InvalidOperationException($"Windows could not change {feature}: {new System.ComponentModel.Win32Exception((int)code).Message} ({code}).");
         }
     }
 
@@ -356,8 +416,8 @@ public sealed class MemoryRuleEnforcer
     private readonly HashSet<string> reportedFailures = new(StringComparer.OrdinalIgnoreCase);
     private List<AppMemoryRule> rules = [];
     private DateTime rulesWritten;
-    private DateTime summaryDue = DateTime.UtcNow + SummaryInterval;
-    private DateTime stateDue = DateTime.UtcNow;
+    private long summaryAt = System.Diagnostics.Stopwatch.GetTimestamp();
+    private long stateAt;
     private readonly Dictionary<string, (int Trims, long Bytes)> trimmed = new(StringComparer.OrdinalIgnoreCase);
 
     /// <param name="source">Rules to use instead of the file, read on every snapshot (tests); the memory manager state is then not stored.</param>
@@ -371,9 +431,9 @@ public sealed class MemoryRuleEnforcer
     {
         try
         {
-            if (source is null && DateTime.UtcNow >= stateDue)
+            if (source is null && (stateAt == 0 || System.Diagnostics.Stopwatch.GetElapsedTime(stateAt) >= StateInterval))
             {
-                stateDue = DateTime.UtcNow + StateInterval;
+                stateAt = System.Diagnostics.Stopwatch.GetTimestamp();
                 MemoryManager.StoreCurrent();
             }
             ReloadRules();
@@ -396,8 +456,11 @@ public sealed class MemoryRuleEnforcer
         }
         DateTime written = File.Exists(MemoryRuleStore.FilePath) ? File.GetLastWriteTimeUtc(MemoryRuleStore.FilePath) : DateTime.MinValue;
         if (written == rulesWritten) return;
+        // Keep the existing active rules and retry on the next tick if the file was momentarily unreadable.
+        List<AppMemoryRule>? loaded = MemoryRuleStore.TryLoad();
+        if (loaded is null) return;
         rulesWritten = written;
-        rules = MemoryRuleStore.Load().Where(rule => rule.IsValid).ToList();
+        rules = loaded.Where(rule => rule.IsValid).ToList();
         log(rules.Count == 0 ? "Memory rules: none" : "Memory rules: " + string.Join("; ", rules.Select(rule =>
             $"{System.IO.Path.GetFileName(rule.Path)} limit {(rule.LimitMegabytes is { } mb ? mb + " MB" : "none")}, priority {(rule.Priority?.ToString() ?? "default")}")));
     }
@@ -454,8 +517,8 @@ public sealed class MemoryRuleEnforcer
 
     private void WriteSummary()
     {
-        if (DateTime.UtcNow < summaryDue) return;
-        summaryDue = DateTime.UtcNow + SummaryInterval;
+        if (System.Diagnostics.Stopwatch.GetElapsedTime(summaryAt) < SummaryInterval) return;
+        summaryAt = System.Diagnostics.Stopwatch.GetTimestamp();
         foreach (var (path, sum) in trimmed)
         {
             log($"Memory rules: trimmed {System.IO.Path.GetFileName(path)} {sum.Trims} times in the last 10 minutes, {sum.Bytes / 1048576} MB in total");

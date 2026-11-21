@@ -137,15 +137,23 @@ public sealed partial class DiskPage : Page
         if (sender is FrameworkElement { Tag: string column }) ViewModel.FileLayout.Resize(column, e.HorizontalChange);
     }
 
-    /// <summary>The selected file if it still exists, otherwise the program that did the I/O.</summary>
+    /// <summary>True when the selected row has a file or executable path to open (checked without disk I/O).</summary>
+    private bool HasSelectedPath()
+    {
+        if (ViewModel.FilesMode && FileList.SelectedItem is DiskFileSlot { Row: { } file })
+            return file.File.Length > 0 || file.ProcessPath.Length > 0;
+        return (ProcessList.SelectedItem as DiskProcessSlot)?.Row?.Path.Length > 0;
+    }
+
+    /// <summary>The selected file if it still exists, otherwise the program that did the I/O (resolved on user action).</summary>
     private string SelectedPath()
     {
         if (ViewModel.FilesMode && FileList.SelectedItem is DiskFileSlot { Row: { } file })
-            return File.Exists(file.File) ? file.File : file.ProcessPath;
+            return file.File.Length > 0 && File.Exists(file.File) ? file.File : file.ProcessPath;
         return (ProcessList.SelectedItem as DiskProcessSlot)?.Row?.Path ?? "";
     }
 
-    private void UpdateCommands() => OpenLocationButton.IsEnabled = SelectedPath().Length > 0;
+    private void UpdateCommands() => OpenLocationButton.IsEnabled = HasSelectedPath();
 
     private void List_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -170,7 +178,8 @@ public sealed partial class DiskPage : Page
     private void List_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
     {
         if (e.OriginalSource is not FrameworkElement source) return;
-        object? context = source.DataContext ?? (source as ListViewItem)?.Content;
+        object? context = source.DataContext ?? (source as ListViewItem)?.Content
+            ?? (ViewModel.FilesMode ? FileList.SelectedItem : ProcessList.SelectedItem);
         if (context is DiskProcessSlot process) ProcessList.SelectedItem = process;
         else if (context is DiskFileSlot file) FileList.SelectedItem = file;
         else return;
@@ -193,7 +202,11 @@ public sealed partial class DiskPage : Page
         return menu;
     }
 
-    private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) => ProcessActions.OpenFileLocation(SelectedPath());
+    private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
+    {
+        if (e.OriginalSource is FrameworkElement { DataContext: DiskProcessSlot or DiskFileSlot })
+            ProcessActions.OpenFileLocation(SelectedPath());
+    }
 
     private void OpenLocation_Click(object sender, RoutedEventArgs e) => ProcessActions.OpenFileLocation(SelectedPath());
 

@@ -19,14 +19,17 @@ public readonly record struct SocketTraffic(int Pid, string Protocol, int LocalP
 /// <summary>Disk bytes per second of one process, as measured by the history service.</summary>
 public readonly record struct ProcessDisk(int Pid, long CreateTime, double ReadPerSecond, double WritePerSecond);
 
+public readonly record struct VmProcessOwner(int Pid, long CreateTime, string Name);
+
 /// <param name="Disk">Per-process disk rates; null from a service version that does not measure them.</param>
 public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraffic> Processes, List<SocketTraffic> Sockets, List<ProcessDisk>? Disk = null,
-    List<SocketTraffic>? UdpPeers = null)
+    List<SocketTraffic>? UdpPeers = null, List<VmProcessOwner>? VmOwners = null)
 {
     /// <summary>Builds the message from a service snapshot: only processes and sockets that moved data.</summary>
     public static NetworkFeedMessage From(MonitorSnapshot snapshot)
     {
-        var identities = snapshot.Processes.ToDictionary(process => process.Pid, process => process.CreateTime);
+        var identities = new Dictionary<int, long>(snapshot.Processes.Count);
+        foreach (ProcessSample process in snapshot.Processes) identities[process.Pid] = process.CreateTime;
         return new(
         snapshot.Timestamp.ToUniversalTime(),
         snapshot.Processes
@@ -46,7 +49,9 @@ public sealed record NetworkFeedMessage(DateTime TimestampUtc, List<ProcessTraff
                 .ToList()
             : null,
         snapshot.UdpPeers.Select(peer => new SocketTraffic(peer.Pid, "UDP", peer.LocalPort, peer.RemoteAddress, peer.RemotePort,
-            peer.ReceiveBytesPerSecond, peer.SendBytesPerSecond, peer.LocalAddress, identities.GetValueOrDefault(peer.Pid))).ToList());
+            peer.ReceiveBytesPerSecond, peer.SendBytesPerSecond, peer.LocalAddress, identities.GetValueOrDefault(peer.Pid))).ToList(),
+        snapshot.Processes.Where(process => process.VirtualMachineOwner is not null)
+            .Select(process => new VmProcessOwner(process.Pid, process.CreateTime, process.VirtualMachineOwner!)).ToList());
     }
 }
 
@@ -171,6 +176,7 @@ public sealed class NetworkFeedServer : IDisposable
             foreach (Channel<byte[]> reader in readers) reader.Writer.TryComplete();
         }
         try { acceptLoop?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
+        shutdown.Dispose();
     }
 }
 
@@ -299,7 +305,7 @@ public sealed class NetworkFeedClient : IDisposable
             processes.Select(pair => pair.Value with { ReceivePerSecond = processRates[pair.Key].Down / count, SendPerSecond = processRates[pair.Key].Up / count }).ToList(),
             sockets.Select(pair => pair.Value with { ReceivePerSecond = socketRates[pair.Key].Down / count, SendPerSecond = socketRates[pair.Key].Up / count }).ToList(),
             hasDisk ? disk.Select(pair => new ProcessDisk(pair.Key.Item1, pair.Key.Item2, pair.Value.Read / count, pair.Value.Write / count)).ToList() : null,
-            AverageUdpPeers(window));
+            AverageUdpPeers(window), window[^1].VmOwners);
     }
 
     private static List<SocketTraffic>? AverageUdpPeers(List<NetworkFeedMessage> window) => window.All(frame => frame.UdpPeers is null) ? null
@@ -318,5 +324,6 @@ public sealed class NetworkFeedClient : IDisposable
     {
         shutdown.Cancel();
         try { loop?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
+        shutdown.Dispose();
     }
 }

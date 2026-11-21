@@ -478,7 +478,7 @@ public static class NetworkPolicyStore
     {
         try
         {
-            return JsonSerializer.Deserialize<List<AppNetworkPolicy>>(File.ReadAllText(path ?? FilePath), Options)
+            return JsonSerializer.Deserialize<List<AppNetworkPolicy>>(AtomicFile.ReadAllTextShared(path ?? FilePath), Options)
                 ?? throw new JsonException("The policy file does not contain a policy list.");
         }
         catch (FileNotFoundException) { return []; }

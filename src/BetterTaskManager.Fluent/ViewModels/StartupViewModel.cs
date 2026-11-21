@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using BetterTaskManager.Core.Startup;
+using BetterTaskManager.Fluent.Controls;
 using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -14,12 +15,15 @@ public sealed class StartupViewModel : ObservableObject
     public const string SortStatus = "Status";
     public const string SortScope = "Scope";
 
+    private readonly AppSettings settings;
     private List<StartupApp> apps = new();
     private TimeSpan? biosTime;
     private string summary = "";
 
     public StartupViewModel(AppSettings settings)
     {
+        this.settings = settings;
+        if (settings.StartupSortColumn is not (SortName or SortPublisher or SortStatus or SortScope)) settings.StartupSortColumn = SortName;
         Layout = new ColumnLayout("Startup.", new Dictionary<string, double>
         {
             ["Name"] = 300, ["Publisher"] = 220, ["Status"] = 130, ["Scope"] = 160
@@ -30,8 +34,8 @@ public sealed class StartupViewModel : ObservableObject
     public ColumnLayout Layout { get; }
     public ObservableCollection<StartupRow> Rows { get; } = new();
     public string Summary { get => summary; private set => Set(ref summary, value); }
-    public string SortColumn { get; private set; } = SortName;
-    public bool SortDescending { get; private set; }
+    public string SortColumn => settings.StartupSortColumn;
+    public bool SortDescending => settings.StartupSortDescending;
 
     public Task LoadAsync(Func<string> currentSearch) => SearchableListLoader.LoadAsync(
         () => (Apps: StartupApps.Read(), BiosTime: StartupApps.LastBiosTime()), currentSearch,
@@ -68,8 +72,8 @@ public sealed class StartupViewModel : ObservableObject
 
     public void Sort(string column, string search)
     {
-        SortDescending = SortColumn == column && !SortDescending;
-        SortColumn = column;
+        settings.StartupSortDescending = settings.StartupSortColumn == column && !settings.StartupSortDescending;
+        settings.StartupSortColumn = column;
         Apply(search);
     }
 }
@@ -100,7 +104,8 @@ public sealed class StartupRow : RowSlot
     public ImageSource? Icon { get; }
     public double Opacity => App.Enabled ? 1 : 0.6;
     /// <summary>Green for an entry that runs at sign-in, gray for a disabled one.</summary>
-    public Brush StatusBrush => (Brush)Application.Current.Resources[App.Enabled ? "StateGoodBrush" : "StateIdleBrush"];
+    public Brush StatusBrush => ThemeResources.GetBrush(BetterTaskManager.Fluent.App.Window?.Content as FrameworkElement, App.Enabled ? "StateGoodBrush" : "StateIdleBrush")
+        ?? new SolidColorBrush(Microsoft.UI.Colors.Transparent);
 
     /// <summary>What UI Automation and screen readers announce for the row.</summary>
     public override string ToString() => $"{Name}, {Status}";

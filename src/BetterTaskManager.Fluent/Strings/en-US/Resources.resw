@@ -71,8 +71,8 @@
   <data name="ProcessesPage_9.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Name</value></data>
   <data name="ProcessesPage_10.Text" xml:space="preserve"><value>Name</value></data>
   <data name="ProcessesPage_11.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by CPU</value></data>
-  <data name="ProcessesPage_12.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Memory</value></data>
-  <data name="ProcessesPage_13.Text" xml:space="preserve"><value>Memory</value></data>
+  <data name="ProcessesPage_12.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by private RAM</value></data>
+  <data name="ProcessesPage_13.Text" xml:space="preserve"><value>Private RAM</value></data>
   <data name="ProcessesPage_16.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Network speed</value></data>
   <data name="ProcessesPage_17.Text" xml:space="preserve"><value>Network</value></data>
   <data name="ProcessesPage_18.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Open TCP/UDP connections and listeners</value></data>
@@ -312,8 +312,8 @@ Answer: {0}</value></data>
   <data name="DetailsPage_15.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by User name</value></data>
   <data name="DetailsPage_16.Text" xml:space="preserve"><value>User name</value></data>
   <data name="DetailsPage_17.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by CPU</value></data>
-  <data name="DetailsPage_18.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Memory</value></data>
-  <data name="DetailsPage_19.Text" xml:space="preserve"><value>Memory</value></data>
+  <data name="DetailsPage_18.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by private RAM</value></data>
+  <data name="DetailsPage_19.Text" xml:space="preserve"><value>Private RAM</value></data>
   <data name="DetailsPage_20.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Priority</value></data>
   <data name="DetailsPage_21.Text" xml:space="preserve"><value>Priority</value></data>
   <data name="DetailsPage_22.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Description</value></data>
@@ -694,7 +694,7 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="Memory_Residual" xml:space="preserve"><value>Loaded program files, DLLs and other</value></data>
   <data name="Memory_AppsTitle" xml:space="preserve"><value>Largest applications</value></data>
   <data name="Memory_AllProcesses" xml:space="preserve"><value>All processes →</value></data>
-  <data name="Memory_AppsNote" xml:space="preserve"><value>Private working set, grouped by application. Select an app to inspect its processes.</value></data>
+  <data name="Memory_AppsNote" xml:space="preserve"><value>Private RAM and GPU system RAM are shown separately. Shared allocations can overlap; these values must not be added to derive total RAM use. Select an app to inspect its processes.</value></data>
   <data name="Memory_Why" xml:space="preserve"><value>Why the process list does not add up</value></data>
   <data name="Memory_WhyText" xml:space="preserve"><value>Process memory counts private pages currently in RAM. Shared pages, Windows pools, resident cache and driver memory also use RAM. The residual is not a measurement of shared pages alone. Commit is virtual memory backed by RAM or the page file; it is not additional physical RAM.</value></data>
   <data name="Memory_Ready" xml:space="preserve"><value>Immediately available to applications</value></data>
@@ -840,7 +840,7 @@ Windows sends ping requests itself, so ICMP rules do not affect ping.</value></d
   <data name="Tuning_PageCombining" xml:space="preserve"><value>Page combining</value></data>
   <data name="Tuning_PageCombiningNote" xml:space="preserve"><value>Windows looks for identical memory pages in different programs and keeps only one copy. This saves some RAM and costs CPU time now and then.</value></data>
   <data name="Tuning_Prefetch" xml:space="preserve"><value>Application launch prefetching</value></data>
-  <data name="Tuning_PrefetchNote" xml:space="preserve"><value>Windows remembers which files a program reads when it starts and loads them ahead of the next start. Programs start faster, and the standby cache fills up more.</value></data>
+  <data name="Tuning_PrefetchNote" xml:space="preserve"><value>Windows remembers which files a program reads when it starts and loads them ahead of the next start. Programs start faster, and the standby cache fills up more. The switch shows the saved setting. Restart Windows to apply changes.</value></data>
   <data name="Tuning_PreLaunch" xml:space="preserve"><value>Application prelaunch</value></data>
   <data name="Tuning_PreLaunchNote" xml:space="preserve"><value>Windows starts Store apps you use often in the background ahead of time, so they are ready at once. When it is off, they start only when you open them.</value></data>
   <data name="Tuning_SysMain" xml:space="preserve"><value>SysMain (formerly Superfetch)</value></data>
@@ -965,4 +965,25 @@ First {2}, last {3}</value></data>
   <data name="Network_HeaderUpload.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by Upload</value></data>
   <data name="Network_DownloadHeader.Text" xml:space="preserve"><value>Download</value></data>
   <data name="Network_UploadHeader.Text" xml:space="preserve"><value>Upload</value></data>
+  <data name="Memory_PrivateLabel" xml:space="preserve"><value>Private RAM</value></data>
+  <data name="Memory_CommitLabel" xml:space="preserve"><value>Committed</value></data>
+  <data name="Memory_GpuLabel" xml:space="preserve"><value>GPU system RAM</value></data>
+  <data name="Memory_VramLabel" xml:space="preserve"><value>Dedicated GPU memory</value></data>
+  <data name="Memory_CommitColumn.Text" xml:space="preserve"><value>Committed</value></data>
+  <data name="Memory_GpuMemoryColumn.Text" xml:space="preserve"><value>GPU system RAM</value></data>
+  <data name="Memory_HeaderCommit.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by committed memory</value></data>
+  <data name="Memory_HeaderGpuMemory.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort by GPU system RAM</value></data>
+  <data name="Memory_CommitTooltip" xml:space="preserve"><value>Private committed memory allocated by the process. It can be backed by RAM or the page file; it is not physical RAM usage. Do not add it to the other memory columns.</value></data>
+  <data name="Memory_GpuTooltip" xml:space="preserve"><value>System RAM managed by the GPU, separate from dedicated VRAM. Process allocations can overlap other memory figures and other processes; do not add these columns or rows to derive total RAM usage. A dash means unavailable.</value></data>
+  <data name="Memory_GpuSummary" xml:space="preserve"><value>GPU RAM: {0}</value></data>
+  <data name="Memory_GpuAccounting" xml:space="preserve"><value>GPU system RAM: {0}. This is part of system RAM use, shown separately because it can overlap the categories above. It comes from adapter totals, not the sum of process allocations.</value></data>
+  <data name="Memory_GpuMissing" xml:space="preserve"><value>GPU system-RAM usage is unavailable.</value></data>
+  <data name="Memory_AppUsage" xml:space="preserve"><value>RAM {0} · GPU RAM {1}</value></data>
+  <data name="ProcessesPage_12.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Private resident RAM used only by this process (private working set). GPU-managed RAM is shown separately; the system total also includes Windows, drivers and shared pages.</value></data>
+  <data name="DetailsPage_18.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Private resident RAM used only by this process (private working set). GPU-managed RAM is shown separately; the system total also includes Windows, drivers and shared pages.</value></data>
+  <data name="Details_VmOwner" xml:space="preserve"><value>VM owner</value></data>
+  <data name="Design_OverviewNav.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Overview (Ctrl+0)</value></data>
+  <data name="HistoryService_ProtectedFolderRequired" xml:space="preserve"><value>Install Nax-TaskManager for all users (Program Files) to turn on the History service. A per-user installation cannot install a system service.</value></data>
+  <data name="Rules_BlockedWithoutHelpers" xml:space="preserve"><value>The block of the program itself was changed, but its helper programs were not, because the stored rules could not be read ({0}). Reset the rules on the Rules page.</value></data>
+  <data name="RulesPage_PickPathMissing" xml:space="preserve"><value>This file could not be found. Enter the full path to an existing program file.</value></data>
 </root>

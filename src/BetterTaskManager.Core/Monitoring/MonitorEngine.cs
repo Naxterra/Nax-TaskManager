@@ -11,14 +11,17 @@ namespace BetterTaskManager.Core.Monitoring;
 /// </summary>
 public sealed class MonitorEngine : IDisposable
 {
-    private readonly record struct Identity(string Path, string Description, string Company);
+    private readonly record struct Identity(string Path, string Description, string Company, bool IsCritical);
     private readonly record struct CpuMark(long CpuTime, long IoBytes, long DiskRead, long DiskWrite);
 
+    private readonly object collectGate = new();
+    private volatile bool disposed;
     private readonly Dictionary<(int, long), Identity> identities = new();
     private readonly Dictionary<string, (string Description, string Company)> fileInfo = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(int, long), CpuMark> previousMarks = new();
     private readonly MemoryCounters memoryCounters = new();
     private GpuCounters? gpuCounters;
+    private GpuMemoryCounters? gpuMemoryCounters;
     private DiskCounters? diskCounters;
     private readonly BandwidthMonitor bandwidth;
     private readonly HostNameResolver hostNames;
@@ -36,6 +39,8 @@ public sealed class MonitorEngine : IDisposable
     private volatile bool controlStale;
     private Dictionary<int, string> users = new();
     private long usersReadAt;
+    private readonly VirtualMachineOwners vmOwners = new();
+    private readonly bool canReadVmOwners = Firewall.FirewallRules.IsElevated;
     private Task? loop;
     private volatile bool paused;
 
@@ -136,7 +141,17 @@ public sealed class MonitorEngine : IDisposable
 
     public void RequestRefresh()
     {
-        if (wake.CurrentCount == 0) wake.Release();
+        if (disposed) return;
+        try
+        {
+            if (wake.CurrentCount == 0) wake.Release();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (SemaphoreFullException)
+        {
+        }
     }
 
     private async Task RunAsync()
@@ -171,10 +186,16 @@ public sealed class MonitorEngine : IDisposable
     /// <summary>Collects a snapshot synchronously. Public for tests and the self-check.</summary>
     public MonitorSnapshot Collect()
     {
+        lock (collectGate)
+        {
+            if (disposed) throw new ObjectDisposedException(nameof(MonitorEngine));
+            return CollectCore();
+        }
+    }
+
+    private MonitorSnapshot CollectCore()
+    {
         var stopwatch = Stopwatch.StartNew();
-        long now = Stopwatch.GetTimestamp();
-        double elapsedSeconds = previousTimestamp == 0 ? 0 : Stopwatch.GetElapsedTime(previousTimestamp, now).TotalSeconds;
-        previousTimestamp = now;
 
         // Flush first; the counts are drained after the rest of the collection, giving the trace thread time to catch up.
         if (ownTraceDeferred)
@@ -191,8 +212,20 @@ public sealed class MonitorEngine : IDisposable
         else bandwidth.EnsureRunning();
         bandwidth.Flush();
         List<RawProcess> raw = NtProcessReader.Read();
+        long now = Stopwatch.GetTimestamp();
+        double elapsedSeconds = previousTimestamp == 0 ? 0 : Stopwatch.GetElapsedTime(previousTimestamp, now).TotalSeconds;
+        previousTimestamp = now;
+        Dictionary<(int, long), string>? serviceVmOwners = null;
+        if (feed?.Current?.VmOwners is { Count: > 0 } vmList)
+        {
+            serviceVmOwners = new Dictionary<(int, long), string>(vmList.Count);
+            foreach (VmProcessOwner owner in vmList) serviceVmOwners[(owner.Pid, owner.CreateTime)] = owner.Name;
+        }
+        // Skip local HCS calls when the History service feed already supplies VM ownership.
+        var localVmOwners = canReadVmOwners && serviceVmOwners is null ? vmOwners.Read(raw) : null;
         Dictionary<int, string> windowTitles = VisibleWindows.ReadTitlesByProcess();
-        if (servicesReadAt == 0 || Stopwatch.GetElapsedTime(servicesReadAt).TotalSeconds >= 10)
+        bool hasNewProcess = raw.Any(process => process.Pid > 4 && !identities.ContainsKey((process.Pid, process.CreateTime)));
+        if (servicesReadAt == 0 || hasNewProcess || Stopwatch.GetElapsedTime(servicesReadAt).TotalSeconds >= 10)
         {
             services = ServiceNames.ReadByProcess();
             servicesReadAt = Stopwatch.GetTimestamp();
@@ -208,7 +241,7 @@ public sealed class MonitorEngine : IDisposable
                 controlStates.Clear();
                 controlReadAt = Stopwatch.GetTimestamp();
             }
-            if (usersReadAt == 0 || Stopwatch.GetElapsedTime(usersReadAt).TotalSeconds >= 5)
+            if (usersReadAt == 0 || hasNewProcess || Stopwatch.GetElapsedTime(usersReadAt).TotalSeconds >= 5)
             {
                 users = ProcessUsers.Read();
                 usersReadAt = Stopwatch.GetTimestamp();
@@ -217,10 +250,13 @@ public sealed class MonitorEngine : IDisposable
 
         Dictionary<int, ProcessGpu> gpu = [];
         double gpuTotal = 0;
+        GpuMemorySample gpuMemory = GpuMemorySample.Unavailable;
         if (ReadGpu)
         {
             gpuCounters ??= new GpuCounters();
             (gpu, gpuTotal) = gpuCounters.Read();
+            gpuMemoryCounters ??= new GpuMemoryCounters();
+            gpuMemory = gpuMemoryCounters.Read();
         }
 
         var processes = new List<ProcessSample>(raw.Count);
@@ -240,7 +276,11 @@ public sealed class MonitorEngine : IDisposable
             double cpu = 0, io = 0, diskRead = 0, diskWrite = 0;
             bool sampled = false;
             // A process seen for the first time may reuse the PID of one that exited: drop that one's DNS lookups.
-            if (process.Pid > 4 && process.CreateTime > 0 && !previousMarks.ContainsKey(key)) hostNames.ProcessStarted(process.Pid, DateTime.FromFileTimeUtc(process.CreateTime));
+            if (process.Pid > 4 && process.CreateTime > 0 && !previousMarks.ContainsKey(key))
+            {
+                try { hostNames.ProcessStarted(process.Pid, DateTime.FromFileTimeUtc(process.CreateTime)); }
+                catch (ArgumentOutOfRangeException) { }
+            }
             if (process.Pid != 0 && elapsedSeconds > 0 && previousMarks.TryGetValue(key, out CpuMark previous))
             {
                 cpu = Math.Clamp((process.CpuTime100ns - previous.CpuTime) / (elapsedSeconds * 1e7 * processorCount) * 100, 0, 100);
@@ -259,7 +299,7 @@ public sealed class MonitorEngine : IDisposable
             if (ReadProcessDetails && process.Pid > 4 && !controlStates.TryGetValue(key, out control))
             {
                 // Read on the 2-second pass and for processes that started since; failures are remembered too.
-                ProcessControl.TryRead(process.Pid, out control);
+                ProcessControl.TryRead(process.Pid, process.CreateTime, out control);
                 controlStates[key] = control;
             }
             processes.Add(new ProcessSample
@@ -281,6 +321,8 @@ public sealed class MonitorEngine : IDisposable
                 DiskWriteBytesPerSecond = diskWrite,
                 GpuPercent = processGpu.Percent,
                 GpuEngine = processGpu.Engine ?? "",
+                GpuSharedMemory = gpuMemory.ForProcess(process.Pid).Shared,
+                GpuDedicatedMemory = gpuMemory.ForProcess(process.Pid).Dedicated,
                 Threads = process.ThreadCount,
                 Handles = process.HandleCount,
                 SessionId = process.SessionId,
@@ -288,8 +330,11 @@ public sealed class MonitorEngine : IDisposable
                 Services = hosted,
                 Suspended = process.Suspended,
                 UserName = users.GetValueOrDefault(process.Pid, ""),
+                VirtualMachineOwner = VirtualMachineOwners.IsMemoryProcess(process.Name)
+                    ? localVmOwners?.GetValueOrDefault(key) ?? serviceVmOwners?.GetValueOrDefault(key) : null,
                 Priority = control.Priority,
-                Efficiency = control.Efficiency
+                Efficiency = control.Efficiency,
+                IsCritical = identity.IsCritical
             });
         }
 
@@ -365,6 +410,8 @@ public sealed class MonitorEngine : IDisposable
             PerProcessDiskFromService = diskFromService,
             Disks = disks,
             GpuAvailable = gpuCounters?.Available ?? false,
+            GpuSharedMemory = gpuMemory.SharedTotal,
+            GpuDedicatedMemory = gpuMemory.DedicatedTotal,
             ProcessCount = processes.Count,
             ThreadCount = threads,
             HandleCount = handles,
@@ -399,12 +446,13 @@ public sealed class MonitorEngine : IDisposable
                 {
                     FileVersionInfo version = FileVersionInfo.GetVersionInfo(path);
                     info = ((version.FileDescription ?? "").Trim(), (version.CompanyName ?? "").Trim());
+                    if (fileInfo.Count >= 4096) fileInfo.Clear();
+                    fileInfo[path] = info;
                 }
-                catch (Exception ex) when (ex is FileNotFoundException or UnauthorizedAccessException or IOException)
+                catch (Exception ex) when (ex is FileNotFoundException or UnauthorizedAccessException or IOException or ArgumentException or NotSupportedException)
                 {
                     info = ("", "");
                 }
-                fileInfo[path] = info;
             }
             (description, company) = info;
         }
@@ -413,7 +461,8 @@ public sealed class MonitorEngine : IDisposable
             description = "System";
         }
 
-        var identity = new Identity(path, description, company);
+        bool isCritical = NativeProcessInfo.IsCritical(process.Pid);
+        var identity = new Identity(path, description, company, isCritical);
         identities[key] = identity;
         return identity;
     }
@@ -531,7 +580,8 @@ public sealed class MonitorEngine : IDisposable
 
         var tcp = new Dictionary<(int, string, int, string, int), (double Down, double Up)>();
         var udp = new Dictionary<(int, int), (double Down, double Up)>();
-        var current = processes.ToDictionary(process => process.Pid, process => process.CreateTime);
+        var current = new Dictionary<int, long>(processes.Count);
+        foreach (ProcessSample process in processes) current[process.Pid] = process.CreateTime;
         var feedIdentities = message.Processes.GroupBy(process => process.Pid).ToDictionary(group => group.Key, group => group.Last().CreateTime);
         foreach (SocketTraffic socket in message.Sockets)
         {
@@ -602,14 +652,21 @@ public sealed class MonitorEngine : IDisposable
 
     public void Dispose()
     {
+        if (disposed) return;
+        disposed = true;
         shutdown.Cancel();
-        try { loop?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
-        memoryCounters.Dispose();
-        gpuCounters?.Dispose();
-        diskCounters?.Dispose();
-        bandwidth.Dispose();
-        hostNames.Dispose();
-        feed?.Dispose();
+        try { loop?.Wait(TimeSpan.FromSeconds(5)); } catch (AggregateException) { }
+        // Acquire collectGate so native PDH/ETW resources are never disposed while CollectCore is active.
+        lock (collectGate)
+        {
+            memoryCounters.Dispose();
+            gpuCounters?.Dispose();
+            gpuMemoryCounters?.Dispose();
+            diskCounters?.Dispose();
+            bandwidth.Dispose();
+            hostNames.Dispose();
+            feed?.Dispose();
+        }
         shutdown.Dispose();
         wake.Dispose();
     }

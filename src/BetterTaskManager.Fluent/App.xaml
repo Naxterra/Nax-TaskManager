@@ -126,6 +126,9 @@
                     <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#F2F6F5" />
                     <SolidColorBrush x:Key="SurfaceStrokeBrush" Color="#D8E3DF" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#DDF3E9" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#CBEAD9" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#EBF2F0" />
                     <Color x:Key="SystemAccentColor">#087F61</Color>
                     <Color x:Key="SystemAccentColorLight1">#209D7C</Color>
                     <Color x:Key="SystemAccentColorLight2">#4BB598</Color>
@@ -143,9 +146,18 @@
                     <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#F6F8FC" />
                     <SolidColorBrush x:Key="CardStrokeColorDefaultBrush" Color="#D9E0EC" />
+                    <SolidColorBrush x:Key="LayerFillColorDefaultBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="LayerFillColorAltBrush" Color="#F2F6F5" />
                     <SolidColorBrush x:Key="DividerStrokeColorDefaultBrush" Color="#D9E0EC" />
                     <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#0F1E3A8A" />
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush" Color="#081E3A8A" />
+                    <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="#EFF4F3" />
+                    <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#C8D6D1" />
+                    <SolidColorBrush x:Key="TextBoxBackground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="TextControlBackground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#F5F8F7" />
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FFFFFF" />
 
                     <Color x:Key="HeatColor">#F2A000</Color>
                     <SolidColorBrush x:Key="MemoryAppsBrush" Color="#0369A1" />

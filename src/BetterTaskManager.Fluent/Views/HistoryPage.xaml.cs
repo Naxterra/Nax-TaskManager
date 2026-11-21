@@ -13,6 +13,7 @@ public sealed partial class HistoryPage : Page
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(10);
     private readonly DispatcherTimer timer = new() { Interval = RefreshInterval };
     private bool loading, reloadPending, restoringSelection, busy;
+    private long? selectedConnectionId;
 
     public HistoryPage()
     {
@@ -25,6 +26,9 @@ public sealed partial class HistoryPage : Page
         logReorder = new ColumnReorder(LogHeader, ViewModel.Layout);
         UpdateSortIndicators();
         timer.Tick += (_, _) => _ = LoadAsync();
+        var refreshKey = new KeyboardAccelerator { Key = Windows.System.VirtualKey.F5 };
+        refreshKey.Invoked += (sender, args) => { _ = LoadAsync(); args.Handled = true; };
+        KeyboardAccelerators.Add(refreshKey);
     }
 
     private readonly ColumnReorder logReorder;
@@ -45,6 +49,7 @@ public sealed partial class HistoryPage : Page
         bool reload = ViewModel.SortLog(column);
         UpdateSortIndicators();
         if (reload) _ = LoadAsync();
+        else RestoreConnectionSelection();
     }
 
     private void LogSplitter_DragDelta(object sender, Microsoft.UI.Xaml.Controls.Primitives.DragDeltaEventArgs e)
@@ -111,6 +116,7 @@ public sealed partial class HistoryPage : Page
             loading = false;
         }
 
+        if (!IsLoaded) return;
         SummaryText.Text = ViewModel.Summary;
         ConnectionSummaryText.Text = ViewModel.ConnectionSummary;
         bool empty = ViewModel.Connections.Count == 0;
@@ -119,6 +125,7 @@ public sealed partial class HistoryPage : Page
             : App.Monitor.SearchText.Trim().Length > 0 ? Loc.Get("History_EmptySearch")
             : Loc.Get("History_EmptyPeriod");
         RestoreAppSelection();
+        RestoreConnectionSelection();
         UpdateFilterBar();
         UpdateServiceBar();
     }
@@ -128,17 +135,47 @@ public sealed partial class HistoryPage : Page
         restoringSelection = true;
         try
         {
-            string key = ViewModel.AppKey ?? "";
-            int index = 0;
-            for (int i = 0; i < ViewModel.Apps.Count; i++)
+            int index = -1;
+            if (ViewModel.Apps.Count > 0)
             {
-                if (ViewModel.Apps[i].Key == key)
+                string key = ViewModel.AppKey ?? "";
+                index = 0;
+                for (int i = 0; i < ViewModel.Apps.Count; i++)
                 {
-                    index = i;
-                    break;
+                    if (ViewModel.Apps[i].Key == key)
+                    {
+                        index = i;
+                        break;
+                    }
                 }
             }
             if (AppList.SelectedIndex != index) AppList.SelectedIndex = index;
+        }
+        finally
+        {
+            restoringSelection = false;
+        }
+    }
+
+    private void RestoreConnectionSelection()
+    {
+        restoringSelection = true;
+        try
+        {
+            int index = -1;
+            if (selectedConnectionId is long id)
+            {
+                for (int i = 0; i < ViewModel.Connections.Count; i++)
+                {
+                    if (ViewModel.Connections[i].Id == id)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+            }
+            if (ConnectionList.SelectedIndex != index) ConnectionList.SelectedIndex = index;
+            if (index < 0) selectedConnectionId = null;
         }
         finally
         {
@@ -151,12 +188,12 @@ public sealed partial class HistoryPage : Page
         ServiceButton.IsEnabled = !busy;
         switch (ViewModel.ServiceState)
         {
-            case HistoryServiceState.Running when HistoryServiceControl.NeedsUpdate(HistoryServiceSetup.BundledFolder):
+            case HistoryServiceState.Running when ViewModel.ServiceNeedsUpdate:
                 ServiceBar.IsOpen = true;
                 ServiceBar.Severity = InfoBarSeverity.Informational;
                 ServiceBar.Title = Loc.Get("Service_UpdateTitle");
-                string? installed = HistoryServiceControl.InstalledVersion();
-                string? bundled = HistoryServiceControl.VersionIn(HistoryServiceSetup.BundledFolder);
+                string? installed = ViewModel.ServiceInstalledVersion;
+                string? bundled = ViewModel.ServiceBundledVersion;
                 // Same version number from another commit (development builds): show the commit too.
                 bool sameNumber = Short(installed) == Short(bundled);
                 ServiceBar.Message = Loc.F("Service_UpdateMessage", sameNumber ? WithCommit(installed) : Short(installed), sameNumber ? WithCommit(bundled) : Short(bundled));
@@ -192,11 +229,20 @@ public sealed partial class HistoryPage : Page
     {
         busy = true;
         UpdateServiceBar();
-        string? error = await HistoryServiceSetup.SetEnabledAsync(enable: true, App.Monitor.IsElevated);
-        busy = false;
-        if (error is not null)
+        try
         {
-            await new ContentDialog { XamlRoot = XamlRoot, Title = Loc.Get("Service_NotTurnedOn"), Content = error, CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();
+            string? error = await HistoryServiceSetup.SetEnabledAsync(enable: true, App.Monitor.IsElevated);
+            if (error is not null) await Dialogs.ShowAsync(XamlRoot, Loc.Get("Service_NotTurnedOn"), error);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex);
+            await Dialogs.ShowAsync(XamlRoot, Loc.Get("Service_NotTurnedOn"), ex.Message);
+        }
+        finally
+        {
+            busy = false;
+            UpdateServiceBar();
         }
         await LoadAsync();
     }
@@ -247,7 +293,12 @@ public sealed partial class HistoryPage : Page
         _ = LoadAsync();
     }
 
-    private void ConnectionList_SelectionChanged(object sender, SelectionChangedEventArgs e) => RowMenu.TrackSelection(e);
+    private void ConnectionList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        RowMenu.TrackSelection(e);
+        if (restoringSelection) return;
+        selectedConnectionId = (ConnectionList.SelectedItem as ConnectionLogSlot)?.Id;
+    }
 
     private void Row_PointerEntered(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, true);
 
@@ -265,7 +316,7 @@ public sealed partial class HistoryPage : Page
     private void ConnectionList_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
     {
         if (e.OriginalSource is not FrameworkElement source) return;
-        if ((source.DataContext as ConnectionLogSlot ?? (source as ListViewItem)?.Content as ConnectionLogSlot) is not { } slot) return;
+        if ((source.DataContext as ConnectionLogSlot ?? (source as ListViewItem)?.Content as ConnectionLogSlot ?? ConnectionList.SelectedItem as ConnectionLogSlot) is not { } slot) return;
         ConnectionList.SelectedItem = slot;
         MenuFlyout menu = BuildMenu(slot);
         if (e.TryGetPosition(source, out Windows.Foundation.Point point)) menu.ShowAt(source, point);

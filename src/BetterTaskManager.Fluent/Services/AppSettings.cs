@@ -31,6 +31,12 @@ public sealed class AppSettings
     public bool HistoryLogSortDescending { get; set; } = true;
     public string DetailsSortColumn { get; set; } = "Name";
     public bool DetailsSortDescending { get; set; }
+    public string DiskSortColumn { get; set; } = "Total";
+    public bool DiskSortDescending { get; set; } = true;
+    public string DiskFilesSortColumn { get; set; } = "Total";
+    public bool DiskFilesSortDescending { get; set; } = true;
+    public string StartupSortColumn { get; set; } = "Name";
+    public bool StartupSortDescending { get; set; }
     /// <summary>Processes page: false shows the grouped "by app" layout, true the flat "all processes" layout.</summary>
     public bool ProcessFlatView { get; set; }
     /// <summary>The details card on the right of the Processes and Network pages.</summary>
@@ -55,7 +61,7 @@ public sealed class AppSettings
             string path = File.Exists(FilePath) ? FilePath : LegacyFilePath;
             if (File.Exists(path))
             {
-                return FromJson(File.ReadAllText(path));
+                return FromJson(Core.AtomicFile.ReadAllTextShared(path));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
@@ -84,6 +90,9 @@ public sealed class AppSettings
         settings.HistoryAppSortColumn ??= "Data";
         settings.HistoryLogSortColumn ??= "Time";
         settings.DetailsSortColumn ??= "Name";
+        settings.DiskSortColumn ??= "Total";
+        settings.DiskFilesSortColumn ??= "Total";
+        settings.StartupSortColumn ??= "Name";
         return settings;
     }
 

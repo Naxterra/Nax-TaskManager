@@ -16,6 +16,7 @@ internal static class PackageStartupTasks
     // State values (documented for StartupTaskState): 0 disabled, 1 disabled by user, 2 enabled,
     // 3 disabled by policy, 4 enabled by policy.
     private static readonly long MinimumFileTime = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToFileTimeUtc();
+    private static readonly long MaximumFileTime = DateTime.MaxValue.ToFileTimeUtc();
     private const int StateDisabledByUser = 1, StateEnabled = 2, StateDisabledByPolicy = 3, StateEnabledByPolicy = 4;
 
     public static List<StartupApp> Read()
@@ -82,19 +83,37 @@ internal static class PackageStartupTasks
     /// </summary>
     private static (bool Enabled, bool Locked, DateTime? DisabledAt) ReadState(string family, string taskId, bool manifestEnabled)
     {
-        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(StateRoot + family + "\\" + taskId);
-        if (key?.GetValue("State") is not int state) return (manifestEnabled, false, null);
-        bool pendingNotice = key.GetValue("ShowNotification") is 1;
-        bool enabled = state is StateEnabled or StateEnabledByPolicy && !pendingNotice;
-        // Some apps leave a value that is not a FILETIME; only plausible dates are shown.
-        DateTime? disabledAt = !enabled && key.GetValue("LastDisabledTime") is long time && time > MinimumFileTime ? DateTime.FromFileTimeUtc(time).ToLocalTime() : null;
-        return (enabled, state is StateDisabledByPolicy or StateEnabledByPolicy, disabledAt);
+        try
+        {
+            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(StateRoot + family + "\\" + taskId);
+            if (key?.GetValue("State") is not int state) return (manifestEnabled, false, null);
+            bool pendingNotice = key.GetValue("ShowNotification") is 1;
+            bool enabled = state is StateEnabled or StateEnabledByPolicy && !pendingNotice;
+            // Some apps leave a value that is not a FILETIME; only plausible dates are shown.
+            DateTime? disabledAt = !enabled && key.GetValue("LastDisabledTime") is long time && time > MinimumFileTime && time <= MaximumFileTime
+                ? DateTime.FromFileTimeUtc(time).ToLocalTime() : null;
+            return (enabled, state is StateDisabledByPolicy or StateEnabledByPolicy, disabledAt);
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+        {
+            return (manifestEnabled, false, null);
+        }
     }
 
     /// <summary>Like Task Manager: the user's choice, so the app cannot switch itself back on.</summary>
     public static void SetEnabled(string family, string taskId, bool enabled)
     {
+        if (string.IsNullOrWhiteSpace(family) || string.IsNullOrWhiteSpace(taskId)
+            || family.Contains('\\') || family.Contains('/') || family.Contains("..")
+            || taskId.Contains('\\') || taskId.Contains('/') || taskId.Contains(".."))
+        {
+            throw new ArgumentException("Invalid startup task identifier.");
+        }
         using RegistryKey key = Registry.CurrentUser.CreateSubKey(StateRoot + family + "\\" + taskId, writable: true);
+        if (key.GetValue("State") is int current && current is StateDisabledByPolicy or StateEnabledByPolicy)
+        {
+            throw new UnauthorizedAccessException("This startup task is locked by policy.");
+        }
         if (enabled)
         {
             key.SetValue("State", StateEnabled, RegistryValueKind.DWord);

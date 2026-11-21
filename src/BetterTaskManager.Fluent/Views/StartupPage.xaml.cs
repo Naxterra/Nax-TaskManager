@@ -21,7 +21,9 @@ public sealed partial class StartupPage : Page
         InitializeComponent();
         Loaded += Page_Loaded;
         Unloaded += Page_Unloaded;
+        ActualThemeChanged += (_, _) => OnSearchChanged();
         columnReorder = new ColumnReorder(ColumnHeader, ViewModel.Layout);
+        UpdateSortIndicators();
     }
 
     private readonly ColumnReorder columnReorder;
@@ -82,6 +84,12 @@ public sealed partial class StartupPage : Page
         if (columnReorder.SuppressClick) return;
         if (sender is not FrameworkElement { Tag: string column }) return;
         ViewModel.Sort(column, App.Monitor.SearchText);
+        UpdateSortIndicators();
+        RestoreSelection();
+    }
+
+    private void UpdateSortIndicators()
+    {
         var indicators = new Dictionary<string, FontIcon>
         {
             [StartupViewModel.SortName] = SortName, [StartupViewModel.SortPublisher] = SortPublisher,
@@ -92,7 +100,6 @@ public sealed partial class StartupPage : Page
             icon.Visibility = key == ViewModel.SortColumn ? Visibility.Visible : Visibility.Collapsed;
             icon.Glyph = ViewModel.SortDescending ? "" : "";
         }
-        RestoreSelection();
     }
 
     private void Splitter_DragDelta(object sender, DragDeltaEventArgs e)
@@ -102,7 +109,8 @@ public sealed partial class StartupPage : Page
 
     private void RowList_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if (Selected is { Locked: false } app) _ = SetEnabledAsync(app, !app.Enabled);
+        if (e.OriginalSource is FrameworkElement { DataContext: StartupRow { App: { Locked: false } app } })
+            _ = SetEnabledAsync(app, !app.Enabled);
     }
 
     private void Row_PointerEntered(object sender, PointerRoutedEventArgs e) => RowMenu.Hover(sender, true);
@@ -193,20 +201,8 @@ public sealed partial class StartupPage : Page
         }
         else
         {
-            var startInfo = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
-            startInfo.ArgumentList.Add(enabled ? Program.StartupEnableArgument : Program.StartupDisableArgument);
-            startInfo.ArgumentList.Add(app.Source.ToString());
-            startInfo.ArgumentList.Add(app.Name);
-            try
-            {
-                using Process helper = Process.Start(startInfo)!;
-                await helper.WaitForExitAsync();
-                if (helper.ExitCode != 0) error = Loc.F("Common_ExitCode", helper.ExitCode);
-            }
-            catch (System.ComponentModel.Win32Exception)
-            {
-                error = Loc.Get("Uac_CancelledNothing");
-            }
+            error = await ElevatedHelper.RunAsync(
+                [enabled ? Program.StartupEnableArgument : Program.StartupDisableArgument, app.Source.ToString(), app.Name]);
         }
         await ReloadAsync();
         if (error is not null) await Dialogs.ShowAsync(XamlRoot, Loc.F("Startup_NotChanged", app.DisplayName), error);

@@ -67,7 +67,9 @@ public static class AppTraceSessions
             if (keep?.Invoke() == true) break;
             try
             {
-                TraceEventSession.GetActiveSession(name)?.Stop();
+                using TraceEventSession? activeSession = TraceEventSession.GetActiveSession(name);
+                if (activeSession is null) continue;
+                activeSession.Stop();
                 stopped++;
             }
             catch (Exception)

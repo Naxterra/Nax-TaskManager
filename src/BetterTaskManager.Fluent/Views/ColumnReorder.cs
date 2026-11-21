@@ -1,3 +1,4 @@
+using BetterTaskManager.Fluent.Controls;
 using BetterTaskManager.Fluent.Services;
 using BetterTaskManager.Fluent.ViewModels;
 using Microsoft.UI.Xaml;
@@ -39,10 +40,10 @@ internal sealed class ColumnReorder
             HorizontalAlignment = HorizontalAlignment.Left,
             Margin = new Thickness(0, 4, 0, 4),
             CornerRadius = new CornerRadius(1.5),
-            Background = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"],
             IsHitTestVisible = false,
             Visibility = Visibility.Collapsed
         };
+        indicator.SetResourceReference(Border.BackgroundProperty, "AccentFillColorDefaultBrush");
         Grid.SetColumnSpan(indicator, header.ColumnDefinitions.Count);
         header.Children.Add(indicator);
 

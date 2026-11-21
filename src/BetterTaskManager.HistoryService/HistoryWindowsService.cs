@@ -6,6 +6,7 @@ namespace BetterTaskManager.HistoryService;
 public sealed class HistoryWindowsService : ServiceBase
 {
     private const long MaxLogBytes = 1024 * 1024;
+    private static readonly object LogGate = new();
     private HistoryWorker? worker;
 
     public HistoryWindowsService()
@@ -35,14 +36,17 @@ public sealed class HistoryWindowsService : ServiceBase
 
     private static void Log(string message)
     {
-        try
+        lock (LogGate)
         {
-            string path = Path.Combine(HistoryStore.DataFolder, "service.log");
-            if (File.Exists(path) && new FileInfo(path).Length > MaxLogBytes) File.Move(path, path + ".old", overwrite: true);
-            File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
+            try
+            {
+                string path = Path.Combine(HistoryStore.DataFolder, "service.log");
+                if (File.Exists(path) && new FileInfo(path).Length > MaxLogBytes) File.Move(path, path + ".old", overwrite: true);
+                File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
         }
     }
 }

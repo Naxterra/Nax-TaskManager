@@ -42,19 +42,25 @@ public sealed class DiskFileActivity : IDisposable
     private readonly ConcurrentDictionary<int, long> processExited = new();
     private const int MaxFileNames = 200_000, MaxProcessNames = 4096;
     private readonly string sessionName;
+    private readonly object rundownGate = new();
     private TraceEventSession? session;
     private Thread? pump;
+    private CancellationTokenSource? rundownCancel;
+    private Task? rundownTask;
+    private long startedSecond;
     private long lastRundown;
     private int rundownRunning;
+    private int nameCount;
+    private volatile bool running;
 
     public DiskFileActivity(string sessionName = DefaultSessionName) => this.sessionName = sessionName;
 
-    public bool IsRunning { get; private set; }
+    public bool IsRunning => running;
     public string Status { get; private set; } = "";
 
     public bool Start()
     {
-        if (IsRunning) return true;
+        if (running) return true;
         if (TraceEventSession.IsElevated() != true)
         {
             Status = "Needs administrator rights.";
@@ -77,21 +83,28 @@ public sealed class DiskFileActivity : IDisposable
             kernel.ProcessDCStart += data => RememberProcess(data.ProcessID, data.ImageFileName);
             kernel.ProcessStop += data => processExited[data.ProcessID] = Environment.TickCount64;
             TraceEventSession started = session;
+            startedSecond = Environment.TickCount64 / 1000;
+            lock (rundownGate)
+            {
+                rundownCancel?.Dispose();
+                rundownCancel = new CancellationTokenSource();
+            }
+            running = true;
+            Status = "";
             pump = new Thread(() =>
             {
                 try { started.Source.Process(); }
                 catch (Exception ex) { Status = ex.Message; }
-                IsRunning = false;
+                running = false;
             })
             { IsBackground = true, Name = "DiskFileActivity" };
             pump.Start();
-            IsRunning = true;
-            Status = "";
             RequestRundown();
             return true;
         }
         catch (Exception ex)
         {
+            running = false;
             Status = ex.Message;
             session?.Dispose();
             session = null;
@@ -101,13 +114,30 @@ public sealed class DiskFileActivity : IDisposable
 
     public void Stop()
     {
-        IsRunning = false;
+        running = false;
+        Task? pendingRundown;
+        lock (rundownGate)
+        {
+            rundownCancel?.Cancel();
+            pendingRundown = rundownTask;
+        }
+        if (pendingRundown is not null)
+        {
+            try { pendingRundown.Wait(TimeSpan.FromSeconds(5)); } catch (AggregateException) { }
+        }
+        lock (rundownGate)
+        {
+            rundownCancel?.Dispose();
+            rundownCancel = null;
+            rundownTask = null;
+        }
         session?.Dispose();
         session = null;
         pump?.Join(TimeSpan.FromSeconds(2));
         pump = null;
         lock (gate) entries.Clear();
         names.Clear();
+        Interlocked.Exchange(ref nameCount, 0);
         processNames.Clear();
         processExited.Clear();
     }
@@ -120,8 +150,13 @@ public sealed class DiskFileActivity : IDisposable
         if (fileKey == 0 || string.IsNullOrEmpty(name)) return;
         // File keys are never reported as freed here; start over when there are very many, and the next rundown names
         // the files that are still open.
-        if (names.Count >= MaxFileNames) names.Clear();
-        names[fileKey] = name;
+        if (Volatile.Read(ref nameCount) >= MaxFileNames)
+        {
+            names.Clear();
+            Interlocked.Exchange(ref nameCount, 0);
+        }
+        if (names.TryAdd(fileKey, name)) Interlocked.Increment(ref nameCount);
+        else names[fileKey] = name;
     }
 
     private void RememberProcess(int pid, string name)
@@ -145,42 +180,60 @@ public sealed class DiskFileActivity : IDisposable
     /// </summary>
     private void RequestRundown()
     {
-        if (Interlocked.Exchange(ref rundownRunning, 1) == 1) return;
-        lastRundown = Environment.TickCount64;
-        Task.Run(() =>
+        CancellationToken token;
+        lock (rundownGate)
         {
-            try
+            if (rundownCancel is null || rundownCancel.IsCancellationRequested) return;
+            if (Interlocked.Exchange(ref rundownRunning, 1) == 1) return;
+            token = rundownCancel.Token;
+            lastRundown = Environment.TickCount64;
+            rundownTask = Task.Run(() =>
             {
-                using var rundown = new TraceEventSession(sessionName + "-Names") { StopOnDispose = true, BufferSizeMB = 16 };
-                rundown.EnableKernelProvider(KernelTraceEventParser.Keywords.DiskFileIO);
-                rundown.Source.Kernel.FileIOFileRundown += data => Remember(data.FileKey, data.FileName);
-                rundown.Source.Kernel.FileIOName += data => Remember(data.FileKey, data.FileName);
-                var reader = new Thread(() =>
+                try
                 {
-                    try { rundown.Source.Process(); } catch (Exception) { }
-                })
-                { IsBackground = true, Name = "DiskFileNames" };
-                reader.Start();
-                Thread.Sleep(500);
-                rundown.Stop();
-                reader.Join(TimeSpan.FromSeconds(10));
-            }
-            catch (Exception)
-            {
-                // Names stay unknown for files opened before the trace; the traffic is still counted.
-            }
-            finally
-            {
-                Interlocked.Exchange(ref rundownRunning, 0);
-            }
-        });
+                    if (token.IsCancellationRequested) return;
+                    using var rundown = new TraceEventSession(sessionName + "-Names") { StopOnDispose = true, BufferSizeMB = 16 };
+                    rundown.EnableKernelProvider(KernelTraceEventParser.Keywords.DiskFileIO);
+                    rundown.Source.Kernel.FileIOFileRundown += data => Remember(data.FileKey, data.FileName);
+                    rundown.Source.Kernel.FileIOName += data => Remember(data.FileKey, data.FileName);
+                    var reader = new Thread(() =>
+                    {
+                        try { rundown.Source.Process(); } catch (Exception) { }
+                    })
+                    { IsBackground = true, Name = "DiskFileNames" };
+                    reader.Start();
+                    token.WaitHandle.WaitOne(500);
+                    rundown.Stop();
+                    reader.Join(TimeSpan.FromSeconds(token.IsCancellationRequested ? 2 : 10));
+                }
+                catch (Exception)
+                {
+                    // Names stay unknown for files opened before the trace; the traffic is still counted.
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref rundownRunning, 0);
+                }
+            });
+        }
     }
+
+    internal static string FormatPriority(IOPriority priority) => priority switch
+    {
+        IOPriority.Verylow => "VeryLow",
+        IOPriority.Low => "Low",
+        IOPriority.Normal => "Normal",
+        IOPriority.High => "High",
+        IOPriority.Critical => "Critical",
+        _ => ""
+    };
 
     private void Add(DiskIOTraceData data, bool read)
     {
-        if (data.TransferSize <= 0) return;
+        if (data.TransferSize <= 0 || data.ProcessID < 0) return;
         long second = Environment.TickCount64 / 1000;
         int slot = (int)(second % WindowSeconds);
+        string priorityName = FormatPriority(data.Priority);
         lock (gate)
         {
             var key = (data.ProcessID, data.FileKey);
@@ -190,8 +243,8 @@ public sealed class DiskFileActivity : IDisposable
             else entry.Write[slot] += data.TransferSize;
             entry.ResponseSum[slot] += data.ElapsedTimeMSec;
             entry.Count[slot]++;
-            if (entry.File.Length == 0 && data.FileName is { Length: > 0 } name) entry.File = name;
-            entry.Priority = data.Priority.ToString();
+            if (data.FileName is { Length: > 0 } name) entry.File = name;
+            entry.Priority = priorityName;
             entry.DiskNumber = data.DiskNumber;
         }
     }
@@ -214,6 +267,7 @@ public sealed class DiskFileActivity : IDisposable
     public List<FileActivity> Read()
     {
         long second = Environment.TickCount64 / 1000;
+        double divisor = startedSecond > 0 ? Math.Clamp(second - startedSecond + 1, 1, WindowSeconds) : WindowSeconds;
         var result = new List<FileActivity>();
         bool unnamed = false;
         lock (gate)
@@ -227,9 +281,9 @@ public sealed class DiskFileActivity : IDisposable
                     entries.Remove(key);
                     continue;
                 }
-                if (entry.File.Length == 0 && names.TryGetValue(key.FileKey, out string? known)) entry.File = known;
+                if (names.TryGetValue(key.FileKey, out string? known)) entry.File = known;
                 unnamed |= entry.File.Length == 0 && key.FileKey != 0;
-                result.Add(new FileActivity(key.Pid, entry.File, entry.Read.Sum() / (double)WindowSeconds, entry.Write.Sum() / (double)WindowSeconds,
+                result.Add(new FileActivity(key.Pid, entry.File, entry.Read.Sum() / divisor, entry.Write.Sum() / divisor,
                     entry.ResponseSum.Sum() / count, entry.Priority, entry.DiskNumber));
             }
         }

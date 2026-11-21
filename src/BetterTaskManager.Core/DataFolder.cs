@@ -28,14 +28,17 @@ public static class DataFolder
     /// <summary>The same for another folder (tests use a scratch folder instead of the real data folder).</summary>
     public static void EnsureSecured(string path)
     {
+        if (File.Exists(path))
+        {
+            File.Move(path, path + ".untrusted-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")[..6]);
+        }
         var directory = new DirectoryInfo(path);
         if (directory.Exists && !IsTrusted(directory))
         {
             if (directory.Attributes.HasFlag(FileAttributes.ReparsePoint)) Directory.Delete(path, recursive: false);
-            else directory.MoveTo(path + ".untrusted-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            else directory.MoveTo(path + ".untrusted-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")[..6]);
             directory = new DirectoryInfo(path);
         }
-        directory.Create();
 
         var security = new DirectorySecurity();
         security.SetOwner(Administrators);
@@ -44,7 +47,9 @@ public static class DataFolder
         security.AddAccessRule(new FileSystemAccessRule(LocalSystem, FileSystemRights.FullControl, inherit, PropagationFlags.None, AccessControlType.Allow));
         security.AddAccessRule(new FileSystemAccessRule(Administrators, FileSystemRights.FullControl, inherit, PropagationFlags.None, AccessControlType.Allow));
         security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null), FileSystemRights.ReadAndExecute, inherit, PropagationFlags.None, AccessControlType.Allow));
-        directory.SetAccessControl(security);
+        // Creating the folder with its ACL atomically avoids a create-then-ACL race window.
+        if (!directory.Exists) directory = FileSystemAclExtensions.CreateDirectory(security, path);
+        else directory.SetAccessControl(security);
     }
 
     /// <summary>

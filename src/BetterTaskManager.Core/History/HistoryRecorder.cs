@@ -128,7 +128,7 @@ public sealed class HistoryRecorder : IDisposable
         var seenTcp = new HashSet<FlowKey>();
         foreach (ConnectionSample connection in snapshot.Connections)
         {
-            if (connection.Protocol != "TCP" || connection.Pid <= 0 || connection.State == "Listen" || !IsRemote(connection.RemoteAddress)) continue;
+            if (connection.Protocol != "TCP" || connection.Pid <= 0 || connection.State == "Listening" || !IsRemote(connection.RemoteAddress)) continue;
             AppIdentity app = Identify(connection.Pid);
             var key = new FlowKey(connection.Pid, app.CreateTime, "TCP", connection.LocalAddress, connection.LocalPort, connection.RemoteAddress, connection.RemotePort);
             TrackedConnection tracked = Track(key, app, now);
@@ -191,8 +191,11 @@ public sealed class HistoryRecorder : IDisposable
     }
 
     /// <summary>Queues a DNS query answered for a process; safe to call from any thread.</summary>
-    public void RecordDnsQuery(int pid, string name, IReadOnlyList<IPAddress> answers) =>
+    public void RecordDnsQuery(int pid, string name, IReadOnlyList<IPAddress> answers)
+    {
+        if (dnsQueries.Count >= 4096) return;
         dnsQueries.Enqueue((pid, name, answers, DateTime.UtcNow));
+    }
 
     /// <summary>
     /// Logs which app looked up which name, like Portmaster's DNS entries: one row per app and name, kept open

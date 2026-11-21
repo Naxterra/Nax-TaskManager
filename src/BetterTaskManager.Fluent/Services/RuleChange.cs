@@ -172,7 +172,7 @@ public sealed class RuleChange
         if (rulesUnreadable is not null)
         {
             code |= NetworkFailed;
-            details?.Add("The block of the program itself was changed, but its helper programs were not, because the stored rules could not be read (" + rulesUnreadable + "). Reset the rules on the Rules page.");
+            details?.Add(Loc.F("Rules_BlockedWithoutHelpers", rulesUnreadable));
         }
         return code;
     }

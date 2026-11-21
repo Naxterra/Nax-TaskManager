@@ -21,7 +21,7 @@ Built with WinUI 3 (Fluent design) on .NET 11. Formerly *Better Task Manager*.
 - **CSV export**: save every connection or blocked-log entry matching the current app, period, search and DNS/firewall filters, including results beyond the display limit.
 - **History**: an optional background service records connections and traffic per app for 30 days, and lets the app show per-app network speed without administrator rights.
 - **Keeps written files out of RAM**: the History service removes files of 256 MB or more from the Windows file cache shortly after they were written (game updates, installers, downloads), so they do not occupy memory nobody asked for.
-- English and German interface (follows Windows, or chosen in Settings), light and dark theme, Mica, keyboard shortcuts (Ctrl+0 to Ctrl+7 for the pages, Ctrl+F search).
+- English and German interface (follows Windows, or chosen in Settings), light and dark theme, Mica, keyboard shortcuts (Ctrl+0 to Ctrl+7 for the pages, Ctrl+, for Settings, Ctrl+F or Ctrl+K for search, Ctrl+P to pause or resume).
 
 ## Requirements
 
@@ -42,7 +42,7 @@ The app starts without elevation. These features need administrator rights:
 | Path, publisher and icon of system processes | Hidden for protected processes | Shown |
 | Firewall block/allow and network rules | One UAC prompt per change | Direct |
 | Clear standby cache, empty all working sets | Unavailable | Available |
-| Install the History service | One UAC prompt | Direct |
+| Install the History service | One UAC prompt (requires an all-users install in Program Files) | Direct (requires an all-users install in Program Files) |
 
 Use **Restart as administrator** in the app, or turn on **Settings → History → Record in the background** once.
 

@@ -17,12 +17,21 @@ public sealed class DetailPane : Grid
     private readonly TextBlock subtitle = new() { TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly TextBlock detail = new() { TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly Grid tiles = new() { ColumnSpacing = 8 };
-    private readonly Grid facts = new() { ColumnSpacing = 12, RowSpacing = 8 };
+    private readonly Grid facts = new() { ColumnSpacing = 12 };
     private readonly StackPanel actions = new() { Spacing = 8 };
     private readonly TextBlock empty = new() { TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16) };
     private readonly StackPanel content = new() { Spacing = 14 };
-    private readonly Dictionary<string, (TextBlock Value, Button? Copy)> factRows = new();
+    private readonly Dictionary<string, FactRow> factRows = new();
     private readonly List<string> factOrder = new();
+    private readonly HashSet<string> activeCopyable = new();
+
+    private sealed class FactRow
+    {
+        public required TextBlock Label { get; init; }
+        public required TextBlock Value { get; init; }
+        public required int RowIndex { get; init; }
+        public Button? Copy { get; set; }
+    }
 
     public DetailPane()
     {
@@ -94,24 +103,21 @@ public sealed class DetailPane : Grid
     public void SetTilesVisible(bool visible) => tiles.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>Starts a new set of facts; call <see cref="Fact"/> for each, then <see cref="EndFacts"/>.</summary>
-    public void BeginFacts() => factOrder.Clear();
+    public void BeginFacts()
+    {
+        factOrder.Clear();
+        activeCopyable.Clear();
+    }
 
     public void Fact(string label, string value, bool copyable = false)
     {
-        factOrder.Add(label);
-        if (!factRows.TryGetValue(label, out var row))
+        if (!factOrder.Contains(label)) factOrder.Add(label);
+        if (copyable) activeCopyable.Add(label);
+        if (!factRows.TryGetValue(label, out FactRow? row))
         {
             var labelBlock = new TextBlock { Text = label, FontSize = 12, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Top };
             labelBlock.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
             var valueBlock = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, VerticalAlignment = VerticalAlignment.Top };
-            Button? copy = null;
-            if (copyable)
-            {
-                copy = new Button { Content = new FontIcon { Glyph = "", FontSize = 12 }, Padding = new Thickness(4), MinWidth = 0, Height = 26, Width = 28, VerticalAlignment = VerticalAlignment.Top, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0) };
-                ToolTipService.SetToolTip(copy, Loc.Get("Details_Copy"));
-                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(copy, Loc.Get("Details_Copy"));
-                copy.Click += (_, _) => ProcessActions.CopyText(valueBlock.Text);
-            }
             int rowIndex = facts.RowDefinitions.Count;
             facts.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             Grid.SetRow(labelBlock, rowIndex);
@@ -119,16 +125,20 @@ public sealed class DetailPane : Grid
             Grid.SetColumn(valueBlock, 1);
             facts.Children.Add(labelBlock);
             facts.Children.Add(valueBlock);
-            if (copy is not null)
-            {
-                Grid.SetRow(copy, rowIndex);
-                Grid.SetColumn(copy, 2);
-                facts.Children.Add(copy);
-            }
-            row = (valueBlock, copy);
+            row = new FactRow { Label = labelBlock, Value = valueBlock, RowIndex = rowIndex };
             factRows[label] = row;
-            // The label is the element right before the value in the children list; keep it reachable for hiding.
-            labelBlock.Tag = label;
+        }
+        if (copyable && row.Copy is null)
+        {
+            var copy = new Button { Content = new FontIcon { Glyph = "\uE8C8", FontSize = 12 }, Padding = new Thickness(4), MinWidth = 0, Height = 26, Width = 28, VerticalAlignment = VerticalAlignment.Top, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0) };
+            ToolTipService.SetToolTip(copy, Loc.Get("Details_Copy"));
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(copy, Loc.Get("Details_Copy"));
+            TextBlock target = row.Value;
+            copy.Click += (_, _) => ProcessActions.CopyText(target.Text);
+            Grid.SetRow(copy, row.RowIndex);
+            Grid.SetColumn(copy, 2);
+            facts.Children.Add(copy);
+            row.Copy = copy;
         }
         if (row.Value.Text != value) row.Value.Text = value;
     }
@@ -136,20 +146,24 @@ public sealed class DetailPane : Grid
     /// <summary>Hides facts that this round did not set, so a different kind of selection shows only its own.</summary>
     public void EndFacts()
     {
-        foreach (FrameworkElement child in facts.Children.OfType<FrameworkElement>())
-        {
-            string? label = child.Tag as string ?? FindLabel(child);
-            child.Visibility = label is not null && factOrder.Contains(label) ? Visibility.Visible : Visibility.Collapsed;
-        }
-    }
-
-    private string? FindLabel(FrameworkElement element)
-    {
+        var active = new HashSet<string>(factOrder);
+        bool firstVisible = true;
         foreach (var (label, row) in factRows)
         {
-            if (ReferenceEquals(row.Value, element) || ReferenceEquals(row.Copy, element)) return label;
+            bool visible = active.Contains(label);
+            Visibility state = visible ? Visibility.Visible : Visibility.Collapsed;
+            Thickness margin = visible && !firstVisible ? new Thickness(0, 8, 0, 0) : new Thickness(0);
+            if (visible) firstVisible = false;
+            row.Label.Visibility = state;
+            row.Label.Margin = margin;
+            row.Value.Visibility = state;
+            row.Value.Margin = margin;
+            if (row.Copy is not null)
+            {
+                row.Copy.Visibility = visible && activeCopyable.Contains(label) ? Visibility.Visible : Visibility.Collapsed;
+                row.Copy.Margin = margin;
+            }
         }
-        return null;
     }
 
     public void SetActions(Button[] buttons)
@@ -185,18 +199,25 @@ public sealed class DetailPane : Grid
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, text);
     }
 
-    /// <summary>Red for the destructive action (End task), in every pointer state.</summary>
+    /// <summary>High-contrast red for the destructive action (End task), in every pointer state.</summary>
     public static void MakeDanger(Button button)
     {
-        var red = (Brush)Application.Current.Resources["StateBadBrush"];
-        var pressed = new SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0xF8, 0x71, 0x71));
+        var red = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xB9, 0x1C, 0x1C));
+        var hover = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x99, 0x1B, 0x1B));
+        var pressed = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x7F, 0x1D, 0x1D));
         var white = new SolidColorBrush(Microsoft.UI.Colors.White);
         button.Background = red;
         button.Foreground = white;
         button.BorderBrush = red;
-        foreach (string key in new[] { "ButtonBackground", "ButtonBackgroundPointerOver", "ButtonBackgroundPressed" }) button.Resources[key] = key.EndsWith("Pressed") ? pressed : red;
-        foreach (string key in new[] { "ButtonForeground", "ButtonForegroundPointerOver", "ButtonForegroundPressed" }) button.Resources[key] = white;
-        foreach (string key in new[] { "ButtonBorderBrush", "ButtonBorderBrushPointerOver", "ButtonBorderBrushPressed" }) button.Resources[key] = red;
+        button.Resources["ButtonBackground"] = red;
+        button.Resources["ButtonBackgroundPointerOver"] = hover;
+        button.Resources["ButtonBackgroundPressed"] = pressed;
+        button.Resources["ButtonForeground"] = white;
+        button.Resources["ButtonForegroundPointerOver"] = white;
+        button.Resources["ButtonForegroundPressed"] = white;
+        button.Resources["ButtonBorderBrush"] = red;
+        button.Resources["ButtonBorderBrushPointerOver"] = hover;
+        button.Resources["ButtonBorderBrushPressed"] = pressed;
     }
 
     private void ApplyResources()

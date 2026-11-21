@@ -38,6 +38,9 @@ public sealed class ProcessSlot : RowSlot
     public ImageSource? Icon { get => icon; private set => Set(ref icon, value); }
     public string CpuText { get => cpuText; private set => Set(ref cpuText, value); }
     public string MemoryText { get => memoryText; private set => Set(ref memoryText, value); }
+    private string commitText = "", gpuMemoryText = "";
+    public string CommitText { get => commitText; private set => Set(ref commitText, value); }
+    public string GpuMemoryText { get => gpuMemoryText; private set => Set(ref gpuMemoryText, value); }
     public string IoText { get => ioText; private set => Set(ref ioText, value); }
     public string NetworkText { get => networkText; private set => Set(ref networkText, value); }
     public string BandwidthText { get => bandwidthText; private set => Set(ref bandwidthText, value); }
@@ -75,6 +78,7 @@ public sealed class ProcessSlot : RowSlot
         {
             slot.Detail = slot.CpuText = slot.MemoryText = slot.IoText = slot.NetworkText = slot.BandwidthText = slot.GpuText = slot.Publisher = slot.Path = "";
             slot.GpuEngine = null;
+            slot.CommitText = slot.GpuMemoryText = "";
             slot.ChevronVisibility = Visibility.Collapsed;
             foreach (Meter meter in new[] { slot.Cpu, slot.Memory, slot.Io, slot.Network, slot.Bandwidth, slot.Gpu }) meter.Set(0, 1);
             slot.Blocked = false;
@@ -91,6 +95,8 @@ public sealed class ProcessSlot : RowSlot
         slot.ChevronAngle = row.Expanded ? 90 : 0;
         slot.CpuText = row.CpuSampled ? Format.Percent(row.Cpu) : "…";
         slot.MemoryText = Format.Memory(row.Memory);
+        slot.CommitText = Format.Memory(row.Commit);
+        slot.GpuMemoryText = row.GpuMemory is { } shared ? Format.Memory(shared) : "–";
         // Real disk rates are mostly KB/s; one decimal of MB/s would show them all as 0.0.
         slot.IoText = context.RealDisk ? Format.ByteRate(row.Io) : Format.Rate(row.Io);
         slot.NetworkText = row.Connections == 0 ? "–" : Format.Count(row.Connections);

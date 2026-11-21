@@ -31,7 +31,11 @@ public static class ProcessUsers
     }
 
     /// <summary>PID → account name without the domain ("Naxterra", "SYSTEM", "LOCAL SERVICE" in the Windows language).</summary>
-    public static Dictionary<int, string> Read()
+    public static Dictionary<int, string> Read() => ReadAccounts(null);
+
+    internal static void ReadVmIdentities(Dictionary<int, Guid> identities) => ReadAccounts(identities);
+
+    private static Dictionary<int, string> ReadAccounts(Dictionary<int, Guid>? identities)
     {
         var result = new Dictionary<int, string>();
         int level = 1;
@@ -42,7 +46,18 @@ public static class ProcessUsers
             for (int index = 0; index < count; index++)
             {
                 var info = Marshal.PtrToStructure<WtsProcessInfoEx>(buffer + index * size);
-                if (info.UserSid != IntPtr.Zero) result[info.ProcessId] = Name(new SecurityIdentifier(info.UserSid));
+                if (info.UserSid == IntPtr.Zero) continue;
+                if (identities is null)
+                {
+                    result[info.ProcessId] = Name(new SecurityIdentifier(info.UserSid));
+                }
+                else if (Marshal.PtrToStringUni(info.ProcessName) is { } name && VirtualMachineOwners.IsMemoryProcess(name))
+                {
+                    var sid = new SecurityIdentifier(info.UserSid);
+                    byte[] binary = new byte[sid.BinaryLength];
+                    sid.GetBinaryForm(binary, 0);
+                    if (VirtualMachineOwners.TryReadVmId(binary, out Guid id)) identities[info.ProcessId] = id;
+                }
             }
         }
         finally
@@ -68,15 +83,19 @@ public static class ProcessUsers
         }
         catch (Exception ex) when (ex is IdentityNotMappedException or SystemException)
         {
-            name = key;
+            return key;
         }
-        lock (s_names) s_names[key] = name;
+        lock (s_names)
+        {
+            if (s_names.Count >= 4096) s_names.Clear();
+            s_names[key] = name;
+        }
         return name;
     }
 
-    [DllImport("wtsapi32.dll", SetLastError = true)]
+    [DllImport("wtsapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool WTSEnumerateProcessesEx(IntPtr server, ref int level, uint sessionId, out IntPtr processInfo, out int count);
 
-    [DllImport("wtsapi32.dll")]
+    [DllImport("wtsapi32.dll", CharSet = CharSet.Unicode)]
     private static extern bool WTSFreeMemoryEx(int type, IntPtr memory, int count);
 }

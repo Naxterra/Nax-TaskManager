@@ -104,6 +104,8 @@ english.ServiceMoveFailed=The History service could not be moved to its new fold
 german.ServiceMoveFailed=Der Verlaufsdienst konnte nicht in seinen neuen Ordner verschoben werden und läuft möglicherweise nicht. Schalten Sie ihn unter Einstellungen > Verlauf aus und wieder ein.%n%n%1
 english.ServiceRestartFailed=Setup stopped the History service but could not start it again. Turn it off and on again in Settings > History after installing Nax-TaskManager.
 german.ServiceRestartFailed=Setup hat den Verlaufsdienst angehalten, konnte ihn aber nicht wieder starten. Schalten Sie ihn nach der Installation von Nax-TaskManager unter Einstellungen > Verlauf aus und wieder ein.
+english.PerUserUpgradeNeedsStandard=Restart Setup without administrator privileges to upgrade the per-user installation.
+german.PerUserUpgradeNeedsStandard=Starten Sie Setup ohne Administratorrechte neu, um die Benutzerinstallation zu aktualisieren.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopShortcut}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -167,30 +169,27 @@ begin
   RegistrationFound := False;
   Uninstaller := '';
 
-  if RegQueryStringValue(HKCU, UninstallRegistryKey, 'UninstallString', CommandLine) then
+  if IsAdminInstallMode() then
   begin
-    RegistrationFound := True;
-    Uninstaller := ExecutableFromCommand(CommandLine);
+    RegistrationFound := RegQueryStringValue(HKLM64, UninstallRegistryKey, 'UninstallString', CommandLine);
+    if not RegistrationFound then
+      RegistrationFound := RegQueryStringValue(HKLM32, UninstallRegistryKey, 'UninstallString', CommandLine);
   end
-  else if RegQueryStringValue(HKLM64, UninstallRegistryKey, 'UninstallString', CommandLine) then
-  begin
-    RegistrationFound := True;
+  else
+    RegistrationFound := RegQueryStringValue(HKCU, UninstallRegistryKey, 'UninstallString', CommandLine);
+
+  if RegistrationFound then
     Uninstaller := ExecutableFromCommand(CommandLine);
-  end
-  else if RegQueryStringValue(HKLM32, UninstallRegistryKey, 'UninstallString', CommandLine) then
-  begin
-    RegistrationFound := True;
-    Uninstaller := ExecutableFromCommand(CommandLine);
-  end;
 
   Result := RegistrationFound and (Uninstaller <> '') and FileExists(Uninstaller);
 end;
 
 function ExistingRegistrationRemains(): Boolean;
 begin
-  Result := RegKeyExists(HKCU, UninstallRegistryKey) or
-    RegKeyExists(HKLM64, UninstallRegistryKey) or
-    RegKeyExists(HKLM32, UninstallRegistryKey);
+  if IsAdminInstallMode() then
+    Result := RegKeyExists(HKLM64, UninstallRegistryKey) or RegKeyExists(HKLM32, UninstallRegistryKey)
+  else
+    Result := RegKeyExists(HKCU, UninstallRegistryKey);
 end;
 
 function WaitForUninstallerRemoval(const Uninstaller: String): Boolean;
@@ -253,7 +252,7 @@ end;
 // needs a name of its own: the time plus a random number.
 function NewResultFile(const Prefix: String): String;
 begin
-  Result := ExpandConstant('{%TEMP}') + '\' + Prefix + GetDateTimeString('yyyymmddhhnnss', '-', '-') + '-' + IntToStr(Random(1000000000)) + '.txt';
+  Result := AddBackslash(ExpandConstant('{tmp}')) + Prefix + GetDateTimeString('yyyymmddhhnnss', '-', '-') + '-' + IntToStr(Random(1000000000)) + '.txt';
 end;
 
 // The files are in place: move the stopped History service to its own folder and start it again. An install for all
@@ -368,6 +367,13 @@ begin
   begin
     if RegistrationFound then
       Result := CustomMessage('PreviousUninstallerMissing');
+    Exit;
+  end;
+
+  // Starting Setup elevated in per-user mode does not give it an unelevated token.
+  if IsAdmin and (not IsAdminInstallMode()) then
+  begin
+    Result := CustomMessage('PerUserUpgradeNeedsStandard');
     Exit;
   end;
 

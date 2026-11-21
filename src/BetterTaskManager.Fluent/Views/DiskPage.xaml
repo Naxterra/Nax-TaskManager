@@ -149,10 +149,14 @@
             <SelectorBarItem x:Uid="DiskPage_13" x:Name="FilesMode" Text="Disk activity per file" />
         </SelectorBar>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="12" Margin="4,8,0,4" Visibility="{x:Bind ViewModel.NoticeVisibility, Mode=OneWay}">
+        <Grid Grid.Row="4" ColumnSpacing="12" Margin="4,8,0,4" Visibility="{x:Bind ViewModel.NoticeVisibility, Mode=OneWay}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
             <TextBlock Text="{x:Bind ViewModel.Notice, Mode=OneWay}" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <Button x:Uid="DiskPage_14" Content="Restart as administrator" Visibility="{x:Bind ViewModel.RestartVisibility, Mode=OneWay}" Click="RestartElevated_Click" />
-        </StackPanel>
+            <Button x:Uid="DiskPage_14" Grid.Column="1" Content="Restart as administrator" Visibility="{x:Bind ViewModel.RestartVisibility, Mode=OneWay}" Click="RestartElevated_Click" />
+        </Grid>
 
         <Border Grid.Row="5" Grid.RowSpan="2" Style="{StaticResource TableCardStyle}">
         <Grid>

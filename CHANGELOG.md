@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0-alpha.50 - 2026-11-21
+
+- **Committed memory, GPU system RAM, and VM owner labels.** Added Committed and GPU system RAM columns and detail facts to the Processes page, independent adapter-level GPU RAM accounting on the Performance page, and VM owner identification for `vmmem*` processes.
+- **Registry-backed application launch prefetching.** Toggling application launch prefetching now updates `EnablePrefetcher` in the registry while preserving the boot prefetch bit and reflects the saved setting immediately before restart.
+- **Safety and elevated helper hardening.** Hardened helper result file checks against alternate data streams and junction temporary roots, tightened elevated CLI argument parsing, verified single-handle UTC creation times on process termination, fixed IFEO `Debugger` argument unquoting and empty key cleanup, preserved user environment blocks during Explorer restarts, and added WFP and `app-rules.json` rollback handling when saving policies fails.
+- **Monitoring, PDH, ETW, and History service stability.** Fixed multi-GPU WDDM LUID numbering, synchronized PDH counter readers and primed initial baselines, fixed ETW disk I/O priority mapping and rundown cancellation, prevented window-enumeration deadlocks during shutdown, capped standby limit megabytes against 64-bit overflow, switched internal timers to monotonic timestamps, fixed `CacheTrimmer` shutdown disposal, enabled incremental SQLite auto-vacuum on pruning, and flushed blocked records on service shutdown.
+- **WinUI 3 usability, Light theme, and shortcuts.** Scoped the `Delete` key on the Processes page to the process lists, prevented auto-checked helpers from persisting on memory-only saves, fixed custom protocol editing on the Rules page, serialized `ContentDialog` calls, completed the Light-theme brush palette, added `Ctrl+P`, `Ctrl+,`, `Escape`, and `F5` shortcuts, persisted Disk and Startup sort preferences, moved service and file metadata queries off the UI thread, and updated English and German localizations and installer prompts.
+
 ## 2.0.0-alpha.49 - 2026-11-12
 
 - **The app list on the Network page has its own search box.** It narrows only the app list, by app name or path, while All apps, the totals and the connection table stay complete. Opening the page for a specific app clears it, so that app is shown.

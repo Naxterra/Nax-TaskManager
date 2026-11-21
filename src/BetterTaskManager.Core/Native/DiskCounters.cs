@@ -42,11 +42,13 @@ public sealed class DiskCounters : IDisposable
     private static readonly string[] CounterNames =
         ["% Idle Time", "Disk Read Bytes/sec", "Disk Write Bytes/sec", "Avg. Disk sec/Transfer", "Current Disk Queue Length"];
 
-    private readonly IntPtr query;
+    private readonly object sync = new();
+    private IntPtr query;
     private readonly IntPtr[] counters = new IntPtr[CounterNames.Length];
     private readonly Dictionary<int, (string Model, string Kind)> devices = new();
     private readonly Dictionary<string, (string Label, long Free, long Total)> volumes = new(StringComparer.OrdinalIgnoreCase);
     private long volumesReadAt;
+    private bool primed;
 
     public DiskCounters()
     {
@@ -60,49 +62,69 @@ public sealed class DiskCounters : IDisposable
                 return;
             }
         }
-        PdhCollectQueryData(query);
     }
 
     public bool Available => query != IntPtr.Zero;
 
     public List<DiskSample> Read()
     {
+        lock (sync) return ReadCore();
+    }
+
+    private List<DiskSample> ReadCore()
+    {
         var result = new List<DiskSample>();
         if (!Available || PdhCollectQueryData(query) != 0) return result;
+        if (!primed)
+        {
+            primed = true;
+            return result;
+        }
 
-        var values = new Dictionary<string, double[]>(StringComparer.Ordinal);
+        var values = new Dictionary<string, double?[]>(StringComparer.Ordinal);
         for (int index = 0; index < counters.Length; index++)
         {
             foreach (var (instance, value) in ReadArray(counters[index]))
             {
                 if (instance == "_Total") continue;
-                if (!values.TryGetValue(instance, out double[]? row)) values[instance] = row = new double[CounterNames.Length];
+                if (!values.TryGetValue(instance, out double?[]? row)) values[instance] = row = new double?[CounterNames.Length];
                 row[index] = value;
             }
         }
 
         bool refreshVolumes = volumesReadAt == 0 || Environment.TickCount64 - volumesReadAt > 10_000;
         if (refreshVolumes) volumesReadAt = Environment.TickCount64;
+        var seenDisks = new HashSet<int>();
         foreach (var (instance, row) in values)
         {
             // Instances are "<disk number> <drive letters>", for example "0 C:" or "1 D: E:".
-            string[] parts = instance.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 0 || !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int number)) continue;
+            int firstSpace = instance.IndexOf(' ');
+            string diskToken = firstSpace < 0 ? instance : instance[..firstSpace];
+            if (!int.TryParse(diskToken, NumberStyles.None, CultureInfo.InvariantCulture, out int number)) continue;
+            seenDisks.Add(number);
             var diskVolumes = new List<VolumeSample>();
-            foreach (string letter in parts.Skip(1))
+            if (firstSpace >= 0)
             {
-                if (refreshVolumes || !volumes.ContainsKey(letter)) volumes[letter] = ReadVolume(letter);
-                var (label, free, total) = volumes[letter];
-                diskVolumes.Add(new VolumeSample(letter, label, free, total));
+                foreach (string letter in instance[(firstSpace + 1)..].Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (letter.Length != 2 || !char.IsAsciiLetter(letter[0]) || letter[1] != ':') continue;
+                    if (refreshVolumes || !volumes.ContainsKey(letter)) volumes[letter] = ReadVolume(letter);
+                    var (label, free, total) = volumes[letter];
+                    diskVolumes.Add(new VolumeSample(letter, label, free, total));
+                }
             }
             if (!devices.TryGetValue(number, out var device)) devices[number] = device = QueryDevice(number);
+            // If % Idle Time is absent (e.g. first tick after hot-plug), default active time to 0% rather than 100%.
+            double activePercent = row[0] is { } idle ? Math.Clamp(100 - idle, 0, 100) : 0;
             result.Add(new DiskSample(number, device.Model, device.Kind, diskVolumes,
-                ActivePercent: Math.Clamp(100 - row[0], 0, 100),
-                ReadPerSecond: Math.Max(0, row[1]),
-                WritePerSecond: Math.Max(0, row[2]),
-                ResponseMilliseconds: Math.Max(0, row[3] * 1000),
-                QueueLength: Math.Max(0, row[4])));
+                ActivePercent: activePercent,
+                ReadPerSecond: Math.Max(0, row[1] ?? 0),
+                WritePerSecond: Math.Max(0, row[2] ?? 0),
+                ResponseMilliseconds: Math.Max(0, (row[3] ?? 0) * 1000),
+                QueueLength: Math.Max(0, row[4] ?? 0)));
         }
+        // Evict disconnected disks so a hot-swapped drive re-queries its model and bus type.
+        foreach (int stale in devices.Keys.Where(id => !seenDisks.Contains(id)).ToList()) devices.Remove(stale);
         result.Sort((left, right) => left.Number.CompareTo(right.Number));
         return result;
     }
@@ -216,6 +238,10 @@ public sealed class DiskCounters : IDisposable
 
     public void Dispose()
     {
-        if (query != IntPtr.Zero) PdhCloseQuery(query);
+        lock (sync)
+        {
+            if (query != IntPtr.Zero) PdhCloseQuery(query);
+            query = IntPtr.Zero;
+        }
     }
 }

@@ -107,7 +107,7 @@ public sealed class TrendChart : Grid
 
     private void ApplyThemeBrushes()
     {
-        var gridBrush = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"];
+        Brush? gridBrush = ThemeResources.GetBrush(this, "DividerStrokeColorDefaultBrush");
         foreach (Line gridLine in gridLines) gridLine.Stroke = gridBrush;
         BorderBrush = gridBrush;
         Background = new SolidColorBrush(Colors.Transparent);

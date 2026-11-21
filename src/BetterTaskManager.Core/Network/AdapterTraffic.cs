@@ -22,7 +22,7 @@ internal static class AdapterTrafficReader
             for (uint index = 0; index < count; index++)
             {
                 InterfaceRow* row = entry + index;
-                rows.Add(new AdapterTraffic(row->InterfaceGuid.ToString(), new string(row->Description),
+                rows.Add(new AdapterTraffic(row->InterfaceLuid.ToString(System.Globalization.CultureInfo.InvariantCulture), new string(row->Description),
                     (row->Flags & 1) != 0, (row->Flags & 2) != 0, row->OperStatus == 1,
                     row->Type, row->TunnelType, row->InOctets, row->OutOctets));
             }
@@ -78,7 +78,8 @@ internal sealed class AdapterTrafficAccounting
     {
         var selected = Select(rows);
         bool hardware = selected.Any(row => row.Hardware);
-        var current = selected.ToDictionary(row => row.Id);
+        var current = new Dictionary<string, AdapterTraffic>(selected.Count);
+        foreach (AdapterTraffic row in selected) current[row.Id] = row;
         double received = 0, sent = 0;
         int matched = 0;
         if (hardwareLayer == hardware && double.IsFinite(elapsedSeconds) && elapsedSeconds > 0)

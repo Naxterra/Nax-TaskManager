@@ -34,7 +34,11 @@ public static class PoolTags
                     continue;
                 }
                 if (status < 0) return new List<PoolTagUsage>();
+                int validSize = needed > 0 && needed <= size ? needed : size;
+                if (validSize < 8) return new List<PoolTagUsage>();
                 int count = Marshal.ReadInt32(buffer);
+                int maxCount = (validSize - 8) / EntrySize;
+                if (count < 0 || count > maxCount) count = Math.Clamp(count, 0, maxCount);
                 var result = new List<PoolTagUsage>(count);
                 byte[] tag = new byte[4];
                 for (int index = 0; index < count; index++)
@@ -134,11 +138,17 @@ public static class PoolTags
                     continue;
                 }
                 if (status < 0) return result;
+                int validSize = needed > 0 && needed <= size ? needed : size;
+                if (validSize < 8) return result;
                 int count = Marshal.ReadInt32(buffer);
+                int maxCount = (validSize - 8) / ModuleEntrySize;
+                if (count < 0 || count > maxCount) count = Math.Clamp(count, 0, maxCount);
                 string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
                 for (int index = 0; index < count; index++)
                 {
-                    string? raw = Marshal.PtrToStringAnsi(buffer + 8 + index * ModuleEntrySize + FullPathOffset);
+                    string? raw = Marshal.PtrToStringAnsi(buffer + 8 + index * ModuleEntrySize + FullPathOffset, 256);
+                    int nul = raw.IndexOf('\0');
+                    if (nul >= 0) raw = raw[..nul];
                     if (string.IsNullOrEmpty(raw)) continue;
                     string path = raw.StartsWith(@"\SystemRoot\", StringComparison.OrdinalIgnoreCase) ? Path.Combine(windows, raw[12..])
                         : raw.StartsWith(@"\??\", StringComparison.Ordinal) ? raw[4..]

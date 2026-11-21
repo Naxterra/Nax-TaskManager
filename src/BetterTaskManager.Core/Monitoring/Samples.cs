@@ -14,6 +14,10 @@ public sealed class ProcessSample
     public long PrivateWorkingSet { get; init; }
     public long WorkingSet { get; init; }
     public long CommitCharge { get; init; }
+    /// <summary>System RAM managed by the GPU; not additive with CPU working sets or commit. Null when unavailable.</summary>
+    public long? GpuSharedMemory { get; init; }
+    /// <summary>GPU dedicated-memory attribution. Null when unavailable; not system RAM on a discrete GPU.</summary>
+    public long? GpuDedicatedMemory { get; init; }
     public double IoBytesPerSecond { get; init; }
     /// <summary>Bytes per second that reached a disk (not cached I/O); needs administrator rights or the history service.</summary>
     public double DiskReadBytesPerSecond { get; set; }
@@ -40,10 +44,14 @@ public sealed class ProcessSample
     public bool Suspended { get; init; }
     /// <summary>Account the process runs as; empty when Windows does not tell this caller (another account, not elevated).</summary>
     public string UserName { get; init; } = "";
+    public string? VirtualMachineOwner { get; init; }
+    public bool IsVirtualMachineMemory => BetterTaskManager.Core.Native.VirtualMachineOwners.IsMemoryProcess(ImageName);
     /// <summary>Priority class; Unknown when the process cannot be opened.</summary>
     public BetterTaskManager.Core.Native.PriorityClass Priority { get; init; }
     /// <summary>Efficiency mode (EcoQoS), set by Task Manager, by this app or by the program itself.</summary>
     public bool Efficiency { get; init; }
+    /// <summary>True when Windows marks this process critical (cached per process identity on the monitor thread).</summary>
+    public bool IsCritical { get; init; }
 
     /// <summary>Stable identity across refreshes: PIDs are reused, creation times are not.</summary>
     public (int Pid, long CreateTime) Key => (Pid, CreateTime);
@@ -138,6 +146,9 @@ public sealed class SystemSample
     /// <summary>Utilization of the busiest GPU engine over all processes, like Task Manager's GPU column header.</summary>
     public double GpuPercent { get; init; }
     public bool GpuAvailable { get; init; }
+    /// <summary>Adapter-wide GPU system-RAM usage; independent of potentially overlapping process allocations.</summary>
+    public long? GpuSharedMemory { get; init; }
+    public long? GpuDedicatedMemory { get; init; }
     /// <summary>True when per-process disk rates are measured (administrator rights, or the history service).</summary>
     public bool PerProcessDiskAvailable { get; init; }
     public bool PerProcessDiskFromService { get; init; }

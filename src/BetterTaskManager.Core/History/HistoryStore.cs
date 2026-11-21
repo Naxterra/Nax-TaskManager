@@ -108,7 +108,8 @@ public sealed class HistoryStore : IDisposable
         try
         {
             // FULL, not NORMAL: in rollback-journal mode only FULL keeps the database intact through a power loss.
-            store.Execute("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;");
+            // auto_vacuum=INCREMENTAL takes effect for fresh databases before tables exist, and lets Prune reclaim space.
+            store.Execute("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA auto_vacuum=INCREMENTAL;");
             store.CreateSchema();
             return store;
         }
@@ -307,13 +308,18 @@ public sealed class HistoryStore : IDisposable
     /// The time pruning does not trust yet (see <see cref="ClockSkew"/>) and when the wall clock was last checked,
     /// null before the first check.
     /// </summary>
-    public (TimeSpan Skew, DateTime? CheckedUtc) ReadClockState() =>
-        (ReadMetaMs("clock_skew") is { } skew && skew > DateTime.UnixEpoch ? skew - DateTime.UnixEpoch : TimeSpan.Zero, ReadMetaMs("clock_checked"));
+    public (TimeSpan Skew, DateTime? CheckedUtc) ReadClockState()
+    {
+        TimeSpan skew = ReadMetaLong("clock_skew") is { } ms && ms > 0 ? TimeSpan.FromMilliseconds(ms) : TimeSpan.Zero;
+        return (skew, ReadMetaMs("clock_checked"));
+    }
 
     public void WriteClockState(TimeSpan skew, DateTime checkedUtc)
     {
-        SetMeta("clock_skew", ((long)skew.TotalMilliseconds).ToString(CultureInfo.InvariantCulture));
-        SetMeta("clock_checked", ToUnixMs(checkedUtc).ToString(CultureInfo.InvariantCulture));
+        using SqliteTransaction transaction = connection.BeginTransaction();
+        SetMeta("clock_skew", ((long)skew.TotalMilliseconds).ToString(CultureInfo.InvariantCulture), transaction);
+        SetMeta("clock_checked", ToUnixMs(checkedUtc).ToString(CultureInfo.InvariantCulture), transaction);
+        transaction.Commit();
     }
 
     /// <summary>Deletes connections and daily totals older than the retention period.</summary>
@@ -324,7 +330,16 @@ public sealed class HistoryStore : IDisposable
         command.CommandText = "DELETE FROM connections WHERE last_seen < $cut; DELETE FROM app_usage WHERE day < $day; DELETE FROM blocked WHERE last_seen < $cut;";
         command.Parameters.AddWithValue("$cut", ToUnixMs(cutoff));
         command.Parameters.AddWithValue("$day", Day(cutoff.ToLocalTime()));
-        command.ExecuteNonQuery();
+        int deleted = command.ExecuteNonQuery();
+        if (deleted > 0)
+        {
+            using SqliteCommand mode = connection.CreateCommand();
+            mode.CommandText = "PRAGMA auto_vacuum;";
+            if (Convert.ToInt64(mode.ExecuteScalar(), CultureInfo.InvariantCulture) != 2)
+                Execute("PRAGMA auto_vacuum=INCREMENTAL; VACUUM;");
+            else
+                Execute("PRAGMA incremental_vacuum(256);");
+        }
     }
 
     /// <summary>Per-app traffic and connection counts since the start of <paramref name="fromLocalDay"/>, biggest first.</summary>
@@ -501,13 +516,16 @@ public sealed class HistoryStore : IDisposable
     /// <summary>When the service last wrote, or null if it never has.</summary>
     public DateTime? ReadLastWrite() => ReadMetaMs("last_write");
 
-    private DateTime? ReadMetaMs(string key)
+    private DateTime? ReadMetaMs(string key) =>
+        ReadMetaLong(key) is { } ms ? FromUnixMs(ms) : null;
+
+    private long? ReadMetaLong(string key)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "SELECT value FROM meta WHERE key = $key";
         command.Parameters.AddWithValue("$key", key);
         return command.ExecuteScalar() is string value && long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long ms)
-            ? FromUnixMs(ms)
+            ? ms
             : null;
     }
 

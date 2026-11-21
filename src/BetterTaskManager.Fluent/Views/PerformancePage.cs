@@ -69,14 +69,25 @@ public sealed partial class PerformancePage : Page
             App.Monitor.Updated += Update;
             App.Monitor.FirewallChanged -= ShowMemoryRules;
             App.Monitor.FirewallChanged += ShowMemoryRules;
+            KernelPoolService.Instance.DriversUpdated -= OnKernelDriversUpdated;
+            KernelPoolService.Instance.DriversUpdated += OnKernelDriversUpdated;
             if (App.Monitor.Latest is { } snapshot) Update(snapshot);
-            ShowTuningState();
+            _ = ShowTuningStateAsync();
         };
         Unloaded += (_, _) =>
         {
             App.Monitor.Updated -= Update;
             App.Monitor.FirewallChanged -= ShowMemoryRules;
+            KernelPoolService.Instance.DriversUpdated -= OnKernelDriversUpdated;
         };
+    }
+
+    private void OnKernelDriversUpdated()
+    {
+        DispatcherQueue?.TryEnqueue(() =>
+        {
+            if (IsLoaded && App.Monitor.Latest is { } snapshot) UpdateKernelPoolTable(snapshot.System.Memory);
+        });
     }
 
     /// <summary>Opens one section: CPU, memory or the memory settings.</summary>
@@ -92,7 +103,7 @@ public sealed partial class PerformancePage : Page
         string section = sections.SelectedItem?.Tag as string ?? MemorySection;
         foreach (var (tag, panel) in panels) panel.Visibility = tag == section ? Visibility.Visible : Visibility.Collapsed;
         App.Settings.PerformanceSection = section;
-        if (section == TuningSection && IsLoaded) ShowTuningState();
+        if (section == TuningSection && IsLoaded) _ = ShowTuningStateAsync();
     }
 
     private void Arrange(double width)
@@ -204,6 +215,7 @@ public sealed partial class PerformancePage : Page
     private readonly TrendChart memoryChart = new() { Height = 100 };
     private readonly TextBlock total = Text("", 14, true);
     private readonly TextBlock reconciliation = Text("", 12, secondary: true), availableNote = Text("", 12, secondary: true);
+    private readonly TextBlock gpuMemoryNote = Text("", 12, secondary: true);
     private readonly TextBlock usedHeader = Text("", 14, true), readyHeader = Text("", 14, true);
     private readonly StackPanel kernelRows = new() { Spacing = 2 }, kernelWarning = new() { Spacing = 6, Visibility = Visibility.Collapsed };
     private readonly TextBlock kernelWarningText = Text("", 12);
@@ -277,6 +289,7 @@ public sealed partial class PerformancePage : Page
         }
         accounting.Children.Add(Text(Loc.Get("Memory_FreeNote"), 12, secondary: true));
         accounting.Children.Add(reconciliation); accounting.Children.Add(availableNote);
+        accounting.Children.Add(gpuMemoryNote);
         memoryLower.Children.Add(Card(accounting));
 
         var leaders = new StackPanel { Spacing = 10 };
@@ -338,11 +351,19 @@ public sealed partial class PerformancePage : Page
             : Loc.F("Memory_ResidualNote", Format.Memory(m.Unattributed));
         availableNote.Text = m.PageListsAvailable ? Loc.F("Memory_AvailableDifference", Format.Memory(Math.Abs(m.AvailableDifference))) : Loc.Get("Memory_PageListsMissing");
         if (!m.ModifiedAvailable) reconciliation.Text += " " + Loc.Get("Memory_ModifiedMissing");
+        gpuMemoryNote.Text = snapshot.System.GpuSharedMemory is { } shared
+            ? Loc.F("Memory_GpuAccounting", Format.Memory(shared)) : Loc.Get("Memory_GpuMissing");
         var groups = snapshot.Processes.Where(p => p.Pid > 0).GroupBy(ProcessTree.GroupKey, StringComparer.OrdinalIgnoreCase)
-            .Select(g => (Process: g.FirstOrDefault(p => !AppIdentityRules.IsEmbeddedHost(p)) ?? g.First(), Bytes: g.Sum(p => p.PrivateWorkingSet), Count: g.Count()))
-            .OrderByDescending(g => g.Bytes).ThenBy(g => g.Process.DisplayName).Take(8);
-        FillApps(memoryApps, groups.Select(g => (g.Process, g.Count, Format.Memory(g.Bytes))));
+            .Select(g => (Process: g.FirstOrDefault(p => !AppIdentityRules.IsEmbeddedHost(p)) ?? g.First(), Usage: ProcessMemoryUsage.Sum(g), Count: g.Count()))
+            .OrderByDescending(g => Math.Max(g.Usage.Resident, g.Usage.GpuShared ?? 0)).ThenBy(g => g.Process.DisplayName).Take(8);
+        FillApps(memoryApps, groups.Select(g => (g.Process, g.Count, Loc.F("Memory_AppUsage", Format.Memory(g.Usage.Resident),
+            g.Usage.GpuShared is { } gpu ? Format.Memory(gpu) : "–"))));
 
+        UpdateKernelPoolTable(m);
+    }
+
+    private void UpdateKernelPoolTable(MemoryBreakdown m)
+    {
         KernelPoolService.Instance.Refresh(m);
         string? warning = KernelPoolService.Instance.WarningText();
         kernelWarningText.Text = warning ?? "";
@@ -428,43 +449,48 @@ public sealed partial class PerformancePage : Page
 
     private async Task RunCleanupsAsync(IReadOnlyList<string> kinds, string title, string body, string button)
     {
-        var confirm = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = title,
-            Content = new TextBlock { Text = body, TextWrapping = TextWrapping.Wrap },
-            PrimaryButtonText = button,
-            CloseButtonText = Loc.Get("Common_Cancel"),
-            DefaultButton = ContentDialogButton.Close
-        };
-        if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+        if (!await Dialogs.ConfirmAsync(XamlRoot, title, body, button)) return;
 
         cleanupButton.IsEnabled = false;
-        MemoryBreakdown? before = App.Monitor.Latest?.System.Memory;
-        var messages = new List<string>();
-        bool allOk = true;
-        foreach (string kind in kinds)
+        try
         {
-            (bool ok, string message) = await RunOneAsync(kind);
-            allOk &= ok;
-            messages.Add(message);
-        }
+            MemoryBreakdown? before = App.Monitor.Latest?.System.Memory;
+            var messages = new List<string>();
+            bool allOk = true;
+            foreach (string kind in kinds)
+            {
+                (bool ok, string message) = await RunOneAsync(kind);
+                allOk &= ok;
+                messages.Add(message);
+            }
 
-        // A fixed delay can reuse the pre-cleanup sample when paused or collecting slowly.
-        MemoryBreakdown? after = await SampleAfterAsync(DateTime.Now);
-        string combined = string.Join("\n", messages);
-        if (allOk && before is { PageListsAvailable: true, ModifiedAvailable: true } && after is { PageListsAvailable: true, ModifiedAvailable: true })
-        {
-            combined += Loc.F("Cleanup_Delta", Format.Gigabytes(before.InUse), Format.Gigabytes(after.InUse),
-                Format.Gigabytes(before.Standby), Format.Gigabytes(after.Standby),
-                Format.Gigabytes(before.Free), Format.Gigabytes(after.Free));
+            // A fixed delay can reuse the pre-cleanup sample when paused or collecting slowly.
+            MemoryBreakdown? after = await SampleAfterAsync(DateTime.Now);
+            string combined = string.Join("\n", messages);
+            if (allOk && before is { PageListsAvailable: true, ModifiedAvailable: true } && after is { PageListsAvailable: true, ModifiedAvailable: true })
+            {
+                combined += Loc.F("Cleanup_Delta", Format.Gigabytes(before.InUse), Format.Gigabytes(after.InUse),
+                    Format.Gigabytes(before.Standby), Format.Gigabytes(after.Standby),
+                    Format.Gigabytes(before.Free), Format.Gigabytes(after.Free));
+            }
+            else if (allOk) combined += "\n" + Loc.Get("Cleanup_NoMeasurement");
+            cleanupBar.Severity = allOk ? InfoBarSeverity.Success : InfoBarSeverity.Error;
+            cleanupBar.Title = allOk ? Loc.Get("Cleanup_Done") : Loc.Get("Cleanup_NotDone");
+            cleanupBar.Message = combined;
+            cleanupBar.IsOpen = true;
         }
-        else if (allOk) combined += "\n" + Loc.Get("Cleanup_NoMeasurement");
-        cleanupBar.Severity = allOk ? InfoBarSeverity.Success : InfoBarSeverity.Error;
-        cleanupBar.Title = allOk ? Loc.Get("Cleanup_Done") : Loc.Get("Cleanup_NotDone");
-        cleanupBar.Message = combined;
-        cleanupBar.IsOpen = true;
-        cleanupButton.IsEnabled = true;
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex);
+            cleanupBar.Severity = InfoBarSeverity.Error;
+            cleanupBar.Title = Loc.Get("Cleanup_NotDone");
+            cleanupBar.Message = ex.Message;
+            cleanupBar.IsOpen = true;
+        }
+        finally
+        {
+            cleanupButton.IsEnabled = true;
+        }
     }
 
     private static async Task<MemoryBreakdown?> SampleAfterAsync(DateTime finished)
@@ -522,14 +548,17 @@ public sealed partial class PerformancePage : Page
     private readonly ToggleSwitch cacheTrimToggle = Toggle(Loc.Get("Tuning_CacheTrim"));
     private readonly TextBlock standbyStatus = Note(""), cacheTrimStatus = Note(""), managerState = Note(""), tuningError = Note("");
     private readonly Dictionary<string, ToggleSwitch> featureToggles = new();
+    private readonly Dictionary<string, TextBlock> featureErrors = new();
     private readonly StackPanel memoryRules = new() { Spacing = 4 };
     private bool loadingTuning;
+    private bool changingManager;
+    private int managerReadVersion;
 
     private FrameworkElement BuildTuning()
     {
         var panel = new StackPanel { Spacing = 18 };
         panel.Children.Add(Note(Loc.Get("Tuning_Intro")));
-        tuningError.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
+        tuningError.SetResourceReference(TextBlock.ForegroundProperty, "SystemFillColorCriticalBrush");
         tuningError.Visibility = Visibility.Collapsed;
         panel.Children.Add(tuningError);
 
@@ -558,7 +587,11 @@ public sealed partial class PerformancePage : Page
             toggle.IsEnabled = false;
             toggle.Toggled += FeatureToggle_Toggled;
             featureToggles[feature] = toggle;
-            manager.Children.Add(SettingRow(Loc.Get(title), Loc.Get(note), toggle, null));
+            var error = Note("");
+            error.SetResourceReference(TextBlock.ForegroundProperty, "SystemFillColorCriticalBrush");
+            error.Visibility = Visibility.Collapsed;
+            featureErrors[feature] = error;
+            manager.Children.Add(SettingRow(Loc.Get(title), Loc.Get(note), toggle, error));
         }
         manager.Children.Add(Note(Loc.Get("Tuning_RestartNote")));
         panel.Children.Add(Card(manager));
@@ -574,28 +607,31 @@ public sealed partial class PerformancePage : Page
         return panel;
     }
 
-    private void ShowTuningState()
+    private async Task ShowTuningStateAsync()
     {
+        (long? limit, bool cacheTrim, bool service) = await Task.Run(() =>
+            (StandbyLimiter.LimitBytes, Core.Disk.CacheTrimmer.Enabled, HistoryServiceControl.QueryState() == HistoryServiceState.Running));
+        if (!IsLoaded) return;
         loadingTuning = true;
-        long? limit = StandbyLimiter.LimitBytes;
         string tag = limit is { } bytes ? (bytes / 1048576).ToString(System.Globalization.CultureInfo.InvariantCulture) : "off";
         standbyBox.SelectedItem = standbyBox.Items.OfType<ComboBoxItem>().FirstOrDefault(item => (string)item.Tag == tag) ?? standbyBox.Items[0];
-        bool service = HistoryServiceControl.QueryState() == HistoryServiceState.Running;
         standbyStatus.Text = !service ? Loc.Get("Tuning_NoService") : limit is { } on ? Loc.F("Standby_On", Format.Memory(on)) : Loc.Get("Standby_Off");
-        cacheTrimToggle.IsOn = Core.Disk.CacheTrimmer.Enabled;
+        cacheTrimToggle.IsOn = cacheTrim;
         cacheTrimStatus.Text = !service ? Loc.Get("Tuning_NoService") : cacheTrimToggle.IsOn ? Loc.Get("CacheTrim_On") : Loc.Get("CacheTrim_Off");
         loadingTuning = false;
         ShowMemoryRules();
-        _ = ShowManagerStateAsync();
+        await ShowManagerStateAsync();
     }
 
     private async Task ShowManagerStateAsync()
     {
+        int version = ++managerReadVersion;
         MemoryManagerState? state = await Task.Run(MemoryManager.Read);
+        if (version != managerReadVersion) return;
         loadingTuning = true;
         foreach ((string feature, ToggleSwitch toggle) in featureToggles)
         {
-            toggle.IsEnabled = state is not null;
+            toggle.IsEnabled = state is not null && !changingManager;
             toggle.IsOn = state is not null && feature switch
             {
                 MemoryManager.MemoryCompression => state.MemoryCompression,
@@ -647,27 +683,67 @@ public sealed partial class PerformancePage : Page
     {
         if (loadingTuning || standbyBox.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
         standbyBox.IsEnabled = false;
-        // The limit lives in the protected data folder, read by the History service.
-        ShowTuningError(await ElevatedHelper.RunAsync(Program.StandbyLimitArgument, tag));
-        standbyBox.IsEnabled = true;
-        ShowTuningState();
+        try
+        {
+            // The limit lives in the protected data folder, read by the History service.
+            ShowTuningError(await ElevatedHelper.RunAsync(Program.StandbyLimitArgument, tag));
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex);
+            ShowTuningError(ex.Message);
+        }
+        finally
+        {
+            standbyBox.IsEnabled = true;
+        }
+        await ShowTuningStateAsync();
     }
 
     private async void CacheTrimToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (loadingTuning) return;
         cacheTrimToggle.IsEnabled = false;
-        ShowTuningError(await ElevatedHelper.RunAsync(cacheTrimToggle.IsOn ? Program.CacheTrimOnArgument : Program.CacheTrimOffArgument));
-        cacheTrimToggle.IsEnabled = true;
-        ShowTuningState();
+        try
+        {
+            ShowTuningError(await ElevatedHelper.RunAsync(cacheTrimToggle.IsOn ? Program.CacheTrimOnArgument : Program.CacheTrimOffArgument));
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex);
+            ShowTuningError(ex.Message);
+        }
+        finally
+        {
+            cacheTrimToggle.IsEnabled = true;
+        }
+        await ShowTuningStateAsync();
     }
 
     private async void FeatureToggle_Toggled(object sender, RoutedEventArgs e)
     {
-        if (loadingTuning || sender is not ToggleSwitch { Tag: string feature } toggle) return;
-        toggle.IsEnabled = false;
-        ShowTuningError(await ElevatedHelper.RunAsync(Program.MemoryFeatureArgument, feature, toggle.IsOn ? "on" : "off"));
-        await ShowManagerStateAsync();
+        if (loadingTuning || changingManager || sender is not ToggleSwitch { Tag: string feature } toggle) return;
+        changingManager = true;
+        ++managerReadVersion;
+        foreach (ToggleSwitch item in featureToggles.Values) item.IsEnabled = false;
+        try
+        {
+            string? error = await ElevatedHelper.RunAsync([Program.MemoryFeatureArgument, feature, toggle.IsOn ? "on" : "off"], withResultFile: true);
+            ShowTuningError(null);
+            featureErrors[feature].Text = error ?? "";
+            featureErrors[feature].Visibility = error is null ? Visibility.Collapsed : Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write(ex);
+            featureErrors[feature].Text = ex.Message;
+            featureErrors[feature].Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            changingManager = false;
+            await ShowManagerStateAsync();
+        }
     }
 
     private void ShowTuningError(string? error)

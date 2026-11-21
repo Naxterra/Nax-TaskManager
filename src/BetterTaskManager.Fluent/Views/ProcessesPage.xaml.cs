@@ -1,5 +1,6 @@
 using BetterTaskManager.Core.Monitoring;
 using BetterTaskManager.Core.Native;
+using BetterTaskManager.Fluent.Controls;
 using BetterTaskManager.Fluent.Services;
 using BetterTaskManager.Fluent.ViewModels;
 using Microsoft.UI.Xaml;
@@ -7,6 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
+using Windows.System;
 
 namespace BetterTaskManager.Fluent.Views;
 
@@ -32,6 +34,10 @@ public sealed partial class ProcessesPage : Page
         Unloaded += Page_Unloaded;
         groupedReorder = new ColumnReorder(GroupedHeader, ViewModel.Layout);
         flatReorder = new ColumnReorder(FlatHeader, FlatViewModel.Layout);
+        ToolTipService.SetToolTip(CommitHeader, Loc.Get("Memory_CommitTooltip"));
+        ToolTipService.SetToolTip(FlatCommitHeader, Loc.Get("Memory_CommitTooltip"));
+        ToolTipService.SetToolTip(GpuMemoryHeader, Loc.Get("Memory_GpuTooltip"));
+        ToolTipService.SetToolTip(FlatGpuMemoryHeader, Loc.Get("Memory_GpuTooltip"));
         flatMode = App.Settings.ProcessFlatView;
         ModeSelector.SelectedItem = flatMode ? FlatMode : ByAppMode;
         CpuTile.Caption = Loc.Get("Tile_Cpu");
@@ -42,9 +48,9 @@ public sealed partial class ProcessesPage : Page
         (CpuTile.Tone, MemoryTile.Tone, DiskTile.Tone, NetworkTile.Tone, GpuTile.Tone) = ("Cpu", "Memory", "Disk", "Receive", "Gpu");
         (Details.Tile1.Tone, Details.Tile2.Tone) = ("Cpu", "Memory");
         Details.Tile1.Caption = "CPU";
-        Details.Tile1.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartCpuBrush"];
-        Details.Tile2.Caption = Loc.Get("Tile_Memory");
-        Details.Tile2.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartMemoryBrush"];
+        Details.Tile1.SetResourceReference(StatTile.StrokeProperty, "ChartCpuBrush");
+        Details.Tile2.Caption = Loc.Get("Memory_PrivateLabel");
+        Details.Tile2.SetResourceReference(StatTile.StrokeProperty, "ChartMemoryBrush");
         detailOpen = Controls.DetailPane.ActionButton("\uE838", Loc.Get("Menu_OpenLocation"), OpenLocation_Click);
         detailFirewall = Controls.DetailPane.ActionButton("\uE785", Loc.Get("Firewall_Block"), Firewall_Click);
         detailRules = Controls.DetailPane.ActionButton("\uE8D7", Loc.Get("Rules_Menu"), (_, _) => { if (CurrentTarget() is { Path.Length: > 0 } target) App.Window.ShowRules(target.Path); });
@@ -54,6 +60,8 @@ public sealed partial class ProcessesPage : Page
         Details.SetActions([detailNetwork, detailOpen, detailFirewall, detailRules, detailEnd]);
         DetailsToggle.IsChecked = App.Settings.ShowDetailsPane;
         Details.Visibility = App.Settings.ShowDetailsPane ? Visibility.Visible : Visibility.Collapsed;
+        ViewModel.Layout.PropertyChanged += (_, _) => UpdateTableWidth();
+        FlatViewModel.Layout.PropertyChanged += (_, _) => UpdateTableWidth();
         ApplyMode();
         UpdateSortIndicators();
         UpdateFlatSortIndicators();
@@ -134,6 +142,17 @@ public sealed partial class ProcessesPage : Page
     {
         GroupedHeader.Visibility = RowList.Visibility = flatMode ? Visibility.Collapsed : Visibility.Visible;
         FlatHeader.Visibility = FlatList.Visibility = flatMode ? Visibility.Visible : Visibility.Collapsed;
+        UpdateTableWidth();
+    }
+
+    private void UpdateTableWidth() =>
+        TableHost.MinWidth = flatMode ? FlatViewModel.Layout.TableWidth : ViewModel.Layout.TableWidth;
+
+    private void List_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Delete || CurrentTarget() is null) return;
+        e.Handled = true;
+        _ = EndSelectedAsync(entireTree: false);
     }
 
     private void Refresh()
@@ -157,7 +176,7 @@ public sealed partial class ProcessesPage : Page
     private void DetailsToggle_Click(object sender, RoutedEventArgs e)
     {
         App.Settings.ShowDetailsPane = DetailsToggle.IsChecked == true;
-        Details.Visibility = App.Settings.ShowDetailsPane ? Visibility.Visible : Visibility.Collapsed;
+        UpdateDetails();
     }
 
     /// <summary>The card on the right: the selected app or process with its own CPU and memory history.</summary>
@@ -172,7 +191,9 @@ public sealed partial class ProcessesPage : Page
             Details.ShowEmpty(Loc.Get("Details_EmptyProcess"));
             return;
         }
-        string key = flatMode ? "pid:" + (FlatList.SelectedItem as DetailSlot)?.Key.Pid : "group:" + selectedKey;
+        string key = flatMode && FlatList.SelectedItem is DetailSlot flatSlot
+            ? $"pid:{flatSlot.Key.Pid}:{flatSlot.Key.CreateTime}"
+            : "group:" + selectedKey;
         if (key != detailKey)
         {
             detailKey = key;
@@ -195,6 +216,12 @@ public sealed partial class ProcessesPage : Page
         Details.Tile1.Update(Format.Percent(cpu), "", detailCpu, 100);
         Details.Tile2.Update(Format.Memory(memory), "", detailMemory, Math.Max(detailMemory.Max(), 1));
         Details.BeginFacts();
+        if (members.Count == 1 && members[0].VirtualMachineOwner is { } vmOwner)
+            Details.Fact(Loc.Get("Details_VmOwner"), vmOwner);
+        var usage = ProcessMemoryUsage.Sum(members);
+        Details.Fact(Loc.Get("Memory_CommitLabel"), Format.Memory(usage.Committed));
+        Details.Fact(Loc.Get("Memory_GpuLabel"), usage.GpuShared is { } gpuRam ? Format.Memory(gpuRam) : "–");
+        Details.Fact(Loc.Get("Memory_VramLabel"), usage.GpuDedicated is { } vram ? Format.Memory(vram) : "–");
         if (target.Processes.Count > 1) Details.Fact("PID", string.Join(", ", target.Processes.Take(6).Select(process => process.Pid)) + (target.Processes.Count > 6 ? ", …" : ""));
         else Details.Fact("PID", target.Processes[0].Pid.ToString(System.Globalization.CultureInfo.CurrentCulture));
         if (publisher.Length > 0) Details.Fact(Loc.Get("Details_Publisher"), publisher);
@@ -219,7 +246,9 @@ public sealed partial class ProcessesPage : Page
         SystemSample system = snapshot.System;
         MonitorHost monitor = App.Monitor;
         CpuTile.Update(Format.WholePercent(system.CpuPercent), Loc.F("Tile_Processes", Format.Count(system.ProcessCount)), monitor.CpuHistory, 100);
-        MemoryTile.Update(Format.WholePercent(system.Memory.LoadPercent), Loc.F("Tile_MemoryDetail", Format.Gigabytes(system.Memory.InUse), Format.Gigabytes(system.Memory.Total)), monitor.MemoryHistory, 100);
+        string memoryDetail = Loc.F("Tile_MemoryDetail", Format.Gigabytes(system.Memory.InUse), Format.Gigabytes(system.Memory.Total));
+        if (system.GpuSharedMemory is { } gpuRam) memoryDetail += " · " + Loc.F("Memory_GpuSummary", Format.Memory(gpuRam));
+        MemoryTile.Update(Format.WholePercent(system.Memory.LoadPercent), memoryDetail, monitor.MemoryHistory, 100);
         double read = system.Disks.Sum(disk => disk.ReadPerSecond), write = system.Disks.Sum(disk => disk.WritePerSecond);
         double diskMax = Math.Max(Math.Max(monitor.DiskReadHistory.Max(), monitor.DiskWriteHistory.Max()), 1048576);
         DiskTile.Update(Format.ByteRate(read + write), Loc.F("Tile_DiskDetail", Format.ByteRate(read), Format.ByteRate(write)), monitor.DiskReadHistory, diskMax, monitor.DiskWriteHistory);
@@ -233,16 +262,16 @@ public sealed partial class ProcessesPage : Page
 
     private void UpdateSummary()
     {
-        if (flatMode)
-        {
-            SummaryText.Text = FlatViewModel.Summary;
-            return;
-        }
         if (App.Monitor.Latest is not { } snapshot) return;
         SystemSample system = snapshot.System;
-        SummaryText.Text = Loc.F("Proc_Summary", Format.Count(system.ProcessCount), Format.Count(system.ThreadCount),
-            Format.Count(system.HandleCount), Format.Duration(system.Uptime));
-        int apps = ViewModel.Rows.Count(slot => slot.Data?.Kind == RowKind.Group && slot.Data.IsApp);
+        SummaryText.Text = flatMode
+            ? FlatViewModel.Summary
+            : Loc.F("Proc_Summary", Format.Count(system.ProcessCount), Format.Count(system.ThreadCount),
+                Format.Count(system.HandleCount), Format.Duration(system.Uptime));
+        int apps = flatMode
+            ? snapshot.Processes.Where(process => process.Pid != 0 && process.WindowTitle is not null)
+                .Select(ProcessTree.GroupKey).Distinct(StringComparer.OrdinalIgnoreCase).Count()
+            : ViewModel.Rows.Count(slot => slot.Data?.Kind == RowKind.Group && slot.Data.IsApp);
         ByAppMode.Text = Loc.F("Proc_ByAppCount", apps);
         FlatMode.Text = Loc.F("Proc_AllCount", Format.Count(system.ProcessCount));
     }
@@ -332,11 +361,11 @@ public sealed partial class ProcessesPage : Page
         if (flatMode)
         {
             return FlatList.SelectedItem is DetailSlot { Process: { } process }
-                ? new Target(process.ImageName, new[] { process.Key }, process.Path, process.Efficiency, NativeProcessInfo.IsCritical(process.Pid))
+                ? new Target(ProcessTree.NameWithVmOwner(process), new[] { process.Key }, process.Path, process.Efficiency, process.IsCritical)
                 : null;
         }
         return Selected is { Data: { } data }
-            ? new Target(data.Name, data.Processes, data.Path, data.Efficiency, ProcessActions.AnyCritical(data.Processes))
+            ? new Target(data.Name, data.Processes, data.Path, data.Efficiency, data.Critical)
             : null;
     }
 
@@ -384,6 +413,7 @@ public sealed partial class ProcessesPage : Page
         var indicators = new Dictionary<string, FontIcon>
         {
             [ProcessTree.SortName] = SortName, [ProcessTree.SortCpu] = SortCpu, [ProcessTree.SortMemory] = SortMemory,
+            [ProcessTree.SortCommit] = SortCommit, [ProcessTree.SortGpuMemory] = SortGpuMemory,
             [ProcessTree.SortIo] = SortIo, [ProcessTree.SortBandwidth] = SortBandwidth, [ProcessTree.SortNetwork] = SortNetwork, [ProcessTree.SortGpu] = SortGpu,
             [ProcessTree.SortPublisher] = SortPublisher, [ProcessTree.SortPath] = SortPath
         };
@@ -400,7 +430,8 @@ public sealed partial class ProcessesPage : Page
         {
             [DetailsViewModel.SortName] = FlatSortName, [DetailsViewModel.SortPid] = FlatSortPid, [DetailsViewModel.SortStatus] = FlatSortStatus,
             [DetailsViewModel.SortUser] = FlatSortUser, [DetailsViewModel.SortCpu] = FlatSortCpu, [DetailsViewModel.SortMemory] = FlatSortMemory, [DetailsViewModel.SortGpu] = FlatSortGpu,
-            [DetailsViewModel.SortDescription] = FlatSortDescription
+            [DetailsViewModel.SortDescription] = FlatSortDescription,
+            [DetailsViewModel.SortCommit] = FlatSortCommit, [DetailsViewModel.SortGpuMemory] = FlatSortGpuMemory
         };
         foreach (var (column, icon) in indicators)
         {
@@ -595,29 +626,9 @@ public sealed partial class ProcessesPage : Page
         UpdateCommands();
     }
 
-    private async Task<bool> ConfirmAsync(string title, string message, string primary)
-    {
-        var dialog = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = title,
-            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
-            PrimaryButtonText = primary,
-            CloseButtonText = Loc.Get("Common_Cancel"),
-            DefaultButton = ContentDialogButton.Close
-        };
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
-    }
+    private Task<bool> ConfirmAsync(string title, string message, string primary) =>
+        Dialogs.ConfirmAsync(XamlRoot, title, message, primary);
 
-    private async Task ShowMessageAsync(string title, string message)
-    {
-        var dialog = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = title,
-            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
-            CloseButtonText = Loc.Get("Common_OK")
-        };
-        await dialog.ShowAsync();
-    }
+    private Task ShowMessageAsync(string title, string message) =>
+        Dialogs.ShowAsync(XamlRoot, title, message);
 }

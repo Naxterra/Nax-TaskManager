@@ -24,7 +24,8 @@
                     VerticalAlignment="Center"
                     PlaceholderText="Search by name, publisher or PID"
                     QueryIcon="Find"
-                    TextChanged="SearchBox_TextChanged" />
+                    TextChanged="SearchBox_TextChanged"
+                    KeyDown="SearchBox_KeyDown" />
             </TitleBar.Content>
         </TitleBar>
 
@@ -153,6 +154,7 @@
                 </InfoBar>
                 <InfoBar x:Uid="MainWindow_6"
                     x:Name="ElevationBar"
+                    Visibility="Collapsed"
                     Margin="16,8,16,0"
                     IsClosable="True"
                     Severity="Informational"

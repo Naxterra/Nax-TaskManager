@@ -33,7 +33,7 @@ public static class ServiceNames
         {
             int resume = 0;
             int size = 256 * 1024;
-            while (true)
+            for (int attempt = 0; attempt < 8; attempt++)
             {
                 IntPtr buffer = Marshal.AllocHGlobal(size);
                 try
@@ -61,6 +61,7 @@ public static class ServiceNames
                     Marshal.FreeHGlobal(buffer);
                 }
             }
+            return result;
         }
         finally
         {

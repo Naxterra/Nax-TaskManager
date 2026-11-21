@@ -1,5 +1,6 @@
 using BetterTaskManager.Core.Monitoring;
 using BetterTaskManager.Core.Firewall;
+using BetterTaskManager.Fluent.Controls;
 using BetterTaskManager.Fluent.Services;
 using BetterTaskManager.Fluent.ViewModels;
 using Microsoft.UI.Xaml;
@@ -38,9 +39,10 @@ public sealed partial class NetworkPage : Page
         (DownloadTile.Tone, UploadTile.Tone, ConnectionsTile.Tone) = ("Receive", "Send", "Cpu");
         (Details.Tile1.Tone, Details.Tile2.Tone) = ("Receive", "Send");
         Details.Tile1.Caption = Loc.Get("Tile_Download");
-        Details.Tile1.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartReceiveBrush"];
+        Details.Tile1.SetResourceReference(StatTile.StrokeProperty, "ChartReceiveBrush");
         Details.Tile2.Caption = Loc.Get("Tile_Upload");
-        Details.Tile2.Stroke = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ChartSendBrush"];
+        Details.Tile2.SetResourceReference(StatTile.StrokeProperty, "ChartSendBrush");
+        ActualThemeChanged += (_, _) => Refresh();
         detailRules = Controls.DetailPane.ActionButton("", Loc.Get("Rules_Menu"), (_, _) => { if (Selected is { Path.Length: > 0 } slot) EditRules(slot); });
         detailFirewall = Controls.DetailPane.ActionButton("", Loc.Get("Firewall_Block"), Firewall_Click);
         detailOpen = Controls.DetailPane.ActionButton("", Loc.Get("Menu_OpenLocation"), (_, _) => { if (Selected is { Path.Length: > 0 } slot) ProcessActions.OpenFileLocation(slot.Path); });
@@ -62,8 +64,8 @@ public sealed partial class NetworkPage : Page
     public void ShowBusiest()
     {
         ViewModel.SelectedAppKey = NetworkViewModel.AllAppsKey;
-        ViewModel.SortApps(NetworkViewModel.SortSpeed);
-        ViewModel.SortConnections(NetworkViewModel.SortDownload);
+        ViewModel.SortApps(NetworkViewModel.SortSpeed, refresh: false);
+        ViewModel.SortConnections(NetworkViewModel.SortDownload, refresh: false);
         ViewModel.EstablishedOnly = false;
         EstablishedOnlyButton.IsChecked = false;
         connectionKey = null;
@@ -140,7 +142,7 @@ public sealed partial class NetworkPage : Page
             {
                 ViewModel.SelectedAppKey = NetworkViewModel.AllAppsKey;
                 ViewModel.Refresh();
-                appIndex = 0;
+                appIndex = ViewModel.Apps.Count > 0 ? 0 : -1;
             }
             if (AppList.SelectedIndex != appIndex) AppList.SelectedIndex = appIndex;
             int index = connectionKey is null ? -1 : IndexOf(ViewModel.Connections, connectionKey);
@@ -356,7 +358,7 @@ public sealed partial class NetworkPage : Page
     {
         if (columnReorder.SuppressClick) return;
         if (sender is not FrameworkElement { Tag: string column }) return;
-        ViewModel.Sort(column);
+        ViewModel.Sort(column, refresh: false);
         SyncSortBox();
         UpdateSortIndicators();
         Refresh();
@@ -365,7 +367,7 @@ public sealed partial class NetworkPage : Page
     private void AppSortBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (settingSort || AppSortBox.SelectedItem is not ComboBoxItem { Tag: string column }) return;
-        ViewModel.SortApps(column);
+        ViewModel.SortApps(column, refresh: false);
         UpdateSortIndicators();
         Refresh();
     }
@@ -373,7 +375,7 @@ public sealed partial class NetworkPage : Page
     private void ConnectionSortBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (settingSort || ConnectionSortBox.SelectedItem is not ComboBoxItem { Tag: string column }) return;
-        ViewModel.SortConnections(column);
+        ViewModel.SortConnections(column, refresh: false);
         UpdateSortIndicators();
         Refresh();
     }
@@ -386,14 +388,14 @@ public sealed partial class NetworkPage : Page
 
     private void AppSortDirection_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.ToggleAppSort();
+        ViewModel.ToggleAppSort(refresh: false);
         UpdateSortIndicators();
         Refresh();
     }
 
     private void ConnectionSortDirection_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.ToggleConnectionSort();
+        ViewModel.ToggleConnectionSort(refresh: false);
         UpdateSortIndicators();
         Refresh();
     }
@@ -454,7 +456,12 @@ public sealed partial class NetworkPage : Page
 
     private void Select(NetworkSlot slot)
     {
-        if (slot.Data?.Kind == RowKind.Group) AppList.SelectedItem = slot;
+        if (slot.Data?.Kind == RowKind.Group)
+        {
+            connectionKey = null;
+            ConnectionList.SelectedItem = null;
+            AppList.SelectedItem = slot;
+        }
         else ConnectionList.SelectedItem = slot;
     }
 
@@ -528,25 +535,11 @@ public sealed partial class NetworkPage : Page
     private async Task ToggleFirewallAsync(string path)
     {
         bool block = !App.Monitor.IsBlocked(path);
-        if (block)
-        {
-            var confirm = new ContentDialog
-            {
-                XamlRoot = XamlRoot,
-                Title = Loc.Get("Firewall_ConfirmTitle"),
-                Content = new TextBlock { Text = Loc.F("Firewall_ConfirmText", path), TextWrapping = TextWrapping.Wrap },
-                PrimaryButtonText = Loc.Get("Firewall_BlockButton"),
-                CloseButtonText = Loc.Get("Common_Cancel"),
-                DefaultButton = ContentDialogButton.Close
-            };
-            if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
-        }
+        if (block && !await Dialogs.ConfirmAsync(XamlRoot, Loc.Get("Firewall_ConfirmTitle"), Loc.F("Firewall_ConfirmText", path), Loc.Get("Firewall_BlockButton")))
+            return;
 
         string? error = await App.Monitor.SetBlockedAsync(path, block);
-        if (error is not null)
-        {
-            await new ContentDialog { XamlRoot = XamlRoot, Title = Loc.Get("Firewall_NotChanged"), Content = error, CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();
-        }
+        if (error is not null) await Dialogs.ShowAsync(XamlRoot, Loc.Get("Firewall_NotChanged"), error);
         UpdateCommands();
     }
 }

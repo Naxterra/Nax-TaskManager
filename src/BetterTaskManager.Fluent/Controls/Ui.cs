@@ -70,13 +70,17 @@ internal static class Ui
         return panel;
     }
 
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Border, StrongBox<string>> WashTones = new();
+
+    private sealed class StrongBox<T>(T value) { public T Value = value; }
+
     /// <summary>A soft diagonal tint in the tone's color that fades out, for tile and card backgrounds.</summary>
     public static void SetWash(this Border element, string tone)
     {
-        void Apply()
+        static void Apply(Border target, string currentTone)
         {
-            Color color = ThemeColor(element, "Wash" + tone + "Color");
-            element.Background = new LinearGradientBrush
+            Color color = ThemeColor(target, "Wash" + currentTone + "Color");
+            target.Background = new LinearGradientBrush
             {
                 StartPoint = new Windows.Foundation.Point(0, 0),
                 EndPoint = new Windows.Foundation.Point(1, 1),
@@ -87,9 +91,18 @@ internal static class Ui
                 }
             };
         }
-        Apply();
-        element.ActualThemeChanged += (_, _) => Apply();
-        element.Loaded += (_, _) => Apply();
+
+        bool attach = false;
+        StrongBox<string> box = WashTones.GetValue(element, _ =>
+        {
+            attach = true;
+            return new StrongBox<string>(tone);
+        });
+        box.Value = tone;
+        Apply(element, tone);
+        if (!attach) return;
+        element.ActualThemeChanged += (sender, _) => { if (sender is Border target && WashTones.TryGetValue(target, out var state)) Apply(target, state.Value); };
+        element.Loaded += (sender, _) => { if (sender is Border target && WashTones.TryGetValue(target, out var state)) Apply(target, state.Value); };
     }
 
     /// <summary>A color from the theme dictionary that matches the element's current theme.</summary>

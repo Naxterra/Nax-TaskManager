@@ -22,8 +22,10 @@ public sealed class StandbyLimiter : IDisposable
     private long? activeLimit;
     private int clears;
     private long bytesCleared;
-    private DateTime summaryDue = DateTime.UtcNow + SummaryInterval;
+    private long summaryAt = System.Diagnostics.Stopwatch.GetTimestamp();
+    private long lastPurgeFailureAt;
     private bool reportedReadFailure;
+    private volatile bool disposed;
 
     public StandbyLimiter(Action<string> log) => this.log = log;
 
@@ -34,6 +36,8 @@ public sealed class StandbyLimiter : IDisposable
     public static string ConfigPath => Path.Combine(DataFolder.Path, "standby-limit");
 
     public const int MinimumMegabytes = 256;
+    /// <summary>16 TB cap so multiplying megabytes by 1048576 can never overflow long.</summary>
+    public const long MaximumMegabytes = 16L * 1024 * 1024;
 
     /// <summary>The limit in bytes, or null when the standby list is left to Windows.</summary>
     public static long? LimitBytes
@@ -43,9 +47,7 @@ public sealed class StandbyLimiter : IDisposable
             try
             {
                 if (!File.Exists(ConfigPath)) return null;
-                return long.TryParse(File.ReadAllText(ConfigPath).Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out long megabytes) && megabytes >= MinimumMegabytes
-                    ? megabytes * 1048576
-                    : null;
+                return ParseLimitBytes(AtomicFile.ReadAllTextShared(ConfigPath));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -53,6 +55,12 @@ public sealed class StandbyLimiter : IDisposable
             }
         }
     }
+
+    internal static long? ParseLimitBytes(string text) =>
+        long.TryParse(text.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out long megabytes)
+        && megabytes >= MinimumMegabytes && megabytes <= MaximumMegabytes
+            ? megabytes * 1048576L
+            : null;
 
     /// <summary>Sets the limit in megabytes, or switches the limit off with null. Needs administrator rights.</summary>
     public static void SetLimit(int? megabytes)
@@ -63,11 +71,13 @@ public sealed class StandbyLimiter : IDisposable
             return;
         }
         DataFolder.EnsureSecured();
-        AtomicFile.WriteAllText(ConfigPath, Math.Max(MinimumMegabytes, megabytes.Value).ToString(CultureInfo.InvariantCulture));
+        long clamped = Math.Clamp((long)megabytes.Value, MinimumMegabytes, MaximumMegabytes);
+        AtomicFile.WriteAllText(ConfigPath, clamped.ToString(CultureInfo.InvariantCulture));
     }
 
     public void Start()
     {
+        if (thread is not null || disposed) return;
         thread = new Thread(Run) { IsBackground = true, Name = "StandbyLimiter", Priority = ThreadPriority.BelowNormal };
         thread.Start();
     }
@@ -109,7 +119,11 @@ public sealed class StandbyLimiter : IDisposable
             CleanupResult result = MemoryCleanup.PurgeStandbyList();
             if (!result.Succeeded)
             {
-                log("Standby limit: clearing failed: " + result.Message);
+                if (lastPurgeFailureAt == 0 || System.Diagnostics.Stopwatch.GetElapsedTime(lastPurgeFailureAt) >= SummaryInterval)
+                {
+                    lastPurgeFailureAt = System.Diagnostics.Stopwatch.GetTimestamp();
+                    log("Standby limit: clearing failed: " + result.Message);
+                }
                 return;
             }
             long after = ReadStandbyBytes() ?? 0;
@@ -117,12 +131,12 @@ public sealed class StandbyLimiter : IDisposable
             bytesCleared += Math.Max(0, before - after);
         }
         // One line per 10 minutes at most, so a busy disk cannot fill the log.
-        if (DateTime.UtcNow >= summaryDue)
+        if (System.Diagnostics.Stopwatch.GetElapsedTime(summaryAt) >= SummaryInterval)
         {
             if (clears > 0) log($"Standby limit: cleared {clears} times in the last 10 minutes, {bytesCleared / 1048576} MB in total");
             clears = 0;
             bytesCleared = 0;
-            summaryDue = DateTime.UtcNow + SummaryInterval;
+            summaryAt = System.Diagnostics.Stopwatch.GetTimestamp();
         }
     }
 
@@ -149,6 +163,8 @@ public sealed class StandbyLimiter : IDisposable
 
     public void Dispose()
     {
+        if (disposed) return;
+        disposed = true;
         shutdown.Cancel();
         // A purge can take longer than the wait. The token source is disposed only when the thread has ended, because
         // the thread reads its token after every check and would otherwise crash the stopping service.

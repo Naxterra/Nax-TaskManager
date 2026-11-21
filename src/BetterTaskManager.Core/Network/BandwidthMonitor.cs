@@ -36,8 +36,9 @@ public sealed class BandwidthMonitor : IDisposable
     private Dictionary<SocketKey, ByteCounts> bySocket = new();
     private TraceEventSession? session;
     private Thread? pump;
+    private volatile bool running;
     private volatile bool disposed;
-    private DateTime lastAttempt;
+    private long lastAttemptTicks;
 
     /// <param name="sessionName">
     /// ETW session names are machine-wide and opening one replaces any session with the same name, so a second
@@ -55,7 +56,7 @@ public sealed class BandwidthMonitor : IDisposable
 
     private const int KernelBufferSizeMB = 16;
 
-    public bool IsRunning { get; private set; }
+    public bool IsRunning => running;
 
     /// <summary>Events the kernel dropped because the buffers were full (0 when the buffer size is adequate).</summary>
     public long EventsLost => session?.EventsLost ?? 0;
@@ -63,8 +64,8 @@ public sealed class BandwidthMonitor : IDisposable
 
     public bool TryStart()
     {
-        if (IsRunning) return true;
-        lastAttempt = DateTime.UtcNow;
+        if (running) return true;
+        lastAttemptTicks = System.Diagnostics.Stopwatch.GetTimestamp();
         if (TraceEventSession.IsElevated() != true)
         {
             Status = "Per-app network speed needs administrator rights.";
@@ -96,6 +97,8 @@ public sealed class BandwidthMonitor : IDisposable
             kernel.ProcessStop += data => processes.Stop(data.ProcessID);
 
             TraceEventSession started = session;
+            running = true;
+            Status = "Running";
             pump = new Thread(() =>
             {
                 try
@@ -107,17 +110,15 @@ public sealed class BandwidthMonitor : IDisposable
                 {
                     Status = "Network trace stopped: " + ex.Message;
                 }
-                IsRunning = false;
+                running = false;
             })
             { IsBackground = true, Name = "BandwidthMonitor" };
             pump.Start();
-
-            IsRunning = true;
-            Status = "Running";
             return true;
         }
         catch (Exception ex)
         {
+            running = false;
             Status = "Could not start the network trace: " + ex.Message;
             session?.Dispose();
             session = null;
@@ -128,7 +129,7 @@ public sealed class BandwidthMonitor : IDisposable
     /// <summary>Restarts the trace after it was stopped from outside, at most once per <see cref="RestartDelay"/>.</summary>
     public void EnsureRunning()
     {
-        if (IsRunning || disposed || DateTime.UtcNow - lastAttempt < RestartDelay) return;
+        if (running || disposed || (lastAttemptTicks != 0 && System.Diagnostics.Stopwatch.GetElapsedTime(lastAttemptTicks) < RestartDelay)) return;
         TryStart();
     }
 
@@ -214,7 +215,7 @@ public sealed class BandwidthMonitor : IDisposable
     public void Dispose()
     {
         disposed = true;
-        IsRunning = false;
+        running = false;
         session?.Dispose();
         session = null;
         pump?.Join(TimeSpan.FromSeconds(2));

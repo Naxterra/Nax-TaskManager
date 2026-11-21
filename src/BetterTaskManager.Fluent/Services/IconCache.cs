@@ -12,17 +12,26 @@ namespace BetterTaskManager.Fluent.Services;
 public static class IconCache
 {
     private const int IconSize = 32;
+    private const int MaxEntries = 512;
     private static readonly Dictionary<string, BitmapImage> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Queue<string> Order = new();
     private static BitmapImage? s_default;
+    private static byte[]? s_stockPng;
+    private static int s_stockLoaded;
 
     public static ImageSource Get(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return Default;
         if (Cache.TryGetValue(path, out BitmapImage? cached)) return cached;
 
+        while (Cache.Count >= MaxEntries && Order.Count > 0)
+        {
+            Cache.Remove(Order.Dequeue());
+        }
         var image = new BitmapImage { DecodePixelWidth = IconSize };
         Cache[path] = image;
-        Load(image, () => TryPackageLogo(path) ?? TryExtractPng(path) ?? ExtractStockApplicationPng());
+        Order.Enqueue(path);
+        Load(image, () => TryPackageLogo(path) ?? TryExtractPng(path) ?? StockApplicationPng());
         return image;
     }
 
@@ -33,15 +42,24 @@ public static class IconCache
             if (s_default is null)
             {
                 s_default = new BitmapImage { DecodePixelWidth = IconSize };
-                Load(s_default, ExtractStockApplicationPng);
+                Load(s_default, StockApplicationPng);
             }
             return s_default;
         }
     }
 
+    private static byte[]? StockApplicationPng()
+    {
+        if (Volatile.Read(ref s_stockLoaded) == 1) return s_stockPng;
+        s_stockPng = ExtractStockApplicationPng();
+        Volatile.Write(ref s_stockLoaded, 1);
+        return s_stockPng;
+    }
+
     private static void Load(BitmapImage image, Func<byte[]?> extract)
     {
-        DispatcherQueue dispatcher = DispatcherQueue.GetForCurrentThread();
+        DispatcherQueue? dispatcher = DispatcherQueue.GetForCurrentThread();
+        if (dispatcher is null) return;
         _ = Task.Run(() =>
         {
             byte[]? png;

@@ -86,7 +86,7 @@ public static class NtProcessReader
 
         for (int attempt = 0; attempt < 8; attempt++)
         {
-            int size = s_bufferSize;
+            int size = Volatile.Read(ref s_bufferSize);
             IntPtr buffer = Marshal.AllocHGlobal(size);
             try
             {
@@ -103,12 +103,13 @@ public static class NtProcessReader
                 if (status == StatusInfoLengthMismatch)
                 {
                     // Processes can start between calls; leave headroom.
-                    s_bufferSize = Math.Max(size * 2, needed + 64 * 1024);
+                    Volatile.Write(ref s_bufferSize, Math.Max(size * 2, needed + 64 * 1024));
                     continue;
                 }
                 if (status < 0) throw new Win32Exception($"NtQuerySystemInformation failed with NTSTATUS 0x{status:X8}.");
                 DiskCountersAvailable = full;
-                return Parse(buffer, size, full);
+                int validSize = needed > 0 && needed <= size ? needed : size;
+                return Parse(buffer, validSize, full);
             }
             finally
             {
@@ -158,7 +159,7 @@ public static class NtProcessReader
                 DiskWriteBytes: full ? ReadExtension(entry, offset, size, OffsetDiskBytesWritten) : 0));
 
             int next = Marshal.ReadInt32(entry, OffsetNextEntry);
-            if (next == 0) break;
+            if (next <= 0) break;
             offset += next;
         }
         return result;

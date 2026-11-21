@@ -33,9 +33,6 @@
                         <FontIcon Glyph="" FontSize="14" />
                         <TextBlock x:Uid="ProcessesPage_32" Text="End task" />
                     </StackPanel>
-                    <Button.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="Delete" />
-                    </Button.KeyboardAccelerators>
                 </Button>
                 <CommandBar x:Name="PageCommands" DefaultLabelPosition="Right" Background="Transparent" IsDynamicOverflowEnabled="True" VerticalAlignment="Center">
                     <AppBarButton x:Uid="ProcessesPage_3" x:Name="OpenLocationButton" Label="Open file location" IsEnabled="False" Click="OpenLocation_Click">
@@ -103,7 +100,7 @@
         <controls:DetailPane x:Name="Details" Grid.Row="2" Grid.Column="1" Width="296" Margin="16,0,0,0" />
 
         <Border Grid.Row="2" Style="{StaticResource TableCardStyle}">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled"><Grid MinWidth="{x:Bind ViewModel.Layout.TableWidth, Mode=OneWay}">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled"><Grid x:Name="TableHost">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -129,6 +126,8 @@
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.W5, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.W6, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind ViewModel.Layout.W7, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.W8, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind ViewModel.Layout.W9, Mode=OneWay}" />
                         <ColumnDefinition Width="*" MinWidth="120" />
                         <ColumnDefinition Width="36" />
                     </Grid.ColumnDefinitions>
@@ -162,6 +161,24 @@
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
+                    </Button>
+                    <Button x:Uid="Memory_HeaderCommit" x:Name="CommitHeader" Grid.Column="{x:Bind ViewModel.Layout.CommitColumn, Mode=OneWay}" Tag="Commit" Style="{StaticResource ColumnHeaderButtonStyle}" Click="Header_Click">
+                        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                            <TextBlock Text="{x:Bind ViewModel.CommitHeader, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                <FontIcon x:Name="SortCommit" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                                <TextBlock x:Uid="Memory_CommitColumn" Text="Committed" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Uid="Memory_HeaderGpuMemory" x:Name="GpuMemoryHeader" Grid.Column="{x:Bind ViewModel.Layout.GpuMemoryColumn, Mode=OneWay}" Tag="GpuMemory" Style="{StaticResource ColumnHeaderButtonStyle}" Click="Header_Click">
+                        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                            <TextBlock Text="{x:Bind ViewModel.GpuMemoryHeader, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                <FontIcon x:Name="SortGpuMemory" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                                <TextBlock x:Uid="Memory_GpuMemoryColumn" Text="GPU system RAM" />
+                            </StackPanel>
+                        </StackPanel>
                     </Button>
                     <Button x:Uid="ProcessesPage_14" Grid.Column="{x:Bind ViewModel.Layout.IoColumn, Mode=OneWay}" Tag="Io" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Disk" Click="Header_Click" ToolTipService.ToolTip="{x:Bind ViewModel.IoTooltip, Mode=OneWay}">
                         <Grid>
@@ -215,7 +232,7 @@
                             </StackPanel>
                         </Grid>
                     </Button>
-                    <Button x:Uid="ProcessesPage_22" Grid.Column="8" Tag="Path" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Path" Click="Header_Click">
+                    <Button x:Uid="ProcessesPage_22" Grid.Column="10" Tag="Path" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Path" Click="Header_Click">
                         <Grid>
                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom" Margin="8,0,0,0">
                                 <TextBlock x:Uid="ProcessesPage_23" Text="Path" />
@@ -227,6 +244,8 @@
                     <Thumb Tag="Name" Grid.Column="0" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
                     <Thumb Tag="Cpu" Grid.Column="{x:Bind ViewModel.Layout.CpuColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
                     <Thumb Tag="Memory" Grid.Column="{x:Bind ViewModel.Layout.MemoryColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
+                    <Thumb Tag="Commit" Grid.Column="{x:Bind ViewModel.Layout.CommitColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
+                    <Thumb Tag="GpuMemory" Grid.Column="{x:Bind ViewModel.Layout.GpuMemoryColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
                     <Thumb Tag="Io" Grid.Column="{x:Bind ViewModel.Layout.IoColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
                     <Thumb Tag="Bandwidth" Grid.Column="{x:Bind ViewModel.Layout.BandwidthColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
                     <Thumb Tag="Network" Grid.Column="{x:Bind ViewModel.Layout.NetworkColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
@@ -234,7 +253,7 @@
                     <Thumb Tag="Publisher" Grid.Column="{x:Bind ViewModel.Layout.PublisherColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="GroupedSplitter_DragDelta" />
                 </Grid>
 
-                <ListView x:Name="RowList" Grid.Row="2" ItemsSource="{x:Bind ViewModel.Rows}" SelectionMode="Single" IsItemClickEnabled="False" ItemContainerStyle="{StaticResource TableRowStyle}" SelectionChanged="RowList_SelectionChanged" ContextRequested="RowList_ContextRequested" DoubleTapped="RowList_DoubleTapped">
+                <ListView x:Name="RowList" Grid.Row="2" ItemsSource="{x:Bind ViewModel.Rows}" SelectionMode="Single" IsItemClickEnabled="False" ItemContainerStyle="{StaticResource TableRowStyle}" SelectionChanged="RowList_SelectionChanged" ContextRequested="RowList_ContextRequested" DoubleTapped="RowList_DoubleTapped" KeyDown="List_KeyDown">
                     <ListView.ItemContainerTransitions>
                         <TransitionCollection />
                     </ListView.ItemContainerTransitions>
@@ -252,6 +271,8 @@
                                         <ColumnDefinition Width="{x:Bind Layout.W5, Mode=OneWay}" />
                                         <ColumnDefinition Width="{x:Bind Layout.W6, Mode=OneWay}" />
                                         <ColumnDefinition Width="{x:Bind Layout.W7, Mode=OneWay}" />
+                                        <ColumnDefinition Width="{x:Bind Layout.W8, Mode=OneWay}" />
+                                        <ColumnDefinition Width="{x:Bind Layout.W9, Mode=OneWay}" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="36" />
                                     </Grid.ColumnDefinitions>
@@ -302,6 +323,8 @@
                                         <Rectangle Grid.Column="1" Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterMemoryBrush}" />
                                         <TextBlock Grid.ColumnSpan="2" Text="{x:Bind MemoryText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
+                                <TextBlock Grid.Column="{x:Bind Layout.CommitColumn, Mode=OneWay}" Text="{x:Bind CommitText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="6,0,10,0" />
+                                <TextBlock Grid.Column="{x:Bind Layout.GpuMemoryColumn, Mode=OneWay}" Text="{x:Bind GpuMemoryText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="6,0,10,0" />
                                     <Grid Grid.Column="{x:Bind Layout.IoColumn, Mode=OneWay}" Margin="6,0,10,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="{x:Bind Io.Rest, Mode=OneWay}" />
@@ -335,8 +358,8 @@
                                         <TextBlock Grid.ColumnSpan="2" Text="{x:Bind GpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
                                     <TextBlock Grid.Column="{x:Bind Layout.PublisherColumn, Mode=OneWay}" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Publisher, Mode=OneWay}" />
-                                    <TextBlock Grid.Column="8" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Path, Mode=OneWay}" />
-                                    <Button x:Uid="Common_RowMenu" Grid.Column="9" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />
+                                    <TextBlock Grid.Column="10" Margin="10,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Path, Mode=OneWay}" />
+                                    <Button x:Uid="Common_RowMenu" Grid.Column="11" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />
                                 </Grid>
                             </Grid>
                         </DataTemplate>
@@ -353,6 +376,8 @@
                         <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.W4, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.W5, Mode=OneWay}" />
                         <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.W6, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.W7, Mode=OneWay}" />
+                        <ColumnDefinition Width="{x:Bind FlatViewModel.Layout.W8, Mode=OneWay}" />
                         <ColumnDefinition Width="*" MinWidth="120" />
                         <ColumnDefinition Width="36" />
                     </Grid.ColumnDefinitions>
@@ -392,13 +417,25 @@
                             <TextBlock x:Uid="DetailsPage_19" Text="Memory" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
+                    <Button x:Uid="Memory_HeaderCommit" x:Name="FlatCommitHeader" Grid.Column="{x:Bind FlatViewModel.Layout.CommitColumn, Mode=OneWay}" Tag="Commit" Style="{StaticResource ColumnHeaderButtonStyle}" Click="FlatHeader_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <FontIcon x:Name="FlatSortCommit" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                            <TextBlock x:Uid="Memory_CommitColumn" Text="Committed" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Uid="Memory_HeaderGpuMemory" x:Name="FlatGpuMemoryHeader" Grid.Column="{x:Bind FlatViewModel.Layout.GpuMemoryColumn, Mode=OneWay}" Tag="GpuMemory" Style="{StaticResource ColumnHeaderButtonStyle}" Click="FlatHeader_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <FontIcon x:Name="FlatSortGpuMemory" FontSize="9" Glyph="&#xE70D;" VerticalAlignment="Center" Visibility="Collapsed" />
+                            <TextBlock x:Uid="Memory_GpuMemoryColumn" Text="GPU system RAM" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                     <Button x:Uid="DetailsPage_24" Grid.Column="{x:Bind FlatViewModel.Layout.GpuColumn, Mode=OneWay}" Tag="Gpu" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by GPU" Click="FlatHeader_Click">
                         <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <FontIcon x:Name="FlatSortGpu" FontSize="9" Glyph="" VerticalAlignment="Center" Visibility="Collapsed" />
                             <TextBlock Text="GPU" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button x:Uid="DetailsPage_22" Grid.Column="7" Tag="Description" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Description" Click="FlatHeader_Click">
+                    <Button x:Uid="DetailsPage_22" Grid.Column="9" Tag="Description" Style="{StaticResource ColumnHeaderButtonStyle}" AutomationProperties.Name="Sort by Description" Click="FlatHeader_Click">
                         <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <TextBlock x:Uid="DetailsPage_23" Text="Description" VerticalAlignment="Center" />
                             <FontIcon x:Name="FlatSortDescription" FontSize="9" Glyph="" VerticalAlignment="Center" Visibility="Collapsed" />
@@ -411,10 +448,12 @@
                     <Thumb Tag="User" Grid.Column="{x:Bind FlatViewModel.Layout.UserColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
                     <Thumb Tag="Cpu" Grid.Column="{x:Bind FlatViewModel.Layout.CpuColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
                     <Thumb Tag="Memory" Grid.Column="{x:Bind FlatViewModel.Layout.MemoryColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
+                    <Thumb Tag="Commit" Grid.Column="{x:Bind FlatViewModel.Layout.CommitColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
+                    <Thumb Tag="GpuMemory" Grid.Column="{x:Bind FlatViewModel.Layout.GpuMemoryColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
                     <Thumb Tag="Gpu" Grid.Column="{x:Bind FlatViewModel.Layout.GpuColumn, Mode=OneWay}" HorizontalAlignment="Right" Style="{StaticResource ColumnSplitterStyle}" DragDelta="FlatSplitter_DragDelta" />
                 </Grid>
 
-                <ListView x:Name="FlatList" Grid.Row="2" Visibility="Collapsed" ItemsSource="{x:Bind FlatViewModel.Rows}" SelectionMode="Single" ItemContainerStyle="{StaticResource TableRowStyle}" SelectionChanged="FlatList_SelectionChanged" ContextRequested="FlatList_ContextRequested">
+                <ListView x:Name="FlatList" Grid.Row="2" Visibility="Collapsed" ItemsSource="{x:Bind FlatViewModel.Rows}" SelectionMode="Single" ItemContainerStyle="{StaticResource TableRowStyle}" SelectionChanged="FlatList_SelectionChanged" ContextRequested="FlatList_ContextRequested" KeyDown="List_KeyDown">
                     <ListView.ItemContainerTransitions>
                         <TransitionCollection />
                     </ListView.ItemContainerTransitions>
@@ -429,13 +468,19 @@
                                     <ColumnDefinition Width="{x:Bind Layout.W4, Mode=OneWay}" />
                                     <ColumnDefinition Width="{x:Bind Layout.W5, Mode=OneWay}" />
                                     <ColumnDefinition Width="{x:Bind Layout.W6, Mode=OneWay}" />
+                                    <ColumnDefinition Width="{x:Bind Layout.W7, Mode=OneWay}" />
+                                    <ColumnDefinition Width="{x:Bind Layout.W8, Mode=OneWay}" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="36" />
                                 </Grid.ColumnDefinitions>
-                                <StackPanel Orientation="Horizontal" Spacing="10" Margin="10,0,8,0">
+                                <Grid ColumnSpacing="10" Margin="10,0,8,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
                                     <Image Width="18" Height="18" Source="{x:Bind Icon, Mode=OneWay}" VerticalAlignment="Center" />
-                                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                </Grid>
                                 <TextBlock Grid.Column="{x:Bind Layout.PidColumn, Mode=OneWay}" Text="{x:Bind PidText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                                 <TextBlock Grid.Column="{x:Bind Layout.StatusColumn, Mode=OneWay}" Text="{x:Bind Status, Mode=OneWay}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis" />
                                 <TextBlock Grid.Column="{x:Bind Layout.UserColumn, Mode=OneWay}" Text="{x:Bind User, Mode=OneWay}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis" />
@@ -455,6 +500,8 @@
                                         <Rectangle Grid.Column="1" Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterMemoryBrush}" />
                                         <TextBlock Grid.ColumnSpan="2" Text="{x:Bind MemoryText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
+                                <TextBlock Grid.Column="{x:Bind Layout.CommitColumn, Mode=OneWay}" Text="{x:Bind CommitText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="6,0,10,0" />
+                                <TextBlock Grid.Column="{x:Bind Layout.GpuMemoryColumn, Mode=OneWay}" Text="{x:Bind GpuMemoryText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="6,0,10,0" />
                                 <Grid Grid.Column="{x:Bind Layout.GpuColumn, Mode=OneWay}" Margin="6,0,10,0" ToolTipService.ToolTip="{x:Bind GpuEngine, Mode=OneWay}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="{x:Bind Gpu.Rest, Mode=OneWay}" />
@@ -463,8 +510,8 @@
                                         <Rectangle Grid.Column="1" Style="{StaticResource MeterBarStyle}" Fill="{ThemeResource MeterGpuBrush}" />
                                         <TextBlock Grid.ColumnSpan="2" Text="{x:Bind GpuText, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
-                                <TextBlock Grid.Column="7" Text="{x:Bind Description, Mode=OneWay}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <Button x:Uid="Common_RowMenu" Grid.Column="8" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />
+                                <TextBlock Grid.Column="9" Text="{x:Bind Description, Mode=OneWay}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Button x:Uid="Common_RowMenu" Grid.Column="10" Style="{StaticResource RowMenuButtonStyle}" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Click="RowMenu_Click" />
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>

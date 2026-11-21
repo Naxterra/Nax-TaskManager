@@ -7,9 +7,10 @@
     <AssemblyName>Nax-TaskManager.HistoryService</AssemblyName>
     <Product>Nax-TaskManager</Product>
     <Company>Naxterra</Company>
-    <Version>2.0.0-alpha.49</Version>
+    <Version>2.0.0-alpha.50</Version>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
+    <StartupHookSupport>false</StartupHookSupport>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

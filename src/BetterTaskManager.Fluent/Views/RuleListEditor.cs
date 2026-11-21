@@ -1,5 +1,6 @@
 using System.Globalization;
 using BetterTaskManager.Core.Firewall;
+using BetterTaskManager.Fluent.Controls;
 using BetterTaskManager.Fluent.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -175,7 +176,8 @@ internal sealed class RuleListEditor
         string[] keys = ["RulesPage_ColAction", "RulesPage_ColTarget", "RulesPage_ColProtocol", "RulesPage_ColPorts", "RulesPage_ColComment"];
         for (int i = 0; i < keys.Length; i++)
         {
-            var label = new TextBlock { Text = Loc.Get(keys[i]), FontSize = 11, Foreground = Brush("TextFillColorSecondaryBrush"), TextTrimming = TextTrimming.CharacterEllipsis };
+            var label = new TextBlock { Text = Loc.Get(keys[i]), FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis };
+            label.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
             Grid.SetColumn(label, i);
             labels.Children.Add(label);
         }
@@ -209,6 +211,20 @@ internal sealed class RuleListEditor
         else target.SelectedIndex = row.Target switch { RuleTargetKind.Any => 0, RuleTargetKind.Lan => 1, RuleTargetKind.Internet => 2, _ => 3 };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(target, Loc.Get("RulesPage_ColTarget"));
         Place(target);
+        void SyncTargetText(string text)
+        {
+            int known = target.Items.IndexOf(text);
+            if (known >= 0)
+            {
+                row.Target = known switch { 0 => RuleTargetKind.Any, 1 => RuleTargetKind.Lan, 2 => RuleTargetKind.Internet, _ => RuleTargetKind.Localhost };
+            }
+            else
+            {
+                row.Target = RuleTargetKind.Address;
+                row.Address = text.Trim();
+            }
+            OnChanged();
+        }
         target.SelectionChanged += (_, _) =>
         {
             if (target.SelectedIndex < 0) return;
@@ -221,19 +237,39 @@ internal sealed class RuleListEditor
             if (known >= 0) target.SelectedIndex = known;
             else
             {
-                row.Target = RuleTargetKind.Address;
-                row.Address = args.Text.Trim();
                 args.Handled = true;
-                OnChanged();
+                SyncTargetText(args.Text);
             }
         };
+        target.KeyUp += (_, _) => SyncTargetText(target.Text ?? "");
 
         var protocol = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, IsEditable = true, Text = row.Protocol };
         foreach (string option in new[] { Loc.Get("Rules_ProtoAny"), "TCP", "UDP", "ICMP" }) protocol.Items.Add(option);
         if (row.Protocol.Length == 0) protocol.SelectedIndex = 0;
         else if (protocol.Items.IndexOf(row.Protocol) is int found and >= 0) protocol.SelectedIndex = found;
-        protocol.SelectionChanged += (_, _) => { row.Protocol = protocol.SelectedIndex <= 0 ? "" : (string)protocol.SelectedItem; OnChanged(); };
-        protocol.TextSubmitted += (_, args) => { row.Protocol = args.Text.Trim(); OnChanged(); };
+        void SyncProtocolText(string text)
+        {
+            string trimmed = text.Trim();
+            row.Protocol = trimmed.Equals(Loc.Get("Rules_ProtoAny"), StringComparison.CurrentCultureIgnoreCase) ? "" : trimmed;
+            OnChanged();
+        }
+        protocol.SelectionChanged += (_, _) =>
+        {
+            if (protocol.SelectedIndex < 0) return;
+            row.Protocol = protocol.SelectedIndex == 0 ? "" : (string)protocol.SelectedItem;
+            OnChanged();
+        };
+        protocol.TextSubmitted += (_, args) =>
+        {
+            int known = protocol.Items.IndexOf(args.Text);
+            if (known >= 0) protocol.SelectedIndex = known;
+            else
+            {
+                args.Handled = true;
+                SyncProtocolText(args.Text);
+            }
+        };
+        protocol.KeyUp += (_, _) => SyncProtocolText(protocol.Text ?? "");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(protocol, Loc.Get("RulesPage_ColProtocol"));
         Place(protocol);
 
@@ -274,9 +310,12 @@ internal sealed class RuleListEditor
         return button;
     }
 
-    private static TextBlock Muted(string text) => new() { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = Brush("TextFillColorSecondaryBrush") };
-
-    private static Brush Brush(string key) => (Brush)Application.Current.Resources[key];
+    private static TextBlock Muted(string text)
+    {
+        var block = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap };
+        block.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
+        return block;
+    }
 
     /// <summary>A rule as the row editor holds it; <see cref="ToLine"/> gives the text form the engine parses.</summary>
     private sealed class RuleRow

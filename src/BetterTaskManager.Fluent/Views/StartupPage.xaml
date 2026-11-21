@@ -135,16 +135,24 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="36" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="10,0,8,0" Opacity="{x:Bind Opacity}">
+                        <Grid ColumnSpacing="10" Margin="10,0,8,0" Opacity="{x:Bind Opacity}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
                             <Image Width="18" Height="18" Source="{x:Bind Icon}" VerticalAlignment="Center" />
-                            <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                            <TextBlock Grid.Column="1" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </Grid>
                         <TextBlock Grid.Column="{x:Bind Layout.PublisherColumn, Mode=OneWay}" Text="{x:Bind Publisher}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <StackPanel Grid.Column="{x:Bind Layout.StatusColumn, Mode=OneWay}" Orientation="Horizontal" Spacing="7" Margin="10,0,8,0" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind StatusDetail}">
+                        <Grid Grid.Column="{x:Bind Layout.StatusColumn, Mode=OneWay}" ColumnSpacing="7" Margin="10,0,8,0" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind StatusDetail}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
                             <Ellipse Width="8" Height="8" Fill="{x:Bind StatusBrush}" VerticalAlignment="Center" />
-                            <TextBlock Text="{x:Bind Status}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                            <TextBlock Grid.Column="1" Text="{x:Bind Status}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </Grid>
                         <TextBlock Grid.Column="{x:Bind Layout.ScopeColumn, Mode=OneWay}" Text="{x:Bind Scope}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock Grid.Column="4" Text="{x:Bind Command}" VerticalAlignment="Center" Margin="10,0,8,0" TextTrimming="CharacterEllipsis"

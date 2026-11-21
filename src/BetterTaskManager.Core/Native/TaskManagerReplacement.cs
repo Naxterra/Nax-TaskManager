@@ -72,8 +72,18 @@ public static class TaskManagerReplacement
     /// <summary>Restores the built-in Task Manager. Needs administrator rights (HKLM).</summary>
     public static void Disable()
     {
-        using RegistryKey? key = Registry.LocalMachine.OpenSubKey(IfeoKey, writable: true);
-        key?.DeleteValue(DebuggerValue, throwOnMissingValue: false);
+        bool removeKey = false;
+        using (RegistryKey? key = Registry.LocalMachine.OpenSubKey(IfeoKey, writable: true))
+        {
+            if (key is null) return;
+            key.DeleteValue(DebuggerValue, throwOnMissingValue: false);
+            removeKey = key.ValueCount == 0 && key.SubKeyCount == 0;
+        }
+        if (removeKey)
+        {
+            using RegistryKey? parent = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options", writable: true);
+            parent?.DeleteSubKey("taskmgr.exe", throwOnMissingSubKey: false);
+        }
     }
 
     /// <summary>Restores the built-in Task Manager only if the redirect points at this app, so another tool's entry is left alone (used on uninstall).</summary>
@@ -82,7 +92,24 @@ public static class TaskManagerReplacement
         if (IsReplacedBy(executablePath)) Disable();
     }
 
-    private static string Unquote(string value) => value.Trim().Trim('"');
+    internal static string Unquote(string value)
+    {
+        string trimmed = value.Trim();
+        if (trimmed.Length == 0) return "";
+        if (trimmed[0] == '"')
+        {
+            int end = trimmed.IndexOf('"', 1);
+            return end > 1 ? trimmed[1..end] : trimmed.Trim('"');
+        }
+        int exe = trimmed.IndexOf(".exe", StringComparison.OrdinalIgnoreCase);
+        if (exe > 0)
+        {
+            int after = exe + 4;
+            if (after == trimmed.Length || char.IsWhiteSpace(trimmed[after])) return trimmed[..after];
+        }
+        int space = trimmed.IndexOfAny([' ', '\t']);
+        return space > 0 ? trimmed[..space] : trimmed;
+    }
 
     private static bool PathsEqual(string a, string b)
     {

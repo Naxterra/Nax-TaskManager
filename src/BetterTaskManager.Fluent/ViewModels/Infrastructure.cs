@@ -171,9 +171,13 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength W5 => At(5);
     public GridLength W6 => At(6);
     public GridLength W7 => At(7);
+    public GridLength W8 => At(8);
+    public GridLength W9 => At(9);
 
     public int CpuColumn => ColumnOf("Cpu");
     public int MemoryColumn => ColumnOf("Memory");
+    public int CommitColumn => ColumnOf("Commit");
+    public int GpuMemoryColumn => ColumnOf("GpuMemory");
     public int IoColumn => ColumnOf("Io");
     public int BandwidthColumn => ColumnOf("Bandwidth");
     public int NetworkColumn => ColumnOf("Network");
@@ -257,7 +261,7 @@ public sealed class ColumnLayout : ObservableObject
         saved[prefix + column] = next;
         Raise(column);
         Raise(nameof(TableWidth));
-        if (ColumnOf(column) is int position and >= 0 and <= 7) Raise("W" + position);
+        if (ColumnOf(column) is int position and >= 0 and <= 9) Raise("W" + position);
     }
 }
 

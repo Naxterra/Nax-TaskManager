@@ -17,8 +17,9 @@ public sealed class ProcessesViewModel : ObservableObject
         this.settings = settings;
         Layout = new ColumnLayout("Processes.", new Dictionary<string, double>
         {
-            ["Name"] = 360, ["Cpu"] = 88, ["Memory"] = 130, ["Io"] = 140, ["Bandwidth"] = 104, ["Network"] = 104, ["Gpu"] = 88, ["Publisher"] = 200
-        }, settings.ColumnWidths, ["Cpu", "Memory", "Io", "Bandwidth", "Network", "Gpu", "Publisher"], settings.ColumnOrder);
+            ["Name"] = 360, ["Cpu"] = 88, ["Memory"] = 130, ["Commit"] = 140, ["GpuMemory"] = 150,
+            ["Io"] = 140, ["Bandwidth"] = 104, ["Network"] = 104, ["Gpu"] = 88, ["Publisher"] = 200
+        }, settings.ColumnWidths, ["Cpu", "Memory", "Commit", "GpuMemory", "Io", "Bandwidth", "Network", "Gpu", "Publisher"], settings.ColumnOrder);
         ProcessSlot.SharedLayout = Layout;
         Rows = new SlotCollection<ProcessSlot, (ProcessRowData, ProcessRowContext)>(ProcessSlot.Load);
     }
@@ -31,6 +32,9 @@ public sealed class ProcessesViewModel : ObservableObject
 
     public string CpuHeader { get => cpuHeader; private set => Set(ref cpuHeader, value); }
     public string MemoryHeader { get => memoryHeader; private set => Set(ref memoryHeader, value); }
+    private string commitHeader = "", gpuMemoryHeader = "";
+    public string CommitHeader { get => commitHeader; private set => Set(ref commitHeader, value); }
+    public string GpuMemoryHeader { get => gpuMemoryHeader; private set => Set(ref gpuMemoryHeader, value); }
     public string IoHeader { get => ioHeader; private set => Set(ref ioHeader, value); }
     public string NetworkHeader { get => networkHeader; private set => Set(ref networkHeader, value); }
     public string BandwidthHeader { get => bandwidthHeader; private set => Set(ref bandwidthHeader, value); }
@@ -46,7 +50,9 @@ public sealed class ProcessesViewModel : ObservableObject
 
         SystemSample system = snapshot.System;
         CpuHeader = system.CpuSampled ? Format.WholePercent(system.CpuPercent) : "…";
-        MemoryHeader = Format.WholePercent(system.Memory.LoadPercent);
+        MemoryHeader = Format.Memory(system.Memory.ProcessPrivate);
+        CommitHeader = Format.Memory(system.Memory.CommitTotal);
+        GpuMemoryHeader = system.GpuSharedMemory is { } shared ? Format.Memory(shared) : "–";
         // Real disk bytes when they are measured (Task Manager's Disk column); else all file and device I/O.
         bool realDisk = system.PerProcessDiskAvailable && system.Disks.Count > 0;
         IoHeader = realDisk ? Format.ByteRate(system.Disks.Sum(disk => disk.ReadPerSecond + disk.WritePerSecond)) : Format.Rate(system.IoBytesPerSecond);

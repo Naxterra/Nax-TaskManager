@@ -16,9 +16,11 @@ internal sealed class KernelPoolService
     private readonly Dictionary<string, string[]> _drivers = new(StringComparer.Ordinal);
     private readonly HashSet<string> _searching = new(StringComparer.Ordinal);
     private readonly Lock _lock = new();
-    private DateTime _readAt = DateTime.MinValue;
+    private long _readAtTicks;
 
     public static KernelPoolService Instance { get; } = new();
+
+    public event Action? DriversUpdated;
 
     /// <summary>The largest tags (paged plus non-paged), largest first.</summary>
     public IReadOnlyList<PoolTagUsage> Largest { get; private set; } = [];
@@ -29,8 +31,8 @@ internal sealed class KernelPoolService
     /// <summary>Re-reads the pool tags when the last read is older than 10 seconds. Call from the UI thread.</summary>
     public void Refresh(MemoryBreakdown memory)
     {
-        if (DateTime.UtcNow - _readAt < s_interval) return;
-        _readAt = DateTime.UtcNow;
+        if (_readAtTicks != 0 && System.Diagnostics.Stopwatch.GetElapsedTime(_readAtTicks) < s_interval) return;
+        _readAtTicks = System.Diagnostics.Stopwatch.GetTimestamp();
         List<PoolTagUsage> tags = PoolTags.Read();
         Largest = KernelPoolAlert.Largest(tags, ListedTags);
         // Without the detailed counters the pool sizes are unknown (zero), which correctly gives no warning.
@@ -87,7 +89,7 @@ internal sealed class KernelPoolService
         }
         Task.Run(() =>
         {
-            Dictionary<string, List<string>> found;
+            Dictionary<string, List<string>>? found = null;
             try
             {
                 found = PoolTags.FindDrivers(missing);
@@ -96,14 +98,18 @@ internal sealed class KernelPoolService
             {
                 found = missing.ToDictionary(tag => tag, _ => new List<string>());
             }
-            lock (_lock)
+            finally
             {
-                foreach (string tag in missing)
+                lock (_lock)
                 {
-                    _drivers[tag] = found.TryGetValue(tag, out List<string>? files) ? [.. files] : [];
-                    _searching.Remove(tag);
+                    foreach (string tag in missing)
+                    {
+                        if (found is not null) _drivers[tag] = found.TryGetValue(tag, out List<string>? files) ? [.. files] : [];
+                        _searching.Remove(tag);
+                    }
                 }
             }
+            if (found is not null) DriversUpdated?.Invoke();
         });
     }
 }

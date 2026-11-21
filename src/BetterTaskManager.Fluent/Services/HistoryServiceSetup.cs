@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using BetterTaskManager.Core.Firewall;
 using BetterTaskManager.Core.History;
+using BetterTaskManager.Core.Native;
 
 namespace BetterTaskManager.Fluent.Services;
 
@@ -30,42 +31,15 @@ internal static class HistoryServiceSetup
     /// <summary>Returns null on success, otherwise a message for the user.</summary>
     public static async Task<string?> SetEnabledAsync(bool enable, bool elevated)
     {
+        if (enable && !ProtectedLocation.IsAdminOnlyDirectory(BundledFolder))
+            return Loc.Get("HistoryService_ProtectedFolderRequired");
+
         if (elevated)
         {
             CommandResult result = await Task.Run(() => Apply(enable));
             return result.Succeeded ? null : result.FailureSummary();
         }
 
-        string resultFile = Path.Combine(Path.GetTempPath(), $"NaxTaskManager-service-{Guid.NewGuid():N}.txt");
-        var startInfo = new ProcessStartInfo(Environment.ProcessPath!)
-        {
-            UseShellExecute = true,
-            Verb = "runas",
-            WindowStyle = ProcessWindowStyle.Hidden
-        };
-        startInfo.ArgumentList.Add(enable ? InstallArgument : UninstallArgument);
-        startInfo.ArgumentList.Add(resultFile);
-        try
-        {
-            using Process helper = Process.Start(startInfo)!;
-            await helper.WaitForExitAsync();
-            if (helper.ExitCode == 0) return null;
-            string reason = File.Exists(resultFile) ? await File.ReadAllTextAsync(resultFile) : Loc.F("Common_ExitCode", helper.ExitCode);
-            return reason;
-        }
-        catch (System.ComponentModel.Win32Exception)
-        {
-            return Loc.Get("Uac_CancelledNothing");
-        }
-        finally
-        {
-            try
-            {
-                File.Delete(resultFile);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
-        }
+        return await ElevatedHelper.RunAsync([enable ? InstallArgument : UninstallArgument], withResultFile: true);
     }
 }

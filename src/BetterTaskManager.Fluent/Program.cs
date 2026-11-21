@@ -23,7 +23,6 @@ public static class Program
     internal const string CacheTrimOnArgument = "--cache-trim-on";
     internal const string CacheTrimOffArgument = "--cache-trim-off";
     internal const string StandbyLimitArgument = "--standby-limit";
-    internal const string PolicyApplyArgument = "--policy-apply";
     internal const string RulesApplyArgument = "--rules-apply";
     internal const string RulesResetArgument = "--rules-reset";
     internal const string MemoryFeatureArgument = "--memory-feature";
@@ -147,24 +146,6 @@ public static class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        // Elevated helper mode: apply one app's network rules (JSON, Base64) and exit.
-        if (args.Length == 2 && args[0] == PolicyApplyArgument)
-        {
-            if (!FirewallRules.IsElevated) return 5;
-            AppNetworkPolicy? policy;
-            try
-            {
-                policy = System.Text.Json.JsonSerializer.Deserialize<AppNetworkPolicy>(Convert.FromBase64String(args[1]));
-            }
-            catch (Exception ex) when (ex is FormatException or System.Text.Json.JsonException)
-            {
-                return 87;
-            }
-            if (policy is null) return 87;
-            CommandResult result = FirewallRules.ApplyPolicy(policy);
-            return result.Succeeded ? 0 : (result.ExitCode == 0 ? 1 : result.ExitCode);
-        }
-
         // Elevated helper mode: install or remove the background history service and exit.
         if (args.Length == 2 && (args[0] == HistoryServiceSetup.InstallArgument || args[0] == HistoryServiceSetup.UninstallArgument))
         {
@@ -176,13 +157,13 @@ public static class Program
         if (args.Length == 3 && (args[0] == StartupEnableArgument || args[0] == StartupDisableArgument))
         {
             if (!FirewallRules.IsElevated) return 5;
-            if (!Enum.TryParse(args[1], out Core.Startup.StartupSource source)) return 2;
+            if (!Enum.TryParse(args[1], out Core.Startup.StartupSource source) || !Enum.IsDefined(source) || source == Core.Startup.StartupSource.Package) return 2;
             try
             {
                 Core.Startup.StartupApps.SetEnabled(source, args[2], args[0] == StartupEnableArgument);
                 return 0;
             }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException or ArgumentException)
             {
                 return 1;
             }
@@ -209,7 +190,7 @@ public static class Program
                 return 6;
             }
         }
-        if (args.Length >= 1 && args[0] == ReplaceTaskManagerOffArgument)
+        if (args.Length is 1 or 2 && args[0] == ReplaceTaskManagerOffArgument)
         {
             if (!FirewallRules.IsElevated) return 5;
             try
@@ -288,18 +269,20 @@ public static class Program
         }
 
         // Elevated helper mode: switch one of Windows' memory manager features on or off, then exit.
-        if (args.Length == 3 && args[0] == MemoryFeatureArgument && (args[2] == "on" || args[2] == "off"))
+        if (args.Length is 3 or 4 && args[0] == MemoryFeatureArgument && (args[2] == "on" || args[2] == "off"))
         {
             if (!FirewallRules.IsElevated) return 5;
             if (!Core.Native.MemoryManager.Features.Contains(args[1])) return 87;
+            if (args.Length == 4 && !Core.HelperResultFile.IsAcceptable(args[3])) return 87;
             try
             {
                 Core.Native.MemoryManager.Set(args[1], args[2] == "on");
                 return 0;
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or InvalidOperationException
-                or System.Management.ManagementException or System.Runtime.InteropServices.COMException or System.ServiceProcess.TimeoutException)
+                or System.Management.ManagementException or System.Runtime.InteropServices.COMException or System.ServiceProcess.TimeoutException or System.Text.Json.JsonException)
             {
+                if (args.Length == 4) Core.HelperResultFile.TryWrite(args[3], ex.Message);
                 return 1;
             }
         }
@@ -308,7 +291,8 @@ public static class Program
         if ((args.Length == 3 || (args.Length == 4 && args[3] == RemoveDataArgument)) && args[0] == UninstallCleanupArgument)
         {
             if (!FirewallRules.IsElevated) return 5;
-            return UninstallCleanup(args[1], args[2], removeData: args.Length == 4);
+            if (Environment.ProcessPath is not { } self || !IsThisExecutable(args[1], self)) return 87;
+            return UninstallCleanup(self, args[2], removeData: args.Length == 4);
         }
 
         WaitForPreviousInstance(args);
@@ -388,9 +372,9 @@ public static class Program
             using Process previous = Process.GetProcessById(pid);
             previous.WaitForExit(10000);
         }
-        catch (ArgumentException)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
         {
-            // Already gone.
+            // Already gone, or cannot be opened from this integrity level.
         }
     }
 

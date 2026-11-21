@@ -12,6 +12,10 @@ var suites = new (string File, IEnumerable<(string Name, string Scenario, Action
     ("RecorderRegressionTests.cs", RecorderRegressionTests.All()),
     ("NavigationSearchTests.cs", NavigationSearchTests.All()),
     ("NetworkRegressionTests.cs", NetworkRegressionTests.All()),
+    ("MemoryTuningTests.cs", MemoryTuningTests.All()),
+    ("GpuMemoryTests.cs", GpuMemoryTests.All()),
+    ("VirtualMachineOwnerTests.cs", VirtualMachineOwnerTests.All()),
+    ("AuditRegressionTests.cs", AuditRegressionTests.All()),
 };
 
 int failures = 0, count = 0;

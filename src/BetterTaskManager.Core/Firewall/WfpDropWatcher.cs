@@ -33,7 +33,7 @@ public static partial class WfpBlocker
         private readonly NetEventCallback callback;
         private Engine? engine;
         private IntPtr subscription;
-        private DateTime filtersReadAt = DateTime.UtcNow;
+        private long filtersReadAt = System.Diagnostics.Stopwatch.GetTimestamp();
         private (DateTime Rules, DateTime Blocks) rulesWritten = RulesWritten();
         private int dropped;
 
@@ -120,10 +120,10 @@ public static partial class WfpBlocker
             // Filter ids are reused when rules are saved again: forget them as soon as the rule files change, and now
             // and then in case the filters changed without them.
             var written = RulesWritten();
-            if (written != rulesWritten || DateTime.UtcNow - filtersReadAt > TimeSpan.FromMinutes(2))
+            if (written != rulesWritten || System.Diagnostics.Stopwatch.GetElapsedTime(filtersReadAt) > TimeSpan.FromMinutes(2))
             {
                 filters.Clear();
-                filtersReadAt = DateTime.UtcNow;
+                filtersReadAt = System.Diagnostics.Stopwatch.GetTimestamp();
                 rulesWritten = written;
             }
             Overflow = Interlocked.Exchange(ref dropped, 0);

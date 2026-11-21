@@ -46,15 +46,17 @@ public sealed class CacheTrimmer : IDisposable
         public required long FileId { get; init; }
         public required string Path { get; init; }
         public required long Size { get; init; }
-        public DateTime WrittenUtc;
+        public long WrittenTicks;
         public int Pass;
     }
 
     private readonly Action<string> log;
+    private readonly object volumesGate = new();
     private readonly List<Volume> volumes = [];
     private readonly Dictionary<(string, long), Pending> pending = new();
     private readonly CancellationTokenSource shutdown = new();
     private Thread? thread;
+    private volatile bool disposed;
 
     public CacheTrimmer(Action<string> log, long threshold = DefaultThreshold)
     {
@@ -146,21 +148,35 @@ public sealed class CacheTrimmer : IDisposable
                 }
                 if (enabled)
                 {
-                    foreach (Volume volume in volumes) ReadJournal(volume);
-                    TrimDue();
+                    lock (volumesGate)
+                    {
+                        foreach (Volume volume in volumes) ReadJournal(volume);
+                        TrimDue();
+                    }
                 }
                 else
                 {
                     // Paused: forget pending files and follow the journal's end, so switching on again starts fresh.
-                    pending.Clear();
-                    foreach (Volume volume in volumes) QueryJournal(volume);
+                    lock (volumesGate)
+                    {
+                        pending.Clear();
+                        foreach (Volume volume in volumes) QueryJournal(volume);
+                    }
                 }
             }
             catch (Exception ex)
             {
                 log("Cache trim failed: " + ex.Message);
             }
-            if (shutdown.Token.WaitHandle.WaitOne(PollInterval)) return;
+            if (disposed) return;
+            try
+            {
+                if (shutdown.Token.WaitHandle.WaitOne(PollInterval)) return;
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
         }
     }
 
@@ -216,15 +232,15 @@ public sealed class CacheTrimmer : IDisposable
         string path = FinalPath(handle);
         // NTFS metadata files ($MFT, $LogFile...) are not ours to touch.
         if (path.Length == 0 || path.Contains(@"\$", StringComparison.Ordinal)) return;
-        pending[(volume.Letter, fileId)] = new Pending { Volume = volume, FileId = fileId, Path = path, Size = size, WrittenUtc = DateTime.UtcNow };
+        pending[(volume.Letter, fileId)] = new Pending { Volume = volume, FileId = fileId, Path = path, Size = size, WrittenTicks = System.Diagnostics.Stopwatch.GetTimestamp() };
     }
 
     private void TrimDue()
     {
-        DateTime now = DateTime.UtcNow;
+        long now = System.Diagnostics.Stopwatch.GetTimestamp();
         foreach (var (key, item) in pending.ToList())
         {
-            if (now - item.WrittenUtc < Passes[item.Pass]) continue;
+            if (System.Diagnostics.Stopwatch.GetElapsedTime(item.WrittenTicks, now) < Passes[item.Pass]) continue;
             // Opening without buffering is what drops the cached pages; nothing is read or written.
             using (SafeFileHandle handle = OpenById(item.Volume, item.FileId, GenericRead, FileFlagNoBuffering))
             {
@@ -258,10 +274,16 @@ public sealed class CacheTrimmer : IDisposable
 
     public void Dispose()
     {
+        if (disposed) return;
+        disposed = true;
         shutdown.Cancel();
-        thread?.Join(TimeSpan.FromSeconds(5));
-        foreach (Volume volume in volumes) volume.Handle.Dispose();
-        volumes.Clear();
+        bool joined = thread is null || thread.Join(TimeSpan.FromSeconds(5));
+        lock (volumesGate)
+        {
+            foreach (Volume volume in volumes) volume.Handle.Dispose();
+            volumes.Clear();
+        }
+        if (joined) shutdown.Dispose();
     }
 
     [StructLayout(LayoutKind.Sequential)]

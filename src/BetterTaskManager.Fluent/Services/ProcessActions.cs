@@ -22,15 +22,23 @@ public static class ProcessActions
         var failures = new List<string>();
         foreach (var (pid, createTime) in processes)
         {
+            if (!entireTree)
+            {
+                ControlResult result = ProcessControl.Terminate(pid, createTime);
+                if (result.Succeeded) ended++;
+                else if (result.Gone) gone++;
+                else failures.Add($"PID {pid}: {new Win32Exception(result.Error).Message}");
+                continue;
+            }
             try
             {
                 using Process process = Process.GetProcessById(pid);
-                if (process.StartTime.ToFileTime() != createTime)
+                if (process.StartTime.ToUniversalTime().ToFileTimeUtc() != createTime)
                 {
                     gone++;
                     continue;
                 }
-                process.Kill(entireTree);
+                process.Kill(entireProcessTree: true);
                 ended++;
             }
             catch (ArgumentException)
@@ -90,8 +98,14 @@ public static class ProcessActions
             try
             {
                 process = Process.GetProcessById(pid);
-                if (process.SessionId != session || !ExplorerShell.IsExplorerProcess(pid) || process.StartTime.ToFileTime() != createTime) continue;
-                process.Kill(entireProcessTree: false);
+                if (process.SessionId != session || !ExplorerShell.IsExplorerProcess(pid) || process.StartTime.ToUniversalTime().ToFileTimeUtc() != createTime) continue;
+                ControlResult result = ProcessControl.Terminate(pid, createTime);
+                if (result.Gone) continue;
+                if (!result.Succeeded)
+                {
+                    failures.Add($"PID {pid}: {new Win32Exception(result.Error).Message}");
+                    continue;
+                }
                 ended.Add(process);
                 process = null;
             }
@@ -158,9 +172,15 @@ public static class ProcessActions
     public static void OpenFileLocation(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
-        // Only the path may be quoted: ArgumentList quotes the whole "/select,..." argument when the path has a space,
-        // and Explorer then ignores it and opens Documents instead.
-        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
+        try
+        {
+            // Only the path may be quoted: ArgumentList quotes the whole "/select,..." argument when the path has a space,
+            // and Explorer then ignores it and opens Documents instead.
+            using Process? process = Process.Start(new ProcessStartInfo(BetterTaskManager.Core.Native.ExplorerShell.ExplorerPath, $"/select,\"{path}\"") { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException)
+        {
+        }
     }
 
     public static void ShowProperties(string path)
@@ -179,9 +199,15 @@ public static class ProcessActions
 
     public static void CopyText(string text)
     {
-        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
-        package.SetText(text);
-        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        try
+        {
+            var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+            package.SetText(text);
+            Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        }
+        catch (Exception ex) when (ex is COMException or UnauthorizedAccessException)
+        {
+        }
     }
 
     private const int ErrorTimeout = 1460;

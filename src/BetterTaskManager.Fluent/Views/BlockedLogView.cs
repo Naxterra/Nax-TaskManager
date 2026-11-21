@@ -117,7 +117,18 @@ internal sealed class BlockedLogView : Grid
                 bool oursOnly = !others.IsOn;
                 string query = search.Text.Trim();
                 string? path = null;
-                List<BlockedRecord>? records = await Task.Run(() => Read(since, path, 301, oursOnly, query));
+                (List<BlockedRecord>? records, HistoryServiceState serviceState) = await Task.Run(() =>
+                {
+                    List<BlockedRecord>? read = Read(since, path, 301, oursOnly, query);
+                    if (read is not null)
+                    {
+                        foreach (BlockedRecord item in read) _ = AppName(item.AppPath);
+                    }
+                    HistoryServiceState state = read is null || read.Count == 0
+                        ? HistoryServiceControl.QueryState()
+                        : HistoryServiceState.Running;
+                    return (read, state);
+                });
                 if (!IsLoaded) return;
                 if (reloadPending) continue;
                 var shown = rowCache.Apply(rows.Children, records ?? [], record => When(record.LastSeen),
@@ -126,7 +137,7 @@ internal sealed class BlockedLogView : Grid
                     Format.Count(shown.Select(record => record.AppPath).Distinct(StringComparer.OrdinalIgnoreCase).Count()))
                     + (records.Count > 300 ? " " + Loc.F("Blocked_Limited", 300) : "");
                 empty.Children.Clear();
-                if (shown.Count == 0) empty.Children.Add(EmptyFor(records is null, query.Length > 0 || path is not null));
+                if (shown.Count == 0) empty.Children.Add(EmptyFor(records is null, serviceState, query.Length > 0 || path is not null));
             }
             while (reloadPending);
         }
@@ -147,9 +158,9 @@ internal sealed class BlockedLogView : Grid
         }
     }
 
-    private static StackPanel EmptyFor(bool noDatabase, bool searching)
+    private static StackPanel EmptyFor(bool noDatabase, HistoryServiceState serviceState, bool searching)
     {
-        if (noDatabase || HistoryServiceControl.QueryState() != HistoryServiceState.Running)
+        if (noDatabase || serviceState != HistoryServiceState.Running)
         {
             var settings = new Button { Content = Loc.Get("Blocked_OpenSettings") };
             settings.Click += (_, _) => App.Window.NavigatePage("Settings");
@@ -179,13 +190,17 @@ internal sealed class BlockedLogView : Grid
         var texts = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
         string remote = Remote(record);
         texts.Children.Add(Line(showApp ? AppName(record.AppPath) : remote, 13, primary: true));
-        var detail = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        var detail = new Grid { ColumnSpacing = 6 };
         if (showApp)
         {
+            detail.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            detail.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             var arrow = new FontIcon { Glyph = record.Inbound ? "" : "", FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
             arrow.SetResourceReference(IconElement.ForegroundProperty, record.Inbound ? "ToneReceiveBrush" : "ToneSendBrush");
             detail.Children.Add(arrow);
-            detail.Children.Add(Line(remote, 12, primary: false));
+            TextBlock remoteText = Line(remote, 12, primary: false);
+            Grid.SetColumn(remoteText, 1);
+            detail.Children.Add(remoteText);
         }
         else detail.Children.Add(Line(Loc.Get(record.Inbound ? "Blocked_Inbound" : "Blocked_Outbound"), 12, primary: false));
         texts.Children.Add(detail);
@@ -303,6 +318,7 @@ internal sealed class BlockedLogView : Grid
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
         }
+        if (Names.Count >= 2048) Names.Clear();
         Names[path] = name;
         return name;
     }

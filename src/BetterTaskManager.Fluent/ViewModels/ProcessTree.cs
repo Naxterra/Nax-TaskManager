@@ -31,13 +31,18 @@ public sealed record ProcessRowData(
     bool Efficiency = false,
     bool Suspended = false,
     double Gpu = 0,
-    string GpuEngine = "");
+    string GpuEngine = "",
+    long Commit = 0,
+    long? GpuMemory = null,
+    bool Critical = false);
 
 public static class ProcessTree
 {
     public const string SortName = "Name";
     public const string SortCpu = "Cpu";
     public const string SortMemory = "Memory";
+    public const string SortCommit = "Commit";
+    public const string SortGpuMemory = "GpuMemory";
     public const string SortIo = "Io";
     public const string SortNetwork = "Network";
     public const string SortBandwidth = "Bandwidth";
@@ -54,6 +59,8 @@ public static class ProcessTree
         public double Cpu;
         public bool CpuSampled;
         public long Memory;
+        public long Commit;
+        public long? GpuMemory;
         public double Io;
         public double NetworkRate;
         public int Connections;
@@ -106,6 +113,9 @@ public static class ProcessTree
             }
             // Summed like the other columns; the engine shown is the busiest member's.
             group.Gpu = Math.Min(group.Gpu, 100);
+            var memory = ProcessMemoryUsage.Sum(group.Members);
+            group.Commit = memory.Committed;
+            group.GpuMemory = memory.GpuShared;
 
             if (query.Length == 0 || Matches(group.Name, query) || Matches(group.Members[0].Path, query) || Matches(group.Members[0].Company, query))
             {
@@ -145,7 +155,8 @@ public static class ProcessTree
                 group.Cpu, group.CpuSampled, group.Memory, group.Io, group.NetworkRate, group.Connections,
                 expandable, expanded, group.IsApp,
                 group.Members.All(member => member.Efficiency), group.Members.All(member => member.Suspended),
-                group.Gpu, group.GpuEngine));
+                group.Gpu, group.GpuEngine, group.Commit, group.GpuMemory,
+                group.Members.Any(member => member.IsCritical)));
 
             if (!expanded) continue;
             foreach (ProcessSample child in SortChildren(children, sortColumn, descending, io))
@@ -153,7 +164,7 @@ public static class ProcessTree
                 rows.Add(new ProcessRowData(RowKind.Child, $"{group.Key}|{child.Pid}|{child.CreateTime}", ChildName(child),
                     "PID " + child.Pid, child.Path, child.Company, new[] { child.Key },
                     child.CpuPercent, child.CpuSampled, child.PrivateWorkingSet, io(child), child.NetworkBytesPerSecond, child.ConnectionCount,
-                    false, false, group.IsApp, child.Efficiency, child.Suspended, child.GpuPercent, child.GpuEngine));
+                    false, false, group.IsApp, child.Efficiency, child.Suspended, child.GpuPercent, child.GpuEngine, child.CommitCharge, child.GpuSharedMemory, child.IsCritical));
             }
         }
     }
@@ -165,6 +176,8 @@ public static class ProcessTree
         {
             SortCpu => item => item.Group.Cpu,
             SortMemory => item => item.Group.Memory,
+            SortCommit => item => item.Group.Commit,
+            SortGpuMemory => item => item.Group.GpuMemory ?? -1,
             SortIo => item => item.Group.Io,
             SortNetwork => item => item.Group.Connections,
             SortBandwidth => item => item.Group.NetworkRate,
@@ -182,6 +195,8 @@ public static class ProcessTree
         {
             SortCpu => child => child.CpuPercent,
             SortMemory => child => child.PrivateWorkingSet,
+            SortCommit => child => child.CommitCharge,
+            SortGpuMemory => child => child.GpuSharedMemory ?? -1,
             SortIo => child => io(child),
             SortNetwork => child => child.ConnectionCount,
             SortBandwidth => child => child.NetworkBytesPerSecond,
@@ -213,6 +228,7 @@ public static class ProcessTree
     internal static string GroupKey(ProcessSample process)
     {
         ProcessSample owner = AppIdentityRules.Owner(process, byPid);
+        if (process.IsVirtualMachineMemory) return $"vm:{process.Pid}:{process.CreateTime}";
         if (owner.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase)) return "pid:" + owner.Pid;
         return owner.Path.Length > 0 ? owner.Path : "name:" + owner.ImageName;
     }
@@ -220,6 +236,7 @@ public static class ProcessTree
     private static string GroupName(List<ProcessSample> members)
     {
         ProcessSample first = members[0];
+        if (first.IsVirtualMachineMemory) return NameWithVmOwner(first);
         bool serviceHost = first.ImageName.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase);
         if (serviceHost && first.Services is { Count: > 0 } services)
         {
@@ -240,6 +257,9 @@ public static class ProcessTree
         Matches(process.ImageName, query) || Matches(process.WindowTitle, query) ||
         process.Pid.ToString(System.Globalization.CultureInfo.InvariantCulture) == query ||
         (process.Services?.Any(service => Matches(service, query)) ?? false);
+
+    internal static string NameWithVmOwner(ProcessSample process) => process.VirtualMachineOwner is { } owner
+        ? $"{process.ImageName} ({owner})" : process.ImageName;
 
     private static bool Matches(string? value, string query) =>
         value is not null && value.Contains(query, StringComparison.CurrentCultureIgnoreCase);

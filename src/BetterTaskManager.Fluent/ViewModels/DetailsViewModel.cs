@@ -14,6 +14,8 @@ public sealed class DetailsViewModel : ObservableObject
     public const string SortUser = "User";
     public const string SortCpu = "Cpu";
     public const string SortMemory = "Memory";
+    public const string SortCommit = "Commit";
+    public const string SortGpuMemory = "GpuMemory";
     public const string SortGpu = "Gpu";
     public const string SortDescription = "Description";
 
@@ -25,12 +27,13 @@ public sealed class DetailsViewModel : ObservableObject
     {
         this.monitor = monitor;
         this.settings = settings;
-        if (settings.DetailsSortColumn is not (SortName or SortPid or SortStatus or SortUser or SortCpu or SortMemory or SortGpu or SortDescription))
+        if (settings.DetailsSortColumn is not (SortName or SortPid or SortStatus or SortUser or SortCpu or SortMemory or SortCommit or SortGpuMemory or SortGpu or SortDescription))
             settings.DetailsSortColumn = SortName;
         Layout = new ColumnLayout("Details.", new Dictionary<string, double>
         {
-            ["Name"] = 260, ["Pid"] = 80, ["Status"] = 150, ["User"] = 150, ["Cpu"] = 80, ["Memory"] = 110, ["Gpu"] = 80
-        }, settings.ColumnWidths, ["Pid", "Status", "User", "Cpu", "Memory", "Gpu"], settings.ColumnOrder);
+            ["Name"] = 260, ["Pid"] = 80, ["Status"] = 150, ["User"] = 150, ["Cpu"] = 80, ["Memory"] = 130,
+            ["Commit"] = 140, ["GpuMemory"] = 150, ["Gpu"] = 80
+        }, settings.ColumnWidths, ["Pid", "Status", "User", "Cpu", "Memory", "Commit", "GpuMemory", "Gpu"], settings.ColumnOrder);
         DetailSlot.SharedLayout = Layout;
         Rows = new SlotCollection<DetailSlot, (ProcessSample, long, bool)>(DetailSlot.Load);
     }
@@ -70,7 +73,7 @@ public sealed class DetailsViewModel : ObservableObject
         else
         {
             settings.DetailsSortColumn = column;
-            settings.DetailsSortDescending = column is SortCpu or SortMemory or SortGpu;
+            settings.DetailsSortDescending = column is SortCpu or SortMemory or SortCommit or SortGpuMemory or SortGpu;
         }
         Raise(nameof(SortColumn));
         Refresh();
@@ -86,6 +89,8 @@ public sealed class DetailsViewModel : ObservableObject
             SortUser => descending ? processes.OrderByDescending(process => process.UserName, text) : processes.OrderBy(process => process.UserName, text),
             SortCpu => Order(processes, process => process.CpuPercent, descending),
             SortMemory => Order(processes, process => process.PrivateWorkingSet, descending),
+            SortCommit => Order(processes, process => process.CommitCharge, descending),
+            SortGpuMemory => Order(processes, process => process.GpuSharedMemory ?? -1, descending),
             SortGpu => Order(processes, process => process.GpuPercent, descending),
             SortDescription => descending ? processes.OrderByDescending(process => process.Description, text) : processes.OrderBy(process => process.Description, text),
             _ => descending ? processes.OrderByDescending(process => process.ImageName, text) : processes.OrderBy(process => process.ImageName, text)
@@ -104,6 +109,7 @@ public sealed class DetailsViewModel : ObservableObject
         query.Length == 0 ||
         process.ImageName.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
         process.Description.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+        process.VirtualMachineOwner?.Contains(query, StringComparison.CurrentCultureIgnoreCase) == true ||
         process.Pid.ToString(CultureInfo.InvariantCulture) == query;
 }
 
@@ -129,6 +135,9 @@ public sealed class DetailSlot : RowSlot
     public string User { get => user; private set => Set(ref user, value); }
     public string CpuText { get => cpuText; private set => Set(ref cpuText, value); }
     public string MemoryText { get => memoryText; private set => Set(ref memoryText, value); }
+    private string commitText = "", gpuMemoryText = "";
+    public string CommitText { get => commitText; private set => Set(ref commitText, value); }
+    public string GpuMemoryText { get => gpuMemoryText; private set => Set(ref gpuMemoryText, value); }
     public string Description { get => description; private set => Set(ref description, value); }
     public string Path { get => path; private set => Set(ref path, value); }
     public ImageSource? Icon { get => icon; private set => Set(ref icon, value); }
@@ -144,12 +153,14 @@ public sealed class DetailSlot : RowSlot
     {
         ProcessSample process = input.Process;
         slot.Process = process;
-        slot.Name = process.ImageName;
+        slot.Name = ProcessTree.NameWithVmOwner(process);
         slot.PidText = process.Pid.ToString(CultureInfo.CurrentCulture);
         slot.Status = process.Suspended ? Loc.Get("ProcState_Suspended") : process.Efficiency ? Loc.Get("Proc_Efficiency") : Loc.Get("ProcState_Running");
         slot.User = process.UserName.Length > 0 ? process.UserName : "–";
         slot.CpuText = process.CpuSampled ? Format.Percent(process.CpuPercent) : "…";
         slot.MemoryText = Format.Memory(process.PrivateWorkingSet);
+        slot.CommitText = Format.Memory(process.CommitCharge);
+        slot.GpuMemoryText = process.GpuSharedMemory is { } shared ? Format.Memory(shared) : "–";
         slot.GpuText = input.GpuAvailable ? Format.Percent(process.GpuPercent) : "–";
         slot.GpuEngine = process.GpuEngine;
         slot.Gpu.Set(process.GpuPercent, 100);

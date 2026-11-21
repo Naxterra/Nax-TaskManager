@@ -68,13 +68,21 @@ public static class StartupApps
     /// <summary>Firmware (POST) time of the last boot, which Task Manager shows as "Last BIOS time".</summary>
     public static TimeSpan? LastBiosTime()
     {
-        using RegistryKey? key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power");
-        return key?.GetValue("FwPOSTTime") is int milliseconds && milliseconds > 0 ? TimeSpan.FromMilliseconds(milliseconds) : null;
+        try
+        {
+            using RegistryKey? key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power");
+            return key?.GetValue("FwPOSTTime") is int milliseconds && milliseconds > 0 ? TimeSpan.FromMilliseconds(milliseconds) : null;
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Sets Windows' StartupApproved flag. Entries for all users need administrator rights.</summary>
     public static void SetEnabled(StartupSource source, string name, bool enabled)
     {
+        if (source == StartupSource.Package) throw new ArgumentException("Packaged startup tasks must be changed via the StartupApp overload.", nameof(source));
         (RegistryHive hive, string subKey) = ApprovedLocation(source);
         using RegistryKey root = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
         using RegistryKey key = root.CreateSubKey(subKey, writable: true);
@@ -106,7 +114,16 @@ public static class StartupApps
     private static void ReadFolder(List<StartupApp> result, string folder, StartupSource source)
     {
         if (folder.Length == 0 || !Directory.Exists(folder)) return;
-        foreach (string file in Directory.EnumerateFiles(folder))
+        IEnumerable<string> files;
+        try
+        {
+            files = Directory.EnumerateFiles(folder).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            return;
+        }
+        foreach (string file in files)
         {
             string name = Path.GetFileName(file);
             if (name.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase)) continue;
@@ -149,9 +166,15 @@ public static class StartupApps
             using RegistryKey? key = root.OpenSubKey(subKey);
             if (key?.GetValue(name) is not byte[] { Length: > 0 } value || (value[0] & 1) == 0) return (true, null);
             long fileTime = value.Length >= 12 ? BitConverter.ToInt64(value, 4) : 0;
-            return (false, fileTime > 0 ? DateTime.FromFileTimeUtc(fileTime).ToLocalTime() : null);
+            DateTime? disabledAt = null;
+            if (fileTime > 0)
+            {
+                try { disabledAt = DateTime.FromFileTimeUtc(fileTime).ToLocalTime(); }
+                catch (ArgumentOutOfRangeException) { }
+            }
+            return (false, disabledAt);
         }
-        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException or ArgumentOutOfRangeException)
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
         {
             return (true, null);
         }
@@ -207,7 +230,7 @@ internal static class ShellLinks
             arguments = buffer.ToString();
             return target.Length > 0;
         }
-        catch (Exception ex) when (ex is COMException or InvalidCastException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is COMException or InvalidCastException or UnauthorizedAccessException or IOException)
         {
             return false;
         }

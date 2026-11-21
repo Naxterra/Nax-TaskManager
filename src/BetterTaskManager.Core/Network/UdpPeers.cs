@@ -18,7 +18,8 @@ public static class UdpPeers
 
     internal static List<ConnectionSample> FromFeed(IReadOnlyList<ProcessSample> processes, NetworkFeedMessage message)
     {
-        var identities = processes.ToDictionary(process => process.Pid, process => process.CreateTime);
+        var identities = new Dictionary<int, long>(processes.Count);
+        foreach (ProcessSample process in processes) identities[process.Pid] = process.CreateTime;
         return FromRates((message.UdpPeers ?? []).Where(peer => peer.Protocol == "UDP" && peer.CreateTime != 0
             && identities.TryGetValue(peer.Pid, out long created) && created == peer.CreateTime));
     }

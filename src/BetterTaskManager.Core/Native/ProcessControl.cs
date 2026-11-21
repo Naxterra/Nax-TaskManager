@@ -28,6 +28,7 @@ public readonly record struct ControlResult(bool Succeeded, bool Gone, int Error
 /// </summary>
 public static class ProcessControl
 {
+    private const int ProcessTerminate = 0x0001;
     private const int ProcessSetInformation = 0x0200;
     private const int ProcessPowerThrottling = 4;
     private const uint PowerThrottlingCurrentVersion = 1;
@@ -41,14 +42,17 @@ public static class ProcessControl
         public uint StateMask;
     }
 
-    /// <summary>Reads both settings with one limited handle; false when the process cannot be opened.</summary>
-    public static bool TryRead(int pid, out ProcessControlState state)
+    /// <summary>Reads both settings with one limited handle; false when the process cannot be opened or its creation time differs.</summary>
+    public static bool TryRead(int pid, out ProcessControlState state) => TryRead(pid, 0, out state);
+
+    public static bool TryRead(int pid, long createTime, out ProcessControlState state)
     {
         state = default;
         IntPtr handle = Win32.OpenProcess(Win32.ProcessQueryLimitedInformation, false, pid);
         if (handle == IntPtr.Zero) return false;
         try
         {
+            if (createTime > 0 && (!GetProcessTimes(handle, out long created, out _, out _, out _) || created != createTime)) return false;
             var priority = (PriorityClass)GetPriorityClass(handle);
             var throttling = new PowerThrottlingState { Version = PowerThrottlingCurrentVersion };
             bool efficiency = GetProcessInformation(handle, ProcessPowerThrottling, ref throttling, Marshal.SizeOf<PowerThrottlingState>()) &&
@@ -64,10 +68,12 @@ public static class ProcessControl
 
     /// <summary>
     /// On: EcoQoS and idle priority. Off: explicitly no EcoQoS (so Windows' own heuristics do not put it back
-    /// straight away) and normal priority, as Task Manager does.
+    /// straight away) and normal priority, as Task Manager does. Rolls back EcoQoS if priority cannot be changed.
     /// </summary>
-    public static ControlResult SetEfficiency(int pid, long createTime, bool on) => WithProcess(pid, createTime, handle =>
+    public static ControlResult SetEfficiency(int pid, long createTime, bool on) => WithProcess(pid, createTime, ProcessSetInformation | Win32.ProcessQueryLimitedInformation, handle =>
     {
+        var previous = new PowerThrottlingState { Version = PowerThrottlingCurrentVersion };
+        bool hadPrevious = GetProcessInformation(handle, ProcessPowerThrottling, ref previous, Marshal.SizeOf<PowerThrottlingState>());
         var throttling = new PowerThrottlingState
         {
             Version = PowerThrottlingCurrentVersion,
@@ -75,16 +81,24 @@ public static class ProcessControl
             StateMask = on ? PowerThrottlingExecutionSpeed : 0
         };
         if (!SetProcessInformation(handle, ProcessPowerThrottling, ref throttling, Marshal.SizeOf<PowerThrottlingState>())) return false;
-        return SetPriorityClass(handle, (uint)(on ? PriorityClass.Idle : PriorityClass.Normal));
+        if (SetPriorityClass(handle, (uint)(on ? PriorityClass.Idle : PriorityClass.Normal))) return true;
+        int error = Marshal.GetLastWin32Error();
+        if (hadPrevious) SetProcessInformation(handle, ProcessPowerThrottling, ref previous, Marshal.SizeOf<PowerThrottlingState>());
+        Marshal.SetLastPInvokeError(error);
+        return false;
     });
 
     public static ControlResult SetPriority(int pid, long createTime, PriorityClass priority) =>
-        WithProcess(pid, createTime, handle => SetPriorityClass(handle, (uint)priority));
+        WithProcess(pid, createTime, ProcessSetInformation | Win32.ProcessQueryLimitedInformation, handle => SetPriorityClass(handle, (uint)priority));
 
-    /// <summary>Opens the process and checks its creation time first, so a reused PID is never changed.</summary>
-    private static ControlResult WithProcess(int pid, long createTime, Func<IntPtr, bool> change)
+    /// <summary>Ends one process after verifying its UTC creation time on the same handle, preventing PID-reuse kills.</summary>
+    public static ControlResult Terminate(int pid, long createTime, uint exitCode = 1) =>
+        WithProcess(pid, createTime, ProcessTerminate | Win32.ProcessQueryLimitedInformation, handle => TerminateProcess(handle, exitCode));
+
+    /// <summary>Opens the process and checks its creation time first, so a reused PID is never changed or terminated.</summary>
+    private static ControlResult WithProcess(int pid, long createTime, int access, Func<IntPtr, bool> change)
     {
-        IntPtr handle = Win32.OpenProcess(ProcessSetInformation | Win32.ProcessQueryLimitedInformation, false, pid);
+        IntPtr handle = Win32.OpenProcess(access, false, pid);
         if (handle == IntPtr.Zero)
         {
             int error = Marshal.GetLastWin32Error();
@@ -92,7 +106,12 @@ public static class ProcessControl
         }
         try
         {
-            if (!GetProcessTimes(handle, out long created, out _, out _, out _) || created != createTime) return new ControlResult(false, true, 0);
+            if (!GetProcessTimes(handle, out long created, out _, out _, out _))
+            {
+                int error = Marshal.GetLastWin32Error();
+                return error == ErrorInvalidParameter ? new ControlResult(false, true, error) : new ControlResult(false, false, error);
+            }
+            if (created != createTime) return new ControlResult(false, true, 0);
             return change(handle) ? ControlResult.Ok : new ControlResult(false, false, Marshal.GetLastWin32Error());
         }
         finally
@@ -102,6 +121,9 @@ public static class ProcessControl
     }
 
     private const int ErrorInvalidParameter = 87;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool TerminateProcess(IntPtr process, uint exitCode);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern uint GetPriorityClass(IntPtr process);

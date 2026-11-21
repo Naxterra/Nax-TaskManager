@@ -29,8 +29,7 @@ internal static class CsvExportDialog
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Microsoft.Data.Sqlite.SqliteException
             or System.Runtime.InteropServices.COMException)
         {
-            await new ContentDialog { XamlRoot = root, Title = Loc.Get("Export_Failed"), Content = ex.Message,
-                CloseButtonText = Loc.Get("Common_OK") }.ShowAsync();
+            await Dialogs.ShowAsync(root, Loc.Get("Export_Failed"), ex.Message);
         }
         finally { busy = false; }
     }

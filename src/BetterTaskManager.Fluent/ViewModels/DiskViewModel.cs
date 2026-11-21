@@ -35,6 +35,7 @@ public sealed class DiskViewModel : ObservableObject
     private static readonly TimeSpan Window = TimeSpan.FromSeconds(60);
 
     private readonly MonitorHost monitor;
+    private readonly AppSettings settings;
     private readonly Dictionary<(int Pid, long CreateTime), Queue<(DateTime Time, double Read, double Write)>> processBytes = new();
     /// <summary>
     /// Name and path of every process seen with disk traffic. The rates are a one-minute average, so a process can
@@ -49,6 +50,9 @@ public sealed class DiskViewModel : ObservableObject
     public DiskViewModel(MonitorHost monitor, AppSettings settings)
     {
         this.monitor = monitor;
+        this.settings = settings;
+        if (settings.DiskSortColumn is not (SortName or SortPid or SortRead or SortWrite or SortTotal)) settings.DiskSortColumn = SortTotal;
+        if (settings.DiskFilesSortColumn is not (SortName or SortPid or SortFile or SortRead or SortWrite or SortTotal or SortResponse or SortPriority)) settings.DiskFilesSortColumn = SortTotal;
         StorageLayout = new ColumnLayout("DiskStorage.", new Dictionary<string, double>
         {
             ["Name"] = 300, ["Kind"] = 120, ["Active"] = 100, ["Read"] = 110, ["Write"] = 110, ["Response"] = 110, ["Queue"] = 120
@@ -83,23 +87,23 @@ public sealed class DiskViewModel : ObservableObject
     public Visibility RestartVisibility { get => restartVisibility; private set => Set(ref restartVisibility, value); }
 
     public bool FilesMode { get; set; }
-    public string ProcessSortColumn { get; private set; } = SortTotal;
-    public bool ProcessSortDescending { get; private set; } = true;
-    public string FileSortColumn { get; private set; } = SortTotal;
-    public bool FileSortDescending { get; private set; } = true;
+    public string ProcessSortColumn => settings.DiskSortColumn;
+    public bool ProcessSortDescending => settings.DiskSortDescending;
+    public string FileSortColumn => settings.DiskFilesSortColumn;
+    public bool FileSortDescending => settings.DiskFilesSortDescending;
 
     public void Sort(string column)
     {
         bool natural = column is not (SortName or SortFile or SortPid);
         if (FilesMode)
         {
-            FileSortDescending = FileSortColumn == column ? !FileSortDescending : natural;
-            FileSortColumn = column;
+            settings.DiskFilesSortDescending = settings.DiskFilesSortColumn == column ? !settings.DiskFilesSortDescending : natural;
+            settings.DiskFilesSortColumn = column;
         }
         else
         {
-            ProcessSortDescending = ProcessSortColumn == column ? !ProcessSortDescending : natural;
-            ProcessSortColumn = column;
+            settings.DiskSortDescending = settings.DiskSortColumn == column ? !settings.DiskSortDescending : natural;
+            settings.DiskSortColumn = column;
         }
         Refresh();
     }
@@ -152,12 +156,12 @@ public sealed class DiskViewModel : ObservableObject
         ShowNotice(available ? "" : Loc.Get("Disk_ProcessNotice"), restart: !available && !monitor.IsElevated);
         // Until a full minute has been seen, average over the time observed so far.
         double window = Math.Clamp((lastSnapshot - firstSnapshot).TotalSeconds + 1, 1, Window.TotalSeconds);
-        var processes = snapshot.Processes.ToDictionary(process => process.Key);
+        var processes = new HashSet<(int Pid, long CreateTime)>(snapshot.Processes.Select(process => process.Key));
         var rows = new List<DiskProcessRow>();
         foreach (var (key, queue) in processBytes)
         {
             identities.TryGetValue(key, out var known);
-            bool alive = processes.ContainsKey(key);
+            bool alive = processes.Contains(key);
             string name = known.Name is { Length: > 0 } ? known.Name : "PID " + key.Pid;
             if (!alive) name = Loc.F("Disk_Exited", name);
             var row = new DiskProcessRow(key.Pid, key.CreateTime, name, known.Path ?? "",

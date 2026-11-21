@@ -74,8 +74,25 @@ public sealed class BootMemoryReport
     {
         static string Gb(long bytes) => (bytes / 1073741824d).ToString("0.00", Invariant).PadLeft(6) + " GB";
         static string Mb(long bytes) => (bytes / 1048576d).ToString("0", Invariant).PadLeft(6) + " MB";
-        static string Vendor(ProcessSample process) =>
-            !string.IsNullOrWhiteSpace(process.Company) ? process.Company : process.Path.Length == 0 ? "(system or protected)" : "(no publisher)";
+        var companyCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string Vendor(ProcessSample process)
+        {
+            if (!string.IsNullOrWhiteSpace(process.Company)) return process.Company;
+            if (process.Path.Length == 0) return "(system or protected)";
+            if (!companyCache.TryGetValue(process.Path, out string? company))
+            {
+                try
+                {
+                    company = (System.Diagnostics.FileVersionInfo.GetVersionInfo(process.Path).CompanyName ?? "").Trim();
+                }
+                catch (Exception ex) when (ex is FileNotFoundException or UnauthorizedAccessException or IOException or ArgumentException or NotSupportedException)
+                {
+                    company = "";
+                }
+                companyCache[process.Path] = company;
+            }
+            return company.Length > 0 ? company : "(no publisher)";
+        }
 
         MemoryBreakdown memory = snapshot.System.Memory;
         var text = new StringBuilder();
@@ -107,17 +124,22 @@ public sealed class BootMemoryReport
         }
 
         List<PoolTagUsage> tags = PoolTags.Read().OrderByDescending(tag => tag.TotalBytes).Take(15).ToList();
-        drivers ??= new Dictionary<string, List<string>>();
-        List<string> unknown = tags.Select(tag => tag.Tag).Where(tag => !drivers.ContainsKey(tag)).ToList();
-        if (unknown.Count > 0)
+        Dictionary<string, List<string>> driverSnapshot;
+        lock (gate)
         {
-            foreach (var (tag, files) in PoolTags.FindDrivers(unknown)) drivers[tag] = files;
+            drivers ??= new Dictionary<string, List<string>>();
+            List<string> unknown = tags.Select(tag => tag.Tag).Where(tag => !drivers.ContainsKey(tag)).ToList();
+            if (unknown.Count > 0)
+            {
+                foreach (var (tag, files) in PoolTags.FindDrivers(unknown)) drivers[tag] = files;
+            }
+            driverSnapshot = new Dictionary<string, List<string>>(drivers);
         }
         text.AppendLine();
         text.AppendLine("Kernel pool by tag (driver files that contain the tag; none listed = Windows kernel itself):");
         foreach (PoolTagUsage tag in tags)
         {
-            string owners = drivers.TryGetValue(tag.Tag, out List<string>? files) && files.Count > 0 ? string.Join(", ", files.Take(4)) : "";
+            string owners = driverSnapshot.TryGetValue(tag.Tag, out List<string>? files) && files.Count > 0 ? string.Join(", ", files.Take(4)) : "";
             text.AppendLine($"  '{tag.Tag}'  paged {Mb(tag.PagedBytes)}  nonpaged {Mb(tag.NonPagedBytes)}  {owners}");
         }
         text.AppendLine();

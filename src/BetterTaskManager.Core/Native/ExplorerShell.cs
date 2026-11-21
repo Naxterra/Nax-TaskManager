@@ -45,14 +45,31 @@ public static class ExplorerShell
 
         int session = self.SessionId;
         int error = ErrorNotFound;
-        foreach (Process host in Process.GetProcessesByName("sihost"))
+        string expectedHost = Path.Combine(Environment.SystemDirectory, "sihost.exe");
+        Process[] hosts = Process.GetProcessesByName("sihost");
+        try
         {
-            using (host)
+            foreach (Process host in hosts)
             {
-                if (host.SessionId != session) continue;
-                error = StartWithTokenOf(host.Id);
+                int hostId, hostSession;
+                try
+                {
+                    hostId = host.Id;
+                    hostSession = host.SessionId;
+                }
+                catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+                {
+                    continue;
+                }
+                if (hostSession != session) continue;
+                if (!string.Equals(Win32.QueryImagePath(hostId), expectedHost, StringComparison.OrdinalIgnoreCase)) continue;
+                error = StartWithTokenOf(hostId);
                 if (error == 0) return 0;
             }
+        }
+        finally
+        {
+            foreach (Process host in hosts) host.Dispose();
         }
         return error;
     }
@@ -61,14 +78,18 @@ public static class ExplorerShell
     {
         IntPtr process = Win32.OpenProcess(Win32.ProcessQueryLimitedInformation, false, pid);
         if (process == IntPtr.Zero) return Marshal.GetLastWin32Error();
-        IntPtr token = IntPtr.Zero, primary = IntPtr.Zero;
+        IntPtr token = IntPtr.Zero, primary = IntPtr.Zero, environment = IntPtr.Zero;
         try
         {
             if (!OpenProcessToken(process, TokenDuplicate | TokenQuery, out token)) return Marshal.GetLastWin32Error();
             if (!DuplicateTokenEx(token, MaximumAllowed, IntPtr.Zero, SecurityImpersonation, TokenPrimary, out primary)) return Marshal.GetLastWin32Error();
 
+            int creationFlags = 0;
+            if (CreateEnvironmentBlock(out environment, primary, inherit: false)) creationFlags |= CreateUnicodeEnvironment;
+            else environment = IntPtr.Zero;
+
             var startup = new StartupInfo { Size = Marshal.SizeOf<StartupInfo>(), Desktop = @"winsta0\default" };
-            if (!CreateProcessWithTokenW(primary, 0, ExplorerPath, null, 0, IntPtr.Zero, Path.GetDirectoryName(ExplorerPath), ref startup, out ProcessInformation info))
+            if (!CreateProcessWithTokenW(primary, 0, ExplorerPath, null, creationFlags, environment, Path.GetDirectoryName(ExplorerPath), ref startup, out ProcessInformation info))
                 return Marshal.GetLastWin32Error();
             Win32.CloseHandle(info.Thread);
             Win32.CloseHandle(info.Process);
@@ -76,6 +97,7 @@ public static class ExplorerShell
         }
         finally
         {
+            if (environment != IntPtr.Zero) DestroyEnvironmentBlock(environment);
             if (primary != IntPtr.Zero) Win32.CloseHandle(primary);
             if (token != IntPtr.Zero) Win32.CloseHandle(token);
             Win32.CloseHandle(process);
@@ -105,6 +127,7 @@ public static class ExplorerShell
     private const int SecurityImpersonation = 2;
     private const int TokenPrimary = 1;
     private const int TokenElevation = 20;
+    private const int CreateUnicodeEnvironment = 0x00000400;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct StartupInfo
@@ -140,4 +163,10 @@ public static class ExplorerShell
     [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool CreateProcessWithTokenW(IntPtr token, int logonFlags, string application, string? commandLine, int creationFlags,
         IntPtr environment, string? currentDirectory, ref StartupInfo startup, out ProcessInformation info);
+
+    [DllImport("userenv.dll", SetLastError = true)]
+    private static extern bool CreateEnvironmentBlock(out IntPtr environment, IntPtr token, bool inherit);
+
+    [DllImport("userenv.dll", SetLastError = true)]
+    private static extern bool DestroyEnvironmentBlock(IntPtr environment);
 }

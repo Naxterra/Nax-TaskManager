@@ -173,6 +173,9 @@ public sealed class HistoryViewModel
     /// <summary>Null shows all apps.</summary>
     public string? AppKey { get; set; }
     public HistoryServiceState ServiceState { get; private set; }
+    public bool ServiceNeedsUpdate { get; private set; }
+    public string? ServiceInstalledVersion { get; private set; }
+    public string? ServiceBundledVersion { get; private set; }
     public string Summary { get; private set; } = "";
     public string ConnectionSummary { get; private set; } = "";
     public bool HasData { get; private set; }
@@ -190,7 +193,15 @@ public sealed class HistoryViewModel
         };
     }
 
-    private sealed record LoadResult(List<AppUsage> Apps, List<ConnectionRecord> Connections, DateTime? LastWrite, string? Error);
+    private sealed record LoadResult(
+        HistoryServiceState ServiceState,
+        bool NeedsUpdate,
+        string? InstalledVersion,
+        string? BundledVersion,
+        List<AppUsage> Apps,
+        List<ConnectionRecord> Connections,
+        DateTime? LastWrite,
+        string? Error);
 
     public async Task LoadAsync(string search)
     {
@@ -199,15 +210,22 @@ public sealed class HistoryViewModel
         bool includeDns = IncludeDns;
         bool largestFirst = LargestFirst;
         DateTime fromDay = DateTime.Today.AddDays(range switch { HistoryRange.Week => -6, HistoryRange.Month => -29, _ => 0 });
-        ServiceState = HistoryServiceControl.QueryState();
 
         LoadResult result = await Task.Run(() =>
         {
+            HistoryServiceState serviceState = HistoryServiceControl.QueryState();
+            bool needsUpdate = serviceState == HistoryServiceState.Running && HistoryServiceControl.NeedsUpdate(HistoryServiceSetup.BundledFolder);
+            string? installedVersion = needsUpdate ? HistoryServiceControl.InstalledVersion() : null;
+            string? bundledVersion = needsUpdate ? HistoryServiceControl.VersionIn(HistoryServiceSetup.BundledFolder) : null;
             try
             {
                 using HistoryStore? store = HistoryStore.OpenReadOnly(HistoryStore.DefaultPath);
-                if (store is null) return new LoadResult([], [], null, null);
+                if (store is null) return new LoadResult(serviceState, needsUpdate, installedVersion, bundledVersion, [], [], null, null);
                 return new LoadResult(
+                    serviceState,
+                    needsUpdate,
+                    installedVersion,
+                    bundledVersion,
                     store.ReadAppUsage(fromDay),
                     store.ReadConnections(fromDay.ToUniversalTime(), appKey, search, ConnectionLimit, includeDns, largestFirst),
                     store.ReadLastWrite(),
@@ -215,9 +233,14 @@ public sealed class HistoryViewModel
             }
             catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
             {
-                return new LoadResult([], [], null, ex.Message);
+                return new LoadResult(serviceState, needsUpdate, installedVersion, bundledVersion, [], [], null, ex.Message);
             }
         });
+
+        ServiceState = result.ServiceState;
+        ServiceNeedsUpdate = result.NeedsUpdate;
+        ServiceInstalledVersion = result.InstalledVersion;
+        ServiceBundledVersion = result.BundledVersion;
 
         if (result.Error is not null)
         {

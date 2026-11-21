@@ -26,8 +26,22 @@ public static class AtomicFile
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            try
+            {
+                if (File.Exists(temporary)) File.Delete(temporary);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
         }
+    }
+
+    /// <summary>Reads a shared config file without blocking concurrent atomic renames (FileShare.Delete).</summary>
+    public static string ReadAllTextShared(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        return reader.ReadToEnd();
     }
 
     public static void WriteAllLines(string path, IEnumerable<string> lines) =>
